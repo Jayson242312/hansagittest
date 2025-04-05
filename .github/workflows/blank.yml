@@ -123,6 +123,10 @@ jobs:
             cd $APP_DIR
             echo 'Rolling back to previous version...'
             git reset --hard HEAD@{1}
+
+            nohup $APP_CMD > hansa.log 2>&1 &
+            echo 'Server restart after pull'
+        
             
             # Kill current instance if different from original
             if [ -n \"$PRE_DEPLOYMENT_PID\" ] && ! ps -p \"$PRE_DEPLOYMENT_PID\" > /dev/null; then
