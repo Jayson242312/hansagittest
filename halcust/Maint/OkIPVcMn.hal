@@ -1,0 +1,24 @@
+
+global updating
+procedure OkIPVcMn(record RcVc RepSpec)
+begin
+
+record IPVc IPr,oldIPr;
+boolean testf;
+
+
+IPr.OKFlag = 0 ;
+
+testf = true;
+
+while (LoopMain(IPr, 1, testf)) begin
+  if (IPr.OKFlag == 1) then begin
+    testf = false;
+  end;
+  if (testf) then begin
+    RecordCopy(oldIPr,IPr);
+    IPr.OKFlag = 1 ;
+    RecordUpdate(oldIPr,IPr,true);
+  end;
+end;
+end;

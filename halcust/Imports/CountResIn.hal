@@ -1,0 +1,1311 @@
+external inner procedure StripLeadingSpaces(var string);
+external inner procedure StripEndingSpaces(var string);
+external inner function Boolean FindStringInString(string,string);
+external inner function val StringToValue(string,Integer,string,string);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure FindUserMailboxName(string,var string,var string);
+// external function boolean GetActualFlatCO(string,date,var record NAContractVc);
+external function boolean BBSCountResExists(longint,date,date,var longint,var val,var string);
+external procedure SumUpCountResVc(var Record CountResVc,val,val);
+external procedure PasteFlatCounterInCountRes(Record FlatCountersVc,var Record CountResVc);
+external function Boolean NAContractVc_PasteArtCode(var record NAContractVc,Integer,var string);
+external function longint CheckCountResExistsInPeriod(record CountResVc);
+external function boolean prevCounterRes(record CountResVc ,var record CountResVc);
+external function string 255 GetFileNameFromFullPath(string);
+external function Boolean CountResAllreadyExsist(record CountResVc,longint);
+
+SetLangMode(LangLatvian,"LAT",2);
+
+procedure GetFieldArray(var array string arrFieldVals,string tstr)
+begin
+  longint pos;
+  string 255 onestr;
+
+  ClearArray(arrFieldVals);
+  while (GetNextSubstring(tstr,pos,";",onestr)) begin
+    arrFieldVals[arrFieldVals.length] = onestr;
+  end;
+
+  return;
+end;
+
+
+procedure AddCOChangeToArea(record NAContractVc NAContractr,var area aCOChg,string msg)
+begin
+  longint lines;
+  string 255 tstr;
+  
+  lines = CountLinesInArea(aCOChg);
+  if lines==0 then begin
+    tstr = USetStr(1001589);
+    AddTextToArea(tstr & chr(13) & chr(10),aCOChg);
+    
+    tstr = USetStr(1000122) & "      " & USetStr(1001052) & "      " & USetStr(1000181) & "      " & USetStr(1001590);
+    AddTextToArea(tstr & chr(13) & chr(10),aCOChg);
+    
+    AddTextToArea(chr(13) & chr(10),aCOChg);
+  end;
+  
+  tstr = NAContractr.SerNr & "      " & NAContractr.FlatCode & "      " & NAContractr.FlatAddress & "     " & msg;
+  AddTextToArea(tstr & chr(13) & chr(10),aCOChg);
+  
+  return;
+end;
+
+procedure AddFFChangeToArea(record FlatsVc Flatsr,var area aFFChg,val oldval,val newval)
+begin
+  longint lines;
+  string 255 tstr;
+  
+  lines = CountLinesInArea(aFFChg);
+  if lines==0 then begin
+    tstr = USetStr(1001593);
+    AddTextToArea(tstr & chr(13) & chr(10),aFFChg);
+    
+    tstr = USetStr(1000715) & "      " & USetStr(1000181) & "      " & USetStr(14122) & "      " & USetStr(14123);
+    AddTextToArea(tstr & chr(13) & chr(10),aFFChg);
+    
+    AddTextToArea(chr(13) & chr(10),aFFChg);
+  end;
+  
+  tstr = Flatsr.FlatCode & "      " & Flatsr.Address;
+  if nonblank(Flatsr.FlatNo) then begin
+    tstr = tstr & "-" & Flatsr.FlatNo;
+  end;
+  tstr = tstr & "      " & ValToString(oldval,M45Val,"",".",0) & "     " & ValToString(newval,M45Val,"",".",0);
+  AddTextToArea(tstr & chr(13) & chr(10),aFFChg);
+  
+  return;
+end;
+
+updating
+procedure CreateInfoMail(area aCOChg,area aFFChg,array string arrMsg)
+begin
+  record MailVc Mailr;
+  row MailVc Mailrw;
+  string 255 mailboxnr,tstr,pstr;
+  longint l,i,line;
+  boolean addf;
+  
+  RecordNew(Mailr);
+
+  FindUserMailboxName(CurrentUser,mailboxnr,tstr);
+  if (blank(tstr)) then begin
+    goto LCreateInfoMail;
+  end;
+  Mailrw.RowTyp = 1;
+  Mailrw.AddrCode = tstr;
+  MatRowPut(Mailr,0,Mailrw);
+  
+  
+  l=CountLinesInArea(aCOChg);
+  if l>0 then begin
+    addf=true;
+    for (i=0;i<l;i=i+1) begin
+      tstr = GetLineFromArea(aCOChg,i);
+      LineTextPut(Mailr,line,tstr);
+      line = line + 1;
+    end;
+  end;
+    
+  l=CountLinesInArea(aFFChg);
+  if l>0 then begin
+    if addf then begin
+      LineTextPut(Mailr,line,"");
+      line = line + 1;
+      LineTextPut(Mailr,line,"");
+      line = line + 1;
+    end else begin
+      addf=true;
+    end;
+    for (i=0;i<l;i=i+1) begin
+      tstr = GetLineFromArea(aFFChg,i);
+      LineTextPut(Mailr,line,tstr);
+      line = line + 1;
+    end;
+  end;
+  
+  l=arrMsg.length;
+  if l>0 then begin
+    if addf then begin
+      LineTextPut(Mailr,line,"");
+      line = line + 1;
+      LineTextPut(Mailr,line,"");
+      line = line + 1;
+    end else begin
+      addf=true;
+    end;
+    for (i=0;i<l;i=i+1) begin
+      tstr = arrMsg[i];
+      LineTextPut(Mailr,line,tstr);
+      line = line + 1;
+    end;
+  end;
+  
+  Mailr.Header = USetStr(1001594);
+  Mailr.TransDate = CurrentDate;
+  Mailr.SerNr = NextSerNr("MailVc",Mailr.TransDate,-1,false,"");
+  if !(RecordStore(Mailr,false)) then begin
+    LogText(0,"CreateInfoMail ERROR :: Count not created email!");
+  end;
+  
+LCreateInfoMail:;
+  return;
+end;
+
+
+
+// updating 
+// function boolean FindFlatByAddress(array string arrFieldVals,var record FlatsVc orgFlatsr)
+// begin
+  // record BuildVc Buildr;
+  // record FlatsVc oldFlatsr,Flatsr;
+  // boolean res,TrHs,testf;
+  // array string 255 arrAddrParts;
+  // longint pos;
+  // string 255 part;
+  // integer size,i,cnt;
+  
+  // ResetLoop(Buildr);
+  // TrHs=true;
+  // Buildr.Address=arrFieldVals[3];
+  // While LoopKey("Address",Buildr,1,TrHs) begin
+    // if Left(Buildr.Address,len(arrFieldVals[3]))!=(arrFieldVals[3]) then begin
+      // TrHs=false;
+    // end else begin
+      // if Buildr.BuildNr==arrFieldVals[5] then begin
+        // testf=true;
+        // TrHs=false;
+      // end;
+    // end;
+  // end;
+  
+  // if testf then begin
+    // pos=-1;
+    // While GetNextSubstring(arrFieldVals[7],pos,",",part) begin
+      // if nonblank(part) then begin
+        // StripLeadingSpaces(part);
+        // StripEndingSpaces(part);
+        // arrAddrParts[size]=part;
+        // size = size + 1;
+      // end;
+    // end;
+    
+    // cnt=2; //dzīv. nr. ir trešā vērtība no beigām.
+    // for (i=size-1;i>=0;i=i-1) begin
+      // if cnt==0 then begin
+        // part=arrAddrParts[i];
+        // i=-1;
+      // end else begin
+        // cnt = cnt - 1;
+      // end;
+    // end;
+    // ResetLoop(Flatsr);
+    // TrHs=true;
+    // Flatsr.Code=Buildr.Code;
+    // while LoopKey("Code",Flatsr,1,TrHs) begin
+      // if Flatsr.Code!=Buildr.Code then begin
+        // TrHs=false;
+      // end else begin
+        // if Flatsr.FlatNo==part then begin
+          // TrHs=false;
+          // res = true;
+        // end;
+      // end;
+    // end;
+  // end;
+  
+  // if res then begin
+    // if blank(Flatsr.NIPCode) then begin
+      // RecordCopy(oldFlatsr,Flatsr);
+      // Flatsr.NIPCode=arrFieldVals[6];
+      // if RecordUpdate(oldFlatsr,Flatsr,false)!=0 then begin
+        // LogText(0,"FindFlatByAddress ERROR :: Cant update flat " & Flatsr.Code);
+      // end;
+    // end;
+    // RecordCopy(orgFlatsr,Flatsr);
+  // end;
+  
+  // FindFlatByAddress=res;
+  // return;
+// end;
+
+updating
+function boolean FindCOByFlat(array string arrFieldVals,record FlatsVc Flatsr,var record NAContractVc orgNAContractr,date sd,date ed)
+begin
+  record NAContractVc NAContractr;
+  boolean wloop,testf,res,firstf;
+  array record NAContractVc arrNAContract;
+  integer i;
+
+  ResetLoop(NAContractr);
+  NAContractr.FlatCode = Flatsr.FlatCode;
+  wloop = true;
+  while LoopKey("FlatCode",NAContractr,1,wloop) begin
+    if NAContractr.FlatCode != Flatsr.FlatCode then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if NAContractr.OKFlag!=1 then begin
+        testf = false;
+      end;
+      if NonBlankDate(NAContractr.StartDate) and ed < NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if nonblankdate(NAContractr.EndDate) and sd>NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        arrNAContract[arrNAContract.length] = NAContractr;
+      end;
+    end;
+  end;
+  
+  if arrNAContract.length==0 then begin
+    res=false;
+    goto LFindCOByFlat;
+  end;
+  
+  if arrNAContract.length==1 then begin
+    orgNAContractr=arrNAContract[0];
+    res=true;
+  end else begin
+    for (i=0;i<arrNAContract.length;i=i+1) begin
+      NAContractr=arrNAContract[i];
+      if (nonblank(arrFieldVals[9]) and NAContractr.CustName==arrFieldVals[9]) or (nonblank(arrFieldVals[18]) and NAContractr.CustName==arrFieldVals[18]) then begin
+        res = true;
+        RecordCopy(orgNAContractr,NAContractr);
+      end;
+    end;
+  end;
+
+LFindCOByFlat:;
+  FindCOByFlat=res;
+  return;
+end;
+
+global
+function string 100 GetNextCounterNo()
+begin
+  Record FlatCountersVc FlatCountersr;
+  boolean TrHs,testf,foundf;
+  string 30 CounterNo,toNo,fromNo;
+  integer CheckNo;
+    
+  //from - 10000001
+  //to   - 19999999
+  fromNo = "10000001";
+  toNo = "19999999";
+  TrHs=true;
+  ResetLoop(FlatCountersr);
+  FlatCountersr.CounterNo = toNo;
+  
+  While LoopBackKey("CounterNo",FlatCountersr,1,TrHs) begin
+    // if FlatCountersr.RecType==1 and nonblank(FlatCountersr.FlatCode) then begin
+      if len(CounterNo)<len(FlatCountersr.CounterNo) then begin
+        CounterNo=FlatCountersr.CounterNo;
+        if len(CounterNo)==8 then begin
+          TrHs=false;
+        end;        
+      end;
+    // end;
+  end;
+  if (CounterNo!=toNo) and (Len(CounterNo)==8) then begin
+    foundf=true;
+    // CounterNo = NextStrNumber(CounterNo,true);
+    CounterNo = StringToLongInt(CounterNo) + 1;
+  end;
+  if !foundf then begin
+    CounterNo=fromNo;
+  end;
+  GetNextCounterNo = CounterNo;
+  return;
+end;
+
+updating
+procedure CreateFlatCounter(record FlatsVc Flatsr,var record FlatCountersVc FlatCountersr)
+begin
+  record CountResVc CountResr;
+  date td;
+
+  FlatCountersr.Code=Flatsr.Code;
+  FlatCountersr.FlatCode=Flatsr.FlatCode;
+  if !ReadFirstKey("BuildCodeType",FlatCountersr,2,true) then begin
+    RecordNew(FlatCountersr);
+    FlatCountersr.FlatCode = Flatsr.FlatCode;
+    FlatCountersr.Address = Flatsr.Address;
+    FlatCountersr.Code = Flatsr.Code;
+    FlatCountersr.FlatNo = Flatsr.FlatNo;
+    FlatCountersr.CounterType = "S03";
+    
+    td.year=2018;
+    td.month=1;
+    td.day=1;
+    
+    FlatCountersr.RecType=1;
+    FlatCountersr.InstallDate=td;
+    FlatCountersr.SerNr=NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+    FlatCountersr.CounterNo=GetNextCounterNo;
+    
+    if RecordStore(FlatCountersr,false) then begin
+    end;
+  end;
+  
+  return;
+end;
+
+global updating
+function boolean CreateDblCounter(var record FlatCountersVc FlatCountersr,string flatcode)
+begin
+  record FlatsVc Flatsr;
+  boolean res;
+  
+  Flatsr.FlatCode=flatcode;
+  if ReadFirstMain(Flatsr,1,true) then begin
+    res = true;
+    CreateFlatCounter(Flatsr,FlatCountersr);
+  end;
+  
+  CreateDblCounter = res;
+  return;
+end;
+
+
+updating
+function boolean GetFlatCounter(record FlatsVc Flatsr,var record FlatCountersVc FlatCountersr)
+begin
+  boolean res;
+  record FlatCountersVc lFlatCountersr;
+  
+  FlatCountersr.Code=Flatsr.Code;
+  FlatCountersr.FlatCode = Flatsr.FlatCode;
+  if !ReadFirstKey("BuildCodeType",FlatCountersr,2,true) then begin
+    CreateFlatCounter(Flatsr,FlatCountersr);
+    // LogText(0,"GetFlatCounter ERROR :: Could not find FlatCountersVc record for NIP code " & nipcode);
+    // GoTo LGetFlatCounter;
+  end;
+  
+  lFlatCountersr.Code=Flatsr.Code;
+  lFlatCountersr.FlatCode = Flatsr.FlatCode;
+  if ReadLastKey("BuildCodeType",lFlatCountersr,2,true) then begin
+    if lFlatCountersr.SerNr != FlatCountersr.SerNr then begin
+      LogText(0,"GetFlatCounter ERROR :: More than one FlatCountersVc record with flat code " & Flatsr.FlatCode);
+      GoTo LGetFlatCounter;
+    end;
+  end; 
+  
+  // if IsTwoTypeFlatCounter(FlatCountersr.SerNr) begin
+    // LogText(0,"GetFlatCounterByNIP ERROR :: Two type FlatCountersVc record with NIP code " & nipcode);
+    // GoTo LGetFlatCounter;
+  // end;
+  
+  res = true;
+  
+LGetFlatCounter:;
+  GetFlatCounter = res;
+  return;
+end;
+
+
+updating
+procedure ContractNormaChange(var record NAContractVc NAContractr,date sd,integer rownr,var area aCOChg,boolean addS07f)
+begin
+  record NAContractVc oldNAContractr;
+  row NAContractVc NAContractrw;
+  integer i,rwc,rw;
+  boolean S03f,s07f,updatef;
+  date S03td,s07td;
+  string 255 tstr,msg;
+  
+  RecordCopy(oldNAContractr,NAContractr);
+  
+  rwc=MatRowCnt(NAContractr);
+  
+  if addS07f then begin //uz S07
+    S03td=AddMonth(sd,-1);
+    S03td.day=DaysInMonth(GetYear(S03td),GetMonth(S03td));
+    s07td=sd;
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(NAContractr,i,NAContractrw);
+      if NAContractrw.ArtCode=="S03" and !S03f then begin
+        if BlankDate(NAContractrw.ServEndDate) then begin
+          S03f=true;
+          updatef=true;
+          NAContractrw.ServEndDate=S03td;
+          MatRowPut(NAContractr,i,NAContractrw);
+          
+          if nonblank(msg) then begin
+            msg = msg & " ";
+          end;
+          msg = msg & USetStr(1001591);
+        end else begin
+          if NAContractrw.ServEndDate==S03td then begin
+            S03f=true;
+          end;
+        end;
+      end;
+    end;
+    if NAContractrw.ArtCode=="S07" and !s07f then begin
+      if BlankDate(NAContractrw.ServStartDate) then begin
+        s07f=true;
+        updatef=true;
+        NAContractrw.ServStartDate=s07td;
+        MatRowPut(NAContractr,i,NAContractrw);
+        if nonblank(msg) then begin
+          msg = msg & " ";
+        end;
+        msg = msg & USetStr(1001592);
+      end else begin
+        if NAContractrw.ServStartDate==s07td then begin
+          s07f=true;
+        end;
+      end;
+    end;
+    if !S03f then begin
+      rw = MatRowCnt(NAContractr);
+      ClearRow(NAContractr,NAContractrw,1);
+      NAContractrw.ArtCode="S03";
+      MatRowInsert(NAContractr,rw,NAContractrw);
+      if NAContractVc_PasteArtCode(NAContractr,rw,tstr) then begin
+      end;
+      MatRowGet(NAContractr,rw,NAContractrw);
+      NAContractrw.ServEndDate=S03td;
+      MatRowPut(NAContractr,i,NAContractrw);
+      updatef=true;
+      
+      if nonblank(msg) then begin
+        msg = msg & " ";
+      end;
+      msg = msg & USetStr(1001591);
+    end;
+    if !s07f then begin
+      rw = MatRowCnt(NAContractr);
+      ClearRow(NAContractr,NAContractrw,1);
+      NAContractrw.ArtCode="S07";
+      MatRowInsert(NAContractr,rw,NAContractrw);
+      if NAContractVc_PasteArtCode(NAContractr,rw,tstr) then begin
+      end;
+      MatRowGet(NAContractr,rw,NAContractrw);
+      NAContractrw.ServStartDate=s07td;
+      MatRowPut(NAContractr,i,NAContractrw);
+      updatef=true;
+      
+      if nonblank(msg) then begin
+        msg = msg & " ";
+      end;
+      msg = msg & USetStr(1001592);
+    end;
+  end else begin
+    S07td=AddMonth(sd,-1);
+    S07td.day=DaysInMonth(GetYear(S07td),GetMonth(S07td));
+    s03td=sd;
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(NAContractr,i,NAContractrw);
+      if NAContractrw.ArtCode=="S03" and !S03f then begin
+        if nonblankdate(NAContractrw.ServEndDate) then begin
+          if NAContractrw.ServEndDate>s03td then begin
+            if blankdate(NAContractrw.ServStartDate) or (NAContractrw.ServStartDate<=s03td)  then begin
+              s03f=true;
+            end;
+          end;
+        end;
+        if nonblankdate(NAContractrw.ServStartDate) then begin
+          if NAContractrw.ServStartDate<=s03td then begin
+            if blankdate(NAContractrw.ServEndDate) or (s03td<NAContractrw.ServEndDate) then begin  
+              s03f=true;
+            end;
+          end;
+        end;
+        if blankdate(NAContractrw.ServStartDate) and blankdate(NAContractrw.ServEndDate) then begin
+          s03f=true; 
+        end;
+      end;
+      if NAContractrw.ArtCode=="S07" and !s07f then begin
+        if BlankDate(NAContractrw.ServEndDate) then begin
+          S07f=true;
+          updatef=true;
+          NAContractrw.ServEndDate=S07td;
+          MatRowPut(NAContractr,i,NAContractrw);
+          if nonblank(msg) then begin
+            msg = msg & " ";
+          end;
+          msg = msg & USetStr(1001595);
+        end else begin
+          if NAContractrw.ServEndDate<=S07td then begin
+            S07f=true;
+          end;
+        end;
+      end;
+    end;
+    if !s03f then begin
+      rw = MatRowCnt(NAContractr);
+      ClearRow(NAContractr,NAContractrw,1);
+      NAContractrw.ArtCode="S03";
+      MatRowInsert(NAContractr,rw,NAContractrw);
+      if NAContractVc_PasteArtCode(NAContractr,rw,tstr) then begin
+      end;
+      MatRowGet(NAContractr,rw,NAContractrw);
+      NAContractrw.ServStartDate=s03td;
+      MatRowPut(NAContractr,i,NAContractrw);
+      updatef=true;
+      if nonblank(msg) then begin
+        msg = msg & " ";
+      end;
+      msg = msg & USetStr(1001596);
+    end;
+    // if !S07f then begin
+      // rw = MatRowCnt(NAContractr);
+      // ClearRow(NAContractr,NAContractrw,1);
+      // NAContractrw.ArtCode="S07";
+      // MatRowInsert(NAContractr,rw,NAContractrw);
+      // if NAContractVc_PasteArtCode(NAContractr,rw,tstr) then begin
+      // end;
+      // MatRowGet(NAContractr,rw,NAContractrw);
+      // NAContractrw.ServEndDate=S07td;
+      // MatRowPut(NAContractr,i,NAContractrw);
+      // updatef=true;
+      // if nonblank(msg) then begin
+        // msg = msg & " ";
+      // end;
+      // msg = msg & USetStr(1001595);
+    // end;
+  end;
+  
+  if updatef then begin
+    LogText(0,"CountResIn :: Normas change in contract " & NAContractr.SerNr & ". Row " & rownr);
+    if RecordUpdate(oldNAContractr,NAContractr,false)!=0 then begin
+      LogText(0,"CountResIn :: Normas change ERROR. Cant update contract " & NAContractr.SerNr & ". Row " & rownr);
+    end else begin
+      AddCOChangeToArea(NAContractr,aCOChg,msg);
+    end;
+  end;
+  
+  return;
+end;
+
+updating
+procedure UpdateFlatField(record FlatsVc Flatsr,string field,date td,val pers,integer rownr,var area aFFChg)
+begin
+  record FlatFieldVc FlatFieldr,oldFlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  integer i,rwc;
+  boolean addf;
+  val oldval,newval;
+  
+  FlatFieldr.FlatCode=Flatsr.FlatCode;
+  FlatFieldr.FieldCode=field;
+  if !ReadFirstMain(FlatFieldr,2,true) then begin
+    Recordnew(FlatFieldr)
+    FlatFieldr.BuildCode=Flatsr.Code;
+    FlatFieldr.FlatCode=Flatsr.FlatCode;
+    FlatFieldr.FieldCode=field;
+    ClearRow(FlatFieldr,FlatFieldrw,1);
+    FlatFieldrw.StartDate=td;
+    FlatFieldrw.Value=pers;
+    MatRowInsert(FlatFieldr,0,FlatFieldrw);
+    RecordStore(FlatFieldr,false);
+    LogText(0,"CountResIn :: Update FlatField for flat " & Flatsr.FlatCode & ". Row " & rownr);
+    AddFFChangeToArea(Flatsr,aFFChg,blankval,pers);
+  end else begin
+    RecordCopy(oldFlatFieldr,FlatFieldr);
+    rwc=MatRowCnt(FlatFieldr);
+    addf=true;
+    if rwc>0 then begin
+      MatRowGet(FlatFieldr,rwc-1,FlatFieldrw);
+      if FlatFieldrw.Value==pers then begin
+        addf=false;
+      end else begin
+        if (td.month==10) and (td.year==2018) and (GetMonth(FlatFieldrw.StartDate)==10) and (GetYear(FlatFieldrw.StartDate)==2018) then begin
+          addf=false;
+          LogText(0,"CountResIn :: Update FlatField for flat " & Flatsr.FlatCode & ". Row " & rownr);
+          oldval=FlatFieldrw.Value;
+          newval=pers;
+          FlatFieldrw.Value=pers;
+          MatRowPut(FlatFieldr,rwc-1,FlatFieldrw);
+          if RecordUpdate(oldFlatFieldr,FlatFieldr,true)!=0 then begin
+            LogText(0,"CountResIn ERROR :: Cant update FlatField for flat " & Flatsr.FlatCode & ". Row " & rownr);
+          end else begin
+            AddFFChangeToArea(Flatsr,aFFChg,oldval,newval);
+          end;
+        end;
+      end;
+    end;
+    if addf then begin
+      LogText(0,"CountResIn :: Update FlatField for flat " & Flatsr.FlatCode & ". Row " & rownr);
+      if rwc>0 then begin
+        MatRowGet(FlatFieldr,rwc-1,FlatFieldrw);
+        oldval=FlatFieldrw.Value;
+      end else begin
+        oldval=blankval;
+      end;
+      newval=pers;
+      ClearRow(FlatFieldr,FlatFieldrw,1);
+      FlatFieldrw.StartDate=td;
+      FlatFieldrw.Value=pers;
+      MatRowInsert(FlatFieldr,rwc,FlatFieldrw);
+      if RecordUpdate(oldFlatFieldr,FlatFieldr,true)!=0 then begin
+        LogText(0,"CountResIn ERROR :: Cant update FlatField for flat " & Flatsr.FlatCode & ". Row " & rownr);
+      end else begin
+        AddFFChangeToArea(Flatsr,aFFChg,oldval,newval);
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+// function string 255 StrRound2(string source)
+// begin
+  // string 255 res,char;
+  // integer i,l,cnt;
+  // boolean foundf;
+  
+  // l=len(source);
+  // for (i=0;i<l;i=i+1) begin
+    // char=Mid(source,i,1);
+    // if char=="," or char =="." then begin
+      // res = res & char;
+      // foundf=true;
+    // end else begin
+      // if foundf then begin
+        // if cnt<2 then begin
+          // res = res & char;
+        // end else begin
+          // GoTo LStrRound2;
+        // end;
+        // cnt = cnt + 1;
+      // end else begin
+        // res = res & char;
+      // end;
+    // end;
+  // end;
+  
+// LStrRound2:;  
+  // StrRound2 = res;
+  // return;
+// end;
+
+
+function boolean FindFlatByStreetNIP(string nipcode,string street,string NIPContract,var record FlatsVc Flatsr)
+begin
+  boolean TrHs,res,testf;
+  string 255 tstr,char;
+  integer i;
+  
+  if Len(street)==11 then begin
+    if Left(street,11)=="J.Pliekšāna" then begin
+      tstr = "Jāņa Pliekšāna";
+      GoTo LFindFlat;
+    end;
+  end; 
+    
+  for (i=0;i<len(street);i=i+1) begin
+    char = Mid(street,i,1);
+    if char == " " then begin
+      GoTo LFindFlat;
+    end else begin
+      tstr = tstr & char;
+    end;
+  end;
+  
+LFindFlat:;
+
+  //1. Check if flats with nip contract nr;
+  // RecordNew(Flatsr);
+  // ResetLoop(Flatsr);
+  // TrHs=true;
+  // Flatsr.NIPCode=nipcode;
+  // while LoopKey("NIPCode",Flatsr,1,TrHs) begin
+    // if Flatsr.NIPCode!=nipcode then begin
+      // TrHs=false;
+    // end else begin
+      // testf=true;
+      // if Flatsr.NIPContract!=NIPContract then begin
+        // testf=false;
+      // end;
+      // if tstr!=Left(Flatsr.Address,len(tstr)) then begin
+        // testf=false;
+      // end;
+      // if testf then begin
+        // res=true;
+        // TrHs=false;
+      // end;
+    // end;
+  // end;
+  
+  if res then begin
+    GoTo LFindFlatByStreetNIP;
+  end;
+    
+  //2. If not found then check w/o NIP contract
+  // RecordNew(Flatsr);
+  // ResetLoop(Flatsr);
+  // TrHs=true;
+  // Flatsr.NIPCode=nipcode;
+  // while LoopKey("NIPCode",Flatsr,1,TrHs) begin
+    // if Flatsr.NIPCode!=nipcode then begin
+      // TrHs=false;
+    // end else begin
+      // if tstr==Left(Flatsr.Address,len(tstr)) then begin
+        // res=true;
+        // TrHs=false;
+      // end;
+    // end;
+  // end;
+    
+LFindFlatByStreetNIP:;  
+  FindFlatByStreetNIP = res;
+  return;
+end;
+
+
+global updating
+procedure CountResIn(record RcVc RepSpec)
+begin
+  record FlatsVc oldFlatsr,Flatsr;
+  record NAContractVc NAContractr;
+  record CountResVc CountResr,oldCountResr;
+  record FlatCountersVc FlatCountersr;
+  array string 255 arrFieldVals;
+  integer rownr;
+  boolean TrHs,testf,flatfoundf,contractf,addf,firstf;
+  record NApsSetBlock NApsSetBl;
+  date sd,ed,td;
+  longint cresnr;
+  string 255 tstr,nipcode,fname,msg;
+  val t,tval,pers;
+  area aCOChg,aFFChg;
+  array string 255 arrNegMsg;
+  integer line;
+  
+  BlockLoad(NApsSetBl);
+  sd=NApsSetBl.DefaultCountResSDate;
+  ed=NApsSetBl.DefaultCountResEDate;
+  
+  fname = GetFileNameFromFullPath(GetImportFileName);
+  
+  while TestEOF()==false begin
+    rownr = rownr + 1;
+    // if rownr==1 then begin
+      // Goto LSkipLine;
+    // end;
+    if !firstf then begin
+      firstf=true;
+      Goto LSkipLine;
+    end;
+    GetFieldArray(arrFieldVals,ImportField);
+    
+    flatfoundf=false;
+    if nonblank(arrFieldVals[5]) and nonblank(arrFieldVals[2]) then begin
+      if FindFlatByStreetNIP(arrFieldVals[5],arrFieldVals[2],arrFieldVals[8],Flatsr) then begin
+        flatfoundf=true;
+      end;
+    end;
+    if !flatfoundf then begin
+      LogText(0,"CountResIn ERROR :: Cant find flat. NIPCode: " & arrFieldVals[5] & " street: " & arrFieldVals[2] & " row " & rownr);
+      GoTo LSkipLine;
+    end;
+    
+    // contractf=false;
+    // if blank(arrFieldVals[9]) and blank(arrFieldVals[18]) then begin
+      // LogText(0,"CountResIn ERROR :: Blank contract NIPCode. Row " & rownr);
+      // GoTo LSkipLine;
+    // end;
+    // nipcode="";
+    // if nonblank(arrFieldVals[9]) then begin
+      // nipcode=arrFieldVals[9];
+    // end else begin
+      // nipcode=arrFieldVals[18];
+    // end;
+    
+    contractf=false;
+    // if nonblank(nipcode) then begin
+      // NAContractr.NIPCode=nipcode;
+      // if ReadFirstKey("NIPCode",NAContractr,1,true) then begin
+        // contractf=true;
+      // end;
+    // end;
+    
+    if !contractf then begin
+      if !FindCOByFlat(arrFieldVals,Flatsr,NAContractr,sd,ed) then begin
+        LogText(0,"CountResIn ERROR :: Cant find contract.  Row " & rownr);
+        GoTo LSkipLine;
+      end else begin
+        contractf=true;
+      end;
+    end;
+    
+    // if !flatfoundf and contractf then begin
+      // if nonblank(NAContractr.FlatCode) then begin
+        // Flatsr.FlatCode=NAContractr.FlatCode;
+        // if ReadFirstMain(Flatsr,1,true) then begin
+          // flatfoundf=true;
+        // end;
+      // end;
+      // if !flatfoundf then begin
+        // LogText(0,"CountResIn ERROR :: Cant find flat. Row " & rownr);
+        // GoTo LSkipLine;
+      // end;
+    // end;
+    
+    if FindStringInString(arrFieldVals[14],",") then begin
+      tval = StringToValue(arrFieldVals[14],M45Val,"",",");
+    end else begin
+      tval = StringToValue(arrFieldVals[14],M45Val,"",".");
+    end;
+    // tval=Round(tval,SetRoundModeD(2));
+/*    
+    if contractf then begin
+      if blank(arrFieldVals[15]) and (arrFieldVals[17]=="0") then begin //Blank P and R==0
+        ContractNormaChange(NAContractr,sd,rownr,aCOChg,true); //To S07
+      end else begin
+        ContractNormaChange(NAContractr,sd,rownr,aCOChg,false); //To S03
+      end;
+    end;
+*/    
+    if flatfoundf and (RepSpec.flags[0]==1) then begin
+      if FindStringInString(arrFieldVals[15],",") then begin
+        pers = StringToValue(arrFieldVals[15],M45Val,"",",");
+      end else begin
+        pers = StringToValue(arrFieldVals[15],M45Val,"",".");
+      end;
+      if FindStringInString(arrFieldVals[21],",") then begin
+        pers = pers + StringToValue(arrFieldVals[21],M45Val,"",",");
+      end else begin
+        pers = pers + StringToValue(arrFieldVals[21],M45Val,"",".");
+      end;
+
+      UpdateFlatField(Flatsr,"TDECLPERS",sd,pers,rownr,aFFChg);  
+    end;
+        
+    if !GetFlatCounter(Flatsr,FlatCountersr) then begin
+      LogText(0,"CountResIn ERROR :: Cant find counter. Row: " & rownr & " Flat: " & Flatsr.FlatCode);
+      GoTo LSkipLine;
+    end;
+        
+    addf=false;
+    if (BBSCountResExists(FlatCountersr.SerNr,sd,ed,cresnr,t,tstr)) then begin
+      testf=true;
+      CountResr.SerNr=cresnr;
+      if ReadFirstMain(CountResr,1,true) then begin
+        if CountResr.ContractNr==NAContractr.SerNr then begin
+          addf = true;
+        end;
+      end;
+      if !addf then begin
+        LogText(0,"CountResIn ERROR :: CountResVc record with number " & cresnr & " already exists in period " & CountResr.StartDate & " - " & CountResr.EndDate);
+        GoTo LSkipLine;
+      end;
+    end;
+    
+    if NApsSetBl.NegValCountResIn==0 then begin
+      if tval<0 then begin
+        if line==0 then begin
+          msg = USetStr(1001787);
+          arrNegMsg[line]=msg;
+          line = line + 1;
+          msg = USetStr(1000431) & "   " & USetStr(1000121) & "   " & USetStr(1000636);
+          arrNegMsg[line]=msg;
+          line = line + 1;
+        end;
+        msg = FlatCountersr.SerNr & "   " & FlatCountersr.CounterNo & "   " & ValToString(tval,M45Val,"",".",0);
+        arrNegMsg[line]=msg;
+        line = line + 1;
+        tval=0.00;
+      end;
+    end;
+    
+    if addf then begin
+      RecordCopy(oldCountResr,CountResr);
+      CountResr.EndVal =  CountResr.EndVal + tval;
+      CountResr.VacFlag = 1;
+      SumUpCountResVc(CountResr,0,0);
+      if RecordUpdate(oldCountResr,CountResr,true)!=0 then begin
+        LogText(0,"CountResIn ERROR :: Cant update CountResVc record with number " & CountResr.SerNr);
+      end;
+    end else begin
+      RecordNew(CountResr);
+      CountResr.StartDate = sd;
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      CountResr.ContractNr=NAContractr.SerNr;
+      CountResr.EndVal = CountResr.StartVal + tval;
+      CountResr.VacFlag = 1;
+      SumUpCountResVc(CountResr,0,0);
+      CountResr.FileName=fname;
+      
+      if !CountResAllreadyExsist(CountResr,-1) then begin
+        CountResr.SerNr = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+        if CountResr.SerNr==-1 then begin
+          LogText(0,"CountResIn ERROR :: Could not assign number to CountResVc record");
+          GoTo LSkipLine;
+        end;
+    
+        if !RecordStore(CountResr,false) then begin
+          LogText(0,"CountResIn ERROR :: Could not save CountResVc record for row: " & rownr);
+          GoTo LSkipLine;
+        end;
+      end else begin
+        MessageBox(1001686,"");
+        LogText(0,"CountResIn ERROR :: CountResVc allready exsist. Row: " & rownr);
+        SetEOF;
+        GoTo LCountResIn;
+      end;
+    end;
+LSkipLine:;
+    testf = NextImportLine(false);
+  end;
+LCountResIn:;
+  if CountLinesInArea(aCOChg)>0 or CountLinesInArea(aFFChg)>0 or arrNegMsg.length>0 then begin
+    CreateInfoMail(aCOChg,aFFChg,arrNegMsg);
+  end;
+  
+return;
+end;
+
+global updating
+procedure CountRes2In()
+begin
+  record FlatsVc Flatsr;
+  record NAContractVc NAContractr;
+  record CountResVc CountResr,oldCountResr;
+  record FlatCountersVc FlatCountersr;
+  array string 255 arrFieldVals;
+  integer rownr;
+  boolean TrHs,testf,flatfoundf,contractf,addf,firstf;
+  record NApsSetBlock NApsSetBl;
+  date sd,ed;
+  longint cresnr;
+  string 255 tstr;
+  val t,tval;
+  
+  BlockLoad(NApsSetBl);
+  sd=NApsSetBl.DefaultCountResSDate;
+  ed=NApsSetBl.DefaultCountResEDate;
+  
+  while TestEOF()==false begin
+    rownr = rownr + 1;
+    // if rownr==1 then begin
+      // Goto LSkipLine;
+    // end;
+    if !firstf then begin
+      firstf=true;
+      Goto LSkipLine;
+    end;
+    GetFieldArray(arrFieldVals,ImportField);
+    
+    contractf=false;
+    // if nonblank(arrFieldVals[1]) then begin
+      // NAContractr.NIPCode=arrFieldVals[1];
+      // if ReadFirstKey("NIPCode",NAContractr,1,true) then begin
+        // contractf=true;
+      // end;
+    // end;
+    
+    if !contractf then begin
+      // if !FindCOByFlat(arrFieldVals,Flatsr,NAContractr,sd) then begin
+      LogText(0,"CountRes2In ERROR :: Cant find contract. Row " & rownr);
+      GoTo LSkipLine;
+      // end;
+    end;
+    
+    Flatsr.FlatCode=NAContractr.FlatCode;
+    if !ReadFirstMain(Flatsr,1,true) then begin
+      LogText(0,"CountRes2In ERROR :: Cant get flat record. Row " & rownr);
+      GoTo LSkipLine;
+    end;
+    
+    if !GetFlatCounter(Flatsr,FlatCountersr) then begin
+      LogText(0,"CountRes2In ERROR :: Cant find counter. Row: " & rownr & " Flat: " & Flatsr.FlatCode);
+      GoTo LSkipLine;
+    end;
+    
+    if FindStringInString(arrFieldVals[3],",") then begin
+      tval = StringToValue(arrFieldVals[3],M45Val,"",",");
+    end else begin
+      tval = StringToValue(arrFieldVals[3],M45Val,"",".");
+    end;
+        
+    addf=false;
+    if (BBSCountResExists(FlatCountersr.SerNr,sd,ed,cresnr,t,tstr)) then begin
+      testf=true;
+      CountResr.SerNr=cresnr;
+      if ReadFirstMain(CountResr,1,true) then begin
+        if CountResr.ContractNr==NAContractr.SerNr then begin
+          addf = true;
+        end;
+      end;
+      if !addf then begin
+        LogText(0,"CountRes2In ERROR :: CountResVc record with number " & cresnr & " already exists in period " & CountResr.StartDate & " - " & CountResr.EndDate);
+        GoTo LSkipLine;
+      end;
+    end;
+    
+    if addf then begin
+      RecordCopy(oldCountResr,CountResr);
+      CountResr.EndVal =  CountResr.EndVal + tval;
+      SumUpCountResVc(CountResr,0,0);
+      if RecordUpdate(oldCountResr,CountResr,true)!=0 then begin
+        LogText(0,"CountRes2In ERROR :: Cant update CountResVc record with number " & CountResr.SerNr);
+      end;
+    end else begin
+      RecordNew(CountResr);
+      CountResr.StartDate = sd;
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      CountResr.ContractNr=NAContractr.SerNr;
+      CountResr.EndVal = CountResr.StartVal + tval;
+      SumUpCountResVc(CountResr,0,0);
+  
+      CountResr.SerNr = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+      if CountResr.SerNr==-1 then begin
+        LogText(0,"CountRes2In ERROR :: Could not assign number to CountResVc record");
+        GoTo LSkipLine;
+      end;
+  
+      if !RecordStore(CountResr,false) then begin
+        LogText(0,"CountRes2In ERROR :: Could not save CountResVc record for row: " & rownr);
+        GoTo LSkipLine;
+      end;
+    end;
+LSkipLine:;
+    testf = NextImportLine(false);
+  end;
+
+return;
+end;
+
+updating
+function boolean CreateOneKS5CounterRes(record NApsSetBlock NApsSetBl,string code,val tval,string fname)
+begin
+  record FlatCountersVc FlatCountersr;
+  record FlatGroupVc FlatGroupr;
+  record CountResVc CountResr,PrevCountResr;
+  record BuildVc Buildr;
+  date td;
+  longint nr;
+  boolean res;
+  
+  res = true;
+  if Left(code,2)=="TG" then begin
+    FlatCountersr.FlatGroupCode=code;
+    FlatCountersr.CounterType="KS5";
+    if !ReadFirstKey("FlatGroupType",FlatCountersr,2,true) then begin
+      RecordNew(FlatCountersr);
+      FlatCountersr.FlatGroupCode=code;
+      FlatGroupr.Code = FlatCountersr.FlatGroupCode;
+      if (ReadFirstMain(FlatGroupr,1,true)) then begin
+      FlatCountersr.Address = FlatGroupr.Comment;
+      end;
+      FlatCountersr.CounterType = "KS5";
+      td.year=2018;
+      td.month=1;
+      td.day=1;
+      FlatCountersr.InstallDate=td;
+      FlatCountersr.SerNr=NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+      FlatCountersr.CounterNo=GetNextCounterNo;
+      FlatCountersr.CodeField=FlatCountersr.FlatGroupCode;
+      FlatCountersr.RecType=3;
+      if RecordStore(FlatCountersr,false) then begin
+      end;
+    end;
+  end else begin
+    FlatCountersr.Code=code;
+    FlatCountersr.FlatCode="";
+    FlatCountersr.CounterType="KS5";
+    if !ReadFirstKey("BuildCodeType",FlatCountersr,3,true) then begin
+      RecordNew(FlatCountersr);
+      FlatCountersr.Code=code;
+      Buildr.Code = FlatCountersr.Code;
+      if (ReadFirstMain(Buildr,1,true)) then begin
+        FlatCountersr.Address = Buildr.Address;
+      end;
+      FlatCountersr.CounterType = "KS5";
+      td.year=2018;
+      td.month=1;
+      td.day=1;
+      FlatCountersr.InstallDate=td;
+      FlatCountersr.SerNr=NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+      FlatCountersr.CounterNo=GetNextCounterNo;
+      FlatCountersr.CodeField=FlatCountersr.FlatGroupCode;
+      FlatCountersr.RecType=1;
+      if RecordStore(FlatCountersr,false) then begin
+      end;
+    end;
+  end;
+
+  
+  RecordNew(CountResr);
+  CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  CountResr.StartDate = NApsSetBl.DefaultCountResSDate;
+  CountResr.EndDate = NApsSetBl.DefaultCountResEDate;
+  PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+  
+  nr = -1;
+  nr = CheckCountResExistsInPeriod(CountResr);
+  if nr==-1 then begin
+    if (prevCounterRes(CountResr,PrevCountResr)) then begin
+      CountResr.StartVal = PrevCountResr.EndVal;
+    end else begin
+      CountResr.StartVal = FlatCountersr.InitAmount;
+    end;
+    CountResr.EndVal = CountResr.StartVal + tval;
+    CountResr.Amount = tval;
+    SumUpCountResVc(CountResr,0,0);
+    CountResr.FileName=fname;
+      
+    if !CountResAllreadyExsist(CountResr,-1) then begin
+      CountResr.SerNr = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+      if RecordStore(CountResr,false) then begin
+      end; 
+    end else begin
+      LogText(0,"KS5CountResIn ERROR :: CountResVc allready exsist " & CountResr.CounterNo);
+      MessageBox(1001686,"");
+      res = false;
+    end;
+  end else begin
+    LogText(0,"KS5CountResIn ERROR :: Allready exist CountResVc in period " & CountResr.CounterNo);
+  end;
+  
+  CreateOneKS5CounterRes = res;
+  return;
+end;
+
+function string 255 CleanupUTF8String(string tstr)
+begin
+  longint i,l;
+  string 255 res,ch;
+  
+  l = len(tstr);
+  for (i=0;i<l;i=i+1) begin
+    ch = mid(tstr,i,1);
+    if (len(ch)!=1) then begin
+      res = res & "?";
+    end else begin
+      res = res & ch;
+    end;
+  end;
+  
+  CleanupUTF8String = res;
+  return;
+end;
+
+function boolean ReadField(var longint pos,string separator,var string field)
+begin
+  string 1 c;
+  boolean testf,res;
+
+  res=true;
+  field="";
+  testf=true;
+  while testf begin
+    c = ReadChar(pos);
+    pos = pos + 1;
+    if (c==separator) then begin
+      if Left(field,1)=="\"" then begin
+        if ReadChar(pos-2)=="\"" then begin
+          testf=false;
+        end;
+      end else begin
+        testf = false;
+      end;
+    end;
+    if (c==chr(10)) then begin
+      testf = false;
+      res=false;
+    end;
+    if (TestEOF) then begin
+      testf = false;
+      res=false;
+    end;
+
+    if (testf) then begin
+      if asc(c)>31 then begin
+        field = field & c;
+      end;
+    end;
+  end;
+
+  ReadField=res;
+  return;
+end;
+
+function string 255 NormalizeString(string origstr, string removechar) 
+begin
+  string 255 res;
+  integer i;
+  string 1 strchar;
+  
+  res = "";
+  for (i=1;i<=len(origstr);i=i+1) begin
+    strchar = Right(left(origstr,i),1);
+    if strchar != removechar then begin
+      res = res & strchar; 
+    end;
+  end;
+  
+  NormalizeString = res;
+  return;
+end;
+
+global updating
+procedure KS5CountResIn()
+begin
+  record NApsSetBlock NApsSetBl;
+  string 50 tstr,code,field;
+  val tval,testval;
+  boolean testf,firstf;
+  array string 255 arrFieldVals;
+  longint pos;
+  integer i;
+  string 255 fname;
+  
+  BlockLoad(NApsSetBl);
+  
+  fname = GetFileNameFromFullPath(GetImportFileName);
+  
+  while TestEOF()==false begin
+    ClearArray(arrFieldVals);
+    i=0;
+    while ReadField(pos,";",field) begin
+      field = NormalizeString(field,"?");
+      arrFieldVals[i]=field;
+      i=i+1;
+    end;
+    if nonblank(field) then begin
+      field = NormalizeString(field,"?");
+      arrFieldVals[i]=field;
+    end;
+
+    code=arrFieldVals[0];
+    
+    // tstr=arrFieldVals[1];
+    // tstr=arrFieldVals[2];
+    tstr=arrFieldVals[3]; //patēriņš
+    if FindStringInString(tstr,",") then begin
+      tval = StringToValue(tstr,M45Val,"",",");
+    end else begin
+      tval = StringToValue(tstr,M45Val,"",".");
+    end;
+    
+    // tstr=arrFieldVals[4];
+    // tstr=arrFieldVals[5];
+    // tstr=arrFieldVals[6];
+    // tstr=arrFieldVals[7];
+    tstr=arrFieldVals[8];
+    if FindStringInString(tstr,",") then begin
+      testval = StringToValue(tstr,M45Val,"",",");
+    end else begin
+      testval = StringToValue(tstr,M45Val,"",".");
+    end;
+    if testval>0 then begin
+      if !CreateOneKS5CounterRes(NApsSetBl,code,tval,fname) then begin
+        SetEOF;
+        GoTo LKS5CountResIn;
+      end;
+    end;
+    
+LSkipKS5CountRes:;    
+    testf = NextImportLine(false);
+  end;
+LKS5CountResIn:;
+  return;
+end;

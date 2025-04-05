@@ -1,0 +1,756 @@
+external inner procedure CUIntMn(record RcVc);
+external inner function val FindVatRate(string); // jh custom function
+external inner function LongInt MonthDiff(Date,Date);
+external inner function string 60 AddObjectToObjectList(string,string);
+external function string 255 GetTagObjectForItem (string); //based off currentuser and vote
+
+// 1. -> CLEARANCE CERTIFICATE -> INTEREST INVOICE
+global
+updating procedure OpenCertificateInterestInvoicesm()
+begin
+  record ARVc ARr;
+  record INVc INr; //items
+  record ITVc ITr; // item.groups
+  record IVVc IVr,IV2r; //invoice
+  row IVVc IVrw,IVr2w;
+  record UserVc Userr; // users/persons
+  record ComplianceCertBlock ComplianceCertsb;
+  record ClearanceCertVc ClearanceCertr,ClearanceCert2r;
+  record NAContractVc COr;
+  integer wn,i,standardPeriod;
+  boolean wloop,interestFound;
+  String 25 ITEM_ACC;
+  String 25 ITEM_GROUP;
+  //
+  array String 225 arr_inv_num;
+  array String 225 arr_cust_code;
+  array Date arr_inv_due;
+  array val arr_balance; 
+  val vatRate,balance_total;
+  //
+  record IIBlock IIRec; // interest block settings
+  val block_rate;
+  String 255 block_item;
+  // =====================================
+  record NotepadVc Noter;
+  record RLinkVc RLr;
+  Integer notenr;
+  notenr = 1;
+  // ====================================
+
+
+  wn = CurWindow;
+  if (WindowState(wn)==0) then begin //Rs_normal
+    GetWindowRecord(wn,ClearanceCertr);
+
+    COr.SerNr = ClearanceCertr.ContractNr;
+    if(ReadFirstMain(COr,1,true)) then begin
+      if(nonblank(COr.ZoningCode) AND COr.ZoningCode != "RESIDENTIAL") then begin
+
+        // get interest settings
+        BlockLoad(IIRec);
+        if(nonblank(IIRec.IntRate)) then begin
+          block_rate = IIRec.IntRate;
+        end else begin
+          MessageBox(0,"Enter interest rate in Settings -> Interest");
+          goto BreakL2;
+        end;
+        //
+        if(nonblank(IIRec.ArtCode)) then begin
+          block_item = IIRec.ArtCode;
+        end else begin
+          MessageBox(0,"Select interest item in Settings -> Interest");
+          goto BreakL2;
+        end;
+
+        // is period set in block
+        BlockLoad(ComplianceCertsb); // get period
+        if(blank(ComplianceCertsb.Months) or (ComplianceCertsb.Months == 0)) then begin
+          MessageBox(0,"Compliance Certificate Period was not set. Go to settings!");
+          goto BreakL2;
+        end;
+        standardPeriod = ComplianceCertsb.Months;
+
+        // is interest invoice created
+        notenr = 1;
+        while (ReadRecordLink(ClearanceCertr,notenr,IV2r,RLr)) begin
+          MatRowGet(IV2r, 0, IVr2w);
+          if(IV2r.InvType == 4) then begin
+            MessageBox(0,"Interest on Outstanding Invoice already generated!");
+            goto BreakL2;
+          end;
+          notenr = notenr + 1;
+        end;
+        // ================= link.manager ======================
+
+        i = 0;
+        wloop = true;
+        interestFound = false;
+        ARr.CustCode = ClearanceCertr.CustCode;
+        // loop  outstanding invoices -> arvc
+        While LoopKey("CustCode",ARr,1,wloop) begin
+          if (ARr.CustCode != ClearanceCertr.CustCode) then begin
+            wloop=false;
+          end else begin
+            // if past due date
+            if(CurrentDate>ARr.DueDate) then begin
+              if(nonblank(IIRec.MinInt) AND ARr.RVal<IIRec.MinInt) then begin
+              end else begin
+                //
+                IVr.SerNr = ARr.InvoiceNr;
+                if (ReadFirstMain(IVr,1,true)) then begin
+                  if(IVr.InvType != 4) then begin
+                    interestFound = true;
+                    arr_inv_num[i] = ARr.InvoiceNr;
+                    arr_cust_code[i] = ARr.CustCode;
+                    arr_inv_due[i] = ARr.DueDate;
+                    arr_balance[i] = ARr.RVal;
+                    balance_total = balance_total + ARr.RVal;
+                    i = i + 1;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+
+        if (interestFound) then begin
+          //
+          RecordNew(IVr);
+          IVr.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+          IVr.Contract = ClearanceCertr.ContractNr;
+          IVr.CustCode = ClearanceCertr.CustCode;
+          IVr.BuildCode = ClearanceCertr.BuildCode;
+          IVr.FlatCode = ClearanceCertr.FlatCode;
+          IVr.Addr0 = ClearanceCertr.CustName;
+          IVr.PayDate = ClearanceCertr.PeriodEndDate;
+          // ==== add objects ====
+          Userr.Code = CurrentUser;
+          if ReadFirstMain(Userr,1,true) then begin
+            IVr.Location = Userr.Location;
+            // IVr.Objects = AddObjectToObjectList(IVr.Objects,Userr.Code);
+            // IVr.Objects = AddObjectToObjectList(IVr.Objects,Userr.Location);
+            IVr.Objects = CurrentUser & "X," & "VINV";
+          end;
+          IVr.CredMark = "I"; // mark as interest.inv
+          IVr.InvType = 4; // mark as interest.inv
+
+          // find interest item
+          INr.Code = block_item;
+          if(ReadFirstMain(INr,1,true)) then begin
+            //
+            ITEM_GROUP = INr.Group;
+            ITr.Code = INr.Group;
+            if(ReadFirstMain(ITr,1,true)) then begin
+              ITEM_ACC = ITr.SalesAcc;
+            end;
+            // adding invoice row
+            i = i - 1;
+            while(i>=0) begin
+              IVrw.ArtCode = arr_inv_num[i];
+              IVrw.Spec = INr.Name &" - "& arr_inv_num[i];
+              IVrw.Quant = standardPeriod;
+              IVrw.BasePrice = arr_balance[i];
+              IVrw.vRebate = standardPeriod;
+              IVrw.Sum = (arr_balance[i] * (block_rate/100)) * standardPeriod;
+              IVrw.OrdRow = 1;
+              IVrw.stp = 4; // row type interet invoice
+              IVrw.SalesAcc = ITEM_ACC;
+              IVrw.Objects = GetTagObjectForItem(IVrw.ArtCode);
+              // IVrw.VATCode = "0";
+              // IVr.Sum3 = blankval; // vat
+              IVrw.VATCode = INr.VATCode;
+              vatRate = FindVatRate(IVrw.VATCode);
+              IVr.Sum3 = IVr.Sum3 + IVrw.Sum * vatRate; //15% vat
+              MatRowPut(IVr,i,IVrw);
+              i = i - 1;
+            end;
+          end;
+          IVr.Sum1 = (balance_total * (block_rate/100)) * standardPeriod;
+          IVr.Sum4 = (balance_total * (block_rate/100)) * standardPeriod; // total = subtotal + vat
+          IVr.InvComment = "Clearance Certificate Interest Rate";
+
+          // update clearance cert. register
+          RecordCopy(ClearanceCert2r, ClearanceCertr);
+          ClearanceCert2r.InterestOnOutstanding = IVr.Sum1;
+          ClearanceCert2r.LastUpdated = CurrentDate;
+          ClearanceCert2r.User = CurrentUser;
+          RecordUpdate(ClearanceCertr,ClearanceCert2r,true);
+          PutWindowRecord(wn,ClearanceCertr);
+          
+          // create link manager
+          if(RecordStore(IVr,true)) then begin
+            MessageBox(0,"Interest on outstanding payments invoice created!");
+            CreateRecordLink(IVr,CurrentCompany,ClearanceCertr,CurrentCompany);
+            CreateRecordLink(ClearanceCertr,CurrentCompany,IVr,CurrentCompany);
+          end;
+        end else begin
+          MessageBox(0,"No oustanding invoices found!");
+        end;
+      end else begin
+        MessageBox(0,"Interests not applicable to this customer type");
+      end;
+    end;
+  end;
+
+BreakL2:;
+  return;
+end;
+
+
+
+// 2. -> COMPLIANCE CERTIFICATE -> APP FEE INVOICES
+global
+updating procedure OpenCertificateFeeInvoicesm()
+begin
+  record ComplianceCertBlock ComplianceCertsb;
+  record NAContractVc COr;//contracts
+  row NAContractVc COrw;
+  record IVVc IVr,IV2r;//invoices
+  row IVVc IVrw,IVr2w;
+  record INVc INr;//items
+  record ITVc ITr; // item.groups
+  record UserVc Userr; // users/persons
+  Integer wn,nwn;
+  val vatRate;
+  // =====================================
+  record ClearanceCertVc ClearanceCertr,ClearanceCert2r;
+  // =====================================
+  record NotepadVc Noter;
+  record RLinkVc RLr;
+  Integer notenr;
+  notenr = 1;
+  // =====================================
+
+
+  wn = CurWindow;
+  if (WindowState(wn)==0)then begin //Rs_normal
+    GetWindowRecord(wn,ClearanceCertr);
+
+    // next 2 months + 15 days
+    BlockLoad(ComplianceCertsb); // get period
+    if(blank(ComplianceCertsb.Months) or (ComplianceCertsb.Months == 0)) then begin
+      MessageBox(0,"Compliance Certificate Period was not set. Go to settings!");
+      goto BreakL;
+    end;
+    if(blank(ComplianceCertsb.CertificateFeeItem)) then begin
+      MessageBox(0,"Select a Clearance Certificate Fee Charge. Go to settings!");
+      goto BreakL;
+    end;
+
+    // ================= link.manager ======================
+    while (ReadRecordLink(ClearanceCertr,notenr,IVr,RLr)) begin
+      if(IVr.OKFlag == 0) then begin
+        MessageBox(0,"Firstly, Okay invoice that was generated!");
+        goto BreakL;
+      end;
+      if(IVr.InvComment == "Clearance Certificate Fees") then begin
+        MessageBox(0,"Application fee invoice was already generated!");
+        goto BreakL;
+      end;
+      notenr = notenr + 1;
+    end;
+    // ================= link.manager ======================
+
+    // check contract is okayed
+    COr.SerNr = ClearanceCertr.ContractNr;
+    if (ReadFirstMain(COr,1,true)) then begin
+      if (COr.OKFlag == 0) then begin
+        MessageBox(0,"Client contract is not approved!");
+        goto BreakL;
+      end;
+    end;
+
+    // new invoice record
+    RecordNew(IV2r);
+
+    IV2r.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+    IV2r.Contract = ClearanceCertr.ContractNr;
+    IV2r.CustCode = ClearanceCertr.CustCode;
+    IV2r.BuildCode = ClearanceCertr.BuildCode;
+    IV2r.FlatCode = ClearanceCertr.FlatCode;
+    IV2r.Addr0 = ClearanceCertr.CustName;
+    IV2r.PayDate = ClearanceCertr.PeriodEndDate;
+
+    // ccert.application item into invoice row
+    INr.Code = ComplianceCertsb.CertificateFeeItem;
+    if(ReadFirstMain(INr,1,true)) then begin
+      ITr.Code = INr.Group;
+      if(ReadFirstMain(ITr,1,true)) then begin
+        IVr2w.SalesAcc = ITr.SalesAcc;
+      end;
+      IVr2w.ArtCode = INr.Code;
+      IVr2w.Spec = INr.Name;
+      IVr2w.Quant = 1;
+      IVr2w.Price = INr.UPrice1;
+      IVr2w.vRebate = blankval;
+      IVr2w.Sum = INr.UPrice1;
+      IVr2w.VATCode = INr.VATCode;
+      IVr2w.Objects = GetTagObjectForItem(IVr2w.ArtCode);
+      // vat
+      vatRate = FindVatRate(IVr2w.VATCode);
+      IV2r.Sum3 = IVr2w.Sum * vatRate; //15% vat
+      MatRowPut(IV2r,0,IVr2w);
+    end;
+
+    IV2r.Sum1 = IVr2w.Sum;
+    IV2r.Sum4 = IV2r.Sum1 + IV2r.Sum3; // total = subtotal + vat
+    IV2r.InvComment = "Clearance Certificate Fees";
+    // ==== add objects ====
+    Userr.Code = CurrentUser;
+    if ReadFirstMain(Userr,1,true) then begin
+      IV2r.Location = Userr.Location;
+      // IV2r.Objects = AddObjectToObjectList(IV2r.Objects,Userr.Code);
+      // IV2r.Objects = AddObjectToObjectList(IV2r.Objects,Userr.Location);
+      IV2r.Objects = CurrentUser & "X," & "VINV"; 
+    end;
+    // IVr.OKFlag = 1;
+
+    // create link manager
+    if(RecordStore(IV2r,true)) then begin
+      MessageBox(0,"Application fee invoice created!");
+      CreateRecordLink(IV2r,CurrentCompany,ClearanceCertr,CurrentCompany);
+      CreateRecordLink(ClearanceCertr,CurrentCompany,IV2r,CurrentCompany);
+    end;
+
+    // update -> Clearance.Cert Register
+    RecordCopy(ClearanceCert2r, ClearanceCertr);
+    ClearanceCert2r.AppFees = IV2r.Sum4;
+    ClearanceCert2r.LastUpdated = CurrentDate;
+    ClearanceCert2r.User = CurrentUser;
+    RecordUpdate(ClearanceCertr,ClearanceCert2r,true);
+    PutWindowRecord(wn,ClearanceCert2r);
+  end;
+
+BreakL:;
+  return;
+end;
+
+
+
+
+// 3. -> COMPLIANCE CERTIFICATE -> SERVICE INVOICES
+global
+updating procedure OpenCertificateServiceInvoicesm()
+begin
+  record ComplianceCertBlock ComplianceCertsb;
+  record NAContractVc COr, CO2r;//contracts
+  row NAContractVc COrw;
+  record IVVc IVr,IV2r;//invoices
+  row IVVc IVrw,IVr2w;
+  record INVc INr;//items
+  record ITVc ITr; // item.groups
+  record MHistoryVc MHr,oldMHr;//meter history
+  record CountResVc CountResr,NewCountResr;//meter readings
+  record FlatCountersVc FlatCountersr;//meters
+  record UserVc Userr; // users/persons
+  boolean testf,wloop,SkipCurrMonth;
+  val avConsumption,total;
+  Integer wn,nwn,rwcnt,i,standardPeriod;
+  date s,e,midMonth;
+  // -> land and improvement val
+  record FlatFieldVc FlatFieldr;//premises fields
+  row FlatFieldVc FlatFieldrw;
+  val landVal, ImpVal, ToilVal;
+  Integer rwcnt2,j;
+  date cd,prevDate1,prevDate2;
+  // =====================================
+  record ClearanceCertVc ClearanceCertr,ClearanceCert2r;
+  // =====================================
+  val plusLastMonthsInv,minusCurrMonth;
+  date lastMstart,lastMend;
+  // =====================================
+  record NotepadVc Noter;
+  record RLinkVc RLr;
+  Integer notenr;
+  val vatRate;
+  notenr = 1;
+  // ====================================
+
+
+  wn = CurWindow;
+  if (WindowState(wn)==0)then begin //Rs_normal
+    GetWindowRecord(wn,ClearanceCertr);
+    
+    // next 2 months + 15 days
+    BlockLoad(ComplianceCertsb); // get period
+    if(blank(ComplianceCertsb.Months) or (ComplianceCertsb.Months == 0)) then begin
+      MessageBox(0,"Compliance Certificate Period was not set. Go to settings!");
+      goto BreakL;
+    end;
+    standardPeriod = ComplianceCertsb.Months;
+
+
+    COr.SerNr = ClearanceCertr.ContractNr;
+    if (ReadFirstMain(COr,1,true)) then begin
+
+      // ================= link.manager ======================
+      while (ReadRecordLink(ClearanceCertr,notenr,IVr,RLr)) begin
+        if(IVr.InvComment == "Clearance Certificate Fees") then begin
+          if(IVr.OKFlag == 0) then begin      
+            MessageBox(0,"Firstly, Okay invoice(s) that was generated!");
+            goto BreakL;
+          end;
+          goto SkipAlert;
+        end;
+        notenr = notenr + 1;
+      end;
+      MessageBox(0,"First generate application fee invoice!");
+      goto BreakL;
+      SkipAlert:;
+      //
+      while (ReadRecordLink(ClearanceCertr,notenr,IVr,RLr)) begin
+        if(IVr.InvComment == "Clearance Certificate Services Fees") then begin
+          MessageBox(0,"Invoice was already generated for contract services!");
+          goto BreakL;
+        end;
+        notenr = notenr + 1;
+      end;
+      // ================= link.manager ======================
+
+      // check contract is okayed
+      if (COr.OKFlag == 0) then begin
+        MessageBox(0,"Client contract is not approved!");
+        goto BreakL;
+      end;
+
+
+      // =========== was last months invoice already issued =============
+      plusLastMonthsInv = 1;
+      // check current date is after 15th of current month
+      midMonth = CurrentDate;
+      midMonth.day = 15;
+      if(CurrentDate <= midMonth) then begin
+        wloop=true;
+        // standardPeriod = standardPeriod + 1;
+        IVr.Contract = ClearanceCertr.ContractNr;
+        While LoopKey("Contract",IVr,1,wloop) begin
+          if (IVr.Contract!=ClearanceCertr.ContractNr) then begin
+            wloop=false;
+          end else begin
+            lastMstart = AddMonth(CurrentDate,-1);
+            lastMstart.day = 15;
+            lastMend = CurrentDate;
+            if(DateInRange(IVr.InvDate,lastMstart,lastMend)) then begin
+              MatRowGet(IVr, 0, IVrw);
+              MatRowGet(COr, 0, COrw);
+              //
+              if((IVr.OKFlag==1) AND (IVrw.ArtCode == COrw.ArtCode)) then begin
+                plusLastMonthsInv = 0;
+              end;
+            end;
+          end;
+        end;
+      end else begin
+        minusCurrMonth = 0;
+        plusLastMonthsInv = 0;
+        // loop invoices
+        wloop=true;
+        IVr.Contract = ClearanceCertr.ContractNr;
+        While LoopKey("Contract",IVr,1,wloop) begin
+          if (IVr.Contract!=ClearanceCertr.ContractNr) then begin
+            wloop=false;
+          end else begin
+            lastMstart = AddMonth(CurrentDate,0);
+            lastMstart.day = 1;
+            lastMend.day = DaysInMonth(GetYear(lastMstart),GetMonth(lastMstart));
+            if(DateInRange(IVr.InvDate,lastMstart,lastMend)) then begin
+              MatRowGet(IVr, 0, IVrw);
+              MatRowGet(COr, 0, COrw);
+              //
+              if((IVr.OKFlag==1) AND (IVrw.ArtCode == COrw.ArtCode)) then begin
+                SkipCurrMonth = true;
+                minusCurrMonth = -1;
+              end;
+            end;
+          end;
+        end;
+      end;
+      // =========== END OF -> last month invoice already isssued =============
+
+
+      // get land and imp.val
+      while (LoopMain(FlatFieldr, 1, true)) begin
+        if (FlatFieldr.FlatCode == COr.FlatCode) then begin
+          // -> land value
+          if (FlatFieldr.FieldCode == "TRLAND") then begin
+            rwcnt2 = MatRowCnt(FlatFieldr);
+            // loop row
+            for (j=0; j<rwcnt2; j=j+1) begin
+              MatRowGet(FlatFieldr, j, FlatFieldrw);
+              if NonBlank(FlatFieldrw.StartDate) then begin
+                cd = FlatFieldrw.StartDate;
+                if (cd > prevDate1) then begin
+                  landVal = FlatFieldrw.Value;
+                end;
+                prevDate1 = cd;
+              end;      
+            end;
+          end;
+          // -> improvement value
+          if (FlatFieldr.FieldCode == "TRIMP") then begin
+            rwcnt2 = MatRowCnt(FlatFieldr);
+            // loop row
+            for (j=0; j<rwcnt2; j=j+1) begin
+              MatRowGet(FlatFieldr, j, FlatFieldrw);
+              if NonBlank(FlatFieldrw.StartDate) then begin
+                cd = FlatFieldrw.StartDate;
+                if (cd > prevDate2) then begin
+                  ImpVal = FlatFieldrw.Value;
+                end;
+                prevDate2 = cd;
+              end;      
+            end;
+          end;
+          // -> toilet.no value
+          if (FlatFieldr.FieldCode == "TRTOY") then begin
+            rwcnt2 = MatRowCnt(FlatFieldr);
+            // loop row
+            for (j=0; j<rwcnt2; j=j+1) begin
+              MatRowGet(FlatFieldr, j, FlatFieldrw);
+              if NonBlank(FlatFieldrw.StartDate) then begin
+                cd = FlatFieldrw.StartDate;
+                if (cd > prevDate2) then begin
+                  ToilVal = FlatFieldrw.Value;
+                end;
+                prevDate2 = cd;
+              end;      
+            end;
+          end;
+        end;
+      end;
+
+
+      // new invoice record
+      RecordNew(IV2r);
+      IV2r.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+      IV2r.Contract = COr.ContractNr;
+      IV2r.CustCode = COr.CustCode;
+      IV2r.BuildCode = COr.BuildCode;
+      IV2r.FlatCode = COr.FlatCode;
+      IV2r.Addr0 = COr.CustName;
+      IV2r.PayDate = ClearanceCertr.PeriodEndDate;
+      
+      // =================== UPDATE METER REGISTERS =====================
+      wloop=true;
+      MHr.FlatCode = COr.FlatCode;
+      While LoopKey("FlatCode",MHr,1,wloop) begin
+        if (MHr.FlatCode != COr.FlatCode) then begin
+          wloop=false;
+        end else begin
+          // last 3 readings exists
+          if((MHr.oldReading!=0) AND (MHr.prevReading!=0) AND (MHr.currReading!=0)) then begin
+
+            i = 0;
+            midMonth = CurrentDate;
+            midMonth.day = 15;
+            // check current date is before 15th of current month
+            if(CurrentDate <= midMonth) then begin
+              i = i - 1;
+            end
+            else begin
+              // check if reading exists for last month
+              if(MonthDiff(MHr.EndDate,CurrentDate)>1) then begin
+                MessageBox(0,"Cannot generate meter reading. Previous months reading missing!");
+                goto BreakL;
+              end;
+            end;
+
+            // generate readings
+            while(i <= standardPeriod) begin
+            
+              if(SkipCurrMonth AND i==0) then begin
+                
+              end else begin
+                
+                s = AddMonth(CurrentDate,i);
+                s.day = 1;
+                e = s;
+                e.day = DaysInMonth(GetYear(e),GetMonth(e));
+
+                // average consumption
+                total = MHr.oldConsumption + MHr.prevConsumption + MHr.currConsumption;
+                avConsumption = total / 3;
+
+                // if reading does not exists
+                if(s <= MHr.StartDate) then begin
+
+                end else begin
+                  
+                  // if before the 15th - dont make last reading 
+                  if(i == standardPeriod AND CurrentDate <= midMonth) then begin
+                  
+                  end
+                  else begin
+
+                    RecordCopy(oldMHr,MHr);
+                    MHr.StartDate = s;
+                    MHr.EndDate = e;
+                    MHr.oldReading= MHr.prevReading; 
+                    MHr.prevReading = MHr.currReading;
+                    MHr.currReading = MHr.prevReading + avConsumption;
+                    MHr.oldConsumption = MHr.prevConsumption;
+                    MHr.prevConsumption = MHr.currConsumption;
+                    MHr.currConsumption = avConsumption;
+                    MHr.Total = total;
+                    MHr.Average = avConsumption;
+                    RecordUpdate(oldMHr,MHr,true);
+
+                    RecordNew(NewCountResr);
+                      NewCountResr.StartDate = s;
+                      NewCountResr.EndDate = e;
+                      NewCountResr.RegDate = CurrentDate;
+                      NewCountResr.StartVal = MHr.prevReading;
+                      NewCountResr.EndVal = MHr.currReading;
+                      NewCountResr.Amount = avConsumption;
+                      NewCountResr.FlatCounterSerNr = MHr.FlatCounterSerNr;
+
+                      FlatCountersr.SerNr = NewCountResr.FlatCounterSerNr;
+                      if ReadFirstMain(FlatCountersr,1,true) then begin
+                        NewCountResr.FlatCode = FlatCountersr.FlatCode;
+                        NewCountResr.ContractNr = FlatCountersr.Contract; 
+                        NewCountResr.CounterType = FlatCountersr.CounterType;
+                        NewCountResr.CounterNo = FlatCountersr.CounterNo;
+                        NewCountResr.CounterAddr = FlatCountersr.Address;
+                        NewCountResr.BuildCode = FlatCountersr.Code;
+                        NewCountResr.InvAmount = avConsumption; //adjusted quantity
+                      end;
+                    NewCountResr.Itype = 1; // 1 => estimate
+                    RecordStore(NewCountResr, true);
+                  end;
+                end;
+              end;
+              i = i + 1;
+            end;
+
+            // set readings data
+            IV2r.MeterNo = MHr.MeterNo;
+            IV2r.PrevReading = MHr.prevReading;
+            IV2r.CurrReading = MHr.currReading;
+            IV2r.Consumption = avConsumption * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+            IV2r.ReadingType = "Estimate Reading";
+            IV2r.DateOfReading = CurrentDate;
+
+          wloop=false;
+          end else begin
+            MessageBox(0,"Could not generate reading(s)!");
+          end;
+        end;
+      end;
+      // =================== END OF - UPDATE METER REGISTERS =====================
+
+      
+      // if no contract items in row
+      rwcnt = MatRowCnt(COr); 
+      if(rwcnt < 1) then begin
+        MessageBox(0,"No services listed in contract!");
+        goto BreakL;
+      end;
+
+      // contract items into invoice row
+      for(i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(COr,i,COrw);
+        IVr2w.ArtCode = COrw.ArtCode;
+        IVr2w.Spec = COrw.Spec;
+        IVr2w.Quant = (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+        IVr2w.QtyCoef = COrw.QtyCoef;
+        IVr2w.Price = COrw.Price;
+        IVr2w.Sum = COrw.Price * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+
+        // open items register
+        INr.Code = COrw.ArtCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          ITr.Code = INr.Group;
+          if(ReadFirstMain(ITr,1,true)) then begin
+            IVr2w.SalesAcc = ITr.SalesAcc;
+          end;  
+          IVr2w.Objects = GetTagObjectForItem(IVr2w.ArtCode);
+
+          // calculate land and improvement charges
+          if(INr.CalcOnLandOrImp == 1) then begin
+
+            if(INr.FlatFieldCode == "TRLAND") then begin
+              IVr2w.Sum = (((COrw.Price * COrw.QtyCoef) * landVal) / 12) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = ((landVal) / 12) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = IVr2w.Sum;
+            end;
+            if(INr.FlatFieldCode == "TRIMP") then begin
+              IVr2w.Sum = (((COrw.Price * COrw.QtyCoef) * ImpVal) / 12) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = ((ImpVal) / 12) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = IVr2w.Sum;
+            end;
+            if(INr.FlatFieldCode == "TRTOY") then begin
+              IVr2w.Sum = ((COrw.Price * COrw.QtyCoef) * ToilVal) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = (ToilVal) * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+              // IVr2w.Quant = IVr2w.Sum;
+            end;
+            //
+            IVr2w.Quant = standardPeriod + minusCurrMonth + plusLastMonthsInv;
+            // if(blank(IVr2w.Quant) OR (IVr2w.Quant==0)) then begin
+            //   IVr2w.Quant = (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+            // end;
+          end;
+
+          // calculate water meter charge
+          if(INr.ServQuantInCalc == 2) then begin
+            IVr2w.Sum = COrw.Price * (avConsumption * (standardPeriod + minusCurrMonth + plusLastMonthsInv));
+            IVr2w.Quant = avConsumption * (standardPeriod + minusCurrMonth + plusLastMonthsInv);
+          end;
+
+          IVr2w.rowGP = IVr2w.Sum;
+          IVr2w.PriceWORound = IVr2w.Price;
+          IV2r.BaseSum4 = IV2r.Sum4 + IVr2w.Sum; // base
+          IV2r.GPProc = 100.0; // gp
+          IV2r.TotGP = IV2r.Sum1 + IVr2w.Sum; // total gp
+
+          // calculate vat
+          IVr2w.VATCode = INr.VATCode;
+          vatRate = FindVatRate(IVr2w.VATCode);
+          IV2r.Sum3 = IV2r.Sum3 + IVr2w.Sum*vatRate; // 15% vat 
+
+          IV2r.Sum1 = IV2r.Sum1 + IVr2w.Sum; // subtotal
+          IV2r.Sum4 = IV2r.Sum4 + IVr2w.Sum; // total        
+          MatRowPut(IV2r,i,IVr2w);
+        end;
+      end;
+
+      IV2r.Sum1 = IV2r.Sum1;
+      IV2r.Sum4 = IV2r.Sum1 + IV2r.Sum3; // total = subtotal + vat
+      IV2r.InvComment = "Clearance Certificate Services Fees";
+      // ==== add objects ====
+      Userr.Code = CurrentUser;
+      if ReadFirstMain(Userr,1,true) then begin
+        IV2r.Location = Userr.Location;
+        IV2r.Objects = CurrentUser & "X," & "VINV";
+        // IV2r.Objects = AddObjectToObjectList(IV2r.Objects,Userr.Code);
+        // IV2r.Objects = AddObjectToObjectList(IV2r.Objects,Userr.Location);
+      end;
+      // IVr.OKFlag = 1;
+
+      // create link manager
+      if(RecordStore(IV2r,true)) then begin
+        // nwn = OpenWindow("IVDClass",1,0,"","",IVr);
+        MessageBox(0,"Contract services invoice created!");
+        CreateRecordLink(IV2r,CurrentCompany,ClearanceCertr,CurrentCompany);
+        CreateRecordLink(ClearanceCertr,CurrentCompany,IV2r,CurrentCompany);
+      end;
+
+      // de-activate contract
+      RecordCopy(CO2r,COr);
+      CO2r.OKFlag = 0;
+      CO2r.AccStatus = 2;
+      RecordUpdate(COr,CO2r,true);
+
+      // update -> Clearance.Cert Register
+      RecordCopy(ClearanceCert2r, ClearanceCertr);
+      ClearanceCert2r.ServiceFees = IV2r.Sum4;
+      ClearanceCert2r.LastUpdated = CurrentDate;
+      ClearanceCert2r.User = CurrentUser;
+      RecordUpdate(ClearanceCertr,ClearanceCert2r,true);
+      PutWindowRecord(wn,ClearanceCertr);
+    end;
+  end;
+
+BreakL:;
+  return;
+end;

@@ -1,0 +1,6 @@
+  SetBegin(373);
+  SetText(0,"One Time");
+  SetText(1,"Monthly Fee");
+  SetText(2,"#Instalment#");
+  SetText(3,"Interest");
+  EndSet;

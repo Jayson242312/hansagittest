@@ -1,0 +1,947 @@
+external inner function roundmode SetRoundModeD(integer);
+external inner function val FindVAT(string,val,Integer,Integer);
+external procedure HTMSClass(string,var string);
+external procedure HTBuild(string,var string);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external procedure GetIntPercArtCode(var string);
+external function boolean GetActualFlatCO(string,date,var record NAContractVc);
+external function val GetCustPrepayAmountEx(string,date,longint);
+// external function integer GetNAContractStatVal(longint,date);
+
+procedure PrintReportHeader(record RcVc RepSpec,array integer colx)
+begin
+
+  If RepSpec.ArtMode==2 then begin
+    StartFormat(15);
+      if RepSpec.flags[29]==0 then begin
+        OutString(colx[0],0,USetStr(1001437),false);
+      end else begin
+        OutString(colx[0],0,USetStr(1001438),false);
+      end;
+    EndFormat;
+    Black_Divider(0,1);
+  end;
+
+  StartFormat(15);
+    if RepSpec.ArtMode!=2 then begin
+      OutString(colx[0],0,USetStr(1000394),false);
+    end else begin
+      OutString(colx[0],0,USetStr(1001440),false);
+    end;
+    OutString(colx[2],0,USetStr(1000181),false);
+    if (RepSpec.ArtMode==2) and (RepSpec.flags[4]!=1) then begin
+      OutString(colx[7],0,USetStr(1001439),false);
+    end;
+    if RepSpec.ArtMode==2 and RepSpec.flags[6]==0 then begin
+      OutString(colx[10],0,USetStr(1001603),false);
+    end;
+    OutString(colx[3],0,USetStr(1001600),false); 
+    OutString(colx[4],0,USetStr(1001601),false);
+    OutString(colx[5],0,USetStr(1001602),false);
+    // if RepSpec.flags[0]!=0 and RepSpec.ArtMode!=2 then begin
+      // OutString(colx[6],0,USetStr(1001435),false);
+    // end;
+    if RepSpec.flags[6]==0 then begin
+      OutString(colx[9],0,USetStr(1000341),false);
+      // if RepSpec.ArtMode==2 then begin
+        // OutString(410,0,USetStr(34291),false);
+      // end;
+    end else begin
+      OutString(colx[8],0,USetStr(1000498),false);
+      OutString(colx[9],0,USetStr(1001508),false);
+      OutString(colx[1],0,USetStr(1001289),true);
+    end;
+  EndFormat;
+  Black_Divider(0,1);
+
+  return;
+end;
+
+function boolean OldContractCheck(longint contract,date td)
+begin
+  record NAContractVc NAContractr;
+  boolean res;
+
+  NAContractr.SerNr=contract;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    if NonBlankDate(NAContractr.EndDate) and NAContractr.EndDate<td then begin
+      res=true;
+    end;
+  end;
+
+  OldContractCheck=res;
+  return;
+end;
+
+procedure GetIVUnpayedSums(record IVVc IVr,record RcVc RepSpec,string IntPercArtCodes,var val bezsum,var val saubSum,var val invDebtSum,
+                          var val oldContrSum)
+begin
+  val totSum;
+  integer i,rwc,keynr;
+  array string 20 ArtCodeMas;
+  array string 100 ArtNameMas;
+  array longint arrContractNrs;
+  array val UnPayedSumMas;
+  boolean testf;
+  longint DebtRepAgreeNr;
+  string 1 type;
+  integer StatCO;
+  
+  if RepSpec.ArtMode==2 then begin
+    if RepSpec.flags[29]==1 then begin
+      if !OldContractCheck(IVr.Contract,RepSpec.d1) then begin
+        Goto LGetIVUnpayedSums;
+      end;
+    end;
+  end;
+  
+  GetIVUnPayedArtCodeUniqMasOnDate(IVr,RepSpec.d1,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+  
+  rwc = StringToInt(ArtCodeMas[0]);
+  for(i=1;i<=rwc;i=i+1)begin
+    testf=true;
+    if RepSpec.flags[1]!=0 then begin
+      if SetInSet(ArtCodeMas[i],IntPercArtCodes) then begin
+        testf=false;
+      end;
+    end;
+    if testf then begin
+      totSum = totSum + UnPayedSumMas[i];
+    end;
+  end;
+  
+  if totSum>0 then begin
+    testf=true;
+    if (RepSpec.flags[2]==1) and (RepSpec.flags[29]==0) then begin
+      if OldContractCheck(IVr.Contract,RepSpec.d1) then begin
+        testf=false;
+      end;
+    end;
+    if testf then begin
+      StatCO=0;
+      // if IVr.Contract!=-1 then begin
+        // StatCO = GetNAContractStatVal(IVr.Contract,RepSpec.d1);
+      // end;
+      Switch (StatCO) begin
+          case 0: invDebtSum = invDebtSum + totSum;
+          case 1: saubSum = saubSum + totSum;
+          case 2: bezsum = bezsum + totSum;
+      end;
+      // LogText(0,"IVr.SerNr: " & IVr.SerNr & " totsum: " & totsum & " StatCO: " & StatCO);
+    end;
+  end;
+
+LGetIVUnpayedSums:;
+
+  return;
+end;
+
+function val GetInvJSTUSum(record IVVc IVr)
+begin
+  row IVVc IVrw;
+  integer i,rwc;
+  val res;
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.ArtCode) then begin
+      if SetInSet(IVrw.ArtCode,"SALDO_JSTU,JSTU_LS") then begin
+        if IVr.InclVAT==0 then begin
+          res = res + (IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2)));
+        end else begin
+          res = res + IVrw.Sum;
+        end;
+      end;
+    end;
+  end;
+
+  GetInvJSTUSum = res;
+  return;
+end;
+
+procedure GetOneFlatDebtSums(record RcVc RepSpec,string flatcode,var val bezsum,var val saubSum,var val invDebtSum,var val oldContrSum,string IntPercArtCodes,string custcode,longint contract,var val compsum,var val coef,var val prepay)
+begin
+  record IVVc IVr;
+  boolean TrHs,testf;
+  val t;
+  date sd;
+
+  bezsum = 0;
+  saubSum = 0;
+  invDebtSum = 0;
+  oldContrSum = 0;
+  compsum = 0;
+  coef = 0;
+  prepay = 0;
+  
+  ResetLoop(IVr);
+  TrHs=true;
+  IVr.CustCode=custcode;
+  IVr.InvDate=sd;
+  While LoopKey("CustDate",IVr,2,TrHs) begin
+    if IVr.CustCode!=custcode or IVr.InvDate>RepSpec.d1 then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if IVr.Contract!=-1 and Contract!=-1 and IVr.Contract!=Contract then begin
+        testf=false;
+      end;
+      if testf then begin
+        GetIVUnpayedSums(IVr,RepSpec,IntPercArtCodes,bezsum,saubSum,invDebtSum,oldContrSum);
+       end;
+    end;
+  end;
+  
+  prepay = prepay - GetCustPrepayAmountEx(custcode,RepSpec.d1,contract);
+  
+  if RepSpec.flags[6]==1 then begin
+    ResetLoop(IVr);
+    TrHs=true;
+    IVr.CustCode=custcode;
+    IVr.InvDate=RepSpec.sStartDate;
+    While LoopKey("CustDate",IVr,2,TrHs) begin
+      if IVr.CustCode!=custcode or IVr.InvDate>RepSpec.sEndDate then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if IVr.Contract!=-1 and Contract!=-1 and IVr.Contract!=Contract then begin
+          testf=false;
+        end;
+        if testf then begin
+          compsum = compsum + IVr.Sum4;
+        end;
+      end;
+    end;
+
+    t = bezsum+saubSum+invDebtSum+oldContrSum;
+    if t==0 or compsum==0 then begin
+      coef = 0;
+    end else begin
+      coef = round(t/compsum,SetRoundModeD(2));
+    end;
+    
+  end;
+  
+  return;
+end;
+
+procedure GetFlatGroupFlatsSums(record RcVc RepSpec,string groupcode,var record IPVc FlatsCacher,string IntPercArtCodes)
+begin
+  record FlatsVc Flatsr;
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprw;
+  row IPVc FlatsCacherw;
+  record NAContractVc NAContractr,tmpNAContractr;
+  integer rwc,i,rw;
+  val bezsum,saubSum,invDebtSum,oldContrSum,compsum,coef;
+  string 255 custname;
+  longint contract;
+  string 20 custcode;
+  boolean TrHs2;
+  val prepay;
+  RecordClear(FlatsCacher);
+  
+  FlatGroupr.Code=groupcode;
+  if ReadFirstMain(FlatGroupr,1,true) then begin
+    rw = 0;
+    rwc=MatRowCnt(FlatGroupr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(FlatGroupr,i,FlatGrouprw);
+      if FlatGrouprw.RowCode!="" then begin
+        Flatsr.FlatCode=FlatGrouprw.RowCode;
+        if ReadFirstMain(Flatsr,1,true) then begin
+          bezsum=0;
+          saubSum=0;
+          invDebtSum=0;
+          oldContrSum=0;
+          custcode="";
+          contract=-1;
+          custname="";
+          if GetActualFlatCO(Flatsr.FlatCode,CurrentDate,NAContractr) then begin 
+            custname=NAContractr.CustName;
+            custcode=NAContractr.CustCode;
+            if RepSpec.ArtMode==2 then begin
+              contract=NAContractr.SerNr;
+            end;
+          end else begin
+            NAContractr.FlatCode=Flatsr.FlatCode;
+            if ReadLastKey("FlatCode",NAContractr,1,true) begin
+              custname=NAContractr.CustName;
+              custcode=NAContractr.CustCode;
+              if RepSpec.ArtMode==2 then begin
+                contract=NAContractr.SerNr;
+              end;
+            end;
+          end;
+          if RepSpec.ArtMode==2 and (RepSpec.flags[29]==1 or RepSpec.flags[0]==1) then begin
+            if RepSpec.flags[0]==1 then begin
+              GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+              FlatsCacherw.Comment=Flatsr.FlatNo;
+              FlatsCacherw.CustAddress = Flatsr.Address & " - " & Flatsr.FlatNo;
+              FlatsCacherw.ContractNr=contract;
+              FlatsCacherw.ArtCodeName=custname;
+              FlatsCacherw.BankVal=bezsum;
+              FlatsCacherw.RecVal=saubSum;
+              FlatsCacherw.BankFeeVal=invDebtSum;
+              FlatsCacherw.RoundOff=oldContrSum;
+              FlatsCacherw.TAX1Sum=compsum;
+              FlatsCacherw.B1BankVal=coef;
+              FlatsCacherw.SuggestVal=prepay;
+              if contract!=-1 then begin
+                tmpNAContractr.SerNr=contract;
+                if ReadFirstMain(tmpNAContractr,1,true) then begin
+                  FlatsCacherw.InvoiceOfficialSerNr=tmpNAContractr.OldCode;
+                end;
+              end;
+              MatRowPut(FlatsCacher,rw,FlatsCacherw);
+              rw = rw + 1;
+            end;
+            TrHs2=true;
+            ResetLoop(NAContractr);
+            NAContractr.FlatCode=Flatsr.FlatCode;
+            While LoopBackKey("FlatCode",NAContractr,1,TrHs2) begin
+              if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+                TrHs2=false;
+              end else begin
+                if NAContractr.SerNr!=contract then begin
+                  GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,NAContractr.CustCode,NAContractr.SerNr,compsum,coef,prepay);
+                  FlatsCacherw.Comment=Flatsr.FlatNo;
+                  FlatsCacherw.CustAddress = Flatsr.Address & " - " & Flatsr.FlatNo;
+                  FlatsCacherw.ContractNr=NAContractr.SerNr;
+                  FlatsCacherw.ArtCodeName=NAContractr.CustName;
+                  FlatsCacherw.BankVal=bezsum;
+                  FlatsCacherw.RecVal=saubSum;
+                  FlatsCacherw.BankFeeVal=invDebtSum;
+                  FlatsCacherw.RoundOff=oldContrSum;
+                  FlatsCacherw.TAX1Sum=compsum;
+                  FlatsCacherw.B1BankVal=coef;
+                  FlatsCacherw.SuggestVal=prepay;
+                  FlatsCacherw.InvoiceOfficialSerNr=NAContractr.OldCode;
+                  MatRowPut(FlatsCacher,rw,FlatsCacherw);
+                  rw = rw + 1;
+                end;
+              end;
+            end;
+          end else begin
+            GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+            FlatsCacherw.Comment=Flatsr.FlatNo;
+            FlatsCacherw.CustAddress = Flatsr.Address & " - " & Flatsr.FlatNo;
+            FlatsCacherw.ContractNr=contract;
+            FlatsCacherw.ArtCodeName=custname;
+            FlatsCacherw.BankVal=bezsum;
+            FlatsCacherw.RecVal=saubSum;
+            FlatsCacherw.BankFeeVal=invDebtSum;
+            FlatsCacherw.RoundOff=oldContrSum;
+            FlatsCacherw.TAX1Sum=compsum;
+            FlatsCacherw.B1BankVal=coef;
+            FlatsCacherw.SuggestVal=prepay;
+            tmpNAContractr.SerNr=contract;
+            if ReadFirstMain(tmpNAContractr,1,true) then begin
+              FlatsCacherw.InvoiceOfficialSerNr=tmpNAContractr.OldCode;
+            end;
+            MatRowPut(FlatsCacher,rw,FlatsCacherw);
+            rw = rw + 1;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure GetBuildFlatGroupSums(record RcVc RepSpec,string buildcode,var record IPVc FlatGroupCacher,string IntPercArtCodes)
+begin
+  record NAContractVc NAContractr;
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprw;
+  row IPVc FlatGroupCacherw;
+  boolean TrHs,TrHs2;
+  integer rwc,i;
+  val bezsum,saubSum,invDebtSum,oldContrSum,compsum,coef,prepay;
+  longint contract;
+  string 20 custcode;
+  array val arrSums;
+  
+  RecordClear(FlatGroupCacher);
+  ResetLoop(FlatGroupr);
+  TrHs=true;
+  FlatGroupr.LinkBuildCode=buildcode;
+  while LoopKey("LinkBuildCode",FlatGroupr,1,TrHs) begin
+    if FlatGroupr.LinkBuildCode!=buildcode then begin
+      TrHs=false;
+    end else begin
+      arrSums[0]=0;
+      arrSums[1]=0;
+      arrSums[2]=0;
+      arrSums[3]=0;
+      arrSums[4]=0;
+      arrSums[5]=0;
+      rwc=MatRowCnt(FlatGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(FlatGroupr,i,FlatGrouprw);
+        if FlatGrouprw.RowCode!="" then begin
+          contract=-1;
+          if GetActualFlatCO(FlatGrouprw.RowCode,CurrentDate,NAContractr) then begin 
+            custcode=NAContractr.CustCode;
+            if RepSpec.ArtMode==2 then begin
+              contract=NAContractr.SerNr;
+            end;
+          end;
+          if RepSpec.ArtMode==2 and (RepSpec.flags[29]==1 or RepSpec.flags[0]==1) then begin
+            if RepSpec.flags[0]==1 then begin
+              GetOneFlatDebtSums(RepSpec,FlatGrouprw.RowCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+              arrSums[0]=arrSums[0] + bezsum;
+              arrSums[1]=arrSums[1] + saubSum;
+              arrSums[2]=arrSums[2] + invDebtSum;
+              arrSums[3]=arrSums[3] + oldContrSum;
+              arrSums[4]=arrSums[4] + compsum;
+              arrSums[5]=arrSums[5] + coef;
+            end;
+            TrHs2=true;
+            ResetLoop(NAContractr);
+            NAContractr.FlatCode=FlatGrouprw.RowCode;
+            While LoopBackKey("FlatCode",NAContractr,1,TrHs2) begin
+              if NAContractr.FlatCode!=FlatGrouprw.RowCode then begin
+                TrHs2=false;
+              end else begin
+                if NAContractr.SerNr!=contract then begin 
+                  GetOneFlatDebtSums(RepSpec,FlatGrouprw.RowCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,NAContractr.CustCode,NAContractr.SerNr,compsum,coef,prepay);
+                  arrSums[0]=arrSums[0] + bezsum;
+                  arrSums[1]=arrSums[1] + saubSum;
+                  arrSums[2]=arrSums[2] + invDebtSum;
+                  arrSums[3]=arrSums[3] + oldContrSum;
+                  arrSums[4]=arrSums[4] + compsum;
+                  arrSums[5]=arrSums[5] + coef;
+                end;
+              end;
+            end;
+          end else begin
+            GetOneFlatDebtSums(RepSpec,FlatGrouprw.RowCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+            arrSums[0]=arrSums[0] + bezsum;
+            arrSums[1]=arrSums[1] + saubSum;
+            arrSums[2]=arrSums[2] + invDebtSum;
+            arrSums[3]=arrSums[3] + oldContrSum;
+            arrSums[4]=arrSums[4] + compsum;
+            arrSums[5]=arrSums[5] + coef;
+          end;
+        end;
+      end;
+      FlatGroupCacherw.Comment=FlatGroupr.Code;
+      FlatGroupCacherw.CustAddress=FlatGroupr.Comment;
+      FlatGroupCacherw.BankVal=arrSums[0];
+      FlatGroupCacherw.RecVal=arrSums[1];
+      FlatGroupCacherw.BankFeeVal=arrSums[2];
+      FlatGroupCacherw.RoundOff=arrSums[3];
+      FlatGroupCacherw.TAX1Sum=arrSums[4];
+      FlatGroupCacherw.B1BankVal=arrSums[5];
+      MatRowPut(FlatGroupCacher,MatRowCnt(FlatGroupCacher),FlatGroupCacherw);
+    end;
+  end;
+
+  return;
+end;
+
+procedure GetOneBuildDebtSums(record RcVc RepSpec,string buildcode,var val bezsum,var val saubSum,var val invDebtSum,var val oldContrSum,string IntPercArtCodes,var val compsum,var val coef,var val prepay)
+begin
+  record NAContractVc NAContractr;
+  record IVVc IVr;
+  boolean TrHs,TrHs2,testf;
+  string 255 tstr;
+  longint contract;
+  val t;
+  date blakdate;
+  
+  // ResetLoop(IVr);
+  // TrHs=true;
+  // IVr.BuildCode=buildcode;
+  // IVr.InvDate=blakdate;
+  // While LoopKey("BuildCode",IVr,2,TrHs) begin
+    // if IVr.BuildCode!=buildcode or IVr.InvDate>RepSpec.d1 then begin
+      // TrHs=false;
+    // end else begin
+      // testf=true;
+      // if testf then begin
+        // GetIVUnpayedSums(IVr,RepSpec,IntPercArtCodes,bezsum,saubSum,invDebtSum,oldContrSum);
+      // end;
+    // end;
+  // end;
+  
+  TrHs=true;
+  NAContractr.BuildCode=buildcode;
+  While LoopKey("BuildCode",NAContractr,1,TrHs) begin
+    if NAContractr.BuildCode!=buildcode then begin
+      TrHs=false;
+    end else begin
+      ResetLoop(IVr);
+      TrHs2=true;
+      IVr.Contract=NAContractr.SerNr;
+      IVr.InvDate=blakdate;
+      While LoopKey("Contract",IVr,2,TrHs2) begin
+        if IVr.Contract!=NAContractr.SerNr or IVr.InvDate>RepSpec.d1 then begin
+          TrHs2=false;
+        end else begin
+          GetIVUnpayedSums(IVr,RepSpec,IntPercArtCodes,bezsum,saubSum,invDebtSum,oldContrSum);
+        end;
+      end;
+      prepay = prepay - GetCustPrepayAmountEx(NAContractr.CustCode,RepSpec.d1,NAContractr.SerNr);
+    end;
+  end;
+  
+  if RepSpec.flags[6]==1 then begin
+    ResetLoop(IVr);
+    TrHs=true;
+    IVr.BuildCode=buildcode;
+    IVr.InvDate=RepSpec.sStartDate;
+    While LoopKey("BuildCode",IVr,2,TrHs) begin
+      if IVr.BuildCode!=buildcode or IVr.InvDate>RepSpec.sEndDate then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if testf then begin
+          compsum = compsum + IVr.Sum4;
+        end;
+      end;
+    end;
+    t = bezsum+saubSum+invDebtSum+oldContrSum;
+    if t==0 or compsum==0 then begin
+      coef = 0;
+    end else begin
+      coef = round(t/compsum,SetRoundModeD(2));
+    end;
+  end;
+  
+  return;
+end;
+
+procedure GetBuildFlatsSums(record RcVc RepSpec,string buildcode,var record IPVc FlatsCacher,string IntPercArtCodes)
+begin
+  record FlatsVc Flatsr;
+  record NAContractVc NAContractr;
+  row IPVc FlatsCacherw;
+  boolean TrHs,TrHs2;
+  val bezsum,saubSum,invDebtSum,oldContrSum,compsum,coef;
+  string 255 custname;
+  longint contract;
+  string 20 custcode;
+  val prepay;
+  boolean nooldf;
+  
+  RecordClear(FlatsCacher);
+  ResetLoop(Flatsr);
+  TrHs=true;
+  While LoopKey("BuildCodeIntFlatNo:" & buildcode,Flatsr,1,TrHs) begin
+    bezsum=0;
+    saubSum=0;
+    invDebtSum=0;
+    oldContrSum=0;
+    compsum=0;
+    coef=0;
+    custname="";
+    contract=-1;
+    if GetActualFlatCO(Flatsr.FlatCode,CurrentDate,NAContractr) then begin 
+      custname=NAContractr.CustName;
+      custcode=NAContractr.CustCode;
+      if RepSpec.ArtMode==2 then begin
+        contract=NAContractr.SerNr;
+      end;
+    end else begin
+      NAContractr.FlatCode=Flatsr.FlatCode;
+      if ReadLastKey("FlatCode",NAContractr,1,true) begin
+        custname=NAContractr.CustName;
+        custcode=NAContractr.CustCode;
+        if RepSpec.ArtMode==2 then begin
+          contract=NAContractr.SerNr;
+        end;
+      end;
+    end;
+    if (RepSpec.ArtMode==2 and (RepSpec.flags[29]==1 or RepSpec.flags[0]==1)) then begin
+      if RepSpec.flags[0]==1 then begin
+        GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+        FlatsCacherw.Comment=Flatsr.FlatNo;
+        FlatsCacherw.CustAddress = Flatsr.Address & " - " & Flatsr.FlatNo;
+        FlatsCacherw.ContractNr=contract;
+        FlatsCacherw.ArtCodeName=custname;
+        FlatsCacherw.BankVal=bezsum;
+        FlatsCacherw.RecVal=saubSum;
+        FlatsCacherw.BankFeeVal=invDebtSum;
+        FlatsCacherw.RoundOff=oldContrSum;
+        FlatsCacherw.TAX1Sum=compsum;
+        FlatsCacherw.B1BankVal=coef;
+        FlatsCacherw.SuggestVal=prepay;
+        NAContractr.SerNr=contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          FlatsCacherw.InvoiceOfficialSerNr=NAContractr.OldCode;
+        end;
+        
+        MatRowInsert(FlatsCacher,MatRowCnt(FlatsCacher),FlatsCacherw);
+      end;
+      
+      TrHs2=true;
+      ResetLoop(NAContractr);
+      NAContractr.FlatCode=Flatsr.FlatCode;
+      While LoopBackKey("FlatCode",NAContractr,1,TrHs2) begin
+        if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+          TrHs2=false;
+        end else begin
+          if NAContractr.SerNr!=contract then begin
+            GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,NAContractr.CustCode,NAContractr.SerNr,compsum,coef,prepay);
+            FlatsCacherw.Comment=Flatsr.FlatNo;
+            FlatsCacherw.CustAddress = Flatsr.Address & " - " & Flatsr.FlatNo;
+            FlatsCacherw.ContractNr=NAContractr.SerNr;
+            FlatsCacherw.ArtCodeName=NAContractr.CustName;
+            FlatsCacherw.BankVal=bezsum;
+            FlatsCacherw.RecVal=saubSum;
+            FlatsCacherw.BankFeeVal=invDebtSum;
+            FlatsCacherw.RoundOff=oldContrSum;
+            FlatsCacherw.TAX1Sum=compsum;
+            FlatsCacherw.B1BankVal=coef;
+            FlatsCacherw.SuggestVal=prepay;
+            FlatsCacherw.InvoiceOfficialSerNr=NAContractr.OldCode;
+            MatRowInsert(FlatsCacher,MatRowCnt(FlatsCacher),FlatsCacherw);
+          end;
+        end;
+      end;
+    end else begin
+      GetOneFlatDebtSums(RepSpec,Flatsr.FlatCode,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,custcode,contract,compsum,coef,prepay);
+      FlatsCacherw.Comment=Flatsr.FlatNo;
+      FlatsCacherw.CustAddress = Flatsr.Address & " -4 " & Flatsr.FlatNo;
+      FlatsCacherw.ContractNr=contract;
+      FlatsCacherw.ArtCodeName=custname;
+      FlatsCacherw.BankVal=bezsum;
+      FlatsCacherw.RecVal=saubSum;
+      FlatsCacherw.BankFeeVal=invDebtSum;
+      FlatsCacherw.RoundOff=oldContrSum;
+      FlatsCacherw.TAX1Sum=compsum;
+      FlatsCacherw.B1BankVal=coef;
+      FlatsCacherw.SuggestVal=prepay;
+      NAContractr.SerNr=contract;
+      if ReadFirstMain(NAContractr,1,true) then begin
+        FlatsCacherw.InvoiceOfficialSerNr=NAContractr.OldCode;
+      end;
+      MatRowInsert(FlatsCacher,MatRowCnt(FlatsCacher),FlatsCacherw);
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure BuildDebtRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record IPVc FlatGroupCacher,FlatsCacher;
+  row IPVc FlatGroupCacherw,FlatsCacherw;
+  string 255 tstr,IntPercArtCodes;
+  integer rw,i,rwc,j,rwc1;
+  boolean testf,TrHs,firstf;
+  val bezsum,saubSum,invDebtSum,debtSum,totDebtSum,oldContrSum,compsum,coef,prepay;
+  val totDebtSumTG,debtSumTG,totDebtSumFlats,debtSumFlats,tmpTotSum,totcompsum,totcoef;
+  array integer colx;
+  array val arrTot;
+  if !nonblankdate(RepSpec.d1) then begin
+    RepSpec.d1=currentdate;
+  end;
+
+  StartReportJob(USetStr(1001436));
+    rw=1;
+    tstr = USetStr(1000125) & ": " & RepSpec.d1;
+    Header(rw,tstr,1);
+    rw=rw+1;
+    if RepSpec.f1!="" then begin
+      HTBuild(RepSpec.f1,tstr);
+      Header(rw,tstr,1);
+      rw=rw+1;
+    end;
+    if RepSpec.f2!="" then begin
+      HTMSClass(RepSpec.f2,tstr);
+      Header(rw,tstr,1);
+      rw=rw+1;
+    end;
+  EndHeader;
+  
+  colx[0]=0;
+  colx[1]=1;
+  if RepSpec.ArtMode!=2 then begin
+    if RepSpec.flags[6]==0 then begin
+      colx[2]=40;
+      colx[3]=120;
+      colx[4]=200;
+      colx[5]=270;
+      colx[6]=340;
+      colx[9]=400;
+    end else begin
+      colx[2]=20;
+      colx[3]=80;
+      colx[4]=160;
+      colx[5]=230;
+      colx[6]=300;
+      colx[8]=350;
+      colx[9]=400;
+    end;
+  end else begin
+    if RepSpec.flags[6]==0 then begin
+      colx[2]=40;
+      colx[7]=120;
+      colx[10]=220;
+      colx[3]=270;
+      colx[4]=320;
+      colx[5]=360;
+      colx[6]=340;
+      colx[9]=400;
+    end else begin
+      colx[2]=20;
+      colx[7]=80;
+      colx[3]=160;
+      colx[4]=230;
+      colx[5]=300;
+      colx[6]=300;
+      colx[8]=350;
+      colx[9]=400;
+    end;
+  end;
+
+  if RepSpec.flags[1]!=0 then begin
+    GetIntPercArtCode(IntPercArtCodes);
+  end;
+
+RunArtMode2OnlyOldCO:;
+
+  PrintReportHeader(RepSpec,colx);
+
+  TrHs=true;
+  ResetLoop(Buildr);
+  Buildr.Code=RepSpec.f1;
+  While LoopMain(Buildr,1,TrHs) begin
+    if RepSpec.f1!="" and Buildr.Code!=RepSpec.f1 then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if RepSpec.f2!="" and !SetInSet(RepSpec.f2,Buildr.Classification) then begin
+        testf=false;
+      end;
+      if testf then begin
+        if firstf then begin
+          Gray_Divider(0,1);
+        end;
+        firstf=true;
+        bezsum=0;
+        saubSum=0;
+        invDebtSum=0;
+        debtSum=0;
+        oldContrSum=0;
+        compsum=0;
+        prepay = 0;
+        GetOneBuildDebtSums(RepSpec,Buildr.Code,bezsum,saubSum,invDebtSum,oldContrSum,IntPercArtCodes,compsum,coef,prepay);
+        debtSum=bezsum+saubSum+invDebtSum+oldContrSum+prepay;
+          if (RepSpec.flags[3]==0) or (RepSpec.flags[3]==1 and debtSum!=0) then begin
+          StartFormat(15);
+            OutString(colx[0],0,Buildr.Code,false);
+            OutString(colx[2],0,Buildr.Address,false);
+            if RepSpec.ArtMode==2 and (RepSpec.flags[4]!=1) then begin
+              OutString(colx[7],0,"",false);
+            end;
+            OutVal(colx[3],0,invDebtSum,M4Val,false);
+            OutVal(colx[4],0,saubSum,M4Val,false);
+            OutVal(colx[5],0,bezsum,M4Val,false);
+            // if RepSpec.flags[0]!=0 and RepSpec.ArtMode!=2 then begin
+              // OutVal(colx[6],0,oldContrSum,M4Val,false);
+            // end;
+            if RepSpec.flags[6]==0 then begin
+              OutVal(colx[9],0,prepay,M4Val,false);
+              OutVal(colx[1],0,debtSum,M4Val,true);
+            end else begin
+              OutVal(colx[8],0,debtSum,M4Val,false);
+              OutVal(colx[9],0,compsum,M4Val,false);
+              OutVal(colx[1],0,coef,M4Val,true);
+            end;
+            EndFormat;
+            if RepSpec.ArtMode==0 then begin
+              arrTot[0] = arrTot[0] + invDebtSum;
+              arrTot[1] = arrTot[1] + saubSum;
+              arrTot[2] = arrTot[2] + bezsum;
+            end;
+          totDebtSum=totDebtSum+debtSum;
+          totcompsum=totcompsum+compsum;
+        end;
+
+        if (RepSpec.ArtMode==1) or (RepSpec.ArtMode==2) then begin
+          GetBuildFlatGroupSums(RepSpec,Buildr.Code,FlatGroupCacher,IntPercArtCodes);
+          rwc=MatRowCnt(FlatGroupCacher);
+          for (i=0;i<rwc;i=i+1) begin
+            MatRowGet(FlatGroupCacher,i,FlatGroupCacherw);
+            debtSumTG=FlatGroupCacherw.BankVal+FlatGroupCacherw.RecVal+FlatGroupCacherw.BankFeeVal+FlatGroupCacherw.RoundOff+FlatsCacherw.SuggestVal;
+            if (RepSpec.flags[3]==0) or (RepSpec.flags[3]==1 and debtSumTG!=0) then begin
+              StartFormat(15);
+                OutString(colx[0],0,FlatGroupCacherw.Comment,false);
+                OutString(colx[2],0,FlatGroupCacherw.CustAddress,false);
+                if RepSpec.ArtMode==2 and (RepSpec.flags[4]!=1) then begin
+                  OutString(colx[7],0,"",false);
+                end;
+                if (RepSpec.ArtMode==2) and (RepSpec.flags[6]==0) then begin
+                  OutString(colx[10],0,FlatsCacherw.InvoiceOfficialSerNr,false);
+                end;
+                OutVal(colx[3],0,FlatGroupCacherw.BankFeeVal,M4Val,false);
+                OutVal(colx[4],0,FlatGroupCacherw.RecVal,M4Val,false);
+                OutVal(colx[5],0,FlatGroupCacherw.BankVal,M4Val,false);
+                // if RepSpec.flags[0]!=0 and RepSpec.ArtMode!=2 then begin
+                  // OutVal(colx[6],0,FlatGroupCacherw.RoundOff,M4Val,false);
+                // end;
+                if RepSpec.flags[6]==0 then begin
+                  OutVal(colx[9],0,FlatsCacherw.SuggestVal,M4Val,false);
+                  OutVal(colx[1],0,debtSumTG,M4Val,true);
+                end else begin
+                  OutVal(colx[8],0,debtSumTG,M4Val,false);
+                  OutVal(colx[9],0,FlatsCacherw.TAX1Sum,M4Val,false);
+                  OutVal(colx[1],0,FlatsCacherw.B1BankVal,M4Val,true);
+                end;   
+              EndFormat;
+              if RepSpec.ArtMode==2 then begin
+                GetFlatGroupFlatsSums(RepSpec,FlatGroupCacherw.Comment,FlatsCacher,IntPercArtCodes);
+                rwc1=MatRowCnt(FlatsCacher);
+                for (j=0;j<rwc1;j=j+1) begin
+                  MatRowGet(FlatsCacher,j,FlatsCacherw);
+                  debtSumFlats=FlatsCacherw.BankVal+FlatsCacherw.RecVal+FlatsCacherw.BankFeeVal+FlatsCacherw.RoundOff+FlatsCacherw.SuggestVal;
+                  if (RepSpec.flags[3]==0) or (RepSpec.flags[3]==1 and debtSumFlats!=0) then begin
+                    StartFormat(15);
+                      OutStringID(colx[0],"DblNAContractVc",FlatsCacherw.Comment,false,FlatsCacherw.ContractNr);
+                      OutString(colx[2],0,FlatsCacherw.CustAddress,false);
+                      if RepSpec.ArtMode==2 and (RepSpec.flags[4]!=1) then begin
+                        OutString(colx[7],0,FlatsCacherw.ArtCodeName,false);
+                      end;
+                      if (RepSpec.ArtMode==2) and (RepSpec.flags[6]==0) then begin
+                        OutString(colx[10],0,FlatsCacherw.InvoiceOfficialSerNr,false);
+                      end;
+                      OutVal(colx[3],0,FlatsCacherw.BankFeeVal,M4Val,false);
+                      OutVal(colx[4],0,FlatsCacherw.RecVal,M4Val,false);
+                      OutVal(colx[5],0,FlatsCacherw.BankVal,M4Val,false);
+                      if RepSpec.flags[6]==0 then begin
+                        // OutString(410,0,USetStr(1001600 + FlatsCacherw.ovst),false);
+                        OutVal(colx[9],0,FlatsCacherw.SuggestVal,M4Val,false);
+                        OutVal(colx[1],0,debtSumFlats,M4Val,true);
+                      end else begin
+                        OutVal(colx[8],0,debtSumFlats,M4Val,false);
+                        OutVal(colx[9],0,FlatsCacherw.TAX1Sum,M4Val,false);
+                        OutVal(colx[1],0,FlatsCacherw.B1BankVal,M4Val,true);
+                      end;
+                      arrTot[0] = arrTot[0] + FlatsCacherw.BankFeeVal;
+                      arrTot[1] = arrTot[1] + FlatsCacherw.RecVal;
+                      arrTot[2] = arrTot[2] + FlatsCacherw.BankVal;
+                      arrTot[3] = arrTot[3] + FlatsCacherw.SuggestVal;
+                    EndFormat;
+                  end;
+                end;
+              end;
+            end;
+          end;
+          
+          if (rwc==0) and (RepSpec.ArtMode==2) then begin
+            GetBuildFlatsSums(RepSpec,Buildr.Code,FlatsCacher,IntPercArtCodes);
+            rwc1=MatRowCnt(FlatsCacher);
+            for (j=0;j<rwc1;j=j+1) begin
+              MatRowGet(FlatsCacher,j,FlatsCacherw);
+              debtSumFlats=FlatsCacherw.BankVal+FlatsCacherw.RecVal+FlatsCacherw.BankFeeVal+FlatsCacherw.RoundOff+FlatsCacherw.SuggestVal;
+              if (RepSpec.flags[3]==0) or (RepSpec.flags[3]==1 and debtSumFlats!=0) then begin
+                StartFormat(15);
+                  OutStringID(colx[0],"DblNAContractVc",FlatsCacherw.Comment,false,FlatsCacherw.ContractNr);
+                  OutString(colx[2],0,FlatsCacherw.CustAddress,false);
+                  if RepSpec.ArtMode==2 and (RepSpec.flags[4]!=1) then begin
+                    OutString(colx[7],0,FlatsCacherw.ArtCodeName,false);
+                  end;
+                  if RepSpec.flags[6]==0 then begin
+                    OutString(colx[10],0,FlatsCacherw.InvoiceOfficialSerNr,false);
+                  end;
+                  OutVal(colx[3],0,FlatsCacherw.BankFeeVal,M4Val,false);
+                  OutVal(colx[4],0,FlatsCacherw.RecVal,M4Val,false);
+                  OutVal(colx[5],0,FlatsCacherw.BankVal,M4Val,false);
+                  if RepSpec.flags[6]==0 then begin
+                    // OutString(410,0,USetStr(1001600 + FlatsCacherw.ovst),false);
+                    OutVal(colx[9],0,FlatsCacherw.SuggestVal,M4Val,false);
+                    OutVal(colx[1],0,debtSumFlats,M4Val,true);
+                  end else begin
+                    OutVal(colx[8],0,debtSumFlats,M4Val,false);
+                    OutVal(colx[9],0,FlatsCacherw.TAX1Sum,M4Val,false);
+                    OutVal(colx[1],0,FlatsCacherw.B1BankVal,M4Val,true);
+                  end;
+                  arrTot[0] = arrTot[0] + FlatsCacherw.BankFeeVal;
+                  arrTot[1] = arrTot[1] + FlatsCacherw.RecVal;
+                  arrTot[2] = arrTot[2] + FlatsCacherw.BankVal;
+                  arrTot[3] = arrTot[3] + FlatsCacherw.SuggestVal;
+                EndFormat;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  Black_Divider(0,1);
+  
+  if RepSpec.flags[6]==1 then begin
+    if totDebtSum==0 or totcompsum==0 then begin
+      totcoef = 0;
+    end else begin
+      totcoef = round(totDebtSum/totcompsum,SetRoundModeD(2));
+    end;
+    
+  end;
+  
+  StartFormat(15);
+    // OutString(colx[6],"",USetStr(1000129),false);
+    OutVal(colx[3],0,arrTot[0],M4Val,false);
+    OutVal(colx[4],0,arrTot[1],M4Val,false);
+    OutVal(colx[5],0,arrTot[2],M4Val,false);
+    if RepSpec.flags[6]==0 then begin
+      OutVal(colx[9],0,arrTot[3],M4Val,false);
+      if (RepSpec.ArtMode==2) and (RepSpec.flags[2]!=0) and (RepSpec.flags[29]!=0) then begin
+        OutVal(colx[1],0,tmpTotSum+totDebtSum,M4Val,true);
+      end else begin
+        OutVal(colx[1],0,totDebtSum,M4Val,true);
+      end;
+    end else begin
+      if (RepSpec.ArtMode==2) and (RepSpec.flags[2]!=0) and (RepSpec.flags[29]!=0) then begin
+        // OutVal(colx[8],0,tmpTotSum+totDebtSum,M4Val,true);
+        // OutVal(colx[9],0,totcompsum,M4Val,false);
+        if (tmpTotSum+totDebtSum)==0 or totcompsum==0 then begin
+          totcoef = 0;
+        end else begin
+          totcoef = round((tmpTotSum+totDebtSum)/totcompsum,SetRoundModeD(2));
+        end;
+        OutVal(colx[1],0,totcoef,M4Val,true);
+      end else begin
+        OutVal(colx[8],0,totDebtSum,M4Val,false);
+        OutVal(colx[9],0,totcompsum,M4Val,false);
+        OutVal(colx[1],0,totcoef,M4Val,true);
+      end;
+    end;
+  EndFormat;
+
+  if (RepSpec.ArtMode==2) and (RepSpec.flags[2]!=0) then begin
+    if RepSpec.flags[29]==0 then begin
+      StartFormat(15);
+      EndFormat;
+      RepSpec.flags[29]=1;
+      tmpTotSum=totDebtSum;
+      totDebtSum=0;
+      RecordClear(FlatGroupCacher);
+      RecordClear(FlatsCacher);
+      GoTo RunArtMode2OnlyOldCO;
+    end else begin
+      StartFormat(15);
+        OutString(colx[6],"",USetStr(1001441),false);
+        if RepSpec.flags[6]==0 then begin
+          OutVal(colx[1],0,totDebtSum,M4Val,true);
+        end else begin
+          OutVal(colx[8],0,totDebtSum,M4Val,false);
+          OutVal(colx[9],0,totcompsum,M4Val,false);
+          OutVal(colx[1],0,totcoef,M4Val,true);
+        end;
+      EndFormat;
+    end;
+  end;
+
+  EndJob;
+
+  return;
+end;

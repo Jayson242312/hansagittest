@@ -113,10 +113,11 @@ begin
   if (!TestField("Delivery Address3",ColNr)) then begin goto LExit; end;
   if (!TestField("Delivery Address4",ColNr)) then begin goto LExit; end;
 
+
+
   res = true;
 
-  LExit:;
-
+LExit:;
   NextImportLine(true);
   ValidateOrderHeader = res;
   return;
@@ -151,8 +152,7 @@ begin
 
   res = true;
 
-  LExit:;
-
+LExit:;
   NextImportLine(true);
   ValidateOrderRows = res;
   return;
@@ -163,17 +163,16 @@ begin
   Boolean res;
   Integer ColNr;
 
-  if (!TestField("Parent Item Code",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Children Item Code",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Specification",ColNr)) then begin goto LExit2; end;
-  if (!TestField("In",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Out",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Hrs to produce",ColNr)) then begin goto LExit2; end;
+  if (!TestField("Parent Item Code",ColNr)) then begin goto LExit; end;
+  if (!TestField("Children Item Code",ColNr)) then begin goto LExit; end;
+  if (!TestField("Specification",ColNr)) then begin goto LExit; end;
+  if (!TestField("In",ColNr)) then begin goto LExit; end;
+  if (!TestField("Out",ColNr)) then begin goto LExit; end;
+  if (!TestField("Hrs to produce",ColNr)) then begin goto LExit; end;
 
   res = true;
 
-  LExit2:;
-  
+//LExit:;
   NextImportLine(true);
   ValidateRecipe = res;
   return;
@@ -184,18 +183,18 @@ begin
   Boolean res;
   Integer ColNr;
 
-  if (!TestField("Location",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Item Code",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Description",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Qty",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Cost",ColNr)) then begin goto LExit2; end;
-  if (!TestField("location Area",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Position",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Serial/Batch#",ColNr)) then begin goto LExit2; end;
+  if (!TestField("Location",ColNr)) then begin goto LExit; end;
+  if (!TestField("Item Code",ColNr)) then begin goto LExit; end;
+  if (!TestField("Description",ColNr)) then begin goto LExit; end;
+  if (!TestField("Qty",ColNr)) then begin goto LExit; end;
+  if (!TestField("Cost",ColNr)) then begin goto LExit; end;
+  if (!TestField("location Area",ColNr)) then begin goto LExit; end;
+  if (!TestField("Position",ColNr)) then begin goto LExit; end;
+  if (!TestField("Serial/Batch#",ColNr)) then begin goto LExit; end;
 
   res = true;
 
-  LExit2:;
+//LExit:;
   NextImportLine(true);
   ValidateGoodsReceipt = res;
   return;
@@ -207,39 +206,40 @@ begin
   Integer ColNr;
 
   //JRX - Done  100715 14:06
-  if (!TestField("No",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Supplier no",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Supplier Name",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Signers",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Trans date",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Suppl. Payment Terms",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Qur Ref",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Plan delivery Date",ColNr)) then begin goto LExit2; end;
-  if (!TestField("P/Order Classes",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Order Type",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Purchase Ref",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Attn.",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Objects",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Price Incl. VAT",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Currency",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Agreed Rate",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Del Terms",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Project No.",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Order No.",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Approval Status",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Branch",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Comments",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress1",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress2",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress3",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress4",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress5",ColNr)) then begin goto LExit2; end;
-  if (!TestField("DelAddress6",ColNr)) then begin goto LExit2; end;
-  if (!TestField("Location",ColNr)) then begin goto LExit2; end;
+  if (!TestField("No",ColNr)) then begin goto LExit; end;
+  if (!TestField("Supplier no",ColNr)) then begin goto LExit; end;
+  if (!TestField("Supplier Name",ColNr)) then begin goto LExit; end;
+  if (!TestField("Signers",ColNr)) then begin goto LExit; end;
+  if (!TestField("Trans date",ColNr)) then begin goto LExit; end;
+  if (!TestField("Suppl. Payment Terms",ColNr)) then begin goto LExit; end;
+  if (!TestField("Qur Ref",ColNr)) then begin goto LExit; end;
+  if (!TestField("Plan delivery Date",ColNr)) then begin goto LExit; end;
+  if (!TestField("P/Order Classes",ColNr)) then begin goto LExit; end;
+  if (!TestField("Order Type",ColNr)) then begin goto LExit; end;
+  if (!TestField("Purchase Ref",ColNr)) then begin goto LExit; end;
+  if (!TestField("Attn.",ColNr)) then begin goto LExit; end;
+  if (!TestField("Objects",ColNr)) then begin goto LExit; end;
+  if (!TestField("Price Incl. VAT",ColNr)) then begin goto LExit; end;
+  if (!TestField("Currency",ColNr)) then begin goto LExit; end;
+  if (!TestField("Agreed Rate",ColNr)) then begin goto LExit; end;
+  if (!TestField("Del Terms",ColNr)) then begin goto LExit; end;
+  if (!TestField("Project No.",ColNr)) then begin goto LExit; end;
+  if (!TestField("Order No.",ColNr)) then begin goto LExit; end;
+  if (!TestField("Approval Status",ColNr)) then begin goto LExit; end;
+  if (!TestField("Branch",ColNr)) then begin goto LExit; end;
+  if (!TestField("Comments",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress1",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress2",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress3",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress4",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress5",ColNr)) then begin goto LExit; end;
+  if (!TestField("DelAddress6",ColNr)) then begin goto LExit; end;
+  if (!TestField("Location",ColNr)) then begin goto LExit; end;
+
 
   res = true;
 
-  LELExit2xit:;
+//LExit:;
   NextImportLine(true);
   ValidatePurchOrdHeader = res;
   return;
@@ -250,26 +250,27 @@ begin
   Boolean res;
   Integer ColNr;
   //JRX - Done  100715 14:08
-  if (!TestField("Purchase Order No.",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Item Code",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Qty",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Unit",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Desc",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Supplier Unit Price",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Discount Percentage",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Sum",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Vat Code",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Purchase Account",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Objects",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Planned Del Item",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Comments (100 Character)",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Fr. Cost",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Recv.1",ColNr)) then begin goto LExit3; end;
-  if (!TestField("Invoiced",ColNr)) then begin goto LExit3; end;
+  if (!TestField("Purchase Order No.",ColNr)) then begin goto LExit; end;
+  if (!TestField("Item Code",ColNr)) then begin goto LExit; end;
+  if (!TestField("Qty",ColNr)) then begin goto LExit; end;
+  if (!TestField("Unit",ColNr)) then begin goto LExit; end;
+  if (!TestField("Desc",ColNr)) then begin goto LExit; end;
+  if (!TestField("Supplier Unit Price",ColNr)) then begin goto LExit; end;
+  if (!TestField("Discount Percentage",ColNr)) then begin goto LExit; end;
+  if (!TestField("Sum",ColNr)) then begin goto LExit; end;
+  if (!TestField("Vat Code",ColNr)) then begin goto LExit; end;
+  if (!TestField("Purchase Account",ColNr)) then begin goto LExit; end;
+  if (!TestField("Objects",ColNr)) then begin goto LExit; end;
+  if (!TestField("Planned Del Item",ColNr)) then begin goto LExit; end;
+  if (!TestField("Comments (100 Character)",ColNr)) then begin goto LExit; end;
+  if (!TestField("Fr. Cost",ColNr)) then begin goto LExit; end;
+  if (!TestField("Recv.1",ColNr)) then begin goto LExit; end;
+  if (!TestField("Invoiced",ColNr)) then begin goto LExit; end;
+
 
   res = true;
 
-  LExit3:;
+//LExit:;
   NextImportLine(true);
   ValidatePurchOrdRows = res;
   return;
@@ -282,19 +283,19 @@ begin
   Integer ColNr;
 
 
-  if (!TestField("CUSTCODE",ColNr)) then begin goto LExit4; end;
-  if (!TestField("CUSTNAME",ColNr)) then begin goto LExit4; end;
-  if (!TestField("STARTDATE",ColNr)) then begin goto LExit4; end;
-  if (!TestField("EXPIRYDATE",ColNr)) then begin goto LExit4; end;
-  if (!TestField("LCMLEVEL",ColNr)) then begin goto LExit4; end;
-  if (!TestField("ACCUMPOINTS",ColNr)) then begin goto LExit4; end;
-  if (!TestField("POINTSTO",ColNr)) then begin goto LExit4; end;
-  if (!TestField("CLOSED",ColNr)) then begin goto LExit4; end;
-  if (!TestField("SERNR",ColNr)) then begin goto LExit4; end;
+  if (!TestField("CUSTCODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("CUSTNAME",ColNr)) then begin goto LExit; end;
+  if (!TestField("STARTDATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("EXPIRYDATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("LCMLEVEL",ColNr)) then begin goto LExit; end;
+  if (!TestField("ACCUMPOINTS",ColNr)) then begin goto LExit; end;
+  if (!TestField("POINTSTO",ColNr)) then begin goto LExit; end;
+  if (!TestField("CLOSED",ColNr)) then begin goto LExit; end;
+  if (!TestField("SERNR",ColNr)) then begin goto LExit; end;
 
   res = true;
 
-  LExit4:;
+//LExit:;
   NextImportLine(true);
   ValidateLoyaltyColumns = res;
   return;

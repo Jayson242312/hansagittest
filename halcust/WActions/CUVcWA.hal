@@ -1,0 +1,15 @@
+remote updating procedure UpdateNAContractCustName(string,string,var integer);
+
+global updating
+procedure UpdateNAContractCustNameCUDsm()
+begin
+  Record CUVc CUr;
+  integer wn,cnt;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,CUr);
+  UpdateNAContractCustName(CUr.Code,CUr.Name,cnt);
+  MessageBox(0,USetStr(1001348) & " " & cnt & " " & USetStr(1001349));
+  
+  return;
+end;

@@ -1,0 +1,416 @@
+/*
+skaitatju radijumu saraksts
+*/
+external inner procedure HT2Per(Date, Date , var string);
+
+procedure PrintFlatHeader(record FlatCountersVc FlatCountersr,boolean exlf)
+begin
+
+  OutStringID(0,"DblFlatCountersVc",FlatCountersr.CounterNo,false,FlatCountersr.SerNr);
+  OutString(3,0,FlatCountersr.FlatCode,false);
+  if NonBlank(FlatCountersr.FlatNo) then begin
+    OutString(4,0,FlatCountersr.Address & " - " & FlatCountersr.FlatNo,false);
+  end else begin
+    OutString(4,0,FlatCountersr.Address,false);
+  end;
+  OutDate  (380,0,FlatCountersr.ValidUntil,true);
+  OutString(430,0,FlatCountersr.CounterType,true);
+  OutString(1,0,FlatCountersr.Location,true);
+  if !exlf then begin
+    EndFormat;
+    Black_Divider(0,1);
+  end;
+
+  return;
+end;
+
+procedure AddToCacher(record CountResVc CountResr,var record SMVc Cacher,var record SMVc totCacher) begin
+  row SMVc Cacherw;
+  integer i,rwc;
+  boolean foundf;
+  string 255 tstr;
+
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    if Cacherw.Comment == CountResr.CountResType then begin
+      Cacherw.BaseRate1 = Cacherw.BaseRate1 + CountResr.Amount;
+      Cacherw.BaseRate2 = Cacherw.BaseRate2 + CountResr.InvAmount;
+      MatRowPut(Cacher,i,Cacherw);
+      foundf = true;
+      i = rwc;
+    end;
+  end;
+
+  if !foundf then begin
+    tstr = CountResr.CountResType;
+    if blank(tstr) then begin
+      tstr = USetStr(1001303); //Bez tipa
+    end;
+    Cacherw.BaseRate1 = CountResr.Amount;
+    Cacherw.BaseRate2 = CountResr.InvAmount;
+    Cacherw.Comment = CountResr.CountResType;
+    Cacherw.ExtraComment = tstr;
+    MatRowPut(Cacher,rwc,Cacherw);
+  end;
+
+  foundf = false;
+  rwc = MatRowCnt(totCacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(totCacher,i,Cacherw);
+    if Cacherw.Comment == CountResr.CountResType then begin
+      Cacherw.BaseRate1 = Cacherw.BaseRate1 + CountResr.Amount;
+      Cacherw.BaseRate2 = Cacherw.BaseRate2 + CountResr.InvAmount;
+      MatRowPut(totCacher,i,Cacherw);
+      foundf = true;
+      i = rwc;
+    end;
+  end;
+
+  if !foundf then begin
+    tstr = CountResr.CountResType;
+    if blank(tstr) then begin
+      tstr = USetStr(1001303); //Bez tipa
+    end;
+    Cacherw.BaseRate1 = CountResr.Amount;
+    Cacherw.BaseRate2 = CountResr.InvAmount;
+    Cacherw.Comment = CountResr.CountResType;
+    Cacherw.ExtraComment = tstr;
+    MatRowPut(totCacher,rwc,Cacherw);
+  end;
+
+  return;
+end;
+
+procedure PrintFlatCounterRes(record RcVc RepSpec,var record SMVc totCacher,record FlatCountersVc FlatCountersr,boolean exlf)
+begin
+  record CountResVc CountResr;
+  record SMVc Cacher;
+  row SMVc Cacherw;
+  boolean testf,TrHs,outf;
+  val total,totcount,totendval,totrecalc,totrecalc2,totinv,alltotcount;
+  integer i,rwc;
+
+  if RepSpec.flags[0]<>0 then begin
+    PrintFlatHeader(FlatCountersr,exlf);
+    testf = false;
+    if exlf then begin
+      outf=true;
+    end else begin
+      EndFormat;
+    end;
+  end else begin
+    testf = true;
+  end;
+  Trhs = true;
+  ResetLoop(CountResr);
+  CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  CountResr.StartDate = RepSpec.sStartDate;
+  totcount = 0;totrecalc = 0;totinv = 0;
+  while LoopKey("FlatCounterSerNr",CountResr,2,TrHs) begin
+    if (Countresr.FlatCounterSerNr != FlatCountersr.SerNr) or (CountResr.StartDate > RepSpec.sEndDate) then begin
+      TrHs = false;
+    end else begin
+      if exlf then begin
+        if outf then begin
+          if testf then begin
+            testf=false;
+          end;
+          outf=false;
+        end else begin
+          if testf then begin
+            PrintFlatHeader(FlatCountersr,exlf);
+            testf = false;
+          end;
+        end;
+      end else begin
+        if testf then begin
+          PrintFlatHeader(FlatCountersr,exlf);
+          testf = false;
+        end;
+      end;
+      OutString(2,"DblCountResVc",CountResr.SerNr,false);
+      OutDate(3,0,CountResr.StartDate,false);
+      OutDate(4,0,CountResr.EndDate,false);
+      OutString(9,0,CountResr.CountResType,false);// Meter type
+      //Jh Field for estimated or manual reading
+        switch (CountResr.Itype) begin
+          case 1: OutString(170,0,"EE",false);
+          case 0: OutString(170,0,"MM",false);           
+        end;
+      OutVal(5,0,CountResr.StartVal,M45Val,true);
+      OutVal(6,0,CountResr.EndVal,M45Val,true);
+      OutVal(7,0,CountResr.Amount,M45Val,true);
+      OutVal(8,0,CountResr.CorAmount,M45Val,true);
+      OutVal(1,0,CountResr.InvAmount,M45Val,true);
+      OutDate(180,0,CountResr.RegDate,true);
+      EndFormat;
+      AddToCacher(CountResr,Cacher,totCacher);
+      totcount = totcount + CountResr.Amount;
+      totendval = totendval + CountResr.EndVal;
+      totinv = totinv+CountResr.InvAmount;
+      if NonBlank(FlatCountersr.FlatCode) then begin
+        alltotcount = alltotcount + CountResr.Amount;
+      end;
+    end;
+  end;
+  if !testf then begin
+    if outf and exlf then begin
+      EndFormat;
+    end;
+    Black_Divider(0,1);
+    rwc = MatRowCnt(Cacher);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Cacher,i,Cacherw);
+      StartFormat(15);
+      if exlf then begin
+        OutString(0,0,"",false)
+        OutString(0,0,"",false);
+        OutString(0,0,"",false);
+        OutString(0,0,"",true);
+        OutString(0,0,"",true);
+        OutString(0,0,"",true);
+        OutString(0,0,"",false);
+        OutString(0,0,"",false);
+        OutString(0,0,"",false);
+        OutString(0,0,USetStr(1000546) & " (" & Cacherw.ExtraComment & ")",false);
+        OutString(0,0,"",true); //Sāk. rād.
+        OutString(0,0,"",true); //Beig.rād.
+        OutVal(0,0,Cacherw.BaseRate1,M45Val,true); //Sask.
+        OutString(0,0,"",true); //Korekcija
+        OutVal(0,0,Cacherw.BaseRate2,M45Val,true); //Koriģ. daudzums
+      end else begin
+        OutString(0,0,USetStr(5425) & " (" & Cacherw.ExtraComment & ")",false);
+        OutVal(7,0,Cacherw.BaseRate1,M45Val,true);
+        OutVal(1,0,Cacherw.BaseRate2,M45Val,true);
+      end;
+      EndFormat;
+    end;
+    if !exlf then begin
+      EndFormat;
+    end;
+    RecordNew(Cacher);
+  end;
+
+  return;
+end;
+
+
+
+global
+procedure MSCountListRn(var record RcVc RepSpec)
+begin
+  record FlatCountersVc FlatCountersr;
+  record FlatsVc Flatsr;
+  record SMVc totCacher;
+  row SMVc Cacherw;
+  boolean TrHs2,TrHs,foundCounterf,testf,exlf;
+  string 20 frb,tob,prevc;
+  string 20 frc,toc;
+  string 255 tstr;
+  integer i,rwc;
+
+  frb = FirstInRange(RepSpec.f3,20);
+  tob = LastInRange(RepSpec.f3,20);
+  frc = FirstInRange(RepSpec.f2,20);
+  toc = LastInRange(RepSpec.f2,20);
+
+  StartReportJob(USetStr(1000009));
+  if GetYear(RepSpec.sEndDate)==2040 and GetYear(RepSpec.sStartDate)==1990 then begin
+    Header(1,StringFromSet(57,1),1);
+  end else begin
+    HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+    Header(1,tstr,1);
+  end;
+  if nonblank(RepSpec.f3) then begin
+    Header(2,USetStr(1000406) & RepSpec.f3,1);
+  end else begin
+    Header(2,USetStr(1000670),1);
+  end;
+  EndHeader;
+
+
+  if (RepSpec.Media==mtFile) or (RepSpec.Media==mtExcel) or (RepSpec.Media==mtClipboard) then begin
+    exlf=true;
+  end;
+
+  if !exlf then begin
+    SetRepCol(2,10);
+    SetRepCol(3,60);
+    SetRepCol(4,110); // date until
+    SetRepCol(5,240);
+    SetRepCol(6,300);
+    SetRepCol(7,360);
+    SetRepCol(8,420);
+    SetRepCol(9,1000);
+    // SetRepCol(10,170); // Jh Added field for Type of Reading
+
+    StartFormat(15);
+    OutString(0,0,USetStr(1000622),false); //Meter
+    OutString(3,0,USetStr(1001052),false);
+    OutString(4,0,USetStr(1000400),false);
+    OutString(365,0,USetStr(1000531),true);
+    OutString(430,0,USetStr(1000634),true);
+    OutString(1,0,USetStr(1000635),true);
+    EndFormat;
+    OutString(2,0,USetStr(1000636),false);
+    OutString(3,0,USetStr(1000480),false);
+    OutString(4,0,USetStr(1000481),false);
+
+    OutString(9,0,USetStr(12022),true);
+    OutString(165,0,"Date of Reading",false); //Jh Reading Type
+    OutString(5,0,USetStr(1001300),true); //Sāk. rād.
+    OutString(6,0,USetStr(1001301),true); //Beig.rād.
+    OutString(7,0,USetStr(1000623),true); //Sask.
+    OutString(8,0,USetStr(1000668),true); //Korekcija
+    OutString(1,0,USetStr(1001302),true); //Koriģ. daudzums
+    EndFormat;
+    Black_Divider(0,1);
+    Black_Divider(0,1);
+  end else begin
+    StartFormat(15);
+    OutString(0,0,USetStr(1000622),false)
+    OutString(0,0,USetStr(1001052),false);
+    OutString(0,0,USetStr(1000400),false);
+    OutString(0,0,USetStr(1000531),true);
+    OutString(0,0,USetStr(1000634),true);
+    OutString(0,0,USetStr(1000635),true);
+    OutString(0,0,USetStr(1000636),false);
+    OutString(0,0,USetStr(1000480),false);
+    OutString(0,0,USetStr(1000481),false);
+    OutString(0,0,USetStr(12022),true);
+    OutString(0,0,USetStr(1001300),true); //Sāk. rād.
+    OutString(0,0,USetStr(1001301),true); //Beig.rād.
+    OutString(0,0,USetStr(1000623),true); //Sask.
+    OutString(0,0,USetStr(1000668),true); //Korekcija
+    OutString(0,0,USetStr(1001302),true); //Koriģ. daudzums
+    EndFormat;
+  end;
+
+  if nonblank(RepSpec.f3) then begin
+    //Erf
+    ResetLoop(FlatCountersr);
+    foundCounterf=false;
+    TrHs2=true;
+    FlatCountersr.Code=RepSpec.f3;
+    FlatCountersr.FlatCode="";
+    While LoopKey("MainCounterCode",FlatCountersr,2,TrHs2) begin
+      if (FlatCountersr.Code!=RepSpec.f3) or (FlatCountersr.FlatCode!="") then begin
+        TrHs2=false;
+      end else begin
+        testf = true;
+        if RepSpec.flags[1]!=FlatCountersr.Closedf then begin
+          testf = false;
+        end;
+        if (nonblank(RepSpec.f4) and RepSpec.f4 <> FlatCountersr.CounterType) then begin
+          testf = false;
+        end;
+        if nonblank(RepSpec.f5) and RepSpec.f5!=FlatCountersr.FlatCode then begin
+          testf=false;
+        end;
+        // long1 is not -1 only when this report is called from FlatCountersDClass special menu
+        if Repspec.long1!=-1 and FlatCountersr.SerNr!=RepSpec.long1 then begin
+          testf = false;
+        end;
+        if testf then begin
+          PrintFlatCounterRes(RepSpec,totCacher,FlatCountersr,exlf);
+        end;
+      end;
+    end;
+    //Flats
+    ResetLoop(Flatsr);
+    TrHs=true;
+    While LoopKey("BuildCodeIntFlatNo:" & RepSpec.f3,Flatsr,1,TrHs) begin
+      ResetLoop(FlatCountersr);
+      foundCounterf=false;
+      TrHs2=true;
+      FlatCountersr.Code=Flatsr.Code;
+      FlatCountersr.FlatCode=Flatsr.FlatCode;
+      While LoopKey("BuildCodeType",FlatCountersr,2,TrHs2) begin
+        if (FlatCountersr.Code!=Flatsr.Code) or (FlatCountersr.FlatCode!=Flatsr.FlatCode) then begin
+          TrHs2=false;
+        end else begin
+          testf = true;
+          if RepSpec.flags[1]!=FlatCountersr.Closedf then begin
+            testf = false;
+          end;
+          if (nonblank(RepSpec.f4) and RepSpec.f4 <> FlatCountersr.CounterType) then begin
+            testf = false;
+          end;
+          if nonblank(RepSpec.f5) and RepSpec.f5!=FlatCountersr.FlatCode then begin
+            testf=false;
+          end;
+          // long1 is not -1 only when this report is called from FlatCountersDClass special menu
+          if Repspec.long1!=-1 and FlatCountersr.SerNr!=RepSpec.long1 then begin
+            testf = false;
+          end;
+          if testf then begin
+            PrintFlatCounterRes(RepSpec,totCacher,FlatCountersr,exlf);
+          end;
+        end;
+      end;
+    end;
+  end else begin
+    Trhs2 = true;
+    FlatCountersr.CounterNo = frc;
+    While LoopKey("WinCounterNo",FlatCountersr,1,Trhs2) begin
+      if (toc <> "" and FlatCountersr.CounterNo > toc) then begin
+        TrHs2 = false;
+      end;
+      if TrHs2 then begin
+        testf = true;
+        if RepSpec.flags[1]!=FlatCountersr.Closedf then begin
+          testf = false;
+        end;
+        if (nonblank(RepSpec.f4) and RepSpec.f4 <> FlatCountersr.CounterType) then begin
+          testf = false;
+        end;
+        if (nonblank(RepSpec.f3) and RepSpec.f3 <> FlatCountersr.Code) then begin
+          testf = false;
+        end;
+        if nonblank(RepSpec.f5) and RepSpec.f5!=FlatCountersr.FlatCode then begin
+          testf=false;
+        end;
+        // long1 is not -1 only when this report is called from FlatCountersDClass special menu
+        if Repspec.long1!=-1 and FlatCountersr.SerNr!=RepSpec.long1 then begin
+          testf = false;
+        end;
+        if testf then begin
+          PrintFlatCounterRes(RepSpec,totCacher,FlatCountersr,exlf);
+        end;
+      end;
+    end;
+  end;
+
+  Black_Divider(0,1);
+  rwc = MatRowCnt(totCacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(totCacher,i,Cacherw);
+    StartFormat(15);
+    if exlf then begin
+      OutString(0,0,"",false)
+      OutString(0,0,"",false);
+      OutString(0,0,"",false);
+      OutString(0,0,"",true);
+      OutString(0,0,"",true);
+      OutString(0,0,"",true);
+      OutString(0,0,"",false);
+      OutString(0,0,"",false);
+      OutString(0,0,"",false);
+      OutString(0,0,USetStr(1000546) & " (" & Cacherw.ExtraComment & ")",false);
+      OutString(0,0,"",true); //Sāk. rād.
+      OutString(0,0,"",true); //Beig.rād.
+      OutVal(0,0,Cacherw.BaseRate1,M45Val,true); //Sask.
+      OutString(0,0,"",true); //Korekcija
+      OutVal(0,0,Cacherw.BaseRate2,M45Val,true); //Koriģ. daudzums
+    end else begin
+      OutString(0,0,USetStr(1000546) & " (" & Cacherw.ExtraComment & ")",false);
+      OutVal(7,0,Cacherw.BaseRate1,M45Val,true);
+      OutVal(1,0,Cacherw.BaseRate2,M45Val,true);
+    end;
+    EndFormat;
+  end;
+
+  EndJob;
+return;
+end;

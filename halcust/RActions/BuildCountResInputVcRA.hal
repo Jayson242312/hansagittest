@@ -1,0 +1,167 @@
+external procedure GetCountResPeriod(var date,var date);
+
+global
+updating function longint BuildCountResInputVcRecordCheck(var record BuildCountResInputVc BuildCountResInputr,record BuildCountResInputVc BuildCountResInput2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  Record FlatsVc Flatsr;
+  record DBLockBlock DBLockBl;
+  integer i,rwc,i2;
+  Row BuildCountResInputVc BuildCountResInputrw,BuildCountResInput2rw;
+  Record FlatCountersVc FlatCountersr;
+  record NApsSetBlock NApsSetbl;
+  longint pos;
+  string 20 ctype;
+  string 100 overctypes;
+  date td;
+  
+  res=0;
+  BlockLoad(NApsSetbl);
+  if BuildCountResInputr.SerNr<0 then begin
+    if CountRecords("CountResInputVc")==0 then begin
+      BuildCountResInputr.SerNr=10001;
+    end else begin
+      BuildCountResInputr.SerNr=NextSernr("BuildCountResInputVc",CurrentDate,-1,false,"");
+    end;
+  end;
+  
+  if blankdate(BuildCountResInputr.StartDate) then begin
+    res=-1;
+    RecordCheckError(1058,"",-1,"StartDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  if GetDay(BuildCountResInputr.StartDate)!=1 then begin
+    res=-1;
+    RecordCheckError(1001261,"",-1,"StartDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  if blankdate(BuildCountResInputr.EndDate) then begin
+    res=-1;
+    RecordCheckError(1058,"",-1,"EndDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  if GetDay(BuildCountResInputr.EndDate)!=DaysInMonth(GetYear(BuildCountResInputr.EndDate),GetMonth(BuildCountResInputr.EndDate)) then begin
+    res=-1;
+    RecordCheckError(1001262,"",-1,"EndDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  BlockLoad(DBLockBl);
+  if BuildCountResInputr.EndDate<DBLockBl.OtherLock then begin
+    res=-1;
+    RecordCheckError(1046,"",-1,"EndDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  if BuildCountResInputr.StartDate>BuildCountResInputr.EndDate then begin
+    res=-1;
+    RecordCheckError(1000810,"",-1,"StartDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  td=AddMonth(CurrentDate,4);
+  td.day=1;
+  if BuildCountResInputr.StartDate>td or BuildCountResInputr.EndDate>td then begin
+    res=-1;
+    RecordCheckError(1001542,"",i,"StartDate");
+    GoTo EndBuildCountResInputVcRecordCheck;
+  end;
+  
+  rwc = MatRowCnt(BuildCountResInputr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildCountResInputr,i,BuildCountResInputrw);
+    FlatCountersr.CounterNo = BuildCountResInputrw.CounterNo;
+    if !ReadFirstKey("CounterNo",FlatCountersr,1,true) then begin
+      res = -1;
+      RecordCheckError(1120,"BuildCountResInputrw.CounterNo",i,"CounterNo");
+      GoTo EndBuildCountResInputVcRecordCheck;
+    end;
+    if BuildCountResInputrw.SumAmount<0 then begin
+      res=-1;
+      RecordCheckError(1001288,"",i,"SumAmount");
+      GoTo EndBuildCountResInputVcRecordCheck;
+    end;
+    for(i2=i+1;i2<rwc;i2=i2+1)begin
+      MatRowGet(BuildCountResInputr,i2,BuildCountResInput2rw);
+      if BuildCountResInput2rw.CounterNo == BuildCountResInputrw.CounterNo then begin
+        res=-1;
+        RecordCheckError(1000067,(i2+1),i,"CounterNo");
+        GoTo EndBuildCountResInputVcRecordCheck;
+      end;
+    end;
+  end;
+  
+EndBuildCountResInputVcRecordCheck:;
+  BuildCountResInputVcRecordCheck=res;
+  return;
+end;
+
+function integer BuildCountResMadeFromInput(Record BuildCountResInputVc BuildCountResInputr) begin
+  Row BuildCountResInputVc BuildCountResInputrw;
+  integer i,rwc,res;
+  
+  res = 1;
+  rwc = MatRowCnt(BuildCountResInputr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildCountResInputr,i,BuildCountResInputrw);
+    if BuildCountResInputrw.Type!=1 then begin
+      res = 0;
+      i = rwc;
+    end;
+  end;
+  
+  BuildCountResMadeFromInput = res;
+return;
+end;
+
+global
+updating function LongInt BuildCountResInputVcRecordSave(Var Record BuildCountResInputVc BuildCountResInputr, Record BuildCountResInputVc BuildCountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+
+  res = 0;
+  BuildCountResInputr.CountResMade = BuildCountResMadeFromInput(BuildCountResInputr);
+  
+  BuildCountResInputVcRecordSave = res;
+  return;
+end;
+
+global
+updating function LongInt BuildCountResInputVcRecordUpdate(Var Record BuildCountResInputVc BuildCountResInputr, Record BuildCountResInputVc BuildCountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 0;
+  BuildCountResInputr.CountResMade = BuildCountResMadeFromInput(BuildCountResInputr);
+  
+  BuildCountResInputVcRecordUpdate = res;
+  return;
+end;
+
+global
+updating function LongInt BuildCountResInputVcRecordImport(Var Record BuildCountResInputVc BuildCountResInputr, Record BuildCountResInputVc BuildCountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  BuildCountResInputr.CountResMade = BuildCountResMadeFromInput(BuildCountResInputr);
+  
+  BuildCountResInputVcRecordImport = res;
+  return;
+end;
+
+global
+updating function LongInt BuildCountResInputVcRecordDefaults(Var Record BuildCountResInputVc BuildCountResInputr, Record BuildCountResInputVc BuildCountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  date sd,ed;
+  
+  GetCountResPeriod(sd,ed);
+  BuildCountResInputr.StartDate = sd;
+  BuildCountResInputr.EndDate = ed;
+  
+  BuildCountResInputVcRecordDefaults = res;
+  return;
+end;

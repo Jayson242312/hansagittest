@@ -1,0 +1,293 @@
+external procedure PasteFlatCounterInCountRes(Record FlatCountersVc,var Record CountResVc);
+external function boolean prevCounterRes(record CountResVc ,var record CountResVc);
+external procedure SumUpCountResVc(var Record CountResVc,val,val);
+external inner function Boolean CheckIfIVOpen(Date,record IVVc,string,var val,Boolean,Boolean);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+
+global 
+function val GetCustIPrsSumTillDate2(string custcode,date ondate,longint exlcinv,var val latesum,longint Contract,var val exclsum,string exclitems,var val lateexclsum)
+begin
+  val res,rval,ARSum;
+  Record IPrsVc IPrsr;
+  Record IVVc IVr;
+  boolean wloop,testf;
+  date td;
+  val fr,to1,to2,br1,br2;
+  Array String 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+  integer arraysize,i;
+  vector boolean vecInvIgnoreList;
+
+  exclsum = 0;
+  latesum = 0;
+  lateexclsum = 0;
+  res=0;
+  wloop=true;
+  td.year=1980; td.month=1; td.day=1;
+  IPrsr.TransDate=td;
+  IPrsr.CustCode=custcode;
+  While LoopKey("CustTransKey",IPrsr,2,wloop) begin
+    if IPrsr.CustCode!=custcode or IPrsr.TransDate>ondate then begin
+      wloop=false;
+    end else begin
+      Switch (IPrsr.TransType) Begin
+        Case 0: //IVVc
+          Begin
+            if IPrsr.TransDate<=ondate and IPrsr.IVNr!=exlcinv then begin
+              IVr.SerNr = IPrsr.TransNr;
+              testf = true;
+              if (ReadFirstMain(IVr,1,true)==false) then begin testf = false;; end;
+              if (IVr.Invalid!=0) then begin testf = false; end;
+              if (IVr.InvType==2) then begin testf = false; end;
+              if (IVr.InvType==6) then begin testf = false; end;
+              if (IVr.InvType==3) then begin
+                if (IVr.CredInv!=-1) then begin testf = false; end;
+              end;
+              // if /* (Contract!=-1) and  */ (IVr.Contract!=Contract) then begin testf = false; end;
+              if (Contract!=-1) and (IVr.Contract!=Contract) then begin testf = false; end; //uz visu klientu
+              if (testf) then begin
+                //testf = CheckIfIVOpen(addday(ondate,-1),IVr,"",rval,true,false);
+                testf = CheckIfIVOpen(ondate,IVr,"",rval,true,false);
+              end;
+              if (testf) then begin
+                GetFullCurncyRate(IVr.CurncyCode,IVr.InvDate,fr,to1,to2,br1,br2);
+                rval = MulRateToBase1(IVr.CurncyCode,rval,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+                res = res + rval;
+                if IVr.PayDate<ondate then begin
+                  latesum = latesum + rval;
+                end;
+                if nonblank(exclitems) then begin
+                  ClearArray(ArtCodeMas);
+                  ClearArray(UnPayedSumMas);
+                  ClearArray(arrContractNrs);
+                  ArtCodeMas[0]=0;
+                  GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+                  arraysize=StringToInt(ArtCodeMas[0]);
+                  for(i=1;i<=arraysize;i=i+1)begin
+                    if SetInSet(ArtCodeMas[i],exclitems) then begin
+                      exclsum = exclsum + UnPayedSumMas[i];
+                      if IVr.PayDate<ondate begin
+                        lateexclsum = lateexclsum + UnPayedSumMas[i];
+                      end;
+                    end;
+                  end;  
+                end;
+              end;
+            end;
+          end;
+        Case 1: //IPVc
+        Case 2: //CLInVc
+      end;
+    end;
+  end;
+
+  GetCustIPrsSumTillDate2=res;
+  return;
+end;
+
+global 
+function val GetCustIPrsSumTillDate(string custcode,date ondate,longint exlcinv,var val latesum,longint Contract)
+begin
+  val res,exclsum,lateexclsum;
+  
+  res = GetCustIPrsSumTillDate2(custcode,ondate,exlcinv,latesum,contract,exclsum,"",lateexclsum);
+
+  GetCustIPrsSumTillDate=res;
+  return;
+end;
+
+global 
+function integer GetSleepTime(integer type) begin
+  integer res,i,rwc;
+  Record NonStopSleepBlock NSSr;
+  Row NonStopSleepBlock NSSrw;
+
+  res=0;
+  BlockLoad(NSSr);
+  rwc=MatRowCnt(NSSr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(NSSr,i,NSSrw);
+    if NSSrw.MaintType==type then begin
+      res=NSSrw.SleepTime;
+      i=rwc;
+    end;
+  end;
+
+  GetSleepTime=res;
+end;
+
+global updating 
+function boolean GenCountResRec3(longint flatcounterser,val EndVal,date sd,date ed,boolean SaveRecord,var longint sernr,string crestype) begin
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr,PrevCountResr;
+  boolean res;
+
+  sernr = -1;
+  RecordNew(CountResr);
+  Countresr.StartDate = sd;
+  Countresr.EndDate = ed;
+  FlatCountersr.SerNr = flatcounterser;
+  if (ReadFirstMain(FlatCountersr,1,true)) then begin
+    PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+    Countresr.EndDate = ed;
+    CountResr.CountResType = crestype;
+    
+    if (prevCounterRes(CountResr,PrevCountResr)) then begin
+      CountResr.StartVal = PrevCountResr.EndVal;
+      CountResr.EndVal = CountResr.StartVal;
+    end else begin
+      if blank(crestype) or crestype=="MWH" then begin
+        CountResr.StartVal = FlatCountersr.InitAmount;
+      end else begin
+        CountResr.StartVal = FlatCountersr.InitAmount2;
+      end;
+      // CountResr.StartVal = FlatCountersr.InitAmount;
+      CountResr.EndVal = CountResr.StartVal;
+    end;
+    
+    if EndVal>0 then begin
+      CountResr.EndVal = EndVal;  //Diff from GenCountResRec2
+    end;
+    SumUpCountResVc(CountResr,0,0);
+    
+    if SaveRecord then begin
+      CountResr.SerNr = NextSerNr("CountResVc",CountResr.EndDate,-1,false,"");
+      if CountResr.SerNr!=-1 then begin
+        if (RecordStore(CountResr,true)) then begin
+          res = true;
+          sernr = CountResr.SerNr;
+        end else begin
+          LogText(0,"ERROR while saving CountResVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+        end;
+      end else begin
+        LogText(0,"ERROR while assigning serial number to CountResVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+      end;
+    end else begin
+      if OpenWindow("CountResDClass",1,0,"","",CountResr)==0 then begin
+        res = true;
+      end;
+    end;    
+  end else begin
+    LogText(0,"ERROR cannot find FlatCountersVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+  end;
+  
+  GenCountResRec3 = res;
+return;
+end;
+
+updating 
+function boolean GenCountResRec2(longint flatcounterser,val qty,date sd,date ed,boolean SaveRecord,var longint sernr,string crestype) begin
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr,PrevCountResr;
+  boolean res;
+
+  sernr = -1;
+  RecordNew(CountResr);
+  Countresr.StartDate = sd;
+  Countresr.EndDate = ed;
+  FlatCountersr.SerNr = flatcounterser;
+  if (ReadFirstMain(FlatCountersr,1,true)) then begin
+    PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+    Countresr.EndDate = ed;
+    CountResr.CountResType = crestype;
+    
+    if (prevCounterRes(CountResr,PrevCountResr)) then begin
+      CountResr.StartVal = PrevCountResr.EndVal;
+      CountResr.EndVal = CountResr.StartVal;
+    end else begin
+      if blank(crestype) or crestype=="MWH" then begin
+        CountResr.StartVal = FlatCountersr.InitAmount;
+      end else begin
+        CountResr.StartVal = FlatCountersr.InitAmount2;
+      end;
+      // CountResr.StartVal = FlatCountersr.InitAmount;
+      CountResr.EndVal = CountResr.StartVal;
+    end;
+    
+    if qty>0 then begin
+      CountResr.EndVal = CountResr.EndVal + qty;
+    end;
+    SumUpCountResVc(CountResr,0,0);
+    
+    if SaveRecord then begin
+      CountResr.SerNr = NextSerNr("CountResVc",CountResr.EndDate,-1,false,"");
+      if CountResr.SerNr!=-1 then begin
+        if (RecordStore(CountResr,true)) then begin
+          res = true;
+          sernr = CountResr.SerNr;
+        end else begin
+          LogText(0,"ERROR while saving CountResVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+        end;
+      end else begin
+        LogText(0,"ERROR while assigning serial number to CountResVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+      end;
+    end else begin
+      if OpenWindow("CountResDClass",1,0,"","",CountResr)==0 then begin
+        res = true;
+      end;
+    end;    
+  end else begin
+    LogText(0,"ERROR cannot find FlatCountersVc Record for flat " & FlatCountersr.FlatCode & " and counter number " & FlatCountersr.CounterNo);
+  end;
+  
+  GenCountResRec2 = res;
+return;
+end;
+
+global updating 
+function boolean GenCountResRec(longint flatcounterser,val qty,date sd,date ed,boolean SaveRecord,string crestype) begin
+  longint sernr;
+  boolean res;
+  
+  res = GenCountResRec2(flatcounterser,qty,sd,ed,SaveRecord,sernr,crestype);
+
+  GenCountResRec = res;
+return;
+end;
+
+global 
+procedure GetObjectsFromString(string objstring,var array string objects,var integer n)
+begin
+  record ObjVc Objr;
+  integer i,ii;
+
+  n = 0;
+  for (i=0; i<=len(objstring);i=i+1)begin
+    if (mid(objstring,i,1)==",")then begin
+      objects[n]=mid(objstring,ii,i-ii);
+      n=n+1;
+      i=i+1;
+      ii=i;
+    end;
+    if (i==len(objstring))then begin
+      objects[n]=mid(objstring,ii,i-ii);
+      n=n+1;
+    end;
+  end;
+return;
+end;
+
+global
+function string 100 GetIVBuildCode(record IVVc IVr)
+begin
+  record NAContractVc COr;
+  record FlatsVc Flatsr;
+  string 100 BuildCode;
+
+  BuildCode = IVr.BuildCode;
+  if blank(BuildCode) then begin
+    COr.SerNr = IVr.Contract;
+    if ReadFirstMain(COr,1,true) then begin
+      Flatsr.FlatCode = COr.FlatCode;
+      if ReadFirstMain(Flatsr,1,true) then begin
+        BuildCode = Flatsr.Code;
+      end;
+    end;
+  end;
+  
+  GetIVBuildCode = BuildCode;
+  return;
+end;

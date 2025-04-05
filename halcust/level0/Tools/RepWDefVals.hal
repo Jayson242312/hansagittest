@@ -1,0 +1,17 @@
+global
+procedure CuPerRClassReportDefaults(Integer wn)
+begin
+  record RcVc RepSpec;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"CuPerRClass");  
+  RepSpec.ArtMode = 1;
+  RepSpec.flags[18] = 1;
+  RepSpec.flags[8] = 1;
+
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  return;
+end;
+

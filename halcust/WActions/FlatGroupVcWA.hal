@@ -1,0 +1,75 @@
+
+
+function boolean FlatGroupDClassRowCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprw;
+  record FlatsVc Flatsr;
+
+  GetWindowRecord(wn,FlatGroupr);
+  if (rownr>-1) then begin
+    MatRowGet(FlatGroupr,rownr,FlatGrouprw);
+    Flatsr.FlatCode = FlatGrouprw.RowCode;
+    if (ReadFirstMain(Flatsr,1,true)) then begin end;
+    FlatGrouprw.RowComment = Flatsr.Address & " " & Flatsr.FlatNo;
+    MatRowPut(FlatGroupr,rownr,FlatGrouprw);
+    PutWindowRecord(wn,FlatGroupr);
+  end;
+  FlatGroupDClassRowCodeEFAfter = true;
+  return;
+end;
+
+global
+function boolean FlatGroupDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed<>0) then begin
+    switch (fieldname) begin
+      case "RowCode": res = FlatGroupDClassRowCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  FlatGroupDClassAfterEditField = res;
+  return;
+end;
+
+global 
+procedure FlatGroupCounterRessm() begin
+  integer wn;
+  record FlatGroupVc FlatGroupr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  if GetWindowClass(wn) == "FlatGroupDClass" then begin
+    GetWindowRecord(wn,FlatGroupr);
+  end;
+  if GetWindowClass(wn) == "FlatGroupLClass" then begin
+    if ReadMarkedRecord(wn,FlatGroupr) then begin end;
+  end;
+  
+  if nonblank(FlatGroupr.Code) then begin
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="MainCounterResRn";
+    RepSpec.f1=FlatGroupr.Code;
+    RepSpec.flags[0]=3;
+    RunReport(RepSpec,0);
+  end;
+
+  return;
+end;
+
+global procedure MSChangeCountFlatGroupMnSm() Begin
+  integer wn;
+  Record FlatGroupVc FlatGroupr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  GetWindowRecord(wn,FlatGroupr);
+
+  RepSpec.Media=mtScreen;
+  RepSpec.repname="MSChangeFlatGroupCountRn";
+  RepSpec.f1=FlatGroupr.Code;
+  RunReport(RepSpec,0);
+
+return;
+end;

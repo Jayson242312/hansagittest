@@ -1,0 +1,168 @@
+external updating procedure UpdatePeriodicServRecFromIV(Record IVVc,boolean);
+
+// updating 
+// procedure CancelPBI(Record RcVc RepSpec,Date sd,Date ed,string buildcode) Begin
+  // Record PrepBuildInvVc PBIr, oldPBIr;
+  // boolean wloop, testf;
+
+  // wloop = true;
+  // PBIr.BuildCode = buildcode; 
+  // PBIr.StartDate = sd;
+  // PBIr.EndDate = ed;
+  // while LoopKey("BuildStartDate",PBIr,2,wloop) begin
+    // testf = true;
+    // if (PBIr.BuildCode != buildcode) then begin
+      // wloop = false;
+    // end;
+    // if sd != PBIr.StartDate then begin
+      // wloop = false;
+    // end;
+    // if ed != PBIr.EndDate then begin
+      // wloop = false;
+    // end;
+    // if RepSpec.flags[16]==0 and PBIr.AddToInv==1 then begin
+      // testf = false;
+    // end;
+    // if RepSpec.flags[16]==1 and PBIr.AddToInv==0 then begin
+      // testf = false;
+    // end;
+    // if wloop and testf then begin
+      // RecordDelete(PBIr);
+    // end;
+  // end;
+
+// return;
+// end;
+
+// updating 
+// procedure UpdPrepBuildInvForBuildInPer(Record RcVc RepSpec,string BuildCode,date StartDate,date EndDate)
+// begin
+  // record PrepBuildInvVc PrepBuildInvr,oldPrepBuildInvr;
+  // boolean wLoop,testf;
+
+  // wLoop = true;
+  // PrepBuildInvr.BuildCode = BuildCode;
+  // PrepBuildInvr.StartDate = StartDate;
+  // while LoopKey("BuildStartDate",PrepBuildInvr,2,wLoop)begin
+    // if PrepBuildInvr.BuildCode<>BuildCode or PrepBuildInvr.StartDate>EndDate then begin
+      // wLoop = false;
+    // end else begin
+      // testf = true;
+      // if RepSpec.flags[16]==0 and PrepBuildInvr.AddToInv==1 then begin
+        // testf = false;
+      // end;
+      // if RepSpec.flags[16]==1 and PrepBuildInvr.AddToInv==0 then begin
+        // testf = false;
+      // end;
+      // if testf then begin
+        // if PrepBuildInvr.Printed<>0 or PrepBuildInvr.PrepFines<>0 or PrepBuildInvr.MadeTR<>0 or PrepBuildInvr.Calc<>0 then begin
+          // RecordCopy(oldPrepBuildInvr,PrepBuildInvr);
+          // PrepBuildInvr.Printed = 0;
+          // PrepBuildInvr.PrepFines = 0;
+          // PrepBuildInvr.MadeTR = 0;
+          // PrepBuildInvr.Calc = 0;
+          // RecordUpdate(oldPrepBuildInvr,PrepBuildInvr,true);
+        // end;
+      // end;
+    // end;
+  // end;
+// end;
+
+global updating 
+procedure MSUndoInvMn(Record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr,NAContract2r;
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  record IVVc IVr,oldIVr;
+  longint UnOKIVCount;
+  boolean TrHs,TrHs2,DeleteIV,testf;
+  string 20 frBuild,toBuild;
+  
+  UnOKIVCount = 0;
+  TrHs = true;
+  frBuild=FirstInRange(RepSpec.f1,20);
+  toBuild=LastInRange(RepSpec.f1,20);
+  Buildr.Code=frBuild;
+
+  while LoopMain(Buildr,1,TrHs) begin
+    if Buildr.Code>toBuild then begin
+      TrHs = false;
+    end else begin
+      testf=true;
+      if nonblank(RepSpec.f2) and !SetInSet(RepSpec.f2,Buildr.Classification) then begin
+        testf=false;
+      end;
+      if testf then begin
+        ResetLoop(Flatsr);
+        // if nonblank(RepSpec.f1) then begin
+          // CancelPBI(RepSpec,RepSpec.sStartDate,RepSpec.sEndDate,Buildr.Code);
+        // end;
+        Flatsr.FlatCode = "";
+        while LoopKey("FlatNoCode:" & Buildr.Code,Flatsr,1,true) begin
+          // if (Flatsr.CONr>0) then begin
+            ResetLoop(IVr);
+            // IVr.CustCode = Flatsr.CustCode;
+            IVr.FlatCode = Flatsr.FlatCode;
+            // IVr.InvDate = RepSpec.sStartDate;
+            IVr.InvDate = RepSpec.d1;
+            TrHs2 = true;
+            // while LoopKey("CustDate",IVr,2,TrHs2) begin
+            while LoopKey("FlatCode",IVr,2,TrHs2) begin
+              // if IVr.InvDate>RepSpec.sEndDate or IVr.CustCode<>Flatsr.CustCode then begin
+              // if IVr.InvDate>RepSpec.sEndDate or IVr.FlatCode<>Flatsr.FlatCode then begin
+              if IVr.InvDate!=RepSpec.d1 or IVr.FlatCode<>Flatsr.FlatCode then begin
+                TrHs2 = false;
+              end else begin
+                testf = true;
+                // if (StringToLongInt(IVr.CreditCard)!=Flatsr.CONr) then begin
+                  // testf = false;
+                // end;
+                // if RepSpec.flags[16]==0 and IVr.AddToInvMark==1 then begin
+                  // testf = false;
+                // end;
+                // if RepSpec.flags[16]==1 and IVr.AddToInvMark==0 then begin
+                  // testf = false;
+                // end;
+                if testf then begin
+                  if IVr.OKFlag<>0 then begin
+                    RecordCopy(oldIVr,IVr);
+                    IVr.OKFlag = 0;
+                    DeleteIV = RecordUpdate(oldIVr,IVr,true)==0;
+                    if !DeleteIV then begin
+                      UnOKIVCount = UnOKIVCount + 1;
+                    end;
+                  end else begin
+                    DeleteIV = true;
+                  end;
+                  if DeleteIV then begin
+                    NAContractr.SerNr = IVr.Contract;
+                    if ReadFirstMain(NAContractr,1,true) then begin
+                      RecordCopy(NAContract2r,NAContractr);
+                      // if IVr.AddToInvMark == 1 then begin
+                        // NAContractr.LastDate = "";
+                      // end else begin
+                        NAContractr.LastInvDate = "";
+                      // end;
+                      if (RecordUpdate(NAContract2r,NAContractr,true)==0) then begin
+                      end;
+                    end;
+                    UpdatePeriodicServRecFromIV(IVr,true);
+                    RecordDelete(IVr);
+                    StepBack(IVr);
+                  end;
+                end;
+              end;
+            end;
+          // end;
+        end;
+      end;  
+      // UpdPrepBuildInvForBuildInPer(RepSpec,Buildr.Code,RepSpec.sStartDate,RepSpec.sEndDate); //Is this even needed? Records are deleted in CancelPBI
+    end;
+  end;
+  if UnOKIVCount>0 then begin
+    MessageBox(0,UnOKIVCount & USetStr(1000762));
+  end;
+
+  return;
+end;

@@ -1,0 +1,30 @@
+
+global
+updating function LongInt INVcRecordCheck(record INVc INr,record INVc IN2r,LongInt stat,LongInt long4)
+BEGIN
+  longint res;
+  
+  if (INr.CalcOnLandOrImp == 1) then begin
+    if (INr.UPrice1 != 1) then begin
+      MessageBox(0,"Base price for charges based on Land or Improvement value must be set to 1");
+      res = -1;
+      goto LINVcRecordCheck;
+    end;
+    if (blank(INr.FlatFieldCode)) then begin
+      MessageBox(0,"Premise field cannot be blank");
+      res = -1;
+      goto LINVcRecordCheck;
+    end;
+    if (blank(INr.UserStr2)) then begin
+      MessageBox(0,"Enter the rate in the 'Tariff Rate' field in 'User Values'");
+      res = -1;
+      goto LINVcRecordCheck;
+    end;
+  end;
+
+  res = inner.INVcRecordCheck(INr,IN2r,stat,long4);
+  
+LINVcRecordCheck:;
+  INVcRecordCheck = res;
+return;
+end;

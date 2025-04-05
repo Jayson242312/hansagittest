@@ -1,0 +1,225 @@
+external updating procedure UpdateItemPayHistVcFromIVVc(Record IVVc,boolean);
+external updating procedure UpdateIntSumCalcVc(record IVVc);
+external updating procedure RemoveIntSumCalcVc(longint);
+external function boolean CreditInvItemPayHistCheck(record IVVc,var longint);
+function boolean BlankCreditRow(record IVVc IVr)
+begin
+  row IVVc IVrw;
+  integer i,rwc;
+  boolean res;
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeCredit then begin
+      if IVrw.OrdRow==-1 then begin
+        res=true;
+      end;
+    end;
+  end;
+  
+  BlankCreditRow=res;
+  return;
+end;
+
+global
+updating function LongInt IVVcRecordCheck(record IVVc IVp,record IVVc IV2p,LongInt stat,LongInt long4)
+BEGIN
+  longint res,rw;
+  Record NAContractVc NAContractr;
+  
+  if IVp.Contract!=-1 then begin
+    // if Blank(IVp.FlatCode) and Blank(IVp.BuildCode) then begin
+    //   RecordCheckError(1001285,"",-1,"FlatCode");
+    //   res = -1;
+    //   goto LIVVcRecordCheck;
+    // end; //jh this record check was commented out so you can save invoices without erf
+    // NAContractr.SerNr=IVp.Contract;
+    // if ReadFirstMain(NAContractr,1,true) then begin
+      // if IVp.CustCode!=NAContractr.CustCode then begin
+        // RecordCheckError(1001273,"",-1,"Contract");
+        // res = -1;
+        // goto LIVVcRecordCheck;
+      // end;
+    // end;
+    if (IVp.OKFlag==1) and (IV2p.OKFlag==0) then begin
+      if IVp.InvType==kInvoiceTypeCredit then begin
+        if !BlankCreditRow(IVp) then begin
+          if !CreditInvItemPayHistCheck(IVp,rw) then begin
+            RecordCheckError(1001429,"",rw,"Sum");
+            res = -1;
+            goto LIVVcRecordCheck;
+          end;
+        end;
+      end;
+    end;
+  end;
+  res = inner.IVVcRecordCheck(IVp,IV2p,stat,long4);
+  
+LIVVcRecordCheck:;
+  IVVcRecordCheck = res;
+return;
+end;
+
+global updating 
+function LongInt IVVcRecordSave(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4) begin
+  longint res;
+  Record FlatsVc Flatsr;
+
+  res = inner.IVVcRecordSave(IVr,IV2r,long3,long4);
+  
+  if blank(IVr.BuildCode) and nonblank(IVr.FlatCode) then begin
+    Flatsr.FlatCode = IVr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      IVr.BuildCode = Flatsr.Code;
+    end;
+  end;
+  
+  IVVcRecordSave = res;
+  return;
+end;
+
+global updating 
+function LongInt IVVcRecordSaveAfter(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4) begin
+  longint res;
+  date sd,ed;
+  res=inner.IVVcRecordSaveAfter(IVr,IV2r,long3,long4);
+  
+  
+  if IVr.OKFlag==1 then begin //OK
+    // UpdateLastInvDateInCOVc(IVr.InvDate,IVr.CreditCard);
+    // UpdatePeriodicServRecFromIV(IVr,false);
+    // UpdateIVUsedPayPrVc(IVr,false);
+    UpdateItemPayHistVcFromIVVc(IVr,false);
+  end;
+  
+  UpdateIntSumCalcVc(IVr);
+  
+  IVVcRecordSaveAfter=res;
+  return;
+end;
+
+global updating 
+function LongInt IVVcRecordUpdate(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4)
+begin
+  longint res;
+  Record FlatsVc Flatsr;
+  Boolean wloop;
+
+  res = inner.IVVcRecordUpdate(IVr,IV2r,long3,long4);
+  
+  if blank(IVr.BuildCode) and nonblank(IVr.FlatCode) then begin
+    Flatsr.FlatCode = IVr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      IVr.BuildCode = Flatsr.Code;
+    end;
+  end;
+  
+  IVVcRecordUpdate = res;
+  return;
+end;
+
+global updating 
+function LongInt IVVcRecordUpdateAfter(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4) begin
+  longint res;
+  date sd,ed;
+
+  res = inner.IVVcRecordUpdateAfter(IVr,IV2r,long3,long4);
+  
+  if ((IVr.Invalid==0) and (IV2r.Invalid==0)) then begin
+    if ((IVr.OKFlag==0) and (IV2r.OKFlag!=0)) then begin //unok
+      // RemoveLastInvDateFromCOVc(IVr.InvDate,IVr.Contract);
+      // UpdatePeriodicServRecFromIV(IVr,true);
+      // UpdateIVUsedPayPrVc(IVr,true);
+      UpdateItemPayHistVcFromIVVc(IVr,true); //Šim šeit ir jāpaliek, jo atgrāmatošana netiek apstrādāta recordcheck
+    end;
+  end;
+  if ((IVr.Invalid==0) and (IV2r.Invalid==0)) then begin
+    if ((IVr.OKFlag!=0) and (IV2r.OKFlag==0)) then begin //ok
+      // UpdateLastInvDateInCOVc(IVr.InvDate,IVr.Contract);
+      // UpdatePeriodicServRecFromIV(IVr,false);
+      // UpdateIVUsedPayPrVc(IVr,false);
+      UpdateItemPayHistVcFromIVVc(IVr,false); //Šis Fortum tiek izdarīts recordcheck funkcijā
+    end;
+  end;
+  
+  UpdateIntSumCalcVc(IVr);
+  
+  IVVcRecordUpdateAfter = res;
+  return;
+end;
+
+global updating 
+function LongInt IVVcRecordImport(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4) begin
+  longint res;
+  Record FlatsVc Flatsr;
+
+  res = inner.IVVcRecordImport(IVr,IV2r,long3,long4);
+  
+  if blank(IVr.BuildCode) and nonblank(IVr.FlatCode) then begin
+    Flatsr.FlatCode = IVr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      IVr.BuildCode = Flatsr.Code;
+    end;
+  end;
+  
+  IVVcRecordImport = res;
+  return;
+end;
+
+global 
+function LongInt IVVcRecordDuplicate(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4) begin
+  string 255 BuildCode;
+  LongInt res;
+
+  BuildCode = IVr.BuildCode;
+  res = inner.IVVcRecordDuplicate(IVr,IV2r,long3,long4);
+  IVr.BuildCode = BuildCode;
+  IVr.ServInvf = 0;
+
+  IVVcRecordDuplicate = res;
+  return;
+end;
+
+// global
+// function LongInt IVVcRecordRemoveTest(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4)
+// BEGIN
+//   LongInt res;
+  
+//   res = inner.IVVcRecordRemoveTest(IVr,IV2r,long3,long4);
+  
+//   if (IVr.OKFlag!=0) and res==1 then begin
+//     if nonblank(IVr.Contract) then begin
+//       if (long3>0) then begin
+//         MessageBox(1560,"");
+//       end;
+//       res = 0;
+//     end;
+//   end;
+  
+//   return;
+// end;
+
+global updating 
+function LongInt IVVcRecordRemove(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  res = inner.IVVcRecordRemove(IVr,IV2r,long3,long4);
+  RemoveIntSumCalcVc(IVr.SerNr);
+  
+  return;
+end;
+
+global
+function LongInt IVVcRecordDefaults(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  
+  res = inner.IVVcRecordDefaults(IVr,IV2r,long3,long4);
+  IVr.Objects = CurrentUser  & "X," & "VINV"; //jh default vote for invoice
+  IVr.ServInvf = 0;
+  
+  IVVcRecordDefaults = res;
+  return;
+end;

@@ -1,0 +1,190 @@
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+
+global 
+procedure PrintLeaseAgreementFields(record LeaseAgreementVc LeaseAgreementr)
+begin
+  record CUVc CUr;
+  record buildVc buildr;
+  record ExtensionVc Extensionr;
+  record DivisionVc Divisionr;
+  record TitleVc Titler;
+  integer erf;
+  string 255 maritalStatus,vat; 
+
+
+  if(FieldInForm("CUST_ZONE")) then begin
+    OUTFORMFIELD("CUST_ZONE",LeaseAgreementr.Zoning);
+  end;
+
+
+  if(FieldInForm("CUST_VAT")) then begin
+    if (LeaseAgreementr.VatRadioButton == 0) then begin vat = "Excluding" ;end ; 
+    if (LeaseAgreementr.VatRadioButton == 1) then begin vat = "Including" ;end ; 
+    OUTFORMFIELD("CUST_VAT",vat);
+  end;
+
+
+  if(FieldInForm("CUST_REPRESENTATIVE")) then begin
+    OUTFORMFIELD("CUST_REPRESENTATIVE",LeaseAgreementr.Representative);
+  end;
+
+  if(FieldInForm("CUST_TITLE")) then begin
+    Titler.Code = LeaseAgreementr.Title;
+    if (ReadFirstMain(Titler,1,true)) then begin
+        OUTFORMFIELD("CUST_TITLE",Titler.Name);
+    end;
+  end;
+  if(FieldInForm("CUST_HODNAME")) then begin
+    OUTFORMFIELD("CUST_HODNAME",LeaseAgreementr.HoDName);
+  end;
+  if(FieldInForm("CUST_CUSTNAME")) then begin
+    OUTFORMFIELD("CUST_CUSTNAME",LeaseAgreementr.CustomerName);
+  end;
+
+  // CONTACT INFORMATION 
+  CUr.Code = LeaseAgreementr.Customer;
+  if(ReadFirstMain(CUr,1,true)) then begin
+     if(FieldInForm("CUST_CUSTNAME")) then begin
+      OUTFORMFIELD("CUST_CUSTNAME",CUr.Name);
+    end;
+   if(FieldInForm("CUST_POSTALADDR")) then begin
+      OUTFORMFIELD("CUST_POSTALADDR",CUr.InvAddr0);
+      if blank(CUr.InvAddr0) then begin       OUTFORMFIELD("CUST_POSTALADDR","N/A");end;
+
+    end;
+    if(FieldInForm("CUST_TELEPHONE")) then begin
+      OUTFORMFIELD("CUST_TELEPHONE",CUr.Phone);
+      if blank(CUr.Phone) then begin       OUTFORMFIELD("CUST_TELEPHONE","N/A");end;
+    end;
+    if(FieldInForm("CUST_EMAILADDR")) then begin
+      OUTFORMFIELD("CUST_EMAILADDR",CUr.eMail); //f
+      if blank(CUr.eMail) then begin       OUTFORMFIELD("CUST_EMAILADDR","N/A");end;
+    end;
+
+  if(FieldInForm("CUST_ERF")) then begin
+    buildr.Code = LeaseAgreementr.BuildCode;
+    if (ReadFirstMain(buildr,1,true)) then begin
+      erf = StringToInt(buildr.LotNo);
+    end;
+    OUTFORMFIELD("CUST_ERF","ERF " & erf);
+  end;
+  if(FieldInForm("CUST_TOWNSHIP")) then begin
+    OUTFORMFIELD("CUST_TOWNSHIP",LeaseAgreementr.Township);
+  end;
+  if(FieldInForm("CUST_EXTENSION")) then begin
+    OUTFORMFIELD("CUST_EXTENSION","Extension " & StringToInt(LeaseAgreementr.Extension));
+  end;
+  if(FieldInForm("CUST_DIVISION")) then begin
+    OUTFORMFIELD("CUST_DIVISION",LeaseAgreementr.Division);
+  end;
+  if(FieldInForm("CUST_LANDSIZE")) then begin
+    OUTFORMFIELD("CUST_LANDSIZE",LeaseAgreementr.LandSize & " m2"); //f fs
+  end;
+  if(FieldInForm("CUST_LEASEVAL")) then begin
+    OUTFORMFIELD("CUST_LEASEVAL", "N$"&LeaseAgreementr.LeaseVal);
+  end;
+  if(FieldInForm("CUST_LEASEVALWORDS")) then begin //f
+    OUTFORMFIELD("CUST_LEASEVALWORDS","(In words: " & LeaseAgreementr.LeaseString & ")");
+  end;
+  if(FieldInForm("CUST_DATEPLESSERSIGNED")) then begin
+    OUTFORMFIELD("CUST_DATEPLESSERSIGNED",LeaseAgreementr.DateLeaseSign); //fffF
+  end; 
+  if(FieldInForm("CUST_DATEKATIMASIGN")) then begin
+    OUTFORMFIELD("CUST_DATEKATIMASIGN",LeaseAgreementr.DateKatimaSign);
+  end; 
+
+  if(FieldInForm("CUST_LEASESTARTDATE")) then begin
+    OUTFORMFIELD("CUST_LEASESTARTDATE",LeaseAgreementr.LeaseStartDate);
+  end; 
+
+  if(FieldInForm("CUST_LEASEENDDATE")) then begin
+    OUTFORMFIELD("CUST_LEASEENDDATE",LeaseAgreementr.LeaseEndDate);
+  end; 
+end;
+end;
+
+
+
+
+global 
+procedure LeaseAgreementForm(record RcVc RepSpec) 
+begin
+  record LeaseAgreementVc LeaseAgreementr;
+  
+  if (blank(RepSpec.f1)) then begin
+    goto LLeaseAgreementForm;
+  end;
+  
+  LeaseAgreementr.SerNr = StringToLongInt(RepSpec.f1);
+  if (ReadFirstMain(LeaseAgreementr,1,true)) then begin
+    PrintDocument(LeaseAgreementr,"LeaseAgreementForm",false);
+  end;
+  
+LLeaseAgreementForm:;
+  return;
+end;
+
+
+global
+procedure DoLeaseAgreementForm(record RcVc RepSpec,record LeaseAgreementVc LeaseAgreementr)
+BEGIN
+  Integer i,rwcnt;
+  Boolean printf,testf;
+  Integer intdocnr;
+  string 30 formcode,langcode;
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+  
+  testf = true;
+
+
+  
+  if (LeaseAgreementr.OKFlag==0) then begin
+      MessageBox(0,"Cant Print Unokayed record");
+      testf = false;
+  end;
+
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    testf = false;
+  end;
+  if testf then begin
+    langcode = "";
+    intdocnr = 1;
+    printf = true; //ff
+    rwcnt = MatRowCnt(FDr);
+    while (printf) begin
+      formcode = "";
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(FDr,i,FDrw);
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,-1,FDrw.PrintGroupCode,
+                          langcode,intdocnr,"",formcode)) then
+          begin
+          goto LBREAKPrint;
+        end;
+      end;
+  LBREAKPrint:;
+      
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          PrintLeaseAgreementFields(LeaseAgreementr);
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);  
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));  
+        end;
+      end;
+      intdocnr = intdocnr + 1;
+    end;
+  end;
+
+  return;
+end;

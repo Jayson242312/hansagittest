@@ -1,10 +1,11 @@
-//c85480649
+// TMK:: 02.09.2024 ::Customised ::SERP 8.5 2024.08.05/85555622
+
 external procedure PrintCurrencyCode(string,string);
 external procedure PortugueseFormFields(Integer);
 external procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
 external procedure BeginCurncyTotals(var Integer);
 external function LongInt CalculateLateDays(Date,Date,Date,Boolean,Boolean);
-//external function Integer DefaultCurRoundOff();
+// external function Integer DefaultCurRoundOff();
 external function Boolean CheckIfPrepaymentOpen(string,Date,LongInt,LongInt,val,var val);
 external procedure PrintValueInclZero(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
 external function Boolean CheckIfIVOpen(Date,record IVVc,string,var val,Boolean,Boolean);
@@ -22,13 +23,46 @@ external procedure GetBaseCurncy(Integer,var string);
 external procedure CreateKIDNoCheck(string,LongInt,var string);
 external procedure CreateKIDCheckNor(val,LongInt,var string);
 external procedure CreateKIDCode(string,LongInt,var string);
-external procedure InvoiceType(Integer,var string);
+external procedure InvoiceType(Integer,var string,var record RcVc);
 external procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
 external procedure GetLangNr(string,var record LangNrVc);
 external procedure PrintValue(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
 external procedure DoARSFunction(record RcVc,Integer);
 external procedure SetFaxInfo(string,string,string,string);
 external function string 255 GetHRVOfficialInvoiceNo(string);
+external function val FindVatRate(string); // jh custom function
+external procedure PrintCashInandCashout(record RcVc ,var val ,Date ,Date ,
+                                var val ,var val ,var val ,var val ,
+                                var Integer ,var Integer ,Boolean ,
+                                array val,array val,array val ,array string,var Integer);
+
+external outer function val GetFlatFieldValue(string,string,date,date); // jh added to get flatfield value
+
+global
+ procedure GetDeposits(record RcVc RepSpec2,var val deposits)
+ begin
+  array string 20 acur;
+  array val av1;
+  Integer curcnt;
+  val TotSumIn,TotSumOut,TotBalSum,TotSumCurIn,TotSumCurOut,TotBalSumCur;
+  Integer countin,countout;
+  array val av2;
+  array val av3;
+  Date td,bdat;
+  val BalStart,BalStartCur;
+
+  RepSpec2.sStartDate = StringToDate("01/01/2001");  //Not best solution, might change (Takes all cashins/deposits regardless of period)
+  RepSpec2.sEndDate = StringToDate("01/01/2035");
+
+  RepSpec2.flags[1] = 1;
+  RepSpec2.flags[0] = 1;
+
+  PrintCashInandCashOut(RepSpec2,BalStart,RepSpec2.sStartDate,RepSpec2.sEndDate,TotSumIn,TotSumOut,TotSumCurIn,TotSumCurOut,countin,countout,true,av1,av2,av3,acur,curcnt);
+  BalStart = TotSumIn - TotSumOut;
+  deposits = BalStart;
+
+ end;
+
 
 procedure SetZeroAged(var val s0,var val s1,var val s2,var val s3,var val s4,var val s5,var val s6,var val s7)
 begin
@@ -227,9 +261,9 @@ begin
 end;
 
 global
-procedure FaktText(Integer type,LongInt InvoiceNr,var string res)
+procedure FaktText(Integer type,LongInt InvoiceNr,var string res,var record RcVc RepSpec) //JH RCVC
 BEGIN
-  InvoiceType(type,res);
+  InvoiceType(type,res,RepSpec);
   res = res & " ";
   res = res & InvoiceNr;
   RETURN;
@@ -262,6 +296,40 @@ BEGIN
         res = IVr.OurContact;
       end;
   end;
+  RETURN;
+END;
+
+
+//Procedure to get installment amount from agreement paying off old //Install agreement No , Purchasing amount, Install amount, balance amount, 
+
+// Not used at the moment 00 00 00 00 00 00 00 00 00 00 00
+procedure GetInstallment(var val res,var record RcVc RepSpec)
+BEGIN
+  record ARInstallVc Inst;
+  record IVVc IVr;
+  val sum;
+  integer i;
+  boolean testf;
+  date instdueDateMonth,dueDateMonth;
+  string 255 concat;
+  dueDateMonth = RepSpec.sStartDate;
+  testf = true;
+  sum = 0;
+  while (LoopMain(Inst, 1, testf)) begin
+   instdueDateMonth = Inst.DueDate;
+   if (Inst.CustCode == RepSpec.f1) then begin
+    if (instdueDateMonth.month==dueDateMonth.month) then begin
+      concat = "Installment is due on: " & datetostring(Inst.DueDate,"DD/MM/YYYY");
+      sum = sum + Inst.RVal;
+    end;
+    end else begin
+      testf = false;
+    end;
+  end;
+  OutFormField("MYF_CUSUMVATINSTALL",sum);
+  OUTFORMFIELD("MYF_CUSPEINSTALL",concat);
+  OUTFORMFIELD("F_FAKTDAGINSTALL",Inst.DueDate); // Installment date 
+  res = sum;
   RETURN;
 END;
 
@@ -447,7 +515,7 @@ BEGIN
   end;
   FindNumberSeriesComment = res;
   RETURN;
-END;
+END; 
 
 global
 procedure DoPrintARSForm2(record RcVc RepSpec,record CUVc CUp,
@@ -464,14 +532,38 @@ BEGIN
   val v,t,bal,ARSARSumodPrint;
   record SysFormatBlock SFb;
   record LangNrVc LangNrr;
+  record RcVc RepSpec2;
   Integer maxrem;
   record AgedBlock Ab;
-  record IVVc IVr;
-  
+  record VATCodeBlock VATCodeb;
+  row VATCodeBlock VATCodebrw;
+  record NAContractVc NAContractr; //JH::07.03.2025
+  record FlatFieldVc FlatFieldr;//JH::03.09.2024
+  row FlatFieldVc FlatFieldrw; //JH::03.09.2024
+  record IPVc IPr;
+  record BuildVc Buildr; //JH::03.09.2024
+  record INVc INr; //JH::04.09.2024
+  record IVVc IVr; //TMK::02.09.2024 
+  row IVVc IVrw; //TMK::02.09.2024 
+  integer rwcnt,j; //TMK::02.09.2024 
+  integer k,l,wn,nwn; //JH::03.09.204
+  integer rwcnt3,rwcnt4; //JH::03.09.2024
+  val LandSize,value8,value9,value5,qty,sum,sum1,sum2,sum3; //JH::03.09.2024
+  date cd,prevDate5,prevDate8,prevDate;//JH::03.09.2024
+  string 255 zoning,tarrif,doc; //JH::03.09.2024
+  val zeroVal,vatVal,vatAmount,leviedAmount,vatRate,totalReceiptVal,difference,instalval; //JH::03.09.2024
+  array val totalVatArr,totalSumNoVat;
   array string 20 acur;
   array val av1;
   Integer curcnt;
-
+  val TotSumIn,TotSumOut,TotBalSum,TotSumCurIn,TotSumCurOut,TotBalSumCur;
+  Integer countin,countout;
+  array val av2;
+  array val av3;
+  Date td,bdat;
+  val BalStart,BalStartCur,deposit;
+  string 255 premise,build; //JH::07.09.2025
+      
   BlockLoad(Ab);
   GetLangNr("",LangNrr);  
   BlockLoad(SFb);
@@ -481,7 +573,18 @@ BEGIN
   if (HasLocalization("PRT")) then begin
     PortugueseFormFields(2480);
   end;
+  //jh
+  totalReceiptVal = 0;
+  //jh
+
+  wn = CurWindow;
+
+
+
   for (i=0;i<acnt;i=i+1) begin
+    GetComment(aInvoiceNr[i],aRwtype[i],tstr)
+
+    GetInstallment(instalval,RepSpec);
     AddCurncyTotals(acur,av1,curcnt,aCurncyCode[i],aRValCur[i]);
     PrintValueInclZero("F_FAKTBELOPP",aSum4[i],M4Val,LangNrr,SFb,false);
     OUTFORMFIELD("F_FAKTNR",aInvoiceNr[i]);
@@ -492,17 +595,21 @@ BEGIN
       end;
     OUTFORMFIELD("F_OFFICIALSERNO",tstr);
     end;
-    IVr.SerNr = AINVOICENR[I];//MDS: GREG-9
-    IF(READFIRSTMAIN(IVr,1,true))then begin
-      OUTFORMFIELD("F_CLAIM_BROKER_NAME",IVr.BrName);
-      OUTFORMFIELD("F_CLAIM_CLIENT_NAME",IVr.ClientName);
-      OUTFORMFIELD("F_CLAIM_POLICY_NUMBER",IVr.PolicyNum);
-      OUTFORMFIELD("F_CLAIM_CLAIM_NUMBER",IVr.ClaimNum);
-      OUTFORMFIELD("F_CLAIM_ORDER_NUMBER",IVr.OrderNum);
-    end;//:MDS
     OUTFORMFIELD("F_KUNDORDNR",aCustOrdNo[i]);
     OUTFORMFIELD("F_KOMMENTAR",FindNumberSeriesComment(aRwtype[i],aInvoiceNr[i]));
+
+
+    // if(blank(aRwtype[i]) or aRwtype[i]  <> 1  ) then begin 
+    //   StopAlert("No Invoice for this client in this period");
+    // end;
+
+
+    // CUST BEGIN ::JH 05.09.2024 
+    if ((aRwtype[i] == 6 or aRwtype[i] == 7) AND RepSpec.flags[18] == 1) begin
+    end else begin
+    // CUST END
     OUTFORMFIELD("F_FAKTDAG",aInvDate[i]);
+    end;
     OUTFORMFIELD("F_FORFALLODATUM",aDueDate[i]);
     if (Ab.ShowDelayDays!=0) then begin
       if (alatedays[i]<0) then begin
@@ -531,17 +638,36 @@ BEGIN
         bal = bal - (aRValCur[i] - aIntVal[i]);
       end;
     end;
-    PrintValueInclZero("F_SALDO",bal,M4Val,LangNrr,SFb,false);
+    if  (RepSpec.flags[18] <> 1) then begin //::JH added flag to check( for debit credid balance really)
+        PrintValueInclZero("F_SALDO",bal,M4Val,LangNrr,SFb,false);
+    end; 
     PrintValue("F_RECVALUE",aSum4[i]-aRVal[i],M4Val,LangNrr,SFb,false);
     PrintValueInclZero("F_INVOUTSTAND",aRValCur[i],M4Val,LangNrr,SFb,false);
     PrintValueInclZero("F_INVOUTSTANDBASE1",aRVal[i],M4Val,LangNrr,SFb,false);
     OUTFORMFIELD("F_TRANSNR",aInvoiceNr[i]);
     PrintCurrencyCode("F_VALUTA",aCurncyCode[i]);
-    ShortInvType(aRwtype[i],tstr)
+    ShortInvType(aRwtype[i],tstr);
     OUTFORMFIELD("F_FAKTTYP",tstr);
-    InvoiceType(aRwtype[i],tstr)
+    InvoiceType(aRwtype[i],tstr,RepSpec); // JH if  aRwtype[i]==6 this means its a receipt if i == 4 means interest invoice
     OUTFORMFIELD("F_FAKTURATYP",tstr);
+    // CUST BEGIN ::JH 05.09.2024
+    if ((aRwtype[i] == 6 or aRwtype[i] == 7) AND RepSpec.flags[18] == 1) begin
+    // {code to display receipt information} above invoice
+      if (aRwtype[i] == 6) then begin // to check if this for on account or just a normal receipt against an invoice.
+          doc = "Receipt";
+        end else begin
+          doc = "On Account";
+        end; 
+      OUTFORMFIELD("F_RECEIPTNAME",doc);
+      OUTFORMFIELD("F_RECEIPTNO",aInvoiceNr[i]);
+      OUTFORMFIELD("F_FAKTDAGR",aInvDate[i]); // Date of receipt
+      OUTFORMFIELD("F_RECEIPTDESC","PAYMENT - THANK YOU");
+      PrintValue("F_RECVALUEFROMRECEIPT",aRVal[i],M4Val,LangNrr,SFb,false);
+    end;
+
+    // CUST END
     GetComment(aInvoiceNr[i],aRwtype[i],tstr)
+ 
     OUTFORMFIELD("F_COMMENT",tstr);
     GetReference(aInvoiceNr[i],aRwtype[i],tstr)
     OUTFORMFIELD("F_OURREF",tstr);
@@ -556,8 +682,9 @@ BEGIN
     if (FIELDINFORM("F_KIDNOCHECK")) then begin
       CreateKIDNoCheck(CUp.Code,aInvoiceNr[i],tstr);
       OUTFORMFIELD("F_KIDNOCHECK",tstr);
-    end;  
-
+    end;
+     // Jh :: 07:09:2024 if flag is ticked it doesnt show debit credit
+    if (RepSpec.flags[18] <> 1)  then begin
     if ((aRwtype[i]==-3) or (aRwtype[i]==2)) then begin
       if (aRVal[i]<0) then begin
         t = -aRVal[i];
@@ -570,10 +697,216 @@ BEGIN
       PrintValueInclZero("F_DEBVAL",aRVal[i],M4DVal,LangNrr,SFb,false);
       PrintValueInclZero("F_CREDVAL",aRVal[i],M4CVal,LangNrr,SFb,false);
     end;    
-    FaktText(aRwtype[i],aInvoiceNr[i],tstr);
+    FaktText(aRwtype[i],aInvoiceNr[i],tstr,RepSpec);
+  end;
     OUTFORMFIELD("F_FAKTTEXT",tstr);
+    //CUST-BEGIN:JH::06.09.2024
+
+    // rwcnt = matrowcnt(IVr);
+    // for(j=0;j<rwcnt;j=j+1)begin
+    // matrowget(IVr,j,IVrw);
+    // OUTFORMFIELD("MYF_CUARTCODE",IVrw.ArtCode); //Item code
+    // OUTFORMFIELD("MYF_CUSPEC",IVrw.Spec); //Item Description
+    // PrintValueInclZero("MYF_CUPRICE",IVrw.Price,M4Val,LangNrr,SFb,false); // ITEM Price
+    // // OUTFORMFIELD("MYF_CUPRICE",IVrw.Price);//Item Price
+    // OUTFORMFIELD("MYF_CUINVNUMBER",IVr.SerNr);//Jh ::04.09.2024 Invoice Number Number
+    // end
+    //CUST-BEGIN:TMK::02.09.2024                       
+    if(aRwtype[i]==1 or aRwtype[i]==2 or aRwtype[i]==3 or aRwtype[i]==4)then begin // Jh added interest invoice
+        IVr.SerNr = aInvoiceNr[i];
+      if(readfirstmain(IVr,1,true))then begin
+
+        // Get the deposits since we have custcode now
+        RepSpec2.f2 = IVr.CustCode; // CustCdde
+        GetDeposits(RepSpec2,deposit);
+        OUTFORMFIELD("MYF_CUDEPOSIT",deposit);
+      
+        //
+
+
+        OUTFORMFIELD("MYF_CUARTCODETEXT","Item");
+        OUTFORMFIELD("MYF_CUSPECTEXT","Description");
+        OUTFORMFIELD("MYF_CUPRICETEXT","Price");
+        OUTFORMFIELD("MYF_CUDISCOUNTTEXT","Discount");
+        OUTFORMFIELD("MYF_CUSUMTEXT","Sum");
+        // Jh::03.09.2024
+        // {Meter Information}
+          if (RepSpec.flags[18] == 1) then begin
+          OUTFORMFIELD("F_PREVREADINGFROMINVKMTC",IVr.PrevReading);
+          OUTFORMFIELD("F_METERNOINVKMTC",IVr.MeterNo);
+          
+          OUTFORMFIELD("F_CURRREADINGFROMINVKMTC",IVr.CurrReading);
+          OUTFORMFIELD("F_CONSUMPTIONFROMINVKMTC",IVr.Consumption);
+          OUTFORMFIELD("F_DATEOFREADINGFROMINVKMTC",IVr.DateOfReading);
+          OUTFORMFIELD("F_READINGTYPEFROMINVKMTC",IVr.ReadingType);
+          if NonBlank(IVr.MeterNo) then begin
+          OUTFORMFIELD("F_METERTYPEFROMINVKMTC","WATER"); //HARDCODED FOR NOW BECAUSE THERE IS ONLY ONE TYPE OF METER
+          end;
+          end; 
+        if(fieldinform("MYF_CUARTCODETEXT") or fieldinform("MYF_CUSPECTEXT") or fieldinform("MYF_CUPRICETEXT") or fieldinform("MYF_CUDISCOUNTTEXT") or fieldinform("MYF_CUSUMTEXT"))then begin
+          EndFormRow;
+        end;
+        if(aRwtype[i]!= 6 OR aRwtype[i]!= 7) then begin //not receipt or on account we sum up all the invoice totals with vat and all
+        totalVatArr[i] = IVr.Sum3;
+        totalSumNoVat[i] = IVr.Sum1;
+
+        sum3 = totalSumNoVat[i] + sum3; // totalSumNoVat
+        sum1 = totalVatArr[i] + sum1; // total vat for all invoices
+        sum = aRVal[i] + sum ; // total sum for all invoices
+        end; 
+
+ // if rwtype is of interest
+         if (aRwtype[i] == 4) then begin 
+          OUTFORMFIELD("MYF_CUSPEC","INTEREST"); 
+          vatVal = 0;  
+          vatAmount = IVrw.Sum;
+          VatRate = FindVatRate(IVrw.VATCode);
+
+          // if (IVrw.VATCode == "1") then begin
+          //   BlockLoad(VATCodeb);
+          //   rwcnt4 = MatRowCnt(VATCodeb);
+          //   for (l=0;l<rwcnt4;l=l+1) begin
+          //     MatRowGet(VATCodeb,l,VATCodebrw);
+          //     if (VATCodebrw.VATCode == "1") then begin
+          //       vatRate = VATCodebrw.ExVatpr/100;
+          //     end;
+          //   end;
+            vatVal = IVrw.Sum * vatRate; // Vat on price of item
+            // OUTFORMFIELD("MYF_CUSUMVATPERITEM",vatVal);
+            vatAmount = IVrw.Sum + vatVal;  // Price including Vat
+            // OUTFORMFIELD("MYF_CUSUMVAT",vatAmount); // This includes the vat
+          PrintValueInclZero("MYF_CUSUMVATPERITEM",IVr.Sum3,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 VAT AMOUNT PER ITEM SUM
+          PrintValueInclZero("MYF_CUSUMVAT",aRVal[i],M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 PRICE WITH THE VAT ADDED
+          PrintValueInclZero("MYF_CUSUM",IVr.Sum1,M4Val,LangNrr,SFb,false);  // Exclusive of VAT
+         end; 
+
+        if (aRwtype[i] != 4) then begin
+        if (RepSpec.flags[18] == 1) then begin //Jh ::03.09.2024 ( Code to check if flag is checked)
+        rwcnt = matrowcnt(IVr);
+        for(j=0;j<rwcnt;j=j+1)begin
+          matrowget(IVr,j,IVrw);
+          //{Valuation Information}
+          value5 = GetFlatFieldValue(premise,"TRIMP",currentDate,currentDate) *12; //This function already divides by 12 so we change it back to original
+          if value5<=0 then begin
+            value5 = 0.00;
+          end;
+          value8 = GetFlatFieldValue(premise,"TRLAND",currentDate,currentDate)*12; //This function already divides by 12 so we change it back to original
+          if value8<=0 then begin
+            value8 = 0.00;
+          end;
+          value9 = GetFlatFieldValue(premise,"TRTOY",currentDate,currentDate); //This function already divides by 12 so we change it back to original
+
+
+          OUTFORMFIELD("MYF_CUARTCODE",IVrw.ArtCode); //Item code
+          OUTFORMFIELD("MYF_CUSPEC",IVrw.Spec); //Item Description
+         
+          tarrif = IVrw.Price;
+          qty = IVrw.Quant;
+        // Custom tarrif Price
+          if (IVrw.Price == 1.00) then begin
+          // ::JH The levied amount for the meter reading
+
+          //tarrif ,qty
+          INr.Code = IVrw.ArtCode;
+          if (ReadFirstMain(INr,1,true)) then begin    
+            if (INr.CalcOnLandOrImp == 1)  then begin
+               tarrif = INr.UserStr2;
+            end; 
+            switch INr.FlatFieldCode begin
+              case "TRLAND": qty = value8/12;
+              case "TRIMP": qty = value5/12;
+              case "TRTOY": qty = value9;
+            end;
+          end;
+          end;
+          //
+          OUTFORMFIELD("MYF_CUPRICE",tarrif);
+          // PrintValueInclZero("MYF_CUPRICE",tarrif,M4Str,LangNrr,SFb,false); // ITEM Price
+          
+          if aRwtype[i]==1 or aRwtype[i]==2 then begin
+          OUTFORMFIELD("MYF_CUINVNUMBER",IVr.SerNr);//Jh ::04.09.2024 Invoice Number Number
+          OUTFORMFIELD("MYF_CUINVDUEDATE",IVr.PayDate);//Jh ::04.09.2024 Invoice Number Number
+          OUTFORMFIELD("MYF_CONTRACTNO",IVr.Contract);//Jh ::04.09.2024 CONTRACT NUMBER/ACCOUNT NUMBER
+          end;
+          
+
+          PrintValueInclZero("MYF_CUDISCOUNT",IVrw.vRebate,M4Val,LangNrr,SFb,false);//discount
+
+          PrintValueInclZero("MYF_CUSUM",IVrw.Sum,M4Val,LangNrr,SFb,false);  // Exclusive of VAT
+          PrintValueInclZero("MYF_CUINVQUANT",qty,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 qty 
+          
+          // ::JH The levied amount for the meter reading
+          if (RepSpec.flags[18] == 1)  then begin
+          INr.Code = IVrw.ArtCode;
+          if (ReadFirstMain(INr,1,true)) then begin
+            if (INr.ServQuantInCalc == 2) then begin
+                leviedAmount = IVrw.Quant * IVrw.Price;
+                PrintValueInclZero("MYF_CULEVIEDWAMOUNT",leviedAmount,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 levied water amount 
+            end;
+          end;
+          end;
+          //::JH {Calculations of sum including VAT 
+
+          //get amount for vat from register and store it in a variable
+          vatVal = 0;
+          vatAmount = IVrw.Sum;
+          VatRate = FindVatRate(IVrw.VATCode);
+          vatVal = IVrw.Sum * vatRate; // Vat on price of item
+          vatAmount = IVrw.Sum + vatVal;  // Price including Vat
+            // OUTFORMFIELD("MYF_CUSUMVAT",vatAmount); // This includes the vat
+          PrintValueInclZero("MYF_CUSUMVATPERITEM",vatVal,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 VAT AMOUNT PER ITEM SUM
+          PrintValueInclZero("MYF_CUSUMVAT",vatAmount,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 PRICE WITH THE VAT ADDED
+
+          //{Property Information}
+
+          //JH refactor 07/03/2024 
+          if NonBlank(IVr.Contract) then begin
+            NAContractr.SerNr = IVr.Contract;
+            if (ReadFirstMain(NAContractr,1,true)) then begin
+              premise = NAContractr.FlatCode;
+              build = NAContractr.BuildCode;
+              if NonBlank(NAContractr.ZoningCode) then begin
+                 OUTFORMFIELD("F_ZONINGCODEFROMBUILDKMTC",NAContractr.ZoningCode);
+              end else begin
+                  OUTFORMFIELD("F_ZONINGCODEFROMBUILDKMTC","N/A");
+              end;
+            end;
+          end;
+
+          Buildr.Code = build;
+          if ReadFirstMain(Buildr,1,true) then begin
+            OUTFORMFIELD("F_ERFNUMBERKMTC",Buildr.Erf);
+            OUTFORMFIELD("F_PROPERTYSTREETKMTC",Buildr.Street);
+            if NonBlank(Buildr.LandDimensions) then begin
+                LandSize = Buildr.LandDimensions;
+            end else begin
+              LandSize = 0.00;
+            end;
+          end;
+
+        
+        OUTFORMFIELD("F_LandSizeKMTC", LandSize);
+        OUTFORMFIELD("F_RESIDENTIALIMPROVEMENTKMTC", value5);
+        OUTFORMFIELD("F_RESIDENTIALLANDVALUEKMTC", value8);
+
+        // CUST-END:JH::14.09.202 
+
+          EndFormRow;
+         end;
+        end;
+
+        end;
+      end;
+    end;
+    //CUST-END:TMK::02.09.2024
     EndFormRow;
-  end;  
+  end; 
+   
+  if (RepSpec.flags[18] == 1) then begin 
+    PrintValueInclZero("MYF_CUINVSUMTOTAL",sum,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 Invoice total with vat (-receipt val if there is any)
+    PrintValueInclZero("MYF_TOTALVAT",sum1,M4Val,LangNrr,SFb,false); // Total for vat
+    PrintValueInclZero("MYF_CUINVSUMTOTALNOVAT",sum3,M4Val,LangNrr,SFb,false); //Jh ::04.09.2024 Invoice Total without vat
+    end;
   if (FIELDINFORM("F_ACCBALPERCURRENCY")) then begin
     for (i=0;i<curcnt;i=i+1) begin
       OUTFORMFIELD("F_ACCBALCURRENCY",acur[i]);
@@ -739,7 +1072,7 @@ BEGIN
   OUTFORMFIELD("F_KONTAKT",CUp.Person);
   if (nonblank(CUp.CurncyCode)) then begin
     tstr = CUp.CurncyCode;
-  end else begin
+  end else begin                                                                                    
     GetBaseCurncy(1,tstr);
   end;
   OUTFORMFIELD("F_KUNDVALUTA",tstr);
@@ -748,6 +1081,8 @@ BEGIN
   end else begin
     ARSARSumodPrint = ARSARSumod  + ARSOnAccBal;    
   end;
+
+
   PrintValueInclZero("F_EXTRAKOSTNAD",RepSpec.vals1,M4Val,LangNrr,SFb,false);
   PrintValueInclZero("F_SUMMA",ARSSum + RepSpec.vals1,M4Val,LangNrr,SFb,false);
   PrintValueInclZero("F_STARTBALCREDIT",ARSStartBal,M4CVal,LangNrr,SFb,false);
@@ -781,8 +1116,10 @@ BEGIN
   PrintValueInclZero("F_AGED1ONDATE",ARSs1od,M4Val,LangNrr,SFb,false);
   PrintValueInclZero("F_AGED2ONDATE",ARSs16od,M4Val,LangNrr,SFb,false);
   PrintValueInclZero("F_AGED3ONDATE",ARSs31od,M4Val,LangNrr,SFb,false);
-  PrintValueInclZero("F_AGED4ONDATE",ARSs61od,M4Val,LangNrr,SFb,false);
+
+  PrintValueInclZero("F_AGED4ONDATE",ARSs61od,M4Val,LangNrr,SFb,false); //
   PrintValueInclZero("F_AGED5ONDATE",ARSs91od,M4Val,LangNrr,SFb,false);
+  
   PrintValueInclZero("F_AGED6ONDATE",ARSs121od,M4Val,LangNrr,SFb,false);
   PrintValueInclZero("F_AGED7ONDATE",ARSs151od,M4Val,LangNrr,SFb,false);
 
@@ -796,8 +1133,11 @@ BEGIN
   OUTFORMFIELD("F_STARTDATE",RepSpec.d1);
   OUTFORMFIELD("F_ANTALFORSENAT",ARSNotLateCount);
   OUTFORMFIELD("F_ANTALEJFORSENAT",ARSLateCount);
+LBreak:;
   RETURN;
 END;
+
+
 
 global
 procedure DoPrintARSForm(record RcVc RepSpec,record CUVc CUp,
@@ -837,6 +1177,8 @@ BEGIN
   record FormDefVc FDr;
   row FormDefVc FDrw;
 
+
+
   if (blank(RepSpec.Language)) then begin
     langcode = CUp.LangCode;
   end else begin
@@ -875,6 +1217,7 @@ LBREAKARS:;
       if (OpenForm(formcode)) then begin
         CommonDocumentFields(RepSpec);
         NumberofDocumentPages(FDrw.FPCode,acnt);
+
         SetFaxInfo(CUp.Person,CUp.Name,CUp.Fax,USetStr(2541));
         DoPrintARSForm2(RepSpec,CUp,ARSSum,ARSOnAccBal,ARSOnAccBalB1,ARSIntSum,ARSSumLate,ARSARSum,ARSStartBal,ARSSumNotLate,ARSLateCount,ARSNotLateCount,
                        ARSsact,ARSs0,ARSs1,ARSs16,ARSs31,ARSs61,ARSs91,ARSs121,ARSs151,

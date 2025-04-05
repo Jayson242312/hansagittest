@@ -1,0 +1,23 @@
+
+global updating
+procedure OKVIVcMn(record RcVc RepSpec)
+begin
+
+record VIVc VIr,oldVIr;
+boolean testf;
+
+
+
+testf = true;
+
+while (LoopMain(VIr, 1, testf)) begin
+  if (VIr.OKFlag == 1) then begin
+    testf = false;
+  end;
+  if (testf) then begin
+    RecordCopy(oldVIr,VIr);
+    VIr.OKFlag = 1 ;
+    RecordUpdate(oldVIr,VIr,true);
+  end;
+end;
+end;

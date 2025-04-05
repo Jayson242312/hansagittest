@@ -1,6 +1,3 @@
-//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
-//  VER 6.4 64241500
-
 //VN Block
 function Boolean SDDClassReasonEFAfter(Integer wn,Integer changed)
 begin
@@ -43,7 +40,7 @@ begin
   Boolean res;
 
   switch (fieldname) begin
-    case "Reason": res = SDDClassReasonEFAfter(wn,changed);//VN added
+    case "Reason": res = SDDClassReasonEFAfter(wn,changed);//JH added from gregs code
       otherwise res = inner.SDDClassAfterEditField(wn,fieldname,fn,rownr,changed);
   end;
   SDDClassAfterEditField = res;

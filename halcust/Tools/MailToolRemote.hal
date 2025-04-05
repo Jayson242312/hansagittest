@@ -1,0 +1,207 @@
+
+updating
+procedure CopyAttachmentWithMask(record NAContractVc NAContractr,record MailVc Mailr,string fnMask) begin
+  record RLinkVc RLr;
+  Boolean foundf;
+  Integer i;
+  record Attach2Vc Attachr;
+  
+  i = 1; 
+  while (ReadRecordLink(NAContractr,i,Attachr,RLr)) begin
+    i = i+1;
+    if (Left(Attachr.FileName,6)==fnMask) then begin
+      CreateRecordLink(Mailr,CurrentCompany,Attachr,CurrentCompany);
+    end;
+  end;
+  
+return;
+end;
+
+updating procedure CopyAttachmentLTxtVc(record MailVc Mailr,string textcode)
+begin
+  record RLinkVc RLr;
+  record LTxtVc LTxtr;
+  Boolean foundf;
+  string 255 tstr;
+  Integer i;
+  record Attach2Vc Attachr;
+  
+  LTxtr.Code=textcode;
+  if ReadFirstMain(LTxtr,1,true) then begin
+    i = 1; foundf=false;
+    while (foundf==false and ReadRecordLink(LTxtr,i,Attachr,RLr)) begin
+      i = i+1;
+      // if (Attachr.FileName==attachname) then begin
+        CreateRecordLink(Mailr,CurrentCompany,Attachr,CurrentCompany);
+        foundf = true;
+      // end;
+    end;
+  end;
+  
+  return;
+end;
+
+updating procedure CopyAttachmentWithName(record BuildVc Buildr,record MailVc Mailr,string attachname)
+begin
+  record RLinkVc RLr;
+  record RLinkVc RL2r;
+  Boolean foundf;
+  string 255 tstr;
+  Integer compno,i;
+  record Attach2Vc Attachr;
+  
+  i = 1; foundf=false;
+  while (foundf==false and ReadRecordLink(Buildr,i,Attachr,RLr)) begin
+    i = i+1;
+    if (Attachr.FileName==attachname) then begin
+      CreateRecordLink(Mailr,CurrentCompany,Attachr,CurrentCompany);
+      foundf = true;
+    end;
+  end;
+  
+  /*
+  if foundf then begin
+    RecordCopy(RL2r,RLr);
+    RL2r.ToRecidStr = BuildRecordIdStr(Mailr,compno);
+    if (RecordInsert(RL2r,true)) then begin
+    end;
+  end;
+  */
+  return;
+end;
+
+global
+updating function boolean BBSCreateAndAttachFlatCountExpPdf(record MailVc Mailr,record RcVc RepSpec,string filename)
+begin
+  string 255 fname;
+  Record BuildVc Buildr;
+  Boolean foundf,res;
+  integer i;
+  
+  fname = "tmp/" & filename;
+  SetDocumentFilename(fname);
+  SetMedia(mtPdf);
+
+  PrintDocument(RepSpec,"FlatCountersExpForm",false);
+  
+  if FileExists(fname) then begin
+    res = true;
+    RecordLinkFile(fname,0,Mailr,CurrentCompany);
+    Delete_File(fname);
+  end else begin
+    res = false;
+  end;
+  
+  SetDocumentFilename("");
+  
+  BBSCreateAndAttachFlatCountExpPdf = res;
+return;
+end;
+
+global
+updating procedure OBS_CreateAndAttachPdf(record MailVc Mailr,record IVVc IVr,string docname,string filename,integer UseAddAttachToEmail,string textcode)
+begin
+  string 255 fname,fnMask;
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  boolean foundf;
+  integer i;
+  record RcVc RepSpec;
+  
+  fname = "tmp/" & filename;
+  SetDocumentFilename(fname);
+  SetMedia(mtPdf);
+  IVr.Fax="USEPDFFORM";
+  
+  ReportDefaults(RepSpec,"IVRClass");
+  RepSpec.OnlyUnprntd = 1;  //visi
+  RepSpec.MultiPageJob = 1;
+  PrintDocumentWithSpec(IVr,"InvForm",false,RepSpec);
+  // PrintDocument(IVr,"InvForm",false);
+  
+  RecordLinkFile(fname,0,Mailr,CurrentCompany);
+  
+  SetDocumentFilename("");
+  
+  Delete_File(fname);
+  
+  Buildr.Code=IVr.BuildCode;
+  if ReadFirstMain(Buildr,1,true) then begin
+    CopyAttachmentWithName(Buildr,Mailr,"epasts1.pdf");
+    CopyAttachmentWithName(Buildr,Mailr,"epasts2.pdf");
+    CopyAttachmentWithName(Buildr,Mailr,"epasts3.pdf");
+    CopyAttachmentWithName(Buildr,Mailr,"epasts4.pdf");
+    CopyAttachmentWithName(Buildr,Mailr,"epasts5.pdf");
+  end;
+  
+  CopyAttachmentLTxtVc(Mailr,textcode);
+  
+  if /* UseAddAttachToEmail==1 and */ IVr.Contract!=-1 then begin
+    NAContractr.SerNr = IVr.Contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      fnMask = DateToString(IVr.InvDate,"YYYYMM");
+      CopyAttachmentWithMask(NAContractr,Mailr,fnMask);
+    end;
+  end;
+  
+return;
+end;
+
+global
+updating procedure OBS_CreateAndAttachPdfToIVVc(Record IVVc IVr,Record IVVc IVp,string docname,string filename)
+begin
+  string 255 fname;
+  record RcVc RepSpec;
+  
+  fname = "tmp/" & filename;
+  SetDocumentFilename(fname);
+  SetMedia(mtPdf);
+
+  // PrintDocument(IVr,"InvForm",false);
+  ReportDefaults(RepSpec,"IVRClass");
+  RepSpec.OnlyUnprntd = 1;  //visi
+  RepSpec.MultiPageJob = 1;
+  PrintDocumentWithSpec(IVr,"InvForm",false,RepSpec);
+  
+  RecordLinkFile(fname,0,IVr,CurrentCompany);
+  
+  SetDocumentFilename("");
+  
+  Delete_File(fname);
+return;
+end;
+
+global updating
+procedure OBS_CreateAndAttachMergedPdf(record MailVc Mailr,record IVVc IVr,record RcVc RepSpec,string docname,string filename,integer UseAddAttachToEmail,string textcode)
+begin
+  string 255 fname,fnMask;
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  record RcVc tRepSpec;
+  boolean foundf;
+  integer i;
+  
+  fname = "tmp/" & filename;
+  SetDocumentFilename(fname);
+  SetMedia(mtPdf);
+  
+  ReportDefaults(RepSpec,"IVRClass");
+  tRepSpec.OnlyUnprntd = 1;  //visi
+  tRepSpec.MultiPageJob = 1;
+  
+  IVr.Fax="USEPDFFORM";
+  
+  IVr.BuildCode="MERGEDPDF," & RepSpec.f1 & "," & DateToString(RepSpec.sStartDate,"DD.MM.YYYY") & "," & DateToString(RepSpec.sEndDate,"DD.MM.YYYY");
+  // PrintDocument(IVr,"InvForm",false);
+  PrintDocumentWithSpec(IVr,"InvForm",false,tRepSpec);
+  
+  RecordLinkFile(fname,0,Mailr,CurrentCompany);
+  
+  SetDocumentFilename("");
+  
+  Delete_File(fname);
+  
+  CopyAttachmentLTxtVc(Mailr,textcode);
+  
+  return;
+end;

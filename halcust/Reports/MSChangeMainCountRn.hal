@@ -1,0 +1,43 @@
+
+global 
+procedure MSChangeMainCountRn(Record RcVc RepSpec)
+Begin
+  Record FlatCountersVc FlatCountersr;
+  Boolean wloop,testf;
+  Record INVc INr;
+  
+  StartReportNoHeaderJob(USetStr(1000817));
+  FlatCountersr.Code=RepSpec.f1;
+  FlatCountersr.FlatCode="";
+  wloop=true;
+  While LoopKey("MainCounterCode",FlatCountersr,2,wloop) begin 
+    if FlatCountersr.Code!=RepSpec.f1 or nonblank(FlatCountersr.FlatCode) then begin
+      wloop=false;
+    end else begin
+      testf=true;
+      if nonblank(FlatCountersr.FlatCode) then begin
+        testf=false;
+      end;
+      if FlatCountersr.Changed==1 then begin
+        testf=false;
+      end;
+      if testf then begin
+        INr.Code=FlatCountersr.CounterType;
+        if ReadFirstMain(INr,1,true) then begin end;
+        StartFormat(15);
+        OutString(0,"",FlatCountersr.Code,0);
+        OutStringID(45,"DblFlatCountersVc",FlatCountersr.CounterNo,0,FlatCountersr.SerNr);
+        OutString(120,"",FlatCountersr.Address,0);
+        OutString(240,"",FlatCountersr.CounterType,0);
+        OutString(270,"",INr.Name,0);
+        OutStringID(480,"dblChangeMainCounter",USetStr(1000818),1,FlatCountersr.SerNr);
+        EndFormat;
+        Gray_Divider(1,0);
+      end;
+    end;
+  end;
+    
+  EndJob;
+
+return;
+end;

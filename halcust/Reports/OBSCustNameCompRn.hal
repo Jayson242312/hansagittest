@@ -1,0 +1,41 @@
+global
+procedure OBSCustNameCompRn(record RcVc RepSpec)
+begin
+  record CUVc CUr;
+  record NAContractVc NAContractr;
+  boolean TrHs;
+  
+  StartReportNoHeaderJob(1001624);
+  
+  StartFormat(15);
+  OutString(0,0,USetStr(1000123),false);
+  OutString(40,0,USetStr(1000183),false);
+  OutString(160,0,USetStr(1000122),false);
+  OutString(200,0,USetStr(1000183),false);
+  EndFormat;
+  Black_Divider(0,1);
+  CUr.Code="";
+  While LoopMain(CUr,1,true) begin
+    resetLoop(NAContractr);
+    TrHs=true;
+    NAContractr.CustCode=CUr.Code;
+    While LoopKey("CustCode",NAContractr,1,TrHs) begin
+      if NAContractr.CustCode!=CUr.Code then begin
+        TrHs=false;
+      end else begin
+        if NAContractr.CustName!=CUr.Name then begin
+          StartFormat(15);
+          OutString(0,"DblCUVc",CUr.Code,false);
+          OutString(40,0,CUr.Name,false);
+          OutString(160,"DblNAContractVc",NAContractr.SerNr,false);
+          OutString(200,0,NAContractr.CustName,false);
+          EndFormat;
+        end;
+      end;
+    end;
+  end;
+  
+  EndJob;
+  
+  return;
+end;

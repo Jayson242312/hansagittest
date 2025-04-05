@@ -1,0 +1,74 @@
+
+global 
+function boolean PasteBuildInFlatsVc(var record FlatsVc Flatsr,integer wnstate,boolean insFlatCodef)
+begin
+  record BuildVc Buildr;
+  record FlatsVc locFlatsr;
+  boolean res;
+  string 50 flatcode;
+  
+  res = true;
+  Buildr.Code = Flatsr.Code;
+  if !ReadFirstMain(Buildr,1,true) then begin
+    res = false;
+    GoTo LPasteBuildInFlatsVc;
+  end;
+  
+  Flatsr.Address = Buildr.Address;
+  
+    if wnstate==Rs_insert and insFlatCodef then begin
+    flatcode = "";
+    if CountRecords("FlatsVc")==0 then begin
+      flatcode = "P" & Right(Buildr.Code,len(Buildr.Code)-1);
+    end;
+    
+    if blank(flatcode) then begin
+      locFlatsr.FlatCode = "P" & Right(Buildr.Code,len(Buildr.Code)-1) & "999";
+      ReadLastMain(locFlatsr,1,false);
+      if Mid(locFlatsr.FlatCode,1,3)!=Right(Buildr.Code,len(Buildr.Code)-1) then begin
+        flatcode = "P" & Right(Buildr.Code,len(Buildr.Code)-1);
+      end else begin
+        flatcode = NextStrNumber(locFlatsr.FlatCode,true);
+      end;
+    end;
+    
+    if nonblank(flatcode) then begin
+      Flatsr.FlatCode = flatcode;
+    end;
+  end;
+  
+LPasteBuildInFlatsVc:;
+  PasteBuildInFlatsVc = res;
+  return;
+end;
+
+global
+function boolean GetActualFlatNAContract(var record NAContractVc NAContractr,string FlatCode) 
+begin
+  boolean res,TrHs,testf;
+  
+  res=false;
+  TrHs=true;
+  ResetLoop(NAContractr);
+  NAContractr.FlatCode=FlatCode;
+  while LoopBackKey("FlatCode",NAContractr,1,TrHs) begin
+    if NAContractr.FlatCode!=FlatCode then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if CurrentDate<NAContractr.StartDate then begin
+        testf=false;
+      end;
+      if NonBlankDate(NAContractr.EndDate) and (NAContractr.EndDate<CurrentDate) then begin
+        testf=false;
+      end;
+      if testf then begin
+        res=true;
+        TrHs=false;
+      end;
+    end;
+  end;  
+
+  GetActualFlatNAContract=res;
+  return;
+end;

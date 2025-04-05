@@ -1,0 +1,281 @@
+remote updating procedure CreateCountResFromBCRI(var record BuildCountResInputVc,var boolean,var integer);
+remote function boolean GetLastCounterResData(Record FlatCountersVc,var val,var date,date,string);
+remote function longint CheckBuildCountResInput(record BuildCountResInputVc);
+remote function boolean IsTwoTypeFlatCounter(longint);
+remote function boolean GetCountResRecInPeriod(longint,string,date,date,var record CountResVc);
+remote function boolean FindOldFlatCounter(record FlatCountersVc,var longint);
+
+global updating
+procedure CreateBuildCountResSm()
+begin
+  record BuildCountResInputVc BCRIr;
+  integer wn,cnt;
+  boolean update;
+  longint errcode;
+  
+  wn=CurWindow;
+  if windowstate(wn)==0 then begin
+    WindowFieldGoto(wn,BCRIr,-1,"BuildCode",false);
+    GetWindowRecord(wn,BCRIr);
+    errcode = CheckBuildCountResInput(BCRIr);
+    if errcode==0 then begin
+      CreateCountResFromBCRI(BCRIr,update,cnt);
+      PutWindowRecord(wn,BCRIr);
+      if update then begin
+        if (WindowDoOK(wn,0)) then begin end;
+      end;
+      MessageBox(0,USetStr(1000916) & " (" & cnt & ")");
+    end else begin
+      MessageBox(errcode,"");
+    end;
+  end else begin
+    Beep;
+  end;
+  
+  return;
+end;
+
+function boolean BuildCountResInputDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildCountResInputVc BCRIr;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,BCRIr);
+  td=BCRIr.StartDate;
+  td.day=DaysInMonth(getyear(td),getmonth(td));
+  BCRIr.EndDate=td;
+  PutWindowRecord(wn,BCRIr);
+  
+  BuildCountResInputDClassStartDateEFAfter = res;
+return;
+end;
+
+function boolean DuplicateRowExists(record BuildCountResInputVc BCRIr,integer rownr,row BuildCountResInputVc BCRIrw) begin
+  boolean res;
+  integer i,rwc;
+  row BuildCountResInputVc BCRI2rw
+  
+  rwc = MatRowCnt(BCRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    if rownr!=i then begin
+      MatRowGet(BCRIr,i,BCRI2rw);
+      if BCRIrw.CounterNo == BCRI2rw.CounterNo and blank(BCRIrw.CodeField) then begin
+        res = true;
+      end;
+      if BCRIrw.CounterNo == BCRI2rw.CounterNo and nonblank(BCRIrw.CodeField) and BCRIrw.CodeField==BCRI2rw.CodeField then begin
+        res = true;
+      end;
+    end;
+  end;
+  
+  DuplicateRowExists = res;
+return;
+end;
+
+function boolean BuildCountResDClassCounterNoEFAfter(Integer wn,Integer rownr)
+begin
+  record BuildCountResInputVc BCRIr;
+  row BuildCountResInputVc BCRIrw;
+  record FlatCountersVc FlatCountersr,FCr,FC2r;
+  record CountResVc CountResr,oldCountResr;
+  boolean res,testf;
+  val prevcr,amount;
+  date prevdate,sd,ed;
+  integer cnt,i;
+  longint sernr,oldsernr;
+  
+  res = true;
+  if rownr>=0 then begin
+    GetWindowRecord(wn,BCRIr);
+    MatRowGet(BCRIr,rownr,BCRIrw);
+    testf = true;
+    if blankdate(BCRIr.StartDate) then begin
+      testf = false;
+    end;
+    if blankdate(BCRIr.EndDate) then begin
+      testf = false;
+    end;
+    if blank(BCRIrw.CounterNo) then begin
+      testf = false;
+    end;
+    if testf then begin
+      if DuplicateRowExists(BCRIr,rownr,BCRIrw) then begin
+        testf = false;
+        MessageBox(1001331,"");
+      end;
+    end;
+    if testf then begin
+      FCr.CounterNo=BCRIrw.CounterNo;
+      if !ReadLastKey("CounterNo",FCr,1,true) then begin
+        testf = false;
+      end;
+      FC2r.CounterNo=BCRIrw.CounterNo;
+      if !ReadFirstKey("CounterNo",FC2r,1,true) then begin
+        testf = false;
+      end;
+      if testf then begin
+        if FCr.SerNr!=FC2r.SerNr then begin
+          testf = false;
+        end else begin
+          if !NonBlank(FCr.FlatCode) then begin
+            BCRIrw.CodeField=FCr.CodeField;
+            MatRowPut(BCRIr,rownr,BCRIrw);
+          end else begin
+            testf=false;
+          end;
+        end;
+      end;
+    end;
+    if testf then begin
+      FlatCountersr.CounterNo=BCRIrw.CounterNo;
+      FlatCountersr.FlatCode="";
+      if !ReadLastKey("CounterNo",FlatCountersr,2,true) then begin
+        testf = false;
+        BCRIrw.CurAmount=blankval;
+        BCRIrw.PrevAmount=blankval;
+        MatRowPut(BCRIr,rownr,BCRIrw);
+        PutWindowRecord(wn,BCRIr);
+      end;
+    end;
+    if testf then begin
+      if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+        testf = false;
+      end;
+    end;
+    if testf then begin
+      if GetLastCounterResData(FlatCountersr,prevcr,prevdate,BCRIr.StartDate,"") then begin
+        BCRIrw.PrevDate=prevdate;
+        BCRIrw.PrevAmount=prevcr;
+        // if (prevdate==FlatCountersr.InstallDate) and (prevcr==FlatCountersr.InitAmount) then begin
+          // findOldFlatCountf=true;
+        // end;
+        BCRIrw.Address=FlatCountersr.Address;
+        BCRIrw.CounterType = FlatCountersr.CounterType;
+        BCRIrw.Type=0;
+        sernr=FlatCountersr.SerNr;
+        // if findOldFlatCountf then begin
+          // if FindOldFlatCounter(FlatCountersr,sernr2) then begin
+            // sernr=sernr2;
+            // prevdate=AddMonth(prevdate,-1);
+          // end;
+        // end;
+        if FindOldFlatCounter(FlatCountersr,oldsernr) then begin
+        end;
+        sd=prevdate;
+        sd.day = 1;
+        for (i=1;i<=12;i=i+1) begin
+          amount=blankval;
+          ed=sd;
+          ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+          if GetCountResRecInPeriod(sernr,"",sd,ed,CountResr) begin
+            amount = CountResr.Amount;
+          end;
+          if oldsernr!=-1 then begin
+            if GetCountResRecInPeriod(oldsernr,"",sd,ed,oldCountResr) begin
+              amount = amount + oldCountResr.Amount;
+            end;
+          end;
+          Switch (i) begin
+            case 1:  BCRIrw.LastAmount1=amount;
+            case 2:  BCRIrw.LastAmount2=amount;
+            case 3:  BCRIrw.LastAmount3=amount;
+            case 4:  BCRIrw.LastAmount4=amount;
+            case 5:  BCRIrw.LastAmount5=amount;
+            case 6:  BCRIrw.LastAmount6=amount;
+            case 7:  BCRIrw.LastAmount7=amount;
+            case 8:  BCRIrw.LastAmount8=amount;
+            case 9:  BCRIrw.LastAmount9=amount;
+            case 10:  BCRIrw.LastAmount10=amount;
+            case 11:  BCRIrw.LastAmount11=amount;
+            case 12:  BCRIrw.LastAmount12=amount;
+          end;
+          sd=AddMonth(sd,-1);
+        end;
+        MatRowPut(BCRIr,rownr,BCRIrw);
+        PutWindowRecord(wn,BCRIr);
+      end;
+    end;
+  end;
+  
+  BuildCountResDClassCounterNoEFAfter=res;
+return;
+end;
+
+function boolean BuildCountResDClassCurAmountEFAfter(Integer wn,Integer rownr)
+begin
+  record BuildCountResInputVc BCRIr;
+  row BuildCountResInputVc BCRIrw;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,BCRIr);
+  if rownr>=0 then begin
+    MatRowGet(BCRIr,rownr,BCRIrw);
+    BCRIrw.SumAmount = BCRIrw.CurAmount - BCRIrw.PrevAmount;
+    MatRowPut(BCRIr,rownr,BCRIrw);
+    PutWindowRecord(wn,BCRIr);
+  end;
+  
+  BuildCountResDClassCurAmountEFAfter = res;
+return;
+end;
+
+function boolean BuildCountResDClassSumAmountEFAfter(Integer wn,Integer rownr)
+begin
+  record BuildCountResInputVc BCRIr;
+  row BuildCountResInputVc BCRIrw;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,BCRIr);
+  if rownr>=0 then begin
+    MatRowGet(BCRIr,rownr,BCRIrw);
+    BCRIrw.CurAmount = BCRIrw.SumAmount + BCRIrw.PrevAmount;
+    MatRowPut(BCRIr,rownr,BCRIrw);
+    PutWindowRecord(wn,BCRIr);
+  end;
+  
+  BuildCountResDClassSumAmountEFAfter = res;
+return;
+end;
+
+
+global
+function boolean BuildCountResInputDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "StartDate": res = BuildCountResInputDClassStartDateEFAfter(wn,fn,rownr,changed);
+      case "CounterNo": res = BuildCountResDClassCounterNoEFAfter(wn,rownr);
+      case "CurAmount": res = BuildCountResDClassCurAmountEFAfter(wn,rownr);
+      case "SumAmount": res = BuildCountResDClassSumAmountEFAfter(wn,rownr);
+    end;
+  end;
+  
+  BuildCountResInputDClassAfterEditField = res;
+  return;
+end;
+
+global
+updating function Boolean BuildCountResInputDClassOnEnterKey(Integer wn,string fieldname,Integer fn,Integer rownr)
+BEGIN
+  Boolean res;
+  record BuildCountResInputVc BCRIr;
+  
+  if fieldname=="CounterNo" then begin
+    WindowFieldGoto(wn,BCRIr,rownr,"CurAmount",false);
+  end;
+  
+  if fieldname=="CurAmount" then begin
+    WindowFieldGoto(wn,BCRIr,rownr+1,"CounterNo",false);
+  end;
+  
+  BuildCountResInputDClassOnEnterKey = res;
+  RETURN;
+END;

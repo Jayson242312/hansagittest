@@ -1,0 +1,24 @@
+external procedure SetInvToEmailTask(string);
+
+global
+updating procedure OnApplicationStartupComplete()
+begin
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  
+  if TestEnablerFile("OBSTestEnv") then begin
+    LogText(0,"TEST ENVIRONMENT DETECTED - OBSTestEnv");
+    GoTo LOnApplicationStartupComplete;
+  end;
+  
+  inner.OnApplicationStartupComplete;
+  
+  if (ServerMode or SingleUserMode) then begin
+     BlockLoad(InvToEmailTaskBl);
+    if InvToEmailTaskBl.RunFlag==1 then begin
+      SetInvToEmailTask("2");
+    end;
+  end;
+  
+LOnApplicationStartupComplete:;  
+  return;
+end;

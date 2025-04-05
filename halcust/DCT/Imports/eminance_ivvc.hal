@@ -1,0 +1,49 @@
+global
+updating procedure CustRelationIn()
+BEGIN
+  record CUVc CUr, newCUr;
+  record ContactRelVc CRr;
+  boolean oncef;
+  string 255 field;
+
+  oncef = false;
+
+  while (TestEOF==false) begin
+      if(oncef == false) then begin
+          oncef = true;
+      end;
+
+      field = ImportField();
+      CUr.Code = field;
+
+      if(ReadFirstMain(CUr,1,true)) then begin
+          RecordNew(newCUr);
+          newCUr.Mobile = CUr.Mobile;
+          newCUr.InvAddr0 = CUr.InvAddr0;
+          newCUr.InvAddr2 = CUr.InvAddr2;
+          newCUr.InvAddr3 = CUr.InvAddr3;
+          newCUr.CustCat = CUr.CustCat;
+
+          LogText(0, CUr.Mobile & CUr.InvAddr0);
+
+          field = ImportField();
+          newCUr.Name = field;
+          LogText(0, newCUr.Name & newCUr.Code);
+
+          RecordStore(newCUr,false);
+          
+          RecordNew(CRr);
+          CRr.CustCode = CUr.Code;
+          CRr.CustName = CUr.Name;
+          CRr.ContactCode = newCUr.Code;
+          CRr.ContactName = newCUr.Name;
+
+          RecordStore(CRr,false);
+
+      end else begin
+        LogText(0, "Not found");
+      end;;
+      if (NextImportLine(true)) then begin end;
+  end;
+  RETURN;
+END;

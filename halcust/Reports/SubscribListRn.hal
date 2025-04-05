@@ -1,0 +1,167 @@
+external procedure HTBuild(string,var string);
+external procedure HTMSClass(string,var string);
+  
+function val GetFlatFieldValueOnDate(string FlatCode,string FieldCode,date OnDate)
+begin
+  record FlatFieldVc FlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  val Value;
+  integer i,rw;
+
+  FlatFieldr.FlatCode = FlatCode;
+  FlatFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldr,2,true) then begin
+    rw = MatRowCnt(FlatFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(FlatFieldr,i,FlatFieldrw);
+      if FlatFieldrw.StartDate<=OnDate then begin
+        Value = FlatFieldrw.Value;
+        i = -1;
+      end;
+    end;
+  end;
+  GetFlatFieldValueOnDate = Value;
+  return;
+end;  
+  
+procedure PrintFlat(record FlatsVc Flatsr,date ondate,array integer colx,var array val totSums)
+begin
+  record NAContractVc NAContractr;
+  boolean TrHs,testf;
+  val t;
+  
+  TrHs=true;
+  NAContractr.FlatCode=Flatsr.FlatCode;
+  While LoopKey("FlatCode",NAContractr,1,TrHs) begin
+    if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+      TrHs=false;
+    end else begin;
+      testf = true;
+      if NAContractr.OKFlag==0 then begin
+        testf = false;
+      end;
+      if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>ondate then begin
+        testf = false;
+      end;
+      if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<ondate then begin
+        testf = false;
+      end;
+      if testf then begin
+        StartFormat(15);
+        OutString(colx[0],0,Flatsr.Address,false);
+        OutString(colx[1],"DblNAContractVc",NAContractr.SerNr,false);
+        OutString(colx[2],0,NAContractr.FlatAddress,false);
+        OutString(colx[3],0,NAContractr.CustName,false);
+        t=GetFlatFieldValueOnDate(Flatsr.FlatCode,"THEATAREA",ondate);
+        totSums[0]=totSums[0] + t;
+        OutVal(colx[4],0,t,M4UVal,true);
+        
+        t=GetFlatFieldValueOnDate(Flatsr.FlatCode,"TDECLPERS",ondate);  
+        totSums[1]=totSums[1] + t;
+        OutVal(colx[5],0,t,M4UVal,true);
+        if Flatsr.PrivStat==2 then begin
+          OutString(colx[6],0,USetStr(1000719),true);
+        end else begin
+          OutString(colx[6],0,USetStr(1000720),true);
+        end;
+        if Flatsr.RoomType==8 or Flatsr.RoomType==13 then begin
+          OutString(colx[7],0,USetStr(1000719),true);
+        end else begin
+          OutString(colx[7],0,USetStr(1000720),true);
+        end;
+        EndFormat;
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure SubscribListRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  boolean TrHs,TrHs2;
+  integer rw;
+  string 255 tstr;
+  array integer colx;
+  array val totSums;
+  
+  StartReportJob(USetStr(1001663));
+  rw = 1;
+  Header(rw,USetStr(2353) & ": " & DateToString(RepSpec.d1,"DD.MM.YYYY"),1);
+  rw = rw + 1;
+  if nonblank(RepSpec.f1) then begin
+    HTBuild(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  if nonblank(RepSpec.f2) then begin
+    HTMSClass(RepSpec.f2,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  EndHeader;
+  
+  colx[0]=0;
+  colx[1]=100;
+  colx[2]=140;
+  colx[3]=240;
+  colx[4]=380;
+  colx[5]=410;
+  colx[6]=450;
+  colx[7]=1;
+  
+  
+  StartFormat(15);
+  OutString(colx[0],0,USetStr(1001080),false);
+  OutString(colx[1],0,USetStr(1000122),false);
+  OutString(colx[2],0,USetStr(1001664),false);
+  OutString(colx[3],0,USetStr(1000123),false);
+  OutString(colx[4],0,USetStr(1000658),true);
+  OutString(colx[5],0,USetStr(1000724),true);
+  OutString(colx[6],0,USetStr(1000160),true);
+  OutString(colx[7],0,USetStr(1001665),true);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  ResetLoop(Buildr);
+  TrHs=true;
+  Buildr.Code=RepSpec.f1;
+  While LoopMain(Buildr,1,TrHs) begin
+    if nonblank(RepSpec.f1) and (Buildr.Code!=RepSpec.f1) then begin
+      TrHs=false;
+    end;
+    if nonblank(RepSpec.f2) and !SetInSet(RepSpec.f2,Buildr.Classification) then begin
+      TrHs=false;
+    end;
+    if TrHs then begin
+      ResetLoop(Flatsr);
+      TrHs2=true;
+      Flatsr.Code=Buildr.Code;
+      While LoopKey("Code",Flatsr,1,TrHs2) begin
+        if Flatsr.Code!=Buildr.Code then begin
+          TrHs2=false;
+        end else begin
+          PrintFlat(Flatsr,RepSpec.d1,colx,totSums);
+        end;
+      end;
+    end;
+  end;
+  
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(colx[0],0,"",false);
+  OutString(colx[1],0,"",false);
+  OutString(colx[2],0,"",false);
+  OutString(colx[3],0,"",false);
+  OutVal(colx[4],0,totSums[0],M45Val,true);
+  OutVal(colx[5],0,totSums[1],M4UVal,true);
+  OutString(colx[6],0,"",true);
+  OutString(colx[7],0,"",true);
+  EndFormat;
+  EndJob;
+  
+  return;
+end;

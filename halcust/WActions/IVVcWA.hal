@@ -1,0 +1,276 @@
+remote function boolean PasteNAContratInIVVc(var record IVVc,record LocalMachineBlock,var longint,var string,var string,var string,var string,var string);
+remote updating function longint UndoOneInvoice(longint);
+remote inner updating function Boolean RecordAction_raEMailQue(var record MailVc,Boolean);
+external inner function Integer TestAcceptanceStatus(Integer);
+remote updating function Integer BBS_CreateMailFromIV(record IVVc,var record MailVc,var string,Boolean,string,Record RcVc,string,string);
+remote updating procedure OBS_CreateAndAttachPdf(Record MailVc,Record IVVc,string,string,integer,string);
+remote function boolean GetFlatVcRec(string,var record FlatsVc);
+remote function boolean GetBuildVcRec(string,var record BuildVc);
+remote updating function boolean OBS_CreateInvEmail(var record IVVc,var record MailVc,var longint);  //OBS
+
+global
+procedure UpdatePDFIVDsm()
+begin
+  record IVVc IVr;
+  record RcVc RepSpec;
+  integer wn,nwn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,IVr);
+  RepSpec.repname = "PDFInvRemakeRecMn";
+  ReportDefaults(RepSpec,"PDFInvRemakeRecVClass");
+  RepSpec.long1 = IVr.SerNr;
+  nwn=OpenWindow("PDFInvRemakeRecVClass",1,0,"","",RepSpec);
+  // RunMaintenance(RepSpec);
+
+  return;
+end;
+
+global
+function Boolean IVDClassContractEFAfter(Integer wn,Integer rownr,Integer changed)
+begin
+  record IVVc IVr;
+  record NAContractVc NAContractr;
+  record MHistoryVc MHr; //meter history
+  boolean res,wloop;
+  res=true;
+
+  GetWindowRecord(wn,IVr);
+  NAContractr.SerNr=IVr.Contract;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    IVr.FlatCode = NAContractr.FlatCode;
+    IVr.BuildCode = NAContractr.BuildCode;
+    IVr.CustCode = NAContractr.CustCode;
+    IVr.Addr0 = NAContractr.CustName;
+
+    wloop=true;
+    MHr.ContractNr = IVr.Contract;
+    While LoopKey("ContractNr",MHr,1,wloop) begin
+      if (MHr.ContractNr != IVr.Contract) then begin
+        wloop=false;
+      end else begin
+        IVr.MeterNo = MHr.MeterNo;
+        // IVr.PrevReading = MHr.prevReading;
+        // IVr.CurrReading = MHr.currReading;
+        // IVr.Consumption = MHr.currConsumption;
+        // IVr.DateOfReading = "MHr."; 
+        // IVr.ReadingType = "MHr.";
+      end;
+    end;
+    PutWindowRecord(wn,IVr);
+  end;
+  IVDClassContractEFAfter = res;
+  return;
+end;
+
+global function Boolean IVDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed) BEGIN
+  Boolean res;
+
+  if (changed <> 0) then begin
+    Switch (fieldname) begin
+      case "Contract": res = IVDClassContractEFAfter(wn,rownr,changed);
+      otherwise
+        res=inner.IVDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+    end;
+  end;
+
+  IVDClassAfterEditField = res;
+  RETURN;
+END;
+
+global updating
+procedure MSUndoInvYesbtn()
+begin
+  Record RcVc RepSpec;
+  Record IVVc IVr;
+  integer wn,mwn;
+  longint res;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,RepSpec);
+  mwn=RepSpec.flags[0];
+  GetWindowRecord(mwn,IVr);
+  CloseWindow(wn);
+  CloseWindow(mwn);
+  res = UndoOneInvoice(IVr.SerNr);
+  if res!=0 then begin
+    MessageBox(res,"");
+  end;
+  
+  return;
+end;
+
+global
+procedure MSUndoInvNobtn()
+begin
+  integer wn;
+  
+  wn = CurWindow;
+  CloseWindow(wn);
+  
+  return;
+end;
+
+global updating
+procedure MSUndoInvSm()
+begin
+  Record IVVc IVr;
+  Record RcVc RepSpec;
+  longint res;
+  integer wn,nwn;
+
+  wn = CurWindow;
+  if (WindowState(wn)!=Rs_normal) then begin
+    MessageBox(1000763,"");
+    GoTo LMSUndoInvSm;
+  end;
+  
+  RepSpec.flags[0]=wn;
+  nwn=OpenWindow("MSUndoInvWClass",1,0,"","",RepSpec);
+  
+  // GetWindowRecord(wn,IVr);
+  // CloseWindow(wn);
+  // res = UndoOneInvoice(IVr.SerNr);
+  // if res!=0 then begin
+    // MessageBox(res,"");
+  // end;
+
+LMSUndoInvSm:;
+  return;
+end;
+
+global
+procedure CalculateMSIntSumRnsm() begin
+  record IVVc IVr;
+  record RcVc RepSpec;
+  integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,IVr);
+  RepSpec.repname = "CalculateMSIntSumRn";
+  ReportDefaults(RepSpec,"CalculateMSIntSumRClass");
+  RepSpec.Media = mtScreen;
+  RepSpec.long1 = IVr.SerNr;
+  RunReport(RepSpec,0);
+return;
+end;
+
+global
+updating procedure CreateMailFromIVDsm()
+begin
+  Integer wn,nwn;
+  record MailVc Mailr;
+  record IVVc IVr;
+  longint err;
+  err=0;
+  // string 255 tstr,docname;
+  // record MailSettingsBlock MSb;
+  // Boolean testf;
+
+// OBS --> standard code not used fully
+
+  // wn = CurWindow;
+  // if (WindowState(wn)==0) then begin//normalstate
+    // testf = true;
+    // GetWindowRecord(wn,IVr);
+    // err = TestAcceptanceStatus(IVr.AcceptanceStatus);
+    // if (err!=0) then begin
+      // MessageBox(err,": " & IVr.SerNr);
+      // testf = false;
+    // end;
+    // if (testf) then begin
+      // BlockLoad(MSb);
+      // if (MSb.UseExternalMail) then begin
+        // err = CreateExternalMailFromIVD(IVr,tstr,true,WindowFormName(wn));
+      // end else begin
+        // err = CreateMailFromIVD(IVr,Mailr,tstr,true,WindowFormName(wn));
+        // if (err!=0) then begin
+          // MessageBox(err,": " & tstr);
+        // end else begin
+          // nwn = OpenWindow("MailDClass",1,0,"","",Mailr);
+        // end;
+      // end;
+    // end;
+  // end;
+  
+  wn = CurWindow;
+  if (WindowState(wn)==0) then begin //normalstate
+    GetWindowRecord(wn,IVr);
+    err = TestAcceptanceStatus(IVr.AcceptanceStatus);
+    if (err!=0) then begin
+      MessageBox(err,": " & IVr.SerNr);
+      goto EndCreateMailFromIVDsm;
+    end;
+    if OBS_CreateInvEmail(IVr,Mailr,err) then begin
+      nwn = OpenWindow("MailDClass",1,0,"","",Mailr);
+    end else begin
+      MessageBox(err,"")
+    end;
+  end;
+  
+EndCreateMailFromIVDsm:;
+  return;
+end;
+
+global
+function Boolean IVDClassDepColfButtonAction(Integer wn,Integer value)
+begin
+  Boolean res;
+
+  res = true;
+
+  IVDClassDepColfButtonAction = res;
+  return;
+end;
+
+global
+function Boolean IVDClassInvStatusButtonAction(Integer wn,Integer value)
+begin
+  record IVVc IVr;
+  Boolean res;
+
+  res = true;
+
+  if (WindowState(wn)!=Rs_update) then begin
+    GetWindowRecord(wn,IVr);
+  end else begin
+    GetPrevWindowRecord(wn,IVr);    
+  end;
+  
+  if IVr.OKFlag==1 then begin
+    res = false;
+  end;
+  
+  IVDClassInvStatusButtonAction = res;
+  return;
+end;
+
+global
+function Boolean IVDClassOpenRecord(Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  record IVVc IVr;
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  
+  res=inner.IVDClassOpenRecord(wn,fieldname,fn,rownr);
+  
+  if fieldname=="FlatCode" then begin
+    GetWindowRecord(wn,IVr);
+    if GetFlatVcRec(IVr.FlatCode,Flatsr) then begin
+      res = true;
+      OpenWindow("FlatsDClass",0,0,"","",Flatsr);  
+    end;
+  end;
+  
+  if fieldname=="BuildCode" then begin
+    GetWindowRecord(wn,IVr);
+    if GetBuildVcRec(IVr.BuildCode,Buildr) then begin
+      res = true;
+      OpenWindow("BuildDClass",0,0,"","",Buildr);  
+    end;
+  end;  
+  
+  IVDClassOpenRecord = res;
+  return;
+end;

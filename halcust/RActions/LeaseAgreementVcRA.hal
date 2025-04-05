@@ -1,0 +1,178 @@
+
+global
+updating function LongInt LeaseAgreementVcRecordCheck(Var Record LeaseAgreementVc LeaseAgreementr, Record LeaseAgreementVc LeaseAgreement2r, LongInt stat, LongInt check)
+begin
+  Integer insertmode,updatemode;
+  boolean unokf,okf,unokf2,okf2;
+  longint res;
+  res = 0;
+  
+  // ==================================== PERMISSIONS  ==================================
+
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+
+  if (LeaseAgreementr.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (LeaseAgreement2r.OKFlag==1) then begin
+        unokf = true;
+      end;
+    end;
+  end;
+  // Permission to unok
+  if (unokf) then begin
+    if(UserCanAction("CustomRecordUnOkLeaseAgreement",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkLeaseAgreement"));
+    goto LExitCheck;
+    end;
+  end;
+  //
+  if (LeaseAgreementr.OKFlag==1) then begin
+    if (stat==updatemode) then begin
+      if (LeaseAgreement2r.OKFlag==0) then begin
+        okf = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf = true;
+    end;
+  end;
+  //
+  if okf then begin
+    // Permission to ok
+    if(UserCanAction("CustomRecordOkLeaseAgreement",false)==false) then begin 
+      res = -1;
+      MessageBox(1274,StringFromStringSet(3,"CustomRecordOkLeaseAgreement"));
+    goto LExitCheck;
+    end;
+  end;
+
+  // ============================== PERMISSIONS - OK - TRANSFER  ==============================
+
+  if (blank(LeaseAgreementr.SerNr)) then begin
+    RecordCheckError(100190,"",-1,"SerNr");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.DateLeaseSign)) then begin
+    RecordCheckError(100191,"",-1,"DateLeaseSign");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.DateKatimaSign)) then begin
+    RecordCheckError(100192,"",-1,"DateKatimaSign");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.LeaseStartDate)) then begin
+    RecordCheckError(100193,"",-1,"LeaseStartDate");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.LeaseEndDate)) then begin
+     RecordCheckError(100194,"",-1,"LeaseEndDate");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  //
+  if (blank(LeaseAgreementr.Title)) then begin
+    RecordCheckError(100195,"",-1,"Title");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.Customer)) then begin
+    RecordCheckError(100196,"",-1,"Customer");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.HoD)) then begin
+    RecordCheckError(100197,"",-1,"HoD");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.Rep)) then begin
+    RecordCheckError(100198,"",-1,"Rep");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.BuildCode)) then begin
+    RecordCheckError(100199,"",-1,"BuildCode");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.LeaseVal)) then begin
+    RecordCheckError(100200,"",-1,"LeaseVal");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.LeaseString)) then begin
+    RecordCheckError(100201,"",-1,"LeaseString");
+
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(LeaseAgreementr.Zoning)) then begin
+    LeaseAgreementr.Zoning = "N/A";
+  end;
+  if (blank(LeaseAgreementr.Township)) then begin
+    LeaseAgreementr.Township = "N/A";
+  end;
+  if (blank(LeaseAgreementr.Extension)) then begin
+    LeaseAgreementr.Extension = "N/A";
+  end;
+  if (blank(LeaseAgreementr.Division)) then begin
+    LeaseAgreementr.Division = "N/A";
+  end;
+  if (blank(LeaseAgreementr.Address)) then begin
+    LeaseAgreementr.Address = "N/A";
+  end;
+  if (blank(LeaseAgreementr.LandSize)) then begin
+    LeaseAgreementr.LandSize = 0;
+  end;
+
+LExitCheck:;
+  LeaseAgreementVcRecordCheck = res;
+end;
+
+
+global
+function LongInt LeaseAgreementVcRecordDefaults(Var Record LeaseAgreementVc LeaseAgreementr, Record LeaseAgreementVc LeaseAgreement2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  LeaseAgreementr.SerNr = NextSerNr("LeaseAgreementVc",CurrentDate,-1,false,"");
+  LeaseAgreementVcRecordDefaults = res;
+  return;
+end;
+
+
+
+// CustomRecordLeaseAgreement
+global
+function longint LeaseAgreementVcRecordRemoveTest(var record LeaseAgreementVc LeaseAgreementr, record LeaseAgreementVc LeaseAgreement2r,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!UserCanAction("CustomRecordDeleteLeaseAgreement",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteLeaseAgreement"));
+    goto LLeaseAgreementVcRecordRemoveTest;
+  end;
+
+LLeaseAgreementVcRecordRemoveTest:;
+  LeaseAgreementVcRecordRemoveTest = res;
+  return;
+end;

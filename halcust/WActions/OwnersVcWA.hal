@@ -1,0 +1,35 @@
+remote function boolean PasteCustNameInOwners(var record OwnersVc,var longint,integer);
+
+function boolean OwnersDClassCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed) begin
+  record OwnersVc Ownersr;
+  row OwnersVc Ownersrw;
+  boolean res;
+  longint warning;
+
+  res = true;
+  GetWindowRecord(wn,Ownersr);
+  DeselectWindow(wn,false);
+  if (PasteCustNameInOwners(Ownersr,warning,rownr)) then begin
+    PutWindowRecord(wn,Ownersr);
+  end else begin
+    MessageBox(warning,"");
+  end;
+    
+  OwnersDClassCodeEFAfter  = res;
+  return;
+end;
+
+global
+function boolean OwnersDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "CustCode": res = OwnersDClassCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  OwnersDClassAfterEditField = res;
+  return;
+end;

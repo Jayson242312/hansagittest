@@ -1,0 +1,115 @@
+external inner function Boolean GetPMRow(string,var row PMBlock);
+external updating procedure MakeIPFromFidaIP(string,string,val,string,date,string,integer,var integer,var longint,var integer,var integer,longint,longint,var longint,record FidaIPVc,integer,string,string);
+external updating procedure MakeTRFromFidaIP(string,string,val,string,date,var integer,var longint,var integer,string);
+external updating procedure CreateFidaIPRowID(var record FidaIPVc);
+
+global updating
+procedure CreateIPFromFidaIPMn(record RcVc RepSpec)
+begin
+  record FidaIPVc Fidar,oldFidar;
+  row FidaIPVc Fidarw;
+  boolean TrHs,testf,update,allMadef;
+  row PMBlock PMrw;
+  integer i,rwc,rownr,wn,ipcnt,ipok,ipcntIP,nwn;
+  longint ipnr,error;
+  
+  TrHs=true;
+  Fidar.TransDate=RepSpec.sStartDate;
+  While LoopKey("TransDate",Fidar,1,TrHs) begin
+    if Fidar.TransDate>RepSpec.sEndDate then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if Fidar.IPMadeFlag==1 then begin
+        testf=false;
+      end;
+      if Fidar.Closed==1 then begin
+        testf=false;
+      end;
+      if Fidar.OKFlag==0 and RepSpec.flags[0]==0 then begin
+        testf=false;
+      end;
+      if testf then begin
+        RecordCopy(oldFidar,Fidar);
+        //Add ID if not exisit
+        CreateFidaIPRowID(Fidar);
+        rwc=MatRowCnt(Fidar);
+        //Make IPVc
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(Fidar,i,Fidarw);
+          testf=true;
+          if Fidarw.Type!=1 then begin
+            testf=false;
+          end;
+          if Fidarw.IPNr>0 then begin
+            testf=false;
+          end;
+          if Fidarw.DCType!=0 then begin
+            testf = false;
+          end;
+          if testf then begin
+            MakeIPFromFidaIP(Fidarw.CustCode,Fidarw.InvoiceList,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,Fidar.PayMode,Fidarw.PayType,rownr,ipnr,ipcntIP,ipok,Fidarw.ContractNr,StringToLongInt(Fidarw.DebtRepAgreements),error,Fidar,i+1,Fidarw.FidaRowID,Fidarw.CaseNr);
+            if ipnr!=-1 then begin
+              Fidarw.IPNr=ipnr;
+              MatRowPut(Fidar,i,Fidarw);
+              update=true;
+            end;
+          end;
+        end;
+        //Make TRVc
+        ipcnt=0;
+        if !GetPMRow(Fidar.PayMode,PMrw) then begin
+          LogText(0,"CreateIPFromFidaIPMn ERROR :: " & USetStr(1100023) & " FidaIPVc " & Fidar.SerNr);
+          GoTo LCreateIPFromFidaIPMn;
+        end;  
+        if blank(PMrw.AccNr) then begin
+          LogText(0,"CreateIPFromFidaIPMn ERROR :: " & USetStr(1100024) & " FidaIPVc " & Fidar.SerNr);
+          GoTo LCreateIPFromFidaIPMn;
+        end;
+        rwc=MatRowCnt(Fidar);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(Fidar,i,Fidarw);
+          testf=true;
+          if Fidarw.Type!=1 then begin
+            testf=false;
+          end;
+          if Fidarw.IPNr>0 then begin
+            testf=false;
+          end;
+          if Fidarw.DCType!=2 then begin
+            testf = false;
+          end;
+          if testf then begin
+            MakeTRFromFidaIP(Fidarw.AccNumber,PMrw.AccNr,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,rownr,ipnr,ipcnt,Fidarw.RowComment);
+            Fidarw.IPNr=ipnr;
+            MatRowPut(Fidar,i,Fidarw);
+            update=true;
+          end;
+        end;
+        
+        if update then begin
+          allMadef=true;
+          rwc=MatRowCnt(Fidar);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(Fidar,i,Fidarw);
+            if Fidarw.IPNr==-1 then begin
+              allMadef=false;
+            end;
+          end;
+          if allMadef then begin
+            Fidar.IPMadeFlag=1;
+          end;
+          if RepSpec.flags[0]==1 and Fidar.OKFlag==0 then begin
+            Fidar.OKFlag=1;
+          end;
+          if RecordUpdate(oldFidar,Fidar,true)!=0 then begin
+            LogText(0,"CreateIPFromFidaIPMn ERROR :: Cant update FidaIPVc " & Fidar.SerNr);
+          end;
+        end;
+        LCreateIPFromFidaIPMn:;
+      end;
+    end;
+  end;
+    
+  return;
+end;

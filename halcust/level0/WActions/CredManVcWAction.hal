@@ -1,0 +1,220 @@
+remote function Integer RecordAction_raCredManToIP(var record IPVc,LongInt,string);
+remote procedure CredManSetDates(var record CredManVc);
+external updating procedure StoreCredManEvent(record CredManVc,var record CredManEventVc); // JH
+external updating procedure SaveTrans(record TRVc); //jh
+external function Integer GetIntYc(Date);//jh
+external updating function Boolean RemoveCredManEvent(record CredManVc,string,LongInt);
+external updating function Integer MakeDebtorsTrans(LongInt,val,val,Integer,string,Date,LongInt,var Integer) ;
+
+global 
+updating procedure ReceiptFromCredMansm()
+begin
+  record CredManVc CredManr;
+  Integer wn,nwn,normalstate,r;
+  record IPVc IPr;
+  boolean testf;
+
+  normalstate = 0;
+  wn = CurWindow;
+  GetWindowRecord(wn,CredManr);
+  testf = true;
+  //jh
+  if(UserCanAction("CustomRecordAgreementCreateAgreementReceipt",false)==false ) then begin 
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordAgreementCreateAgreementReceipt"));
+    goto Lbreak;
+  end;
+  //
+
+  if (CredManr.CreateInstalmentFlag == 0) then begin
+    MessageBox(0,"Please Create Instalments");
+    testf = false;
+    goto Lbreak;
+  end;
+
+  if (CredManr.Approved == 0) then begin
+    MessageBox(0,"Agreement not Approved");
+    testf = false;
+  end;
+
+  if (testf) then begin
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,CredManr);
+    if (UserCanAction("IVToIP",true)) then begin
+        r = RecordAction_raCredManToIP(IPr,CredManr.SerNr,CredManr.CustCode);
+    //   if (r!=-1) then begin
+        nwn = OpenWindow("POSIPDClass",1,0,"","",IPr);
+        PutWindowString(nwn,"POSIPDClassCustomer",CredManr.CustCode); 
+        // CreateRecordLink(IPr,CurrentCompany,CredManr,CurrentCompany);  
+        // CreateRecordLink(CredManr,CurrentCompany,CredManr,CurrentCompany);  
+    //   end else begin
+    //     Beep;
+    //   end;
+    // end else begin
+    end;
+  end else begin
+    Beep;
+  end;
+   end;
+Lbreak:;
+  return;
+end;
+
+
+updating
+procedure revertTransferredInvoices(longint SerNr) 
+begin
+  record IVVc oldIVr,IVr;
+  record AccBlock Accb;
+  record TRVc gTRp;
+  record AccBlock ARAccRec;
+  Integer flushcnt;
+  date cd;
+  Integer err;
+  LongInt NumberSeries;
+  BlockLoad(ARAccRec);
+  BlockLoad(Accb);
+
+  IVr.SerNr = SerNr;
+
+  if (ReadFirstMain(IVr,1,true)) then begin
+    RecordCopy(OldIVr,IVr);
+    IVr.DisputedFlag = 0 ;
+    IVr.CredManNr = Accb.ARAcc;
+    if (RecordUpdate(OldIVr,IVr,true)) then begin end;
+    err = MakeDebtorsTrans(IVr.SerNr,0,IVr.Sum4,0,Accb.ARAcc,currentDate,NumberSeries,flushcnt);
+  end;
+ return;
+end;
+
+
+
+// Jh this only applies for invoices. When a payment is made the payment should never be removed. also the revert only works if its not approved
+global 
+updating procedure RevertAgreementDsm() 
+Begin
+  record CredManVc CredManr;
+  record CredManEventVc CredManEventr;
+  integer wn;
+  boolean testf;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,CredManr);
+  testf = true;
+
+  if (CredManr.Approved == 1) then begin
+    MessageBox(0,"Cannot Revert Approved Agreement")
+    testf = false;
+  end;
+
+  if (testf) then begin
+  CredManEventr.CredManNr = CredManr.SerNr;
+  while (loopkey("FindOriginalRecord",CredManEventr, 1, testf)) begin
+      if (CredManEventr.CredManNr != CredManr.SerNr) then begin
+        testf = false;
+      end;
+      if (testf) then begin
+        if (CredManEventr.FileName == "IVVc") then begin  // Update all invoices and
+         revertTransferredInvoices(CredManEventr.RecordNr);
+         RemoveCredManEvent(CredManr,CredManEventr.FileName,CredManEventr.RecordNr);
+        end;
+      end;
+    end;
+  end;
+End;
+
+
+global
+procedure EditInstalmentCredManDsm()
+begin
+  record CredManVc CredManr;
+  record RcVc RepSpec;
+  Integer wn;
+  boolean testf;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,CredManr);
+
+  if (CredManr.CreateInstalmentFlag == 1) then begin
+    testf = true;
+  end else begin
+  MessageBox(0,"No Instalments created");  
+  end;
+
+  if (testf) then begin
+  RepSpec.repname = "EditInstalmentCredManRn";
+  RepSpec.long1 = CredManr.SerNr;
+  RepSpec.Media = mtScreen;
+  RunReport(RepSpec,0);
+  end;
+
+
+  return;
+end;
+
+
+global
+updating procedure CreateInstalmentCredManDsm()
+begin
+  
+  record CredManVc CredManr,OldCredManr;
+  record CredManEventVc CredManEventr;
+  Integer wn,i;
+  date startdate,enddate;
+  row CredManEventVc CredManEventrw;
+  record CredManSetBlock CredManSetb;
+  boolean testf;
+
+  wn = CurWindow; 
+
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,CredManr);
+
+  testf = true ;
+
+  if (CredManr.agreedInstallmentAmount == 0) then begin
+      MessageBox(0,"Agreed Instalment Amount May Not Be 0");
+      testf = false;
+  end;
+
+  if (CredManr.CreateInstalmentFlag == 1) then begin
+    MessageBox(0,"Instalments Already Created");
+    testf = false;
+  end;
+
+  
+
+  if (testf) then begin
+  RecordCopy(OldCredManr,CredManr);
+  CredManr.CreateInstalmentFlag = 1;
+  if RecordUpdate(OldCredManr,CredManr,false) then begin end;
+  BlockLoad(CredManSetb);
+  for (i=0;i<CredManr.InstalmentMonths;i=i+1)  begin   
+  RecordNew(CredManEventr);
+  CredManEventr.CredManNr = CredManr.SerNr;
+  CredManEventr.FileName = "IVVc";
+  CredManEventr.CredManBal = CredManr.InvSum4; // 
+  CredManEventr.PaidFlag = 0;
+
+  startdate = AddMonth(CredManr.startDate, i+1);
+  startdate.day = 1;
+  endDate = startdate;
+  endDate.day = DaysInMonth(GetYear(startdate), GetMonth(startdate));
+
+  CredManEventr.TransDate = startdate;
+  CredManEventr.DueDate = endDate;
+
+  CredManEventr.Comment = "Instalment"; 
+  CredManEventrw.ArtCode = CredManSetb.InstalmentItem;
+  CredManEventrw.Comment = "";
+  CredManEventr.RecordNr = "INST";
+  CredManEventrw.ChargeType = 2 ; // invoiced fee
+  CredManEventrw.Sum = CredManr.agreedInstallmentAmount;  // this will be the amount for each installment
+  MatRowPut(CredManEventr,MatRowCnt(CredManEventr),CredManEventrw);
+  StoreCredManEvent(CredManr,CredManEventr);
+  end;
+  MessageBox(0,"Instalments Created");
+  PutWindowRecord(wn,CredManr);
+  end;
+  return;
+end;

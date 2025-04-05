@@ -1,0 +1,273 @@
+
+procedure OBS_ExportStringTAB(string tstr) begin
+  
+  ExportPadString(tstr & chr(9),BytesInString(tstr)+1," ",false);
+  
+  return;
+end;
+
+function val FindOneRowCodeValue(string reccode,integer rectype,string rowcode,date sd,date ed,var boolean foundf)
+begin
+  record ServCalcValueVc ServCalcValuer;
+  boolean testf,wloop;
+  val res;
+  
+  ServCalcValuer.Code = reccode;
+  ServCalcValuer.Type = rectype; //1 - Erf 2 - Erf group 3 - flatgroup
+  ServCalcValuer.FieldCode = rowcode;
+  ServCalcValuer.StartDate = sd;
+  wloop = true;
+  While LoopKey("CodeFieldCodeSD",ServCalcValuer,4,wloop) begin
+    testf = true;
+    if ServCalcValuer.Code != reccode then begin
+      wloop = false;
+    end;
+    if ServCalcValuer.Type != rectype then begin
+      wloop = false;
+    end;
+    if ServCalcValuer.FieldCode != rowcode then begin
+      wloop = false;
+    end;
+    if ServCalcValuer.StartDate>ed then begin
+      wloop = false;
+    end;
+    if !DateInRange(ServCalcValuer.StartDate,sd,ed) then begin
+      testf = false;
+    end;
+    if !DateInRange(ServCalcValuer.EndDate,sd,ed) then begin
+      testf = false;
+    end;
+    if wloop and testf then begin
+      wloop = false;
+      foundf = true;
+      res = ServCalcValuer.CalcVal;
+    end;
+  end;
+  
+  FindOneRowCodeValue = res;
+  return;
+end;
+
+procedure ExportBuildVc(date sd,date ed,record CalcServicePlanVc CalcServicePlanr,integer size,string address,var array val arrTotSums)
+begin
+  record BuildVc Buildr;
+  boolean foundf,TrHs;
+  row CalcServicePlanVc CalcServicePlanrw;
+  array val arrVals;
+  integer i,rwc,cnt;
+  
+  ResetLoop(Buildr);
+  Buildr.Address = address;
+  TrHs=true;
+  While LoopKey("Address",Buildr,1,TrHs) begin
+    if Buildr.Address!=address then begin
+      TrHs=false;
+    end else begin
+      foundf = false;
+      cnt = 0;
+      rwc = MatRowCnt(CalcServicePlanr);
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+        if nonblank(CalcServicePlanrw.FCode) then begin
+          arrVals[cnt] = FindOneRowCodeValue(Buildr.Code,1,CalcServicePlanrw.FCode,sd,ed,foundf);
+          cnt = cnt + 1;
+        end;
+      end;
+      if foundf then begin
+        OBS_ExportStringTAB(Buildr.Address); //Adrese
+        OBS_ExportStringTAB(Buildr.Code); //Kods
+        OBS_ExportStringTAB(DateToString(sd,"DD.MM.YYYY") & ":" & DateToString(ed,"DD.MM.YYYY")); //Periods
+        for(i=0;i<size;i=i+1)begin
+          OBS_ExportStringTAB(ValToString(arrVals[i],M45Val,"",".",0));
+          arrTotSums[i] = arrTotSums[i] + arrVals[i];
+        end;
+        ExportPadString(chr(10),1," ",false);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure ExportFlatGroupVc(date sd,date ed,record CalcServicePlanVc CalcServicePlanr,integer size,string address,var array val arrTotSums)
+begin
+  record FlatGroupVc FlatGroupr;
+  boolean TrHs,foundf;
+  row CalcServicePlanVc CalcServicePlanrw;
+  array val arrVals;
+  integer i,rwc,cnt;
+  
+  TrHs=true;
+  ResetLoop(FlatGroupr);
+  FlatGroupr.Comment = address;
+  While LoopKey("Comment",FlatGroupr,1,TrHs) begin
+    if FlatGroupr.Comment!=address then begin
+      TrHs=false;
+    end else begin 
+      foundf = false;
+      cnt = 0;
+      rwc = MatRowCnt(CalcServicePlanr);
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+        if nonblank(CalcServicePlanrw.FCode) then begin
+          arrVals[cnt] = FindOneRowCodeValue(FlatGroupr.Code,3,CalcServicePlanrw.FCode,sd,ed,foundf);
+          cnt = cnt + 1;
+        end;
+      end;
+      if foundf then begin
+        OBS_ExportStringTAB(FlatGroupr.Comment); //Adrese
+        OBS_ExportStringTAB(FlatGroupr.Code); //Kods
+        OBS_ExportStringTAB(DateToString(sd,"DD.MM.YYYY") & ":" & DateToString(ed,"DD.MM.YYYY")); //Periods
+        for(i=0;i<size;i=i+1)begin
+          OBS_ExportStringTAB(ValToString(arrVals[i],M45Val,"",".",0));
+          arrTotSums[i] = arrTotSums[i] + arrVals[i];
+        end;
+        ExportPadString(chr(10),1," ",false);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure ExportBuildGroupVc(date sd,date ed,record CalcServicePlanVc CalcServicePlanr,integer size,string address,var array val arrTotSums)
+begin
+  record BuildGroupVc BuildGroupr;
+  boolean foundf,TrHs;
+  row CalcServicePlanVc CalcServicePlanrw;
+  array val arrVals;
+  integer i,rwc,cnt;
+  
+  ResetLoop(BuildGroupr)
+  BuildGroupr.Comment = address;
+  TrHs=true;
+  While LoopKey("Comment",BuildGroupr,1,TrHs) begin
+    if BuildGroupr.Comment!=address then begin
+      TrHs=false;
+    end else begin
+      foundf = false;
+      cnt = 0;
+      rwc = MatRowCnt(CalcServicePlanr);
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+        if nonblank(CalcServicePlanrw.FCode) then begin
+          arrVals[cnt] = FindOneRowCodeValue(BuildGroupr.Code,2,CalcServicePlanrw.FCode,sd,ed,foundf);
+          cnt = cnt + 1;
+        end;
+      end;
+      if foundf then begin
+        OBS_ExportStringTAB(BuildGroupr.Comment); //Adrese
+        OBS_ExportStringTAB(BuildGroupr.Code); //Kods
+        OBS_ExportStringTAB(DateToString(sd,"DD.MM.YYYY") & ":" & DateToString(ed,"DD.MM.YYYY")); //Periods
+        for(i=0;i<size;i=i+1)begin
+          OBS_ExportStringTAB(ValToString(arrVals[i],M45Val,"",".",0));
+          arrTotSums[i] = arrTotSums[i] + arrVals[i];
+        end;
+        ExportPadString(chr(10),1," ",false);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure AddToArray(var array string arrAddress,var integer arrsize,string address)
+begin
+  boolean foundf;
+  integer i;
+    
+  for (i=0;i<arrsize;i=i+1) begin 
+    if arrAddress[i]==address then begin
+      foundf=true;
+      i=arrsize;
+    end;
+  end;
+  
+  if !foundf then begin
+    arrAddress[arrsize]=address;
+    arrsize = arrsize + 1;
+  end;
+  
+  return;
+end;
+
+procedure FillAddressArray(var array string arrAddress,var integer arrsize)
+begin
+  record BuildVc Buildr;
+  record FlatGroupVc FlatGroupr;
+  record BuildGroupVc BuildGroupr;
+  boolean TrHs;
+  
+  ResetLoop(Buildr);
+  TrHs=true;
+  While LoopKey("Address",Buildr,1,TrHs) begin
+    AddToArray(arrAddress,arrsize,Buildr.Address);
+  end;
+  
+  ResetLoop(BuildGroupr);
+  TrHs=true;
+  While LoopKey("Comment",BuildGroupr,1,TrHs) begin
+    AddToArray(arrAddress,arrsize,BuildGroupr.Comment);
+  end;
+  
+  ResetLoop(FlatGroupr);
+  TrHs=true;
+  While LoopKey("Comment",FlatGroupr,1,TrHs) begin
+    AddToArray(arrAddress,arrsize,FlatGroupr.Comment);
+  end;
+
+  return;
+end;
+
+global
+procedure ServCalcValueExpEn(Record RcVc RepSpec)
+Begin
+  record CalcServicePlanVc CalcServicePlanr;
+  row CalcServicePlanVc CalcServicePlanrw;
+  integer i,rwc,size;
+  array string 255 arrAddress;
+  integer arrsize;
+  array val arrTotSums;
+  
+  CalcServicePlanr.Code = RepSpec.f1;
+  if !ReadFirstMain(CalcServicePlanr,1,true) then begin
+    LogText(0,"ServCalcValueExpEn ERROR :: Could not find CalcServicePlanVc record " & RepSpec.f1);
+    GoTo LServCalcValueExpEn;
+  end;
+  
+  OBS_ExportStringTAB(USetStr(1000181)); //Adrese
+  OBS_ExportStringTAB(USetStr(1000569)); //Kods
+  OBS_ExportStringTAB(USetStr(1000499)); //Periods
+  rwc = MatRowCnt(CalcServicePlanr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+    if nonblank(CalcServicePlanrw.FCode) then begin 
+      OBS_ExportStringTAB(CalcServicePlanrw.Comment); //FCode
+      size = size + 1;
+    end;
+  end;
+  ExportPadString(chr(10),1," ",false);
+  
+  FillAddressArray(arrAddress,arrsize);
+  
+  //Sakarto alfabeta seciba
+  SortStringArray(arrAddress);  
+  
+  for (i=0;i<arrsize;i=i+1) begin
+    ExportBuildGroupVc(RepSpec.sStartDate,RepSpec.sEndDate,CalcServicePlanr,size,arrAddress[i],arrTotSums);
+    ExportBuildVc(RepSpec.sStartDate,RepSpec.sEndDate,CalcServicePlanr,size,arrAddress[i],arrTotSums);
+    ExportFlatGroupVc(RepSpec.sStartDate,RepSpec.sEndDate,CalcServicePlanr,size,arrAddress[i],arrTotSums);
+  end;
+
+  //totsum output
+  OBS_ExportStringTAB("");
+  OBS_ExportStringTAB("");
+  OBS_ExportStringTAB("");
+  for(i=0;i<size;i=i+1)begin
+    OBS_ExportStringTAB(ValToString(arrTotSums[i],M45Val,"",".",0));
+  end;
+  ExportPadString(chr(10),1," ",false);
+  
+LServCalcValueExpEn:;
+return;
+end;

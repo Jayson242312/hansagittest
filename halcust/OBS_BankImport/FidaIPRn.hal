@@ -1,0 +1,108 @@
+external inner procedure HT2Per(Date,Date,var string);
+
+procedure FillPMCommentVec(var vector string vecPMCom)
+begin
+  record PMBlock PMBl; //Payment block
+  row PMBlock PMBlrw;
+  integer i,rwc;
+  
+  BlockLoad(PMBl);
+  rwc=MatRowCnt(PMBl);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(PMBl,i,PMBlrw);
+    if nonblank(PMBlrw.Code) then begin
+      vecPMCom[PMBlrw.Code] = PMBlrw.Comment; // 
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure FidaIPRn(record RcVc RepSpec)
+begin
+  record FidaIPVc FidaIPr; //  Bank payments
+  boolean TrHs,testf;
+  integer rw;
+  string 255 tstr;
+  vector string 255 vecPMCom;
+  val totval;
+  
+  StartReportJob(USetStr(1100037));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  if RepSpec.f1!="" then begin
+    Header(rw,USetStr(13857) & RepSpec.f1,1);
+    rw = rw + 1;
+  end;
+  EndHeader;
+    
+  FillPMCommentVec(vecPMCom);  //
+    
+  StartFormat(15);
+  OutString(0,0,USetStr(12421),false);  //number
+  OutString(50,0,USetStr(1100038),false);  //Ready
+  OutString(90,0,USetStr(1100039),false);  //Associate
+  OutString(130,0,USetStr(1100040),false);  //Closed
+  OutString(170,0,USetStr(12001),false);  //Date
+  OutString(250,0,USetStr(13857),false);  //Method of Payment
+  OutString(310,0,USetStr(12164),false);  //
+  OutString(1,0,USetStr(12010),true);  //Sum
+  EndFormat;
+  Black_Divider(0,1);
+
+  TrHs=true;
+  FidaIPr.TransDate = RepSpec.sStartDate;
+  while LoopKey("TransDate",FidaIPr,1,TrHs) begin
+    if FidaIPr.TransDate > RepSpec.sEndDate then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if nonblank(RepSpec.f1) and (FidaIPr.PayMode!=RepSpec.f1) then begin
+        testf=false;
+      end;
+      if testf then begin
+        StartFormat(15);
+        OutString(0,"DblFidaIPVc",FidaIPr.SerNr,false);  //numurs
+        if FidaIPr.OKFlag==1 then begin
+          OutString(50,0,"X",false);
+        end else begin
+          OutString(50,0,"",false);
+        end;
+        if FidaIPr.IPMadeFlag==1 then begin
+          OutString(90,0,"X",false);
+        end else begin
+          OutString(90,0,"",false);
+        end;
+        if FidaIPr.Closed==1 then begin
+          OutString(130,0,"X",false);
+        end else begin
+          OutString(130,0,"",false);
+        end;
+        OutString(170,0,FidaIPr.TransDate,false);  //datums
+        OutString(250,0,FidaIPr.PayMode,false);  //samaksas veids
+        OutString(310,0,vecPMCom[FidaIPr.PayMode],false);  //samaksas veids
+        Outval(1,0,FidaIPr.Sum,M4Val,true);  //Summa
+        EndFormat;  
+        Gray_Divider(0,1);
+        totval = totval + FidaIPr.Sum;
+      end;
+    end;
+  end;
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(0,0,"",false);  //numurs
+  OutString(50,0,"",false);  //Sagatav
+  OutString(90,0,"",false);  //Izv
+  OutString(130,0,"",false);  //Slēgts
+  OutString(170,0,"",false);  //datums
+  OutString(250,0,"",false);  //samaksas veids
+  OutString(310,0,"",false);  //samaksas veids
+  OutVal(1,0,totval,M4Val,true);  //Summa
+  EndFormat;
+  EndJob;
+
+  return;
+end;

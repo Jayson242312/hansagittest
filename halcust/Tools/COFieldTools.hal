@@ -1,0 +1,94 @@
+
+function val GetCOFieldValueOnDate(longint coser,string FieldCode,date OnDate,record COFieldCodeVc COFieldCoder)
+begin
+  record COFieldVc COFieldr;
+  row COFieldVc COFieldrw;
+  val Value;
+  integer i,rw;
+
+  COFieldr.COSer = coser;
+  COFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(COFieldr,2,true) then begin
+    rw = MatRowCnt(COFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(COFieldr,i,COFieldrw);
+      if COFieldrw.StartDate<=OnDate then begin
+        Value = COFieldrw.Value;
+        i = -1;
+      end;
+    end;
+  end;
+  
+  GetCOFieldValueOnDate = Value;
+  return;
+end;
+
+//this is remote
+global
+procedure CalcCOFields(longint COSer,var array val COFieldValueMas)
+begin
+  record COFieldSetBlock COFieldSetr;
+  row COFieldSetBlock COFieldSetrw;
+  record COFieldCodeVc COFieldCoder;
+  date CurDate;
+  integer i,rw;
+
+  CurDate = CurrentDate;
+  BlockLoad(COFieldSetr);
+  rw = MatRowCnt(COFieldSetr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(COFieldSetr,i,COFieldSetrw);
+    COFieldCoder.FieldCode = COFieldSetrw.FieldCode;
+    ReadFirstMain(COFieldCoder,1,true);
+    COFieldValueMas[i+1] = GetCOFieldValueOnDate(COSer,COFieldSetrw.FieldCode,CurDate,COFieldCoder);
+  end;
+  COFieldValueMas[0] = rw;
+  return;
+end;
+
+//this also is remote
+// global
+// procedure CalcCONamedFields(longint coser,var array string CONamedFieldMas)
+// begin
+//   Record MunDecisionVc MunDecisionr;
+//   Row MunDecisionVc MunDecisionrw;
+//   Record SocFlatVc SocFlatr;
+//   Row SocFlatVc SocFlatrw;
+//   Record LowIncomeVc LowIncomer;
+//   Row LowIncomeVc LowIncomerw;
+//   integer i;
+  
+//   for(i=1;i<=8;i=i+1)begin
+//     CONamedFieldMas[i]="";
+//   end;
+  
+//   MunDecisionr.COSer=COSer;
+//   if ReadFirstmain(MunDecisionr,1,true) then begin
+//     if MatRowCnt(MunDecisionr)>0 then begin
+//       MatRowGet(MunDecisionr,MatRowCnt(MunDecisionr)-1,MunDecisionrw);
+//       CONamedFieldMas[1] = MunDecisionrw.DecisionNr;
+//       CONamedFieldMas[2] = MunDecisionrw.StartDate;
+//       CONamedFieldMas[3] = StringFromSet(1033,MunDecisionrw.Type);
+//       CONamedFieldMas[8] = MunDecisionrw.EndDate;
+//     end;
+//   end;
+//   LowIncomer.COSer=COSer;
+//   if ReadFirstmain(LowIncomer,1,true) then begin
+//     if MatRowCnt(LowIncomer)>0 then begin
+//       MatRowGet(LowIncomer,MatRowCnt(LowIncomer)-1,LowIncomerw);
+//       CONamedFieldMas[4] = LowIncomerw.StartDate;
+//       CONamedFieldMas[5] = LowIncomerw.EndDate;
+//     end;
+//   end;
+//   SocFlatr.COSer=COSer;
+//   if ReadFirstmain(SocFlatr,1,true) then begin
+//     if MatRowCnt(SocFlatr)>0 then begin
+//       MatRowGet(SocFlatr,MatRowCnt(SocFlatr)-1,SocFlatrw);
+//       CONamedFieldMas[6] = SocFlatrw.StartDate;
+//       CONamedFieldMas[7] = SocFlatrw.EndDate;
+//     end;
+//   end;
+  
+  
+// return;
+// end;

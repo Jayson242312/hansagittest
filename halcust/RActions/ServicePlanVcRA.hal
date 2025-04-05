@@ -1,0 +1,327 @@
+
+/* tarifu record actioni */
+global
+function longint ServicePlanVcRecordCheck(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlan2r,longint a,longint b)
+begin
+  longint res;
+  Record BuildVc Buildr;
+  Record BuildGroupVc BuildGroupr;
+  Record FlatGroupVc FlatGroupr;
+  record INVc INr;
+  Record ServicePlanVc tmpServicePlanr;
+  row ServicePlanVc ServicePlanrw;
+  string 255 tstr;
+  date sd,ed, prevDate;
+  integer rw,rwc,cnt;
+  boolean changef;
+
+  res = 0;
+  if (ServicePLanr.SerNr<=0) then begin
+    ServicePlanr.SerNr =NextSerNr("ServicePlanVc",CurrentDate,-1,false,"");
+  end;
+  if blank(ServicePlanr.BuildCode) and blank(ServicePlanr.BuildGroupCode) and blank(ServicePlanr.FlatGroupCode) and ServicePlanr.GlobalServPlan==0 then begin
+    RecordCheckError(1000939,"",-1,"BuildCode");
+    res = -1;
+    goto EndServicePlanVcRecordCheck;
+  end;
+  if (ServicePlanr.GlobalServPlan==1) and (nonblank(ServicePlanr.BuildCode) or nonblank(ServicePlanr.BuildGroupCode) or nonblank(ServicePlanr.FlatGroupCode)) then begin
+    RecordCheckError(1000940,"",-1,"BuildCode");
+    res = -1;
+    goto EndServicePlanVcRecordCheck;
+  end;
+  if nonblank(ServicePlanr.ServType) then begin
+    INr.Code = ServicePlanr.ServType;
+    if !ReadFirstMain(INr,1,true) then begin
+      RecordCheckError(1000974,"",-1,"ServType");
+      res = -1;
+      goto EndServicePlanVcRecordCheck;
+    end;
+  end else begin
+    RecordCheckError(1058,"",-1,"ServType");
+    res = -1;
+    goto EndServicePlanVcRecordCheck;
+  end;
+  
+  cnt=0;
+  if nonblank(ServicePlanr.BuildCode) then begin
+    cnt=cnt+1;
+    Buildr.Code=ServicePlanr.BuildCode;
+    if !ReadFirstMain(Buildr,1,true) then begin
+      RecordCheckError(1000914,"",-1,"BuildCode");
+      res = -1;
+      goto EndServicePlanVcRecordCheck;
+    end;
+  end;
+  if nonblank(ServicePlanr.BuildGroupCode) then begin
+    cnt=cnt+1;
+    BuildGroupr.Code=ServicePlanr.BuildGroupCode;
+    if !ReadFirstMain(BuildGroupr,1,true) then begin
+      RecordCheckError(1000972,"",-1,"BuildGroupCode");
+      res = -1;
+      goto EndServicePlanVcRecordCheck;
+    end;
+  end;
+  if nonblank(ServicePlanr.FlatGroupCode) then begin
+    cnt=cnt+1;
+    FlatGroupr.Code=ServicePlanr.FlatGroupCode;
+    if !ReadFirstmain(FlatGroupr,1,true) then begin
+      RecordCheckError(1000973,"",-1,"FlatGroupCode");
+      res = -1;
+      goto EndServicePlanVcRecordCheck;
+    end;
+  end;
+  if cnt>1 then begin
+    RecordCheckError(1000937,"",-1,"BuildCode");
+    res = -1;
+    goto EndServicePlanVcRecordCheck;
+  end;
+  
+  if ServicePlanr.GlobalServPlan==1 then begin
+    tmpServicePlanr.ServType=ServicePlanr.ServType;
+    if ReadFirstKey("ServTypeGlobal",tmpServicePlanr,1,true) then begin
+      if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+        RecordCheckError(1000975," " & tmpServicePlanr.SerNr,-1,"SerNr");
+        res = -1;
+        goto EndServicePlanVcRecordCheck;
+      end;
+    end;
+    
+    tmpServicePlanr.ServType=ServicePlanr.ServType;
+    if ReadLastKey("ServTypeGlobal",tmpServicePlanr,1,true) then begin
+      if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+        RecordCheckError(1000975," " & tmpServicePlanr.SerNr,-1,"SerNr");
+        res = -1;
+        goto EndServicePlanVcRecordCheck;
+      end;
+    end;
+  end else begin
+    if nonblank(ServicePlanr.BuildCode) then begin
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.BuildCode=ServicePlanr.BuildCode;
+      if ReadFirstKey("BuildServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"BuildCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+      
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.BuildCode=ServicePlanr.BuildCode;
+      if ReadLastKey("BuildServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"BuildCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+    end;
+    if nonblank(ServicePlanr.BuildGroupCode) then begin
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.BuildGroupCode=ServicePlanr.BuildGroupCode;
+      if ReadFirstKey("BuildGroupServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"BuildGroupCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+      
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.BuildGroupCode=ServicePlanr.BuildGroupCode;
+      if ReadLastKey("BuildGroupServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"BuildGroupCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+    end;
+    if nonblank(ServicePlanr.FlatGroupCode) then begin
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.FlatGroupCode=ServicePlanr.FlatGroupCode;
+      if ReadFirstKey("FlatGroupServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"FlatGroupCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+      
+      tmpServicePlanr.ServType=ServicePlanr.ServType;
+      tmpServicePlanr.FlatGroupCode=ServicePlanr.FlatGroupCode;
+      if ReadLastKey("FlatGroupServType",tmpServicePlanr,2,true) then begin
+        if tmpServicePlanr.SerNr!=ServicePlanr.SerNr then begin
+          RecordCheckError(1000976," " & tmpServicePlanr.SerNr,-1,"FlatGroupCode");
+          res = -1;
+          goto EndServicePlanVcRecordCheck;
+        end;
+      end;
+    end;
+  end;
+  
+  rwc = MatRowCnt(ServicePlanr);
+  sd = "01.01.2046";
+  ed = "01.01.2045";
+  prevdate = "01.01.1980";
+  for (rw = 0; rw <rwc; rw = rw +1) begin
+    MatRowGet(ServicePlanr,rw,ServicePlanrw);
+    //BBS VG 2007/12/17 -->
+    if (sd > ServicePlanrw.StartDate) then begin
+      sd = ServicePlanrw.StartDate;
+    end;
+    if nonblankdate(ServicePlanrw.EndDate) then begin
+      ed=ServicePlanrw.EndDate;
+    end else begin
+      if (rw+1)!=rwc then begin
+        RecordCheckError(1000429,"",rw,"EndDate");
+        res = -1;
+        goto EndServicePlanVcRecordCheck;
+      end;
+      ed = "01.01.2040";
+    end;
+    if (prevdate >= ServicePlanrw.StartDate) then begin
+      RecordCheckError(1000428,"",rw,"StartDate");
+      res = -1;
+    end;
+    prevDate = ServicePlanrw.EndDate;
+  end;
+  ServicePlanr.StartDate = sd;
+  ServicePlanr.EndDate = ed;
+  
+EndServicePlanVcRecordCheck:;
+  ServicePlanVcRecordCheck = res;
+return;
+end;
+
+global
+function longint ServicePlanVcRecordDefaults(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlan2r,longint a,longint b)
+begin
+  longint res;
+
+  if (servingclient==false) then begin
+    ServicePlanr.SerNr = NextSerNr("ServicePlanVc",CurrentDate,-1,false,"");
+  end;
+  ServicePlanr.TransDate=Currentdate;
+  
+  ServicePlanVcRecordDefaults = res;
+return;
+end;
+
+global
+function LongInt ServicePlanVcRecordInIndex(record ServicePlanVc ServicePlanr,string indexname)
+begin
+  LongInt res;
+
+  res = 1;
+  if (ServicePlanr.GlobalServPlan!=1) then begin
+    if (indexname=="ServTypeGlobal")  then begin res = 0; end;
+  end;
+  ServicePlanVcRecordInIndex = res;
+  return;
+end;
+
+global
+function longint ServicePlanVcRecordSave(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlanr2,longint a,longint b)
+begin
+  longint res;
+  
+  if nonblank(ServicePlanr.BuildCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.BuildCode;
+    ServicePlanr.RecType=1;
+    goto EndServicePlanVcRecordSave;
+  end;
+  if nonblank(ServicePlanr.BuildGroupCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.BuildGroupCode;
+    ServicePlanr.RecType=2;
+    goto EndServicePlanVcRecordSave;
+  end;
+  if nonblank(ServicePlanr.FlatGroupCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.FlatGroupCode;
+    ServicePlanr.RecType=3;
+    goto EndServicePlanVcRecordSave;
+  end;
+  if ServicePlanr.GlobalServPlan==1 then begin
+    ServicePlanr.CodeField="";
+    ServicePlanr.RecType=4;
+    goto EndServicePlanVcRecordSave;
+  end;
+
+EndServicePlanVcRecordSave:;
+  ServicePlanVcRecordSave=res;
+  return;
+end;
+
+global
+function longint ServicePlanVcRecordUpdate(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlanr2,longint a,longint b)
+begin
+  longint res;
+  
+  if nonblank(ServicePlanr.BuildCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.BuildCode;
+    ServicePlanr.RecType=1;
+    goto EndServicePlanVcRecordUpdate;
+  end;
+  if nonblank(ServicePlanr.BuildGroupCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.BuildGroupCode;
+    ServicePlanr.RecType=2;
+    goto EndServicePlanVcRecordUpdate;
+  end;
+  if nonblank(ServicePlanr.FlatGroupCode) then begin
+    ServicePlanr.CodeField=ServicePlanr.FlatGroupCode;
+    ServicePlanr.RecType=3;
+    goto EndServicePlanVcRecordUpdate;
+  end;
+  if ServicePlanr.GlobalServPlan==1 then begin
+    ServicePlanr.CodeField="";
+    ServicePlanr.RecType=4;
+    goto EndServicePlanVcRecordUpdate;
+  end;
+  
+EndServicePlanVcRecordUpdate:;
+  ServicePlanVcRecordUpdate=res;
+  return;
+end;
+
+global
+function longint ServicePlanVcRecordImport(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlanr2,longint a,longint b)
+begin
+  longint res;
+  
+  if ServicePlanr.RecType==0 then begin
+    if nonblank(ServicePlanr.BuildCode) then begin
+      ServicePlanr.CodeField=ServicePlanr.BuildCode;
+      ServicePlanr.RecType=1;
+      goto EndServicePlanVcRecordImport;
+    end;
+    if nonblank(ServicePlanr.BuildGroupCode) then begin
+      ServicePlanr.CodeField=ServicePlanr.BuildGroupCode;
+      ServicePlanr.RecType=2;
+      goto EndServicePlanVcRecordImport;
+    end;
+    if nonblank(ServicePlanr.FlatGroupCode) then begin
+      ServicePlanr.CodeField=ServicePlanr.FlatGroupCode;
+      ServicePlanr.RecType=3;
+      goto EndServicePlanVcRecordImport;
+    end;
+    if ServicePlanr.GlobalServPlan==1 then begin
+      ServicePlanr.CodeField="";
+      ServicePlanr.RecType=4;
+      goto EndServicePlanVcRecordImport;
+    end;
+  end;
+  
+EndServicePlanVcRecordImport:;
+  return;
+end;
+
+global
+function longint ServicePlanVcRecordDuplicate(var record ServicePlanVc ServicePlanr,record ServicePlanVc ServicePlanr2,longint a,longint b)
+begin
+  longint res;
+  
+  ServicePlanr.SerNr = -1;
+  
+  ServicePlanVcRecordDuplicate = res;
+  return;
+end;

@@ -1,0 +1,746 @@
+external inner function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,var string,Boolean,var Integer);
+// external inner procedure IVVc_PastePrice(var record IVVc,record IVVc,Integer,var string);
+external inner function LongInt DateDiff(Date,Date);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+external inner procedure GetBaseCurncy(Integer,var string);
+external inner function string 50 TimeToString(time,string,boolean);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external function val GetMaxIntSumIV(record IVVc,string);
+external function val GetUsedIntSum(longint,date);
+external updating procedure InsertIntSumCalcVcB1(longint,string,date,val,string);
+external function boolean GetMSIntPercRec(longint,var Record IntPercVc,string);
+external procedure GetIntPercDataOnDate2(Record IntPercVc,date,var Row IntPercVc);
+
+global
+function date GetLastIntInvDateBeforeDate(string CustCode,string CONr,date BeforeDate,longint ignoreivsernr)
+begin
+  record IVVc IVr;
+  row IVVc IVrw;
+  date LastIntInvDate;
+  boolean wloop,testf;
+  integer i,rwc;
+  
+  LastIntInvDate = "";
+  IVr.CustCode = custcode;
+  IVr.InvDate = BeforeDate;
+  wloop=true;
+  While LoopBackKey("CustDate",IVr,2,wloop) begin
+    if IVr.CustCode!=custcode then begin
+      wloop=false;
+    end else begin
+      testf=true;
+      if IVr.MergedInvFlag==0 and IVr.Contract!=StringToLongInt(conr) then begin
+        testf = false;
+      end;
+      if IVr.SerNr==ignoreivsernr then begin
+        testf=false;
+      end;
+      if IVr.InvDate>BeforeDate then begin
+        testf=false;
+      end;
+      if testf and IVr.MergedInvFlag==1 then begin
+        testf = false;
+        rwc = MatRowCnt(IVr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(IVr,i,IVrw);
+          if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ContractNr==StringToLongInt(conr) then begin
+            testf = true;
+            i = rwc;
+          end;
+        end;
+      end;
+      if testf and wloop then begin
+        LastIntInvDate = IVr.InvDate;
+        wloop=false;
+      end;
+    end;
+  end;
+  
+  GetLastIntInvDateBeforeDate = LastIntInvDate;
+  return;
+end;
+
+function boolean isInvoiceInIgnoreList(vector string vecInvIgnoreList,string ivnr,date ondate) begin
+  boolean res;
+  date sd,ed;
+  
+  sd.day = 1; sd.month = 1; sd.year = 1980;
+  ed.day = 31; ed.month = 12; ed.year = 2049;
+  
+  if vecInvIgnoreList[ivnr & "::1"]!="1" then begin
+    res = false;
+    GoTo LisInvoiceInIgnoreList;
+  end;
+  
+  if nonblank(vecInvIgnoreList[ivnr & "::SD"]) then begin
+    sd.year = StringToInt(Left(vecInvIgnoreList[ivnr & "::SD"],4));
+    sd.month = StringToInt(Mid(vecInvIgnoreList[ivnr & "::SD"],4,2));
+    sd.day = StringToInt(Mid(vecInvIgnoreList[ivnr & "::SD"],6,2));
+  end;
+  if nonblank(vecInvIgnoreList[ivnr & "::ED"]) then begin
+    ed.year = StringToInt(Left(vecInvIgnoreList[ivnr & "::ED"],4));
+    ed.month = StringToInt(Mid(vecInvIgnoreList[ivnr & "::ED"],4,2));
+    ed.day = StringToInt(Mid(vecInvIgnoreList[ivnr & "::ED"],6,2));
+  end;
+  
+  
+  if DateInRange(ondate,sd,ed) then begin
+    res = true;
+  end;
+  
+LisInvoiceInIgnoreList:;
+  isInvoiceInIgnoreList = res;
+return;
+end;
+
+function string 255 BuildFormulaStr(record SMVc Cacher) begin
+  string 255 res,tstr;
+  row SMVc Cacherw;
+  integer i,rwc;
+  array string 255 arrDayPrcs;
+  vector val vecDayPrcSums;
+  vector boolean vecAddedf;  
+
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    tstr = " * " & Cacherw.RowSimStat & " * " & ValToString(Cacherw.CredVal,M4UVal,"",".",0);
+    vecDayPrcSums[tstr] = vecDayPrcSums[tstr] + Cacherw.DebVal;
+    if vecAddedf[tstr]==false then begin
+      arrDayPrcs[arrDayPrcs.length] = tstr;
+      vecAddedf[tstr] = true;
+    end;
+  end;
+  
+  for(i=0;i<arrDayPrcs.length;i=i+1)begin
+    tstr = arrDayPrcs[i];
+    if blank(res) then begin
+      res = USetStr(1000025) & ValToString(vecDayPrcSums[tstr],M4Val,"",".",0) & tstr;
+    end else begin
+      res = res & " + " & ValToString(vecDayPrcSums[tstr],M4Val,"",".",0) & tstr;
+    end;
+  end;
+  
+  if blank(res) then begin
+    res = UsetStr(1000502);
+  end;
+  
+  BuildFormulaStr = res;
+return;
+end;
+
+procedure AddToCacher(record SMVc Cacher,integer days,val intsum,longint IVSerNr,val UnPayedSumOnDate,val IntPerc,date MSIntDate,string perstr,string invcur) begin
+  row SMVc Cacherw;  
+
+  Cacherw.AccNumber = ivsernr; //rēķina numurs
+  Cacherw.ExtraComment = perstr; //periods
+  Cacherw.DebVal = UnPayedSumOnDate; //rēķina parāds
+  Cacherw.RowSimStat = days; //dienas
+  Cacherw.FrRate = intsum; //līgumsoda summa
+  Cacherw.TransDate = MSIntDate; //līgumsoda datums
+  Cacherw.CredVal = IntPerc; //procenti
+  Cacherw.CurncyCode = invcur; //valūta
+  MatRowPut(Cacher,MatRowCnt(Cacher),Cacherw);
+  
+return;
+end;
+
+procedure PrintCacher(record SMVc Cacher,longint ivsernr,val totsum,integer printEURColumnf,string basecur,string IntFormulaStr) begin
+  record IVVc IVr;
+  row SMVc Cacherw;
+  integer i,days,rwc;
+  val t;
+  
+  IVr.SerNr = ivsernr;
+  ReadFirstMain(IVr,1,true);
+  
+  StartFormat(15);
+  OutString(0,"",IntFormulaStr,0);
+  OutVal(4,"",totsum,M4Val,0);
+  if printEURColumnf==1 then begin
+    CurValToOtherCur(IVr.InvDate,IVr.CurncyCode,totsum,"EUR",t,DefaultCurRoundOff);
+    OutVal(6,"",t,M4Val,0);
+  end;
+  OutString(5,"dblIVVc",IVr.SerNr,1);
+  OutString(1,"",IVr.TransDate,1);
+  EndFormat;
+  Gray_Divider(1,0);
+  
+  StartFormat(15);
+  OutString(20,"",USetStr(14345),false);    //Rēķins
+  OutString(60,"",USetStr(1000367),false);  //Līgumsoda dat.
+  OutString(110,"",USetStr(17300),false);   //Periods
+  OutString(215,"",USetStr(1000128),false); //Parāds
+  OutString(245,"",USetStr(19661),false);   //Dienas
+  OutString(270,"",USetStr(1001272),false); //Proc.
+  OutString(4,"",USetStr(17485),false); //Summa
+  if printEURColumnf==1 then begin
+    OutString(6,"",USetStr(1000368),false); //EUR
+  end;
+  EndFormat;
+  Gray_divider(1,20);
+  
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    StartFormat(15);
+    OutString(20,"dblIVVc",Cacherw.AccNumber,false);
+    OutDate(60,"",Cacherw.TransDate,false);
+    OutString(110,"",Cacherw.ExtraComment,false);
+    OutVal(215,"",Cacherw.DebVal,M4Val,false);
+    OutString(245,"",Cacherw.RowSimStat,false);
+    OutString(270,"",ValToString(Cacherw.CredVal,M4UVal,"",".",0) & "%",false);
+    OutVal(4,"",Cacherw.FrRate,M45Val,false);
+    if printEURColumnf==1 then begin
+      t = 0;
+      if basecur!="EUR" then begin
+        CurValToOtherCur(CurrentDate,Cacherw.CurncyCode,Cacherw.FrRate,"EUR",t,DefaultCurRoundOff);
+      end else begin
+        t = Cacherw.FrRate;
+      end;
+      OutVal(6,"",t,M45Val,false);
+    end;
+    EndFormat;
+  end;
+  EndFormat;
+  
+return;
+end;
+
+procedure PrintReportHeader(array integer ColX,integer calctype) begin
+  
+  OutString(ColX[1],0,USetStr(2361),false);
+  OutString(ColX[2],0,USetStr(17300),false);
+  OutString(ColX[3],0,USetStr(19661),false);
+  OutString(ColX[4],0,USetStr(12010),true);
+  OutString(ColX[5],0,USetStr(12067),true);
+  if calctype==1 then begin
+    OutString(ColX[6],0,USetStr(8095),true);
+    OutString(ColX[7],0,USetStr(10806),true);
+  end;
+  OutString(ColX[8],0,USetStr(1000502),true); //Līgumsods
+  EndFormat;
+  Black_Divider(0,1);
+
+return;
+end;
+
+procedure PrintReportRow(array integer ColX,longint sernr,date d1,date d2,integer days,val ondatesum,val intprc,val maxIntSum,val availIntSum,val t,integer calctype)
+begin
+
+  StartFormat(15);
+  OutLongInt(ColX[1],"dblIVVc",sernr,false);
+  OutString(ColX[2],0,"" & d1 & ":" & d2,false);
+  OutString(ColX[3],0,days,false);
+  OutString(ColX[4],0,ondatesum,true);
+  OutString(ColX[5],0,"" & ValToString(intprc,M4UVal,"",".",0) & "%",true);
+  if calctype==1 then begin
+    OutVal(ColX[6],0,maxIntSum,M45Val,true);
+    OutVal(ColX[7],0,availIntSum + t,M45Val,true);
+  end;
+  OutVal(ColX[8],0,t,M45Val,true);
+  EndFormat;
+  
+return;
+end;
+
+procedure PrintWebRow(longint sernr,date d1,date d2,integer days,val ondatesum,val intprc,val maxIntSum,val availIntSum,val t,integer calctype) begin
+  
+  WebOutStringFormatNL("    <IntSumDetRow>");
+  WebOutStringFormatNL("      <IntInv>" & sernr & "</IntInv>");
+  WebOutStringFormatNL("      <Period>" & "" & d1 & ":" & d2 & "</Period>");
+  WebOutStringFormatNL("      <Days>" & days & "</Days>");
+  WebOutStringFormatNL("      <PerDebtSum>" & ondatesum & "</PerDebtSum>");
+  WebOutStringFormatNL("      <PerIntPrc>" & ValToString(intprc,M4UVal,"",".",0) & "</PerIntPrc>");
+  if calctype==1 then begin
+    WebOutStringFormatNL("      <MaxInvSum>" & ValToString(maxIntSum,M45Val,"",".",0) & "</MaxInvSum>");
+    WebOutStringFormatNL("      <AvailInvSum>" & ValToString(availIntSum + t,M45Val,"",".",0) & "</AvailInvSum>");
+  end;
+  WebOutStringFormatNL("      <RowTot>" & ValToString(t,M45Val,"",".",0) & "</RowTot>");
+  WebOutStringFormatNL("    </IntSumDetRow>");
+
+return;
+end;
+
+procedure CheckIntStartDate(var date LastIntInvDate)
+begin
+  date td;
+  
+  td.year=2019;
+  td.month=4;
+  td.day=1;
+  
+  if nonblankdate(LastIntInvDate) then begin
+    if LastIntInvDate<td then begin
+      LastIntInvDate=td;
+    end;
+  end else begin
+    LastIntInvDate=td;
+  end;
+
+  return;
+end;
+
+function date GetDateDRA(string source)
+begin
+  date res;
+  
+  // YYYYMMDD
+  if nonblank(source) then begin
+    res.year=StringToInt(Left(source,4));
+    res.month=StringToInt(MID(source,4,2));
+    res.day=StringToInt(Right(source,2));
+  end;
+  
+  GetDateDRA = res;
+  return;
+end;
+
+function integer GetCalcDays(date ted,date tsd,record IntPercVc IntPercr,record IntPercVc VienCacher)
+begin
+  row IntPercVc IntPercrw;
+  integer res,i,rwc,size,j; 
+  date td,sd,ed,sd1,ed1,vsd,ved,blnkdate;
+  boolean testf;
+  array date arrSD,arrED;
+  
+  td.year=2019;
+  td.month=4;
+  td.day=1;
+  
+  sd=tsd;
+  ed=ted;
+  
+  if ed<td then begin
+    res=0;
+    GoTo LGetCalcDays;
+  end;
+  if sd<td then begin
+    sd=td;
+  end;
+  
+  res = DateDiff(ed,sd)+1;
+
+  rwc=MatRowCnt(IntPercr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IntPercr,i,IntPercrw)
+    if IntPercrw.CalcWay==2 then begin
+      testf=true;
+      // if nonblankdate(IntPercrw.StartDate) and (ed<IntPercrw.StartDate) then begin
+        // testf=false;
+      // end;
+      // if nonblankdate(IntPercrw.EndDate) and IntPercrw.EndDate<sd then begin
+        // testf=false;
+      // end;
+      if nonblankdate(IntPercrw.StartDate) then begin 
+        sd1=AddDay(IntPercrw.StartDate,-1);
+        if ed<sd1 then begin
+          testf=false;
+        end;
+      end;
+      if nonblankdate(IntPercrw.EndDate) then begin
+        ed1=AddDay(IntPercrw.EndDate,-1);
+        if ed1<sd then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        //GetStartDate
+        sd1=IntPercrw.StartDate;
+        if blankdate(sd1) then begin
+          sd1=td;
+        end else begin
+          sd1=AddDay(sd1,-1);
+        end;
+        if sd1<sd then begin
+          sd1=sd;
+        end;
+        //GetEndDate
+        ed1=IntPercrw.EndDate;
+        if blankdate(ed1) then begin
+          ed1=ed;
+        end else begin
+          ed1=AddDay(ed1,-1);
+        end;
+        if ed<ed1 then begin
+          ed1=ed;
+        end;
+        res = res - (DateDiff(ed1,sd1)+1);
+        arrSD[size]=sd1;
+        arrED[size]=ed1;
+        size = size + 1;
+      end;
+    end;
+  end;
+  
+  rwc=MatRowCnt(VienCacher);
+  for (j=0;j<rwc;j=j+1) begin
+    MatRowGet(VienCacher,j,IntPercrw);
+    testf=true;
+    if nonblankdate(IntPercrw.StartDate) then begin 
+      sd1=AddDay(IntPercrw.StartDate,-1);
+      if ed<sd1 then begin
+        testf=false;
+      end;
+    end;
+    if nonblankdate(IntPercrw.EndDate) then begin
+      ed1=AddDay(IntPercrw.EndDate,-1);
+      if ed1<sd then begin
+        testf=false;
+      end;
+    end;
+    if testf then begin
+      //GetStartDate
+      sd1=IntPercrw.StartDate;
+      if blankdate(sd1) then begin
+        sd1=td;
+      end else begin
+        sd1=AddDay(sd1,-1);
+      end;
+      if sd1<sd then begin
+        sd1=sd;
+      end;
+      //GetEndDate
+      ed1=IntPercrw.EndDate;
+      if blankdate(ed1) then begin
+        ed1=ed;
+      end else begin
+        ed1=AddDay(ed1,-1);
+      end;
+      if ed<ed1 then begin
+        ed1=ed;
+      end;
+      for (i=0;i<size;i=i+1) begin
+        if arrSD[i]<=sd1 and ed1<=arrED[i] then begin
+          testf=false;
+          i=size;
+        end else begin
+          if arrSD[i]<=sd1 and sd1<=arrED[i] then begin
+            sd1=AddDay(arrED[i],1);
+          end;
+          if arrSD[i]<=ed1 and ed1<=arrED[i] then begin
+            ed1=AddDay(arrSD[i],-1);
+          end;
+        end;
+      end;
+      if testf then begin
+        res = res - (DateDiff(ed1,sd1)+1);
+      end;
+    end;
+  end;
+  
+LGetCalcDays:;  
+  GetCalcDays = res;
+  return;
+end;
+
+
+//ReturnType = 0-calcval, 1-with report debug, 2-detailted report, 3-simple report to web
+global
+function val GetMSIntSum(string CustCode,string CONr,date OnDate,integer ReturnType,var string IntArtCode,
+                         var string IntFormulaStr,longint ivsernr,integer printEURColumnf,string pIntPercCode,
+                         boolean createrecsf,var string ControlStr)
+begin
+  record CUVc CUr;
+  record IntPercVc IntPercr,VienCacher;
+  row IntPercVc IntPercrw;
+  record IVVc IVr;
+  record SMVc Cacher;
+  array string 20 ArtCodeMas;
+  array val UnPayedSumMas,UnPayedSumOnDateMas,IntPercMas;
+  array date OnDateMas,locOnDateMas;
+  array integer ColX;
+  date LastIntInvDate,startdate;
+  val debsum,intperc,debsumdecr,invdebsum,totunpayedsum;
+  val minsumforintcalc,maxIntSum,usedIntSum,availIntSum,t,invTotal;
+  integer i,rw,masrw,days,calctype;
+  boolean wLoop,decalldebtsum,invlineprintedf,testf;
+  // record NApsSetBlock NApsSetr;
+  string 255 ignoreItemList;
+  string 20 IntPercCode,basecur;
+  array longint arrContractNrs;
+  vector string 50 vecInvIgnoreList;
+
+  // BlockLoad(NApsSetr);
+  GetBaseCurncy(1,basecur);
+  
+  invlineprintedf = false;
+  IntFormulaStr = "";
+  IntArtCode = "";
+  ignoreItemList = "";
+  ControlStr = "";
+  debsum = 0;
+  
+  CUr.Code = CustCode;
+  if !ReadFirstMain(CUr,1,true) then begin
+    GoTo LGetMSIntSum;
+  end;
+  if (CUr.InterestFlag==0) then begin
+    GoTo LGetMSIntSum;
+  end;
+  
+  if !GetMSIntPercRec(StringToLongInt(CONr),IntPercr,pIntPercCode) then begin
+    GoTo LGetMSIntSum;
+  end;
+  
+  //Get starting date (from previous invoice)
+  LastIntInvDate = GetLastIntInvDateBeforeDate(CUr.Code,CONr,OnDate,ivsernr);
+    
+  GetIntPercDataOnDate2(IntPercr,LastIntInvDate,IntPercrw);
+  // calctype = IntPercrw.CalcWay; //0 - likumiskie, 1 - līgumsods, 2 - nerēķināt
+  calctype = IntPercr.Calcf; //0 - likumiskie, 1 - līgumsods, 2 - nerēķināt
+  if calctype==2 then begin
+    // GoTo LGetMSIntSum;
+  end;
+  
+  if ReturnType==1 then begin //reports
+    ColX[1] = 0;
+    ColX[2] = 70;
+    ColX[3] = 190;
+    if calctype==1 then begin
+      ColX[4] = 280;
+      ColX[5] = 340;
+      ColX[6] = 380;
+      ColX[7] = 430;
+    end else begin
+      ColX[4] = 320;
+      ColX[5] = 400;
+    end;
+    ColX[8] = 480;
+    PrintReportHeader(ColX,calctype);
+  end;
+  
+  //get list of items which are excluded from interest calculation
+  ignoreItemList = IntPercr.IntItem;
+  IntArtCode = IntPercr.IntItem;
+  // if nonblank(NApsSetr.AddIntArtCodes) then begin
+  //   ignoreItemList=ignoreItemList & "," & NApsSetr.AddIntArtCodes;
+  // end;
+  
+  // CheckIntStartDate(LastIntInvDate);
+  
+  // LogText(0,"OnDate=" & OnDate & " LastIntInvDate=" & LastIntInvDate);
+  if LastIntInvDate<>OnDate and nonblankdate(LastIntInvDate) then begin //don`t calc if already invoice in same date
+    
+    //add in 0 element first date, that is needed to know day count from previous intsum
+    //calc saldo on OnDate month first day
+    OnDateMas[0] = LastIntInvDate; //infact we need one day after LastIntInvDate, but because of 0 as saldo we add day to 0-array below
+    // LastIntInvDate = AddDay(LastIntInvDate,1);
+    startdate = LastIntInvDate;
+    
+    //vecInvIgnoreList[InvoiceNr::1] contains 1 if this invoice is in agreement Register, otherwise 0
+    //vecInvIgnoreList[InvoiceNr::SD] contains date from which this invoice is in agreement Register (date format YYYYMMDD)
+    //vecInvIgnoreList[InvoiceNr::ED] contains date until which this invoice is in agreement Register (date format YYYYMMDD)
+    ControlStr = DateToString(CurrentDate,"YYYYMMDD") & ":" & TimeToString(CurrentTime,"HHMMSS",false);
+    //TODO - fills event array with dates when something happens, then calculate debt only on these dates as other times nothing will change
+    // GetContractIntSumEvents();
+    
+    ResetLoop(IVr);
+    wLoop = true;
+    IVr.Contract = StringToLongInt(conr);
+    IVr.InvDate = AddYear(CurrentDate,-20);
+    while LoopKey("Contract",IVr,2,wLoop) begin
+      if IVr.Contract<>StringToLongInt(conr) or IVr.InvDate>=OnDate then begin
+        wLoop = false;
+      end else begin
+        testf = true;
+        if IVr.OKFlag==0 then begin
+          testf = false;
+        end;
+        if IVr.Invalid!=0 then begin
+          testf = false;
+        end;
+        if IVr.PayDate>=ondate then begin
+          testf = false;
+        end;
+        // if InvoiceInCourtOrders(StringToLongInt(CONr),IVr.SerNr) then begin
+        //   testf = false;
+        // end;
+        // if InvoiceInIVSerCOVc(StringToLongInt(CONr),IVr.SerNr,0,true) then begin
+        //   testf = false;
+        // end;
+        if testf and calctype==1 then begin
+          //Iegūst iepriekš aprēķināto likumisko % summu un max iespējamo konkrētajam rēķinam
+          usedIntSum = GetUsedIntSum(IVr.SerNr,startdate);
+          maxIntSum = GetMaxIntSumIV(IVr,ignoreItemList);
+          availIntSum = maxIntSum - usedIntSum;
+          if availIntSum<=0 then begin
+            testf = false;
+          end;
+        end;
+        if testf then begin
+          LastIntInvDate = startdate;
+          OnDateMas[0] = AddDay(startdate,-1);
+          masrw = 0;  
+          while LastIntInvDate<OnDate begin //this will be replaced with cycle that uses event array
+            ArtCodeMas[0]=0;
+            invdebsum = 0;
+            GetIntPercDataOnDate2(IntPercr,LastIntInvDate,IntPercrw); //šis īsti nav vajadzīgs, jo procentu mainīt mēneša vidū nedrīkst
+            
+            testf = true;
+            if IVr.PayDate>=LastIntInvDate then begin
+              testf = false;
+            end;
+            if isInvoiceInIgnoreList(vecInvIgnoreList,IVr.SerNr,LastIntInvDate) then begin
+              testf = false;
+            end;
+            if testf then begin
+              totunpayedsum=0;
+              GetIVUnPayedArtCodeUniqMasOnDate(IVr,LastIntInvDate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+              rw = StringToInt(ArtCodeMas[0]);
+              for(i=1;i<=rw;i=i+1)begin
+                if ArtCodeMas[i]<>IntArtCode and !SetInSet(ArtCodeMas[i],ignoreItemList) and UnPayedSumMas[i]>0 then begin
+                  invdebsum = invdebsum + UnPayedSumMas[i]; //saturēs kopējo rēķina parādu uzkonkrēto dienu (LastIntInvDate) bez artikuliem uz kuriem jārēķina likumiskie procenti
+                end;
+                totunpayedsum = totunpayedsum + UnPayedSumMas[i];
+              end;
+              if (totunpayedsum==0) or (totunpayedsum<0) then begin
+                invdebsum = 0;
+              end;
+            end;
+            if UnPayedSumOnDateMas[masrw]<>invdebsum or IntPercMas[masrw]<>IntPercrw.IntPrc then begin
+              masrw = masrw + 1;
+              OnDateMas[masrw] = LastIntInvDate;
+              UnPayedSumOnDateMas[masrw] = invdebsum;
+              IntPercMas[masrw] = IntPercrw.IntPrc;
+            end else begin
+              OnDateMas[masrw] = LastIntInvDate;
+            end;
+            
+            LastIntInvDate = AddDay(LastIntInvDate,1);
+          end;
+          
+          invTotal = 0;
+          OnDateMas[0] = AddDay(OnDateMas[0],1);
+          OnDateMas[masrw] = AddDay(LastIntInvDate,-1); //don`t include last day
+          for(i=1;i<=masrw;i=i+1)begin
+            if UnPayedSumOnDateMas[i]<>0 then begin
+              // days = (DateDiff(OnDateMas[i],OnDateMas[i-1])+1);
+              days = GetCalcDays(OnDateMas[i],OnDateMas[i-1],IntPercr,VienCacher);
+              
+              t = UnPayedSumOnDateMas[i] * days * IntPercMas[i]/100;
+              if calctype==1 then begin
+                if t > availIntSum then begin
+                  t = availIntSum;
+                end;
+                availIntSum = availIntSum - t;
+              end;
+              debsum = debsum + t;
+              invTotal = invTotal + t;
+              if (ReturnType==1) and t<>0 then begin
+                PrintReportRow(ColX,IVr.SerNr,OnDateMas[i-1],OnDateMas[i],days,UnPayedSumOnDateMas[i],IntPercMas[i],maxIntSum,availIntSum,t,calctype)
+              end;
+              if (ReturnType==3) and t<>0 then begin
+                PrintWebRow(IVr.SerNr,OnDateMas[i-1],OnDateMas[i],days,UnPayedSumOnDateMas[i],IntPercMas[i],maxIntSum,availIntSum,t,calctype);
+              end;
+              
+              if t<>0 then begin
+                AddToCacher(Cacher,days,t,IVr.SerNr,UnPayedSumOnDateMas[i],IntPercMas[i],IVr.PayDate,"" & OnDateMas[i-1] & ":" & OnDateMas[i],IVr.CurncyCode);
+              end;
+            end;
+            OnDateMas[i] = AddDay(OnDateMas[i],1); //to include next time this date
+          end;
+          if invTotal!=0 and createrecsf then begin
+            queued.InsertIntSumCalcVcB1(IVr.SerNr,ControlStr,OnDate,invTotal,basecur);
+          end;
+        end;
+      end;
+    end; //while LoopKey("CustMSIntDate",IVr,2,wLoop) begin
+    
+    
+    debsum = Round(debsum,SetRoundModeD(2));
+    // IntFormulaStr = USetStr(1000502);
+    IntFormulaStr = BuildFormulaStr(Cacher);
+    
+    if ReturnType==1 then begin 
+      Black_Divider(1,0);
+      OutString(ColX[1],"",USetStr(1000446),false);
+      OutVal(ColX[8],0,debsum,M4Val,true);
+      EndFormat;
+    end;
+    if ReturnType==2 then begin
+      PrintCacher(Cacher,ivsernr,debsum,printEURColumnf,basecur,IntFormulaStr);
+    end;
+    if ReturnType==3 then begin
+      WebOutStringFormatNL("    <InvIntSum>" & ValToString(debsum,M4Val,"",".",0) & "</InvIntSum>");
+    end;
+    
+    //LogText(0,"IntFormulaStr: " & IntFormulaStr);
+    
+    if ReturnType==0 then begin
+      LogText(0,"GetMSIntSum :: Contract: " & conr &" IntFormulaStr: " & IntFormulaStr);
+    end;
+  end;
+  
+LGetMSIntSum:;
+
+  GetMSIntSum = debsum;
+  return;
+end;
+
+// global
+// procedure CalculateMSIntSumRemote(var record IVVc IVr)
+// begin
+//   record IVVc IV2r;
+//   row IVVc IVrw;
+//   string 200 IntFormulaStr,ControlStr;
+//   string 20 IntArtCode,tstr;
+//   val debsum;
+//   integer rownr;
+//   Integer sernrf;
+
+//   debsum = GetMSIntSum(IVr.CustCode,IVr.CreditCard,IVr.InvDate,0,IntArtCode,IntFormulaStr,IVr.SerNr,0,"",true,ControlStr);
+//   //stopalert(debsum & " debsum");
+//   if (debsum>0) then begin
+//     ClearRow(IVr,IVrw,1);
+//     IVrw.ArtCode = IntArtCode;
+//     rownr = MatRowCnt(IVr);
+//     MatRowPut(IVr,rownr,IVrw);
+//     if (IVVc_PasteArtCode(IVr,rownr,tstr,tstr,false,sernrf)) then begin
+//       MatRowGet(IVr,rownr,IVrw);
+//       IVrw.Quant = 1;
+//       IVrw.Price = debsum;
+//       MatRowPut(IVr,rownr,IVrw);
+//       RecordCopy(IV2r,IVr);
+//       IVVc_PastePrice(IVr,IV2r,rownr,tstr);
+//       IVr.InvComment = IntFormulaStr;
+//     end;
+//   end;
+//   return;
+// end;
+
+global
+procedure CalculateMSIntSumRn(record RcVc RepSpec)
+begin
+  record IVVc IVr,IV2r;
+  Record CUVc CUr;
+  string 200 IntFormulaStr,ControlStr;
+  string 20 IntArtCode;
+  val DebSum;
+  date td;
+  integer rw;
+
+  IV2r.SerNr=RepSpec.long1;
+  if ReadFirstMain(IV2r,1,true) then begin
+    CUr.Code=IV2r.CustCode;
+    ReadFirstMain(CUr,1,true);
+  end;
+
+  StartReportJob(USetStr(1000493));
+  rw=1;
+  Header(rw,USetStr(1000494) & ": " & RepSpec.long1,1); rw=rw+1;
+  Header(rw,USetStr(17742) & ": " & CUr.Code,1); rw=rw+1;
+  Header(rw,USetStr(2408) & ": " & CUr.Name,1); rw=rw+1;
+  Header(rw,USetStr(8237) & ": " & IV2r.Addr1,1); rw=rw+1;
+  EndHeader;
+  StartFormat(15);
+  IVr.SerNr = RepSpec.long1;
+  if ReadFirstMain(IVr,1,true) then begin
+    DebSum = GetMSIntSum(IVr.CustCode,IVr.Contract,IVr.InvDate,1,IntArtCode,IntFormulaStr,IVr.SerNr,0,"",false,ControlStr);
+    //td="31.03.2009";
+    //GetMSIntSumForPeriod(IVr.CustCode,td,1,IntArtCode,IntFormulaStr);
+  end;
+  EndJob;
+end;
+

@@ -1,0 +1,97 @@
+
+function boolean CustConvInConvMasterBlock()
+begin
+  record ConvMasterBlock ConvMasterBl;
+  boolean res;
+  
+  blockload(ConvMasterBl)
+  if ConvMasterBl.ConvCustFlag==1 then begin
+    res = true;
+  end;
+  
+  CustConvInConvMasterBlock = res;
+  return;
+end;
+
+function boolean OBS_HasConvCust2(record ConvCustBlock ConvCustBl,string custcode,var string newcust,var string newname)
+begin
+  record CUVc CUr;
+  row ConvCustBlock ConvCustBlrw;
+  integer i,rwc;
+  boolean res;
+  
+  newcust="";
+  newname="";
+
+  rwc=MatRowCnt(ConvCustBl);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(ConvCustBl,i,ConvCustBlrw);
+    if nonblank(ConvCustBlrw.OldCode) and (ConvCustBlrw.OldCode==custcode) then begin
+      if nonblank(ConvCustBlrw.NewCode) then begin
+        CUr.Code=ConvCustBlrw.NewCode;
+        if ReadFirstMain(CUr,1,true) then begin
+          newcust=CUr.Code;
+          newname=CUr.Name;
+          res=true;
+        end;
+      end;
+    end;
+  end;
+  
+  OBS_HasConvCust2=res;
+  return;
+end;
+
+global
+function boolean OBS_HasConvCust(string custcode,var string newcust,var string newname)
+begin
+  record ConvCustBlock ConvCustBl;
+  boolean res;
+  
+  newcust="";
+  newname="";
+  
+  if nonblank(custcode) then begin
+    if CustConvInConvMasterBlock then begin
+      BlockLoad(ConvCustBl);
+      if MatRowCnt(ConvCustBl)>0 then begin
+        if OBS_HasConvCust2(ConvCustBl,custcode,newcust,newname) then begin
+          res = true;
+        end;
+      end;
+    end;
+  end;
+  
+  OBS_HasConvCust=res;
+  return;
+end;
+
+global
+procedure OBS_ConvCustOwnersVc(var record OwnersVc Ownersr)
+begin
+  record CUVc CUr;
+  record ConvCustBlock ConvCustBl;
+  row ConvCustBlock ConvCustBlrw;
+  row OwnersVc Ownersrw;
+  integer i,rwc;
+  string 255 newcust,newname;
+  
+  if CustConvInConvMasterBlock then begin
+    BlockLoad(ConvCustBl);
+    if MatRowCnt(ConvCustBl)>0 then begin
+      rwc=MatRowCnt(Ownersr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(Ownersr,i,Ownersrw);
+        if nonblank(Ownersrw.CustCode) then begin
+          if OBS_HasConvCust2(ConvCustBl,Ownersrw.CustCode,newcust,newname) then begin
+            Ownersrw.CustCode=newcust;
+            Ownersrw.CustName=newname;
+            MatRowPut(Ownersr,i,Ownersrw);
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;

@@ -1,0 +1,127 @@
+
+external function string 255 FindZoningByErfFromContract(string);
+
+// -> AUTO POPULATE CUST.NAME
+global
+function Boolean LeaseAgreementDClassCustomerEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record CUVc CUr;
+  record NAContractVc COr;
+  record BuildVc ERFMasterr;
+  record LeaseAgreementVc LeaseAgreementr;
+
+  if changedf then begin
+    GetWindowRecord(wn,LeaseAgreementr);
+
+    CUr.Code = LeaseAgreementr.Customer;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      LeaseAgreementr.CustomerName = CUr.Name;
+    end;
+    COr.CustCode = LeaseAgreementr.Customer;
+    if (ReadFirstKey("CustCode",COr,1,true)) then begin
+      LeaseAgreementr.Zoning = COr.ZoningCode;
+      ERFMasterr.Code = COr.BuildCode;
+      //
+      if(ReadFirstMain(ERFMasterr,1,true)) then begin
+        LeaseAgreementr.BuildCode = ERFMasterr.Code;
+        LeaseAgreementr.Township = ERFMasterr.RuralTer;
+        LeaseAgreementr.Extension = ERFMasterr.ExtensionNo;
+        LeaseAgreementr.Division = ERFMasterr.DivisionNo;
+        LeaseAgreementr.Address = ERFMasterr.Address;
+        LeaseAgreementr.LandSize = ERFMasterr.LandDimensions;
+      end;
+    end;
+    PutWindowRecord(wn, LeaseAgreementr);
+  end;
+  LeaseAgreementDClassCustomerEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE HoD
+global
+function Boolean LeaseAgreementDClassHoDEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record UserVc Userr;
+  record LeaseAgreementVc LeaseAgreementr;
+
+  if changedf then begin
+    GetWindowRecord(wn,LeaseAgreementr);
+
+    Userr.Code = LeaseAgreementr.HoD;
+    if(ReadFirstMain(Userr,1,true)) then begin
+      LeaseAgreementr.HoDName = Userr.Name;
+      PutWindowRecord(wn, LeaseAgreementr);
+    end;
+  end;
+  LeaseAgreementDClassHoDEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE REPRESENTATIVE
+global
+function Boolean LeaseAgreementDClassRepEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record UserVc Userr;
+  record LeaseAgreementVc LeaseAgreementr;
+
+  if changedf then begin
+    GetWindowRecord(wn,LeaseAgreementr);
+
+    Userr.Code = LeaseAgreementr.Rep;
+    if(ReadFirstMain(Userr,1,true)) then begin
+      LeaseAgreementr.Representative = Userr.Name;
+      PutWindowRecord(wn, LeaseAgreementr);
+    end;
+  end;
+  LeaseAgreementDClassRepEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE ERF DETAILS
+global
+function Boolean LeaseAgreementDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  record BuildVc ERFMasterr;
+  record LeaseAgreementVc LeaseAgreementr;
+  Boolean res;
+  String 25 Premise;
+  Integer rwcnt,j;
+
+  if changedf then begin
+    GetWindowRecord(wn,LeaseAgreementr);
+
+    ERFMasterr.Code = LeaseAgreementr.BuildCode;
+    if(ReadFirstMain(ERFMasterr,1,true)) then begin
+      LeaseAgreementr.Township = ERFMasterr.RuralTer;
+      LeaseAgreementr.Zoning = FindZoningByErfFromContract(ERFMasterr.Code);
+      LeaseAgreementr.Extension = ERFMasterr.ExtensionNo;
+      LeaseAgreementr.Division = ERFMasterr.DivisionNo;
+      LeaseAgreementr.Address = ERFMasterr.Address;
+      LeaseAgreementr.LandSize = ERFMasterr.LandDimensions;
+      PutWindowRecord(wn,LeaseAgreementr);
+    end;
+  end;
+  LeaseAgreementDClassBuildCodeEFAfter = res;
+  RETURN;
+END;
+
+
+global
+function boolean LeaseAgreementDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin 
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Customer": res = LeaseAgreementDClassCustomerEFAfter(wn,fn,rownr,changed);
+      case "HoD": res = LeaseAgreementDClassHoDEFAfter(wn,fn,rownr,changed);
+      case "Rep": res = LeaseAgreementDClassRepEFAfter(wn,fn,rownr,changed);
+      case "BuildCode": res = LeaseAgreementDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  LeaseAgreementDClassAfterEditField = res;
+return;
+end;

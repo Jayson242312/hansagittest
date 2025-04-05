@@ -1,0 +1,164 @@
+
+global
+updating function LongInt DeedOfSaleVcRecordCheck(Var Record DeedOfSaleVc DeedOfSalr, Record DeedOfSaleVc DeedOfSal2r, LongInt stat, LongInt check)
+begin
+  Integer insertmode,updatemode;
+  boolean unokf,okf,unokf2,okf2;
+  longint res;
+  res = 0;
+  
+  // ==================================== PERMISSIONS  ==================================
+
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+
+  if (DeedOfSalr.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (DeedOfSal2r.OKFlag==1) then begin
+        unokf = true;
+      end;
+    end;
+  end;
+  // Permission to unok
+  if (unokf) then begin
+    if(UserCanAction("CustomRecordUnOkDeedOfSale",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkDeedOfSale"));
+    goto LExitCheck;
+    end;
+  end;
+  //
+  if (DeedOfSalr.OKFlag==1) then begin
+    if (stat==updatemode) then begin
+      if (DeedOfSal2r.OKFlag==0) then begin
+        okf = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf = true;
+    end;
+  end;
+  //
+  if okf then begin
+    // Permission to ok
+    if(UserCanAction("CustomRecordOkDeedOfSale",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordOkDeedOfSale"));
+    goto LExitCheck;
+    end;
+  end;
+
+  // ============================== PERMISSIONS - OK - TRANSFER  ==============================
+
+  if (blank(DeedOfSalr.SerNr)) then begin
+    RecordCheckError(100190,"",-1,"SerNr");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.DeedNo)) then begin
+    RecordCheckError(100202,"",-1,"DeedNo");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.DatePurchaserSign)) then begin
+    RecordCheckError(100203,"",-1,"DatePurchaserSign");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.DateKatimaSign)) then begin
+    RecordCheckError(100204,"",-1,"DateKatimaSign");
+    res = -1;
+    goto LExitCheck;
+  end;
+  //
+  if (blank(DeedOfSalr.Title)) then begin
+    RecordCheckError(100195,"",-1,"Title");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.Customer)) then begin
+    RecordCheckError(100196,"",-1,"Customer");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.HoD)) then begin
+    RecordCheckError(100197,"",-1,"HoD");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.Rep)) then begin
+    RecordCheckError(100198,"",-1,"Rep");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.BuildCode)) then begin
+    RecordCheckError(100199,"",-1,"BuildCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.PurchasePriceVal)) then begin
+    RecordCheckError(100205,"",-1,"PurchasePriceVal");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.PurchasePriceString)) then begin
+    RecordCheckError(100206,"",-1,"PurchasePriceString");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfSalr.Zoning)) then begin
+    DeedOfSalr.Zoning = "N/A";
+  end;
+  if (blank(DeedOfSalr.Township)) then begin
+    DeedOfSalr.Township = "N/A";
+  end;
+  if (blank(DeedOfSalr.Extension)) then begin
+    DeedOfSalr.Extension = "N/A";
+  end;
+  if (blank(DeedOfSalr.Division)) then begin
+    DeedOfSalr.Division = "N/A";
+  end;
+  if (blank(DeedOfSalr.Address)) then begin
+    DeedOfSalr.Address = "N/A";
+  end;
+  // if (blank(DeedOfSalr.Notarial)) then begin
+    // DeedOfSalr.Notarial = "N/A";
+  // end;
+  if (blank(DeedOfSalr.LandSize)) then begin
+    DeedOfSalr.LandSize = 0;
+  end;
+
+LExitCheck:;
+  DeedOfSaleVcRecordCheck = res;
+end;
+
+
+global
+function LongInt DeedOfSaleVcRecordDefaults(Var Record DeedOfSaleVc DeedOfSalr, Record DeedOfSaleVc DeedOfSal2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  DeedOfSalr.SerNr = NextSerNr("DeedOfSaleVc",CurrentDate,-1,false,"");
+  DeedOfSaleVcRecordDefaults = res;
+  return;
+end;
+
+
+// CustomRecordDeleteDeedOfSale
+global
+function longint DeedOfSaleVcRecordRemoveTest(var record DeedOfSaleVc DeedOfSaler,record DeedOfSaleVc DeedOfSaler2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!UserCanAction("CustomRecordDeleteDeedOfSale",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteDeedOfSale"));
+    goto LDeedOfSaleVcRecordRemoveTest;
+  end;
+
+LDeedOfSaleVcRecordRemoveTest:;
+  DeedOfSaleVcRecordRemoveTest = res;
+  return;
+end;

@@ -1,0 +1,88 @@
+
+global procedure HTActType(string a, var string res) begin
+  
+  res= USetStr(1000807) & " " & a;
+  
+return;
+end;
+
+global procedure HTBuild(string addstr,var string res) begin
+  
+  res= USetStr(1000524) & " " & addstr;
+  
+return;
+end;
+
+global procedure HTBuildGroup(string addstr,var string res) begin
+  
+  res= USetStr(1001029) & " " & addstr;
+  
+return;
+end;
+
+global procedure HTFlatGroup(string addstr,var string res) begin
+  
+  res= USetStr(1001030) & " " & addstr;
+  
+return;
+end;
+
+global procedure HTBuildings(string a,string b,var string res) begin
+  
+  if a==b then begin
+    HTBuild(a,res);
+  end else begin 
+    res=USetStr(1000422) & " " & a & ":" & b;
+  end;
+  
+return;
+end;
+
+global procedure HTFlat(string addstr,var string res) begin
+  string 50 firstflat,lastflat;
+  
+  firstflat = FirstInRange(addstr,50);
+  lastflat = LastInRange(addstr,50);
+  
+  if firstflat == lastflat then begin
+    res = USetStr(1000715) & " " & addstr;
+  end else begin
+    res = USetStr(1000421) & " " & firstflat & ":" & lastflat;
+  end;
+  
+return;
+end;
+
+global procedure HTMSClass(string addstr,var string res) begin
+  Record MSClassVc MSClassr;
+  
+  MSClassr.Code=addstr;
+  if ReadFirstMain(MSClassr,1,true) then begin
+    res= USetStr(1000716) & ":" & MSClassr.Description;
+  end else begin
+    res= USetStr(1000716) & ":" & addstr;
+  end;
+  
+return;
+end;
+
+global procedure HTConf(string addstr,var string res) begin
+  
+  res= USetStr(1000961) & " " & addstr;
+  
+return;
+end;
+
+global procedure HTBalanceFormula(string addstr,var string res) begin
+
+  res= USetStr(1001001) & " " & addstr;
+  
+return;
+end;
+
+global procedure HTServCalcFormula(string addstr,var string res) begin
+
+  res= USetStr(1000108) & " " & addstr;
+  
+return;
+end;

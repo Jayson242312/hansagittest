@@ -1,0 +1,56 @@
+external inner function Integer IVTestApprovalStatus(record IVVc);
+external inner updating function Boolean RecordAction_rlIVLOK(var record IVVc,Boolean,var Integer);
+
+
+// hansa maintenance thats edited to only ok billing invoices
+global
+updating function boolean DoOKInvMn(record RcVc RepSpec,Boolean singlef,var integer total)
+begin
+  LongInt ifr,ito;
+  record IVVc IVr;
+  Boolean found,test;
+  Boolean res;
+  Integer flushcnt,totalreverse;
+  
+  IVr.InvComment = "Monthly Billings";
+  IVr.OKFlag = 0;
+  found = true;
+  res = false;
+  while (LoopKey("UnOkRefStr",IVr,2,found)) begin // sort using monthly billings
+    test = true;
+    if (found) then begin
+      if (IVr.InvComment <> "Monthly Billings") then begin found = false;end;
+      if (IVr.OKFlag<>0) then begin found = false; end;end;
+        test = found;
+    if (test) then begin
+      if (RecordAction_rlIVLOK(IVr,false,flushcnt)) then begin
+          total = total + 1;
+          // LogText(0,"OKd invoice no:" & IVr.SerNr); //jh commented in
+        res = true;
+        if (singlef) then begin
+          UserTrace(IVr.SerNr,M4Long);
+          goto DoLOKInvMn;
+        end else begin
+          StepBack(IVr);
+        end;
+      end;
+    end;
+    UserTrace(IVr.SerNr,M4Long);        
+  end;
+DoLOKInvMn:;
+  DoOKInvMn = res;
+  return;
+end;
+
+global
+updating procedure OKInvMn(record RcVc RepSpec)
+begin
+  boolean retval;
+  integer total
+  
+  retval = DoOKInvMn(RepSpec,false,total);
+  Messagebox(0,"Total Invoices Okeyed:" & total);
+  
+LOKInvMn:;
+  return;
+end;

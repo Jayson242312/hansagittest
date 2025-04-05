@@ -1,0 +1,483 @@
+external inner procedure IVVc_PasteCUPNr(var record IVVc,Integer);
+// external inner procedure M4PadString(string,Integer,string,Boolean,var string);
+// external function boolean GetActualCustCO(string,date,var record NAContractVc,boolean,boolean);
+
+// global
+// function val GetOpenPrepaymentForContract(Date ondate,record NAContractVc NAContractr)
+// BEGIN
+//   val res;
+//   record ARPayHistVc ARHistr;
+//   record IVVc IVr;
+//   boolean wloop;
+//   record NAContractVc tempNAContractr;
+
+//   res = 0;
+
+//   ARHistr.CustCode = NAContractr.CustCode;
+//   wloop = true;
+//   while (LoopKey("CustCode",ARHistr,1,wloop)) begin
+//     if (ARHistr.CustCode != NAContractr.CustCode or ARHistr.TransDate > ondate) then begin
+//       wloop = false;
+//     end else begin
+//       switch (ARHistr.FileName) begin
+//         case "IPVc":
+//           if (GetActualCustCO(NAContractr.CustCode,ARHistr.TransDate,tempNAContractr,true,true)) then begin
+//             if (NAContractr.SerNr == tempNAContractr.SerNr) then begin
+//               res = res + ARHistr.Val;
+//             end;
+//           end;
+//         case "IVVc":
+//           IVr.SerNr = ARHistr.SerNr;
+//           if (ReadFirstMain(IVr,1,true)) then begin
+//             if (StringToLongInt(IVr.CreditCard) == NAContractr.SerNr) then begin
+//               res = res - ARHistr.Val;
+//             end;
+//           end;
+//         case "CLInVc":
+//           if (GetActualCustCO(NAContractr.CustCode,ARHistr.TransDate,tempNAContractr,true,true)) then begin
+//             if (NAContractr.SerNr == tempNAContractr.SerNr) then begin
+//               res = res + ARHistr.Val;
+//             end;
+//           end;
+//         case "CLOutVc":
+//           if (GetActualCustCO(NAContractr.CustCode,ARHistr.TransDate,tempNAContractr,true,true)) then begin
+//             if (NAContractr.SerNr == tempNAContractr.SerNr) then begin
+//               res = res - ARHistr.Val;
+//             end;
+//           end;
+//       end;
+//     end;
+//   end;
+
+//   GetOpenPrepaymentForContract = res;
+//   return;
+// end;
+
+// //return customer prepayment sum till invoice date
+// //this function doesn`t calc the used prepayamount
+// //BBS VG 2008/02/19 Changed because prepayment from IVVc should be subtracted not added
+// global
+// function val GetCustPrepayAmount(string CustCode,date OnDate)
+// begin
+//   record ARPayHistVc ARPayHistr;
+//   val onaccsum;
+//   boolean wLoop, testf;
+
+//   onaccsum = 0;
+//   wLoop = true;
+//   ARPayHistr.CustCode = CustCode;
+//   while LoopKey("CustCode",ARPayHistr,1,wLoop) begin
+//     if (ARPayHistr.CustCode<>CustCode) then begin
+//       wLoop = false;
+//     end else begin
+//       testf = true;
+//       if ARPayHistr.TransDate>OnDate then begin
+//         testf = false;
+//       end;
+//       if testf then begin
+//         if ARPayHistr.FileName == "IVVc" then begin
+//           onaccsum = onaccsum - ARPayHistr.Val;
+//         end else begin
+//           onaccsum = onaccsum + ARPayHistr.Val;
+//         end;
+//       end;
+//     end;
+//   end;
+//   GetCustPrepayAmount = onaccsum;
+//   return;
+// end;
+
+global
+function val GetCustPrepayAmountEx(string CustCode,date OnDate,longint Contract)
+begin
+  record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  val onaccsum;
+  boolean wLoop,testf;
+
+  onaccsum = 0;
+  wLoop = true;
+  ARPayHistr.CustCode = CustCode;
+  while LoopKey("CustCode",ARPayHistr,1,wLoop) begin
+    if (ARPayHistr.CustCode<>CustCode or ARPayHistr.TransDate>OnDate) then begin
+      wLoop = false;
+    end else begin
+      testf=true;
+      if (Contract!=-1) then begin
+        if ARPayHistr.ContractNr!=-1 then begin
+          if ARPayHistr.ContractNr!=Contract then begin
+            testf=false;
+          end;
+        end else begin
+          if ARPayHistr.FileName == "IVVc" then begin
+            IVr.SerNr=ARPayHistr.SerNr;
+            if ReadFirstMain(IVr,1,true) then begin
+              if IVr.Contract!=Contract then begin
+                testf=false;
+              end;
+            end else begin
+              testf=false;
+            end;
+          end else begin
+            testf=false;
+          end;
+        end; 
+      end;
+      if testf then begin
+        switch ARPayHistr.FileName begin
+          case "IPVc": onaccsum = onaccsum + ARPayHistr.Val;
+          case "CLInVc": onaccsum = onaccsum + ARPayHistr.Val;
+          case "IVVc": onaccsum = onaccsum - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  GetCustPrepayAmountEx = onaccsum;
+  return;
+end;
+
+global
+procedure GetCUPrepayAmount(Record CUVc CUr,date sd,date ed,var val prepayval,var val usedprepayval,var val unusedprepay,boolean inperiod) begin
+  val res;
+  Record ARPayHistVc ARPayHistr;
+  integer keycnt;
+  boolean wloop;
+
+  wloop=true;
+  ARPayHistr.TransDate=sd;
+  ARPayHistr.CustCode=CUr.Code;
+
+  While LoopKey("CustCode",ARPayHistr,2,wloop) begin
+    if ARPayHistr.CustCode!=CUr.Code or ARPayHistr.TransDate>ed then begin
+      wloop=false;
+    end;
+    if wloop then begin
+      if ARPayHistr.FileName=="IPVc" then begin
+        prepayval=prepayval+ARPayHistr.BookVal;
+      end;
+      if ARPayHistr.FileName=="IVVc" then begin
+        usedprepayval=usedprepayval+ARPayHistr.BookVal;
+      end;
+    end;
+  end;
+
+  wloop=true;
+  ResetLoop(ARPayHistr);
+  ARPayHistr.TransDate=AddDay(sd,-1);
+  ARPayHistr.CustCode=CUr.Code;
+  While LoopBackKey("CustCode",ARPayHistr,2,wloop) begin
+    if ARpayHistr.CustCode!=CUr.Code then begin
+      wloop=false;
+    end else begin
+      if ARPayHistr.TransDate<sd then begin
+        if ARPayHistr.FileName=="IPVc" then begin
+          unusedprepay=unusedprepay+ARPayHistr.BookVal;
+        end;
+        if ARPayHistr.FileName=="IVVc" then begin
+          unusedprepay=unusedprepay-ARPayHistr.BookVal;
+        end;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+global
+function longint GetPrepayContractNr(longint cupnr)
+begin
+  record ARPayHistVc ARPayHistr;
+  boolean wloop;
+  longint res;
+  date td;
+  
+  td.day = 1; td.month = 1; td.year = 1980;
+  
+  ARPayHistr.CUPNr = cupnr;
+  ARPayHistr.TransDate = td;
+  wloop = true;
+  While LoopKey("CUPNrTransDate",ARPayHistr,2,wloop) begin
+    if ARPayHistr.FileName == "IPVc" then begin
+      res = ARPayHistr.ContractNr;
+      wloop = false;
+    end;
+  end;
+  
+  GetPrepayContractNr = res;
+  return;
+end;
+
+global
+procedure AddUnUsedPrepaymentToIV(var record IVVc IVr)
+begin
+  record ARPayVc ARPayr;
+  record ARPayHistVc ARPayHistr;
+  row IVVc IVrw;
+  val UnPayedSum;
+  boolean wLoop,testf;
+  longint prepaycontr;
+  
+  UnPayedSum = IVr.Sum4;
+  //First add all prepays with INPaypriority specified
+  // wLoop = true;
+  // ARPayr.CustCode = IVr.CustCode;
+  // while LoopKey("CustPay",ARPayr,1,wLoop)begin
+  //   if ARPayr.CustCode<>IVr.CustCode or UnPayedSum<=0 then begin
+  //     wLoop = false;
+  //   end else begin
+  //     ARPayHistr.CUPNr = ARPayr.CUPNr;
+  //     ReadFirstMain(ARPayHistr,1,true);
+  //     if ARPayHistr.INPayPriority!=-1 then begin
+  //       ClearRow(IVr,IVrw,6);
+  //       IVrw.CUPNr = ARPayr.CUPNr;
+  //       MatRowInsert(IVr,0,IVrw);
+  //       IVVc_PasteCUPNr(IVr,0); //modified standart WAction fun, that should paste needed sum and other fields
+  //       MatRowGet(IVr,0,IVrw);
+  //       if IVrw.Sum<=0 then begin
+  //         MatRowDelete(IVr,0);
+  //       end else begin
+  //         UnPayedSum = UnPayedSum - IVrw.Sum;
+  //       end;
+  //     end;
+  //   end;
+  // end;
+  
+  if UnPayedSum>0 then begin
+    ResetLoop(ARPayr);
+    wLoop = true;
+    ARPayr.CustCode = IVr.CustCode;
+    while LoopKey("CustPay",ARPayr,1,wLoop)begin
+      if ARPayr.CustCode<>IVr.CustCode or UnPayedSum<=0 then begin
+        wLoop = false;
+      end else begin
+        testf = true;
+        prepaycontr = GetPrepayContractNr(ARPayr.CUPNr);
+        if IVr.MergedInvFlag==0 and prepaycontr!=IVr.Contract then begin
+          testf = false;
+        end;
+        // if IVr.MergedInvFlag==1 then begin //apvienotajiem rēķniem piesaistam visas klienta priekšapmaksas
+          
+        // end;
+        if testf then begin
+          ClearRow(IVr,IVrw,6);
+          IVrw.CUPNr = ARPayr.CUPNr;
+          MatRowInsert(IVr,0,IVrw);
+          IVVc_PasteCUPNr(IVr,0); //modified standart WAction fun, that should paste needed sum and other fields
+          MatRowGet(IVr,0,IVrw);
+          if IVrw.Sum<=0 then begin
+            MatRowDelete(IVr,0);
+          end else begin
+            UnPayedSum = UnPayedSum - IVrw.Sum;
+          end;
+          if UnPayedSum==0 then begin
+            wloop = false;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+// global
+// function string 255 FindPrepayINPayPriorityStr(longint cupnr) begin
+//   record ARPayHistVc ARPayHistr;
+//   string 255 tstr2;
+  
+//   tstr2 = "";
+//   ARPayHistr.CUPNr = cupnr;
+//   ReadFirstMain(ARPayHistr,1,true);
+//   M4PadString(ARPayHistr.INPayPriority,3," ",true,tstr2);
+  
+//   FindPrepayINPayPriorityStr = tstr2;
+// return;
+// end;
+
+// global
+// function longint FindPrepayINPayPriority(longint cupnr) begin
+//   record ARPayHistVc ARPayHistr;
+//   longint res;
+  
+//   res = -1;
+//   ARPayHistr.CUPNr = cupnr;
+//   ReadFirstMain(ARPayHistr,1,true);
+//   res = ARPayHistr.INPayPriority;
+  
+//   FindPrepayINPayPriority = res;
+// return;
+// end;
+
+global
+function val GetUnUsedPrepaymentSumCust(string custcode,date sd,date ed)
+begin
+  Record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf;
+  integer keycnt;
+  val res;
+  
+  res=0;
+  TrHs=true;
+  ResetLoop(ARPayHistr);
+  if nonblankdate(sd) then begin
+    keycnt=2;
+    ARPayHistr.TransDate=sd;
+  end else begin
+    keycnt=1;
+  end;
+  ARPayHistr.CustCode=custcode;
+  While LoopKey("CustCode",ARPayHistr,keycnt,TrHs) begin
+    if ARPayHistr.CustCode!=custcode or (nonblankdate(ed) and (ed<ARPayHistr.TransDate)) then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      // if ARPayHistr.ContractNr!=-1 then begin
+        // if ARPayHistr.ContractNr!=Contract then begin
+          // testf=false;
+        // end;
+      // end else begin
+        // if ARPayHistr.FileName == "IVVc" then begin
+          // IVr.SerNr=ARPayHistr.SerNr;
+          // if ReadFirstMain(IVr,1,true) then begin
+            // if (IVr.Contract!=Contract) then begin
+              // testf=false;
+            // end;
+          // end else begin
+            // testf=false;
+          // end;
+        // end else begin
+          // if Contract!=-1 then begin
+            // testf=false;
+          // end;
+        // end;
+      // end;
+      if testf then begin
+        switch ARPayHistr.FileName begin
+          case "IPVc": res = res + ARPayHistr.Val;
+          case "CLInVc": res = res + ARPayHistr.Val;
+          case "IVVc": res = res - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  
+  GetUnUsedPrepaymentSumCust=res;
+  return;
+end;
+
+global
+function val GetUnUsedPrepaymentSum(string custcode,longint contract,date sd,date ed)
+begin
+  Record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf;
+  integer keycnt;
+  val res;
+  
+  res=0;
+  TrHs=true;
+  ResetLoop(ARPayHistr);
+  if nonblankdate(sd) then begin
+    keycnt=2;
+    ARPayHistr.TransDate=sd;
+  end else begin
+    keycnt=1;
+  end;
+  ARPayHistr.CustCode=custcode;
+  While LoopKey("CustCode",ARPayHistr,keycnt,TrHs) begin
+    if ARPayHistr.CustCode!=custcode or (nonblankdate(ed) and (ed<ARPayHistr.TransDate)) then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if ARPayHistr.ContractNr!=-1 then begin
+        if ARPayHistr.ContractNr!=Contract then begin
+          testf=false;
+        end;
+      end else begin
+        if ARPayHistr.FileName == "IVVc" then begin
+          IVr.SerNr=ARPayHistr.SerNr;
+          if ReadFirstMain(IVr,1,true) then begin
+            if (IVr.Contract!=Contract) then begin
+              testf=false;
+            end;
+          end else begin
+            testf=false;
+          end;
+        end else begin
+          if Contract!=-1 then begin
+            testf=false;
+          end;
+        end;
+      end;
+      if testf then begin
+        switch ARPayHistr.FileName begin
+          case "IPVc": res = res + ARPayHistr.Val;
+          case "CLInVc": res = res + ARPayHistr.Val;
+          case "IVVc": res = res - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  
+  GetUnUsedPrepaymentSum=res;
+  return;
+end;
+
+global
+function val GetPayedPrepaymentSum(string custcode,longint contract,date sd,date ed)
+begin
+  Record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf;
+  integer keycnt;
+  val res;
+  
+  res=0;
+  TrHs=true;
+  ResetLoop(ARPayHistr);
+  if nonblankdate(sd) then begin
+    keycnt=2;
+    ARPayHistr.TransDate=sd;
+  end else begin
+    keycnt=1;
+  end;
+  ARPayHistr.CustCode=custcode;
+  While LoopKey("CustCode",ARPayHistr,keycnt,TrHs) begin
+    if ARPayHistr.CustCode!=custcode or (nonblankdate(ed) and (ed<ARPayHistr.TransDate)) then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if ARPayHistr.ContractNr!=-1 then begin
+        if ARPayHistr.ContractNr!=Contract then begin
+          testf=false;
+        end;
+      // end else begin
+        // if ARPayHistr.FileName == "IVVc" then begin
+          // IVr.SerNr=ARPayHistr.SerNr;
+          // if ReadFirstMain(IVr,1,true) then begin
+            // if (IVr.Contract!=Contract) then begin
+              // testf=false;
+            // end;
+          // end else begin
+            // testf=false;
+          // end;
+        // end else begin
+          // if Contract!=-1 then begin
+            // testf=false;
+          // end;
+        // end;
+      end;
+      if testf then begin
+        switch ARPayHistr.FileName begin
+          case "IPVc": res = res + ARPayHistr.Val;
+          // case "CLInVc": res = res + ARPayHistr.Val;
+          // case "IVVc": res = res - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  
+  GetPayedPrepaymentSum=res;
+  return;
+end;

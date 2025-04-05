@@ -1,0 +1,161 @@
+external inner procedure HT2Per(Date,Date,var string);
+external inner function boolean SetInSet2(string,string);
+external procedure HTBuild(string,var string);
+external procedure GetBuildFlatFieldValue(record RcVc,string,var val,var val,var array val,var array val,
+                                        var integer,var array string,var array val,integer);
+
+function string 20 GetFlatNr(string FlatCode)
+begin
+  Record FlatsVc Flatsr;
+  string 20 res;
+  
+  Flatsr.FlatCode=FlatCode;
+  if ReadFirstMain(Flatsr,1,true) then begin
+    res=Flatsr.FlatNo;
+  end;
+  
+  GetFlatNr=res;
+  return;
+end;
+
+function boolean TestFlatValueSum(array val arrSum,integer size)
+begin
+  boolean res;
+  integer i;
+  val Total;
+  
+  res=false;
+  for (i=0;i<size;i=i+1) begin
+    Total=Total+arrSum[i];
+  end;
+  if Total>0 then begin
+    res=true;
+  end;
+  
+  TestFlatValueSum=res;
+  return;
+end;
+
+global
+procedure FlatFieldsRn(record RcVc RepSpec)
+begin
+  Record BuildVc Buildr;
+  boolean TrHs,TrHs2,blankf,printf;
+  val Sum,CoefSum;
+  val TotSum,TotCoefSum;
+  integer size,i,rwc;
+  string 255 tstr;
+  array val arrSum,arrCoefSum,arrCoef;
+  array string 90 arrFlats;
+  
+  StartReportJob(USetStr(1001286));
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(1,tstr,1);
+  if NonBlank(RepSpec.f1) then begin
+    HTBuild(RepSpec.f1,tstr);
+    Header(2,tstr,0);
+  end;
+  if RepSpec.flags[1]==0 then begin
+    Header(3,USetStr(1000136),0);
+  end else begin
+    Header(3,USetStr(1001287),0);
+  end;
+  EndHeader;
+  SetRepCol(2,20);
+  SetRepCol(3,100);
+  SetRepCol(4,350);
+  SetRepCol(5,300);
+  SetRepCol(6,400);
+  SetRepCol(7,450);
+  StartFormat(15);
+  OutString(2,0,USetStr(1000394),false);
+  OutString(3,0,USetStr(1000181),false);
+  OutString(4,0,USetStr(1000136),false);
+  if RepSpec.flags[1]==1 then begin
+    if RepSpec.ArtMode==0 then begin
+      OutString(1,0,USetStr(1001287),true);
+    end else begin
+      OutString(6,0,USetStr(1001287),false);
+      OutString(1,0,USetStr(1001289),true);
+    end;
+  end;
+  EndFormat;
+  Black_Divider(0,1);
+  if RepSpec.f1=="" then begin
+    blankf=true;
+  end;
+  TrHs=true;
+  Buildr.Code=RepSpec.f1;
+  While LoopMain(Buildr,1,TrHs) begin
+    if NonBlank(RepSpec.f1) and Buildr.Code!=RepSpec.f1 then begin
+      TrHs=false;
+    end else begin
+      if RepSpec.ArtMode==0 then begin
+        Sum=Blankval;
+        CoefSum=BlankVal;
+        GetBuildFlatFieldValue(Repspec,Buildr.Code,Sum,CoefSum,arrSum,arrCoefSum,size,arrFlats,arrCoef,1);
+        printf=true;
+        if blankf then begin
+          if Sum==BlankVal then begin
+            printf=false;
+          end;
+        end;
+        if printf then begin
+          StartFormat(15);
+          OutString(2,"DblBuildVc",Buildr.Code,false);
+          OutString(3,0,Buildr.Street & " " & Buildr.BuildNr,false);
+          OutVal(4,0,Sum,M4Val,false);
+          TotSum=TotSum+Sum;
+          if RepSpec.flags[1]==1 then begin
+            OutVal(1,0,CoefSum,M4Val,true);
+            TotCoefSum=TotCoefSum+CoefSum;
+          end;
+          EndFormat;
+        end;
+      end else begin
+        GetBuildFlatFieldValue(Repspec,Buildr.Code,Sum,CoefSum,arrSum,arrCoefSum,size,arrFlats,arrCoef,2);
+        printf=true;
+        if blankf then begin
+          if !TestFlatValueSum(arrSum,size) then begin
+            printf=false;
+          end;
+        end;
+        if printf then begin
+          StartFormat(15);
+          OutString(2,"DblBuildVc",Buildr.Code,false);
+          OutString(3,0,Buildr.Street & " " & Buildr.BuildNr,false);
+          EndFormat;
+          for (i=0;i<=size;i=i+1) begin
+            if arrSum[i]!=blankval then begin
+              StartFormat(15);
+              OutString(3,0,USetStr(1001288) & GetFlatNr(arrFlats[i]),false);
+              OutVal(4,0,arrSum[i],M4Val,false);
+              TotSum=TotSum+arrSum[i];
+              if RepSpec.flags[1]==1 then begin 
+                OutVal(6,0,arrCoefSum[i],M4Val,false);
+                OutString(1,0,arrCoef[i],true);
+                TotCoefSum=TotCoefSum+arrCoefSum[i];
+              end;
+              EndFormat;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;  
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(5,0,USetStr(1000200),false);
+  OutVal(4,0,TotSum,M4Val,false);
+  if RepSpec.flags[1]==1 then begin
+    if RepSpec.ArtMode==1 and nonblank(RepSpec.f3) then begin
+      OutVal(6,0,TotCoefSum,M4Val,false);
+    end else begin
+      OutVal(1,0,TotCoefSum,M4Val,true);
+    end;  
+  end;
+  EndFormat;
+  EndJob;
+  
+  return;
+end;

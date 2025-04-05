@@ -1,0 +1,35 @@
+
+procedure COFieldSetTClassFieldCodeEFAfter(integer wn,integer rownr)
+begin
+  record COFieldSetBlock COFieldSetr;
+  Row COFieldSetBlock COFieldSetrw;
+  Record COFieldCodeVc COFieldCoder;
+  
+  GetWindowRecord(wn,COFieldSetr);
+  if rownr>=0 then begin
+    MatRowGet(COFieldSetr,rownr,COFieldSetrw);
+    COFieldCoder.FieldCode=COFieldSetrw.FieldCode;
+    if !ReadFirstMain(COFieldCoder,1,true) then begin
+      Beep;
+    end;
+    COFieldSetrw.Name = COFieldCoder.Name;
+    MatRowPut(COFieldSetr,rownr,COFieldSetrw);
+    PutWindowRecord(wn,COFieldSetr);
+  end;
+  return;
+end;
+
+global
+function boolean COFieldSetTClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+  
+  if (changed<>0) then begin
+    switch (fieldname) begin
+      case "FieldCode": COFieldSetTClassFieldCodeEFAfter(wn,rownr);
+    end;
+  end;
+  
+  COFieldSetTClassAfterEditField = res;
+return;
+end;

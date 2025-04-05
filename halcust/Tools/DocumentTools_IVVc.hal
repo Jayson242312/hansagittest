@@ -1,0 +1,2022 @@
+external inner procedure PrintValueInclZero(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
+external inner procedure Val2ToText(string,val,Integer,string,string,var string);
+external inner function Integer SetDateOrder(string);
+external inner procedure LongDateToStr(Date,Integer,var string);
+external inner procedure SelectUnitText(string,string,var string);
+external inner function Boolean IsDigit(string);
+external inner procedure InvVat(Integer,Integer,Integer,Integer,string,val,var val,var val,var val,var val,var val);
+external inner procedure GetVATproc(string,Integer,var val);
+external inner function val FindVAT(string,val,Integer,Integer);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure SubCashRows_IVVc(record IVVc,Boolean,var val,var val);
+external inner function LongInt CalculateLateDays(Date,Date,Date,Boolean,Boolean);
+external inner procedure ARRnGetInvBalance(record IVVc,var Date,Integer,var val,var val,var LongInt);
+external inner procedure SubPrePayments(record IVVc,var val,var val);
+external procedure PrintAllFlatFields(string,string,date,date);
+external procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+external function val GetCustPrepayAmountEx(string,date,longint);
+external procedure GetIntPercArtCode(var string);
+external procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+// external function boolean IsNIPCityCouncilInv(record NAContractVc);
+external function val GetCustIPrsSumTillDate(string,date,longint,var val,longint);
+external function val GetCustIPrsSumTillDate2(string,date,longint,var val,longint,var val,string,var val);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external function string 255 GetIntStatus(record NAContractVc,var date,date);
+external function string 255 GetIntStatus2(record NAContractVc,var date,date);
+
+procedure GetInvoiceDebtSumsOnDate(record IVVc IVr,date ondate,string exclitems,var val bal,var val latebal,var val exclsum,var val lateexclsum)
+begin
+  val res,rval,rvalb1;
+  longint latedays;
+  Array String 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  integer arraysize,i;
+  array longint arrContractNrs;
+  
+  latedays = CalculateLateDays(IVr.InvDate,IVr.PayDate,ondate,false,false);
+  //LogText(0,"ondate=" & ondate & " sernr=" & IVr.SerNr & " late=" & latedays);
+  rvalb1 = 0;
+  if ((IVr.InvType<>kInvoiceTypeCredit) and (IVr.InvType<>kInvoiceTypeCash)) then begin
+    rval = IVr.Sum4;
+    if (nonblank(IVr.CurncyCode)) then begin
+      rvalb1 = IVr.BaseSum4;
+    end;
+    if (rvalb1==0) then begin
+      rvalb1 = rval;
+    end;
+  end;
+  if (IVr.InvType==kInvoiceTypeCredit) then begin
+    if (IVr.CredInv==-1) then begin
+      rval = -IVr.Sum4;
+      if (nonblank(IVr.CurncyCode)) then begin
+        rvalb1 = -IVr.BaseSum4;
+      end;
+      if (rvalb1==0) then begin
+        rvalb1 = rval;
+      end;
+    end else begin
+      rval = 0;
+      rvalb1 = 0;
+    end;    
+  end;
+  if (IVr.InvType==kInvoiceTypeCash) then begin
+    rval = 0;
+    rvalb1 = 0;
+  end;
+      
+  ARRnGetInvBalance(IVr,ondate,IVr.InvType,rval,rvalb1,latedays);
+  SubPrePayments(IVr,rval,rvalb1);
+  SubCashRows_IVVc(IVr,false,rval,rvalb1);
+      
+  bal = bal + rvalb1;
+  if latedays<=0 then begin
+    latebal = latebal + rvalb1;
+  end;
+  if nonblank(exclitems) then begin
+    ArtCodeMas[0]=0;
+    GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+    arraysize=StringToInt(ArtCodeMas[0]);
+    for(i=1;i<=arraysize;i=i+1)begin
+      if SetInSet(ArtCodeMas[i],exclitems) then begin
+        exclsum = exclsum + UnPayedSumMas[i];
+        if latedays<=0 then begin
+          lateexclsum = lateexclsum + UnPayedSumMas[i];
+        end;
+      end;
+    end;  
+  end;
+  
+  return;
+end;
+
+global
+procedure GetAdditInvDateVals(date invdate,date additinvdate,longint contract,longint ignoreinv,string exclitems,var val AInvDateBal,var val AInvDateLateBal,var val AInvDateExc,var val AInvDateLateExc)
+begin
+  record IVVc IVr;
+  boolean TrHs,testf;
+  date sd,ed;
+  
+  AInvDateBal=blankval;
+  AInvDateLateBal=blankval;
+  AInvDateExc=blankval;
+  AInvDateLateExc=blankval;
+  
+  if blankdate(additinvdate) then begin
+    GoTo LGetAdditInvDateVals;
+  end;
+  
+  sd=invdate;
+  sd.day=1;
+  ed=sd;
+  ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  // ed=invdate;
+  
+  TrHs=true;
+  IVr.Contract=contract;
+  While LoopKey("Contract",IVr,2,TrHs) begin
+    if IVr.Contract!=contract or IVr.InvDate>ed then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if IVr.OKFlag!=1 then begin
+        testf=false;
+      end;
+      if IVr.Invalid!=0 then begin
+        testf=false;
+      end;
+      if (IVr.InvType!=kInvoiceRowTypeNormal) then begin
+        testf=false;
+      end;
+      if blankdate(IVr.AdditInvDate) then begin
+        testf=false;
+      end;
+      if (ignoreinv!=-1) and (IVr.SerNr==ignoreinv) then begin
+        testf=false;
+      end;
+      if testf then begin
+        if IVr.AdditInvDate<=additinvdate then begin
+          GetInvoiceDebtSumsOnDate(IVr,IVr.InvDate,exclitems,AInvDateBal,AInvDateLateBal,AInvDateExc,AInvDateLateExc);
+        end;
+      end;
+    end;
+  end;
+LGetAdditInvDateVals:;
+  return;
+end;
+
+global
+function boolean GetPDFLangCode(record RcVc RepSpec,var string LangCode,var string formcode,record FormDefVc FDr,var integer intdocnr,boolean geninvf)
+begin
+  record PDFInvGenLangBlock PDFInvGenLangBl;
+  row PDFInvGenLangBlock PDFInvGenLangrw;
+  row FormDefVc FDrw;
+  integer i,ii,rwc,rwcc;
+  boolean res;
+  string 20 NewLangCode;
+
+  BlockLoad(PDFInvGenLangBl);
+  rwc=MatRowCnt(PDFInvGenLangBl);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(PDFInvGenLangBl,i,PDFInvGenLangrw);
+    if PDFInvGenLangrw.OrgLang==LangCode then begin
+      // if geninvf then begin
+        // if NonBlank(PDFInvGenLangrw.GenLang) then begin
+          // NewLangCode=PDFInvGenLangrw.GenLang;
+        // end else begin
+          // NewLangCode=PDFInvGenLangrw.PDFLang;
+        // end;
+      // end else begin
+        NewLangCode=PDFInvGenLangrw.PDFLang;
+      // end;
+      rwcc=MatRowCnt(FDr);
+      for (ii=0;ii<rwcc;ii=ii+1) begin
+        MatRowGet(FDr,ii,FDrw);
+        if (FDrw.LangCode==NewLangCode) then begin
+          if NonBlank(PDFInvGenLangrw.intdocnr) and !geninvf then begin
+            if PDFInvGenLangrw.intdocnr==FDrw.intdocnr then begin
+              intdocnr=PDFInvGenLangrw.intdocnr;
+              formcode=FDrw.FPCode;
+              LangCode=NewLangCode;
+              ii=rwcc;
+              res=true;
+            end;
+          end else begin
+            if FDrw.intdocnr==-1 then begin
+              FDrw.intdocnr=1;
+            end;
+            if intdocnr==FDrw.intdocnr then begin
+              formcode=FDrw.FPCode;
+              LangCode=NewLangCode;
+              ii=rwcc;
+              res=true;
+            end;
+          end;
+        end;
+      end;
+      i = rwc;
+    end;
+  end;
+
+  GetPDFLangCode=res;
+  return;
+end;
+
+function boolean FindOneServCalcValues(string code,integer type,string fieldcodes,date sd,date ed,var vector val vecValues)
+begin
+  record ServCalcValueVc ServCalcValuer;
+  boolean testf,wloop;
+  boolean res;
+  
+  ServCalcValuer.Code = code;
+  ServCalcValuer.Type = type; //1 - Erf 2 - Erf group 3 - flatgroup
+  ServCalcValuer.StartDate = sd;
+  wloop = true;
+  While LoopKey("Code",ServCalcValuer,3,wloop) begin
+    if (ServCalcValuer.Code!=code) or (ServCalcValuer.Type!=type) or (ServCalcValuer.StartDate>ed) then begin
+      wloop = false;
+    end else begin
+      if nonblank(ServCalcValuer.FieldCode) and SetInSet(ServCalcValuer.FieldCode,fieldcodes) then begin
+        vecValues[ServCalcValuer.FieldCode] = vecValues[ServCalcValuer.FieldCode] + ServCalcValuer.CalcVal;
+        res = true;
+      end;
+    end;
+  end;
+  
+  FindOneServCalcValues = res;
+  return;
+end;
+
+procedure PrintCountersData(string BuildCode,string flatcode,date InvDate,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  record BuildGroupSuppVc BuildGroupSuppr;
+  record FlatGroupSuppVc FlatGroupSuppr;
+  record FlatGroupVc FlatGroupr;
+  boolean TrHs,foundf,found,KS5SKf;
+  date sd,ed;
+  vector val vecValues;
+
+  sd = InvDate;
+  sd.day=1;
+  ed=sd;
+  ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+  
+  found=false;
+  //Get values from Erf
+  if FindOneServCalcValues(BuildCode,1,"KS5SK,VKU,TSKU,NORMQ,KUSTARP",sd,ed,vecValues) then begin
+    found=true;
+  end;
+  //Get values from buildgroup
+  // TrHs=true;
+  // BuildGroupSuppr.RowCode=BuildCode;
+  // While LoopKey("RowCode",BuildGroupSuppr,1,TrHs) begin
+    // if BuildGroupSuppr.RowCode!=BuildCode then begin
+      // TrHs=false;
+    // end else begin
+    // end;
+  // end;
+  if !found then begin
+    if nonblank(flatcode) then begin
+      TrHs=true;
+      FlatGroupSuppr.RowCode=flatcode;
+      While LoopKey("RowCode",FlatGroupSuppr,1,TrHs) begin
+        if FlatGroupSuppr.RowCode!=flatcode then begin
+          TrHs=false;
+        end else begin
+          if FindOneServCalcValues(FlatGroupSuppr.HeadCode,3,"KS5SK,VKU,TSKU,NORMQ,KUSTARP",sd,ed,vecValues) then begin
+          end;
+        end;
+      end;
+    end else begin
+      TrHs=true;
+      FlatGroupr.LinkBuildCode=BuildCode;
+      While LoopKey("LinkBuildCode",FlatGroupr,1,TrHs) begin
+        if FlatGroupr.LinkBuildCode!=BuildCode then begin
+          TrHs=false;
+        end else begin
+          if FindOneServCalcValues(FlatGroupr.Code,3,"KS5SK,VKU,TSKU,NORMQ,KUSTARP",sd,ed,vecValues) then begin
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if (vecValues["KS5SK"]>0.00) /* and (len(ValToString(vecValues["KS5SK"],M45Val,"",".",0))>0) */ then begin
+    PrintValueInclZero("FF_KS5SK",vecValues["KS5SK"],M45Val,LangNrr,SFb,negamountf);
+    if vecValues["VKU"]==blankval then begin
+      vecValues["VKU"]=0.00;
+    end;
+    if vecValues["TSKU"]==blankval then begin
+      vecValues["TSKU"]=0.00;
+    end;
+    if vecValues["NORMQ"]==blankval then begin
+      vecValues["NORMQ"]=0.00;
+    end;
+    if vecValues["KUSTARP"]==blankval then begin
+      vecValues["KUSTARP"]=0.00;
+    end;
+    PrintValueInclZero("FF_VKU",vecValues["VKU"],M45Val,LangNrr,SFb,negamountf);
+    PrintValueInclZero("FF_TSKU",vecValues["TSKU"],M45Val,LangNrr,SFb,negamountf);
+    PrintValueInclZero("FF_NORMQ",vecValues["NORMQ"],M45Val,LangNrr,SFb,negamountf);
+    PrintValueInclZero("FF_KUSTARP",vecValues["KUSTARP"],M45Val,LangNrr,SFb,negamountf);
+    
+    OutFormField("FF_CONTERDATATEXT1",USetStr(1001604));
+    OutFormField("FF_CONTERDATATEXT2",USetStr(1001605));
+    OutFormField("FF_CONTERDATATEXT3",USetStr(1001606));
+    OutFormField("FF_CONTERDATATEXT4",USetStr(1001607));
+    OutFormField("FF_CONTERDATATEXT5",USetStr(1001608));
+    OutFormField("FF_CONTERDATATEXT6",USetStr(1001609));
+    OutFormField("FF_CONTERDATATEXT7",USetStr(1001610));
+    OutFormField("FF_CONTERDATATEXT8",USetStr(1001611));
+    OutFormField("FF_CONTERDATATEXT9",USetStr(1001612));
+    OutFormField("FF_CONTERDATATEXTM3",USetStr(1000784));
+  end;
+  
+  return;
+end;
+
+procedure PrintMSConst(string code,date ondate,string fieldname,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  Record MSConstBlock MSConstr;
+  Row MSConstBlock MSConstrw;
+  integer i,rwc;
+  boolean testf;
+  date sd,ed;
+  
+  sd=ondate;
+  // sd=AddMonth(sd,-1);
+  sd.day=1; 
+  ed=sd;
+  ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+  
+  BlockLoad(MSConstr);
+  rwc = MatRowCnt(MSConstr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(MSConstr,i,MSConstrw);
+    if MSConstrw.Code==code then begin
+      testf = true;
+      if MSConstrw.SDate > sd and nonblank(MSConstrw.SDate) then begin
+        testf = false;
+      end;
+      if MSConstrw.EDate < ed and nonblank(MSConstrw.EDate) then begin
+        testf = false;
+      end;
+      if testf then begin
+        PrintValueInclZero(fieldname,MSConstrw.Sum,M45Val,LangNrr,SFb,negamountf);
+        i=rwc;
+      end;
+    end;
+  end;  
+    
+  return;
+end;
+
+global
+procedure PrintCONTRINVDELADDR(record NAContractVc NAContractr,record FlatsVc Flatsr,record BuildVc Buildr)
+begin
+  string 255 tstr;
+  
+  if NAContractr.SerNr!=-1 and nonblank(NAContractr.InvDelAddress) then begin
+    OutFormField("FF_CONTRINVDELADDR2",NAContractr.InvDelAddress);
+  end else begin
+    if nonblank(Flatsr.Address) then begin
+      tstr = tstr & Flatsr.Address;
+      if nonblank(Flatsr.FlatNo) then begin
+        if nonblank(tstr) then begin
+          tstr = tstr & " - ";
+        end;
+        tstr = tstr & Flatsr.FlatNo;
+      end;
+    end else begin
+      tstr = tstr & Buildr.Address;
+    end;
+    if nonblank(Buildr.City) then begin
+      if nonblank(tstr) then begin
+        tstr = tstr & ", ";
+      end;
+      tstr = tstr & Buildr.City;
+    end;
+    if nonblank(Buildr.Contry) then begin
+      if nonblank(tstr) then begin
+        tstr = tstr & ", ";
+      end;
+      tstr = tstr & Buildr.Contry;
+    end;
+    OutFormField("FF_CONTRINVDELADDR2",tstr);
+  end;
+  
+  return;
+end;
+
+function string 50 GetMergedInvHeatContractNr(record IVVc IVr)
+begin
+  record NAContractVc NAContractr;
+  row IVVc IVrw;
+  string 50 res;
+  integer i,rwc;
+  
+  res="";
+  rwc = MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeNormal then begin
+      if IVr.MergedInvFlag==1 then begin
+        if IVrw.ContractNr!=-1 then begin
+          NAContractr.SerNr=IVrw.ContractNr;
+          if ReadFirstMain(NAContractr,1,true) then begin
+            if NAContractr.ContractNr!="" then begin
+              res=NAContractr.ContractNr;
+              i=rwc;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  GetMergedInvHeatContractNr = res;
+  return;
+end;
+
+global
+procedure OBS_PrintEditedFieldsIVVC(string fieldname,val vp,record LangNrVc LangNrr,record SysFormatBlock SysFormatRec,Boolean negf,integer type,string langCode,string spec,string artCode)
+begin
+  record INVc INr;
+  row INVc INrw;
+  val v;
+  string 255 tstr;
+  integer i,rwc;
+  
+  if fieldname=="F_ROWVATPRC" then begin
+    v = vp;
+    if type==1 then begin
+      if (nonblank(v)) then begin
+        if (negf) then begin v = -v; end;
+        tstr = ValToString(v,M40Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,LangNrr.CutDecimals);
+        if nonblank(tstr) then begin
+          tstr = tstr & " " & Chr(37);
+        end;
+        OUTFORMFIELD(fieldname,tstr);  
+      end;
+    end else begin
+      if (v!=0) then begin
+        if (negf) then begin v = -v; end;
+        tstr = ValToString(v,M40Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,LangNrr.CutDecimals);
+        if nonblank(tstr) then begin
+          tstr = tstr & " " & Chr(37);
+        end;
+        OUTFORMFIELD(fieldname,tstr);  
+      end;
+    end;
+  end;
+  
+  if fieldname=="F_SPECIFIKATION" then begin
+    if nonblank(langCode) then begin
+      OUTFORMFIELD(fieldname,spec); 
+    end else begin
+      INr.Code=artCode;
+      if ReadFirstMain(INr,1,true) then begin
+        rwc=MatRowCnt(INr);
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(INr,i,INrw);
+          if !nonblank(INrw.LangCode) then begin
+            tstr=INrw.Text;
+            i=rwc;
+          end;
+        end;
+      end else begin
+        tstr=spec;
+      end;
+      OUTFORMFIELD(fieldname,tstr); 
+    end;
+  end;
+
+  return;
+end;
+
+procedure PrintUnpayedIntPercSum(longint Contract,string CustCode,date td,longint ignoreinv,val AInvDateExc)
+begin
+  record ARVc ARr;
+  record IVVc tmpIVr,IVr;
+  record ItemPayHistVc ItemPayHistr;
+  record IPrsVc IPrsr;
+  boolean TrHs,TrHs2,testf;
+  string 255 IntPercCodes;
+  val sum,sumwoinv;
+  boolean ignoref;
+  val rval,rvalb1,bal;
+  longint latedays;
+  
+  if FieldInForm("FF_UNPAYEDINTPERCSUM") or FieldInForm("FF_UNPAYEDINTPERCSUM2") then begin
+    sum=0.00;
+    sumwoinv=0.00;
+    if AInvDateExc>0 then begin
+      sum = sum + AInvDateExc;
+      sumwoinv = sumwoinv + AInvDateExc;
+    end;
+    
+    GetIntPercArtCode(IntPercCodes);
+    
+    TrHs=true;
+    IPrsr.CustCode = CustCode;
+    IPrsr.TransType = kIPrsTransTypeInvoice;
+    while LoopKey("CustType",IPrsr,2,TrHs) begin
+      if IPrsr.CustCode!=CustCode or IPrsr.TransType!=kIPrsTransTypeInvoice then begin
+        TrHs=false;
+      end else begin
+        if IPrsr.TransType==kIPrsTransTypeInvoice then begin
+          bal=0;
+          testf=false;
+          RecordClear(IVr);
+          IVr.SerNr = IPrsr.TransNr;
+          if ReadFirstMain(IVr,1,true) then begin
+            if IVr.InvType==kInvoiceTypeNormal then begin
+              testf=true;
+            end;
+          end;
+          if testf then begin
+            if (Contract!=-1) and (IVr.Contract!=Contract) then begin
+              testf=false;
+            end;
+             if td<IVr.InvDate then begin
+              testf=false;
+            end;
+          end;
+          if testf then begin
+            latedays = CalculateLateDays(IVr.InvDate,IVr.PayDate,td,false,false);
+            rval=0;
+            rvalb1 = 0;
+            if ((IVr.InvType<>kInvoiceTypeCredit) and (IVr.InvType<>kInvoiceTypeCash)) then begin
+              rval = IVr.Sum4;
+              if (nonblank(IVr.CurncyCode)) then begin
+                rvalb1 = IVr.BaseSum4;
+              end;
+              if (rvalb1==0) then begin
+                rvalb1 = rval;
+              end;
+            end;
+            if (IVr.InvType==kInvoiceTypeCredit) then begin
+              if (IVr.CredInv==-1) then begin
+                rval = -IVr.Sum4;
+                if (nonblank(IVr.CurncyCode)) then begin
+                  rvalb1 = -IVr.BaseSum4;
+                end;
+                if (rvalb1==0) then begin
+                  rvalb1 = rval;
+                end;
+              end else begin
+                rval = 0;
+                rvalb1 = 0;
+              end;    
+            end;
+            if (IVr.InvType==kInvoiceTypeCash) then begin
+              rval = 0;
+              rvalb1 = 0;
+            end;
+            ARRnGetInvBalance(IVr,td,IVr.InvType,rval,rvalb1,latedays);
+            SubPrePayments(IVr,rval,rvalb1);
+            SubCashRows_IVVc(IVr,false,rval,rvalb1);
+            bal = bal + rvalb1;
+          end;
+          if bal>0 and testf then begin
+            ignoref=false;
+            if ignoreinv==IVr.SerNr then begin
+              ignoref = true;
+            end;
+            ResetLoop(ItemPayHistr);
+            ItemPayHistr.IVNr = IVr.SerNr;
+            TrHs2 = true;
+            While LoopKey("IVNr",ItemPayHistr,1,TrHs2) begin
+              if ItemPayHistr.IVNr!=IVr.SerNr then begin
+                TrHs2 = false;
+              end else begin
+                if ItemPayHistr.TransDate<=td then begin
+                  if SetInSet(ItemPayHistr.ArtCode,IntPercCodes) then begin
+                    if (ItemPayHistr.FileName==1) then begin
+                      sum = sum + ItemPayHistr.AmtValBaseCur;
+                      if !ignoref then begin
+                        sumwoinv = sumwoinv + ItemPayHistr.AmtValBaseCur;
+                      end;
+                    end else begin
+                      sum = sum - ItemPayHistr.AmtValBaseCur;
+                      if !ignoref then begin
+                        sumwoinv = sumwoinv - ItemPayHistr.AmtValBaseCur;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;  
+    
+    /* TrHs=true;
+    ResetLoop(ARr);
+    ARr.CustCode=CustCode;
+    While LoopKey("CustCode",ARr,1,TrHs) begin
+      if (ARr.CustCode!=CustCode) then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        tmpIVr.SerNr=ARr.InvoiceNr;
+        if ReadFirstMain(tmpIVr,1,true) then begin
+          if td<tmpIVr.InvDate then begin
+            testf=false;
+          end;
+          if (Contract!=-1) and (tmpIVr.Contract!=Contract) then begin
+            testf=false;
+          end;
+        end;
+        if testf then begin
+          ignoref=false;
+          if ignoreinv==ARr.InvoiceNr then begin
+            ignoref = true;
+          end;
+          ResetLoop(ItemPayHistr);
+          ItemPayHistr.IVNr = ARr.InvoiceNr;
+          TrHs2 = true;
+          While LoopKey("IVNr",ItemPayHistr,1,TrHs2) begin
+            if ItemPayHistr.IVNr!=ARr.InvoiceNr then begin
+              TrHs2 = false;
+            end else begin
+              if SetInSet(ItemPayHistr.ArtCode,IntPercCodes) then begin
+                if (ItemPayHistr.FileName==1) then begin
+                  sum = sum + ItemPayHistr.AmtValBaseCur;
+                  if !ignoref then begin
+                    sumwoinv = sumwoinv + ItemPayHistr.AmtValBaseCur;
+                  end;
+                end else begin
+                  sum = sum - ItemPayHistr.AmtValBaseCur;
+                  if !ignoref then begin
+                    sumwoinv = sumwoinv - ItemPayHistr.AmtValBaseCur;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end; */
+    
+    OutFormField("FF_UNPAYEDINTPERCSUM",ValToString(sum,M4Val,"",".",0));
+    OutFormField("FF_UNPAYEDINTPERCSUM2",ValToString(sumwoinv,M4Val,"",".",0));
+  
+  end;
+  
+  return;
+end;
+  
+procedure PrintBuildUnpayedIVVc(string BuildCode,date InvDate,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  Record ARVc ARr;
+  Record NAContractVc NAContractr;
+  Record FlatsVc Flatsr;
+  boolean wloopflat,wloopco,wloopar;
+  integer i,rwc;
+  val totunpayed;
+  Date TillDate;
+  
+  if (FIELDINFORM("FF_BUILDUNPAYEDPSUM")) then begin
+    TillDate=InvDate;
+    TillDate = AddDay(TillDate, -1);
+    Flatsr.Code=BuildCode;
+    wloopFlat=true;
+    While LoopKey("Code",Flatsr,1,wloopflat) begin
+      if Flatsr.Code!=BuildCode then begin
+        wloopflat=false;
+      end else begin
+        ResetLoop(NAContractr);
+        NAContractr.FlatCode=Flatsr.FlatCode;
+        wloopco=true;
+        While LoopKey("FlatCode",NAContractr,1,wloopco) begin
+          if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+            wloopco=false;
+          end else begin
+            ResetLoop(ARr);
+            ARr.CustCode=NAContractr.CustCode;
+            wloopar=true;
+            While LoopKey("CustDue",ARr,2,wloopar) begin
+              if (ARr.CustCode!=NAContractr.CustCode) or (ARr.DueDate>TillDate) then begin
+                wloopar=false;
+              end else begin
+                totunpayed=totunpayed+ARr.RVal;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    if totunpayed>=0 then begin
+      OutFormField("FF_BUILDUNPAYEDPSUMTEXT",USetStr(1001317));
+      // OutFormField("FF_BUILDUNPAYEDPSUM",ValToString(totunpayed,M4Val,"",".",0));
+      PrintValueInclZero("FF_BUILDUNPAYEDPSUM",totunpayed,M4Val,LangNrr,SFb,negamountf);
+      
+    end;
+  end;  
+
+  return;
+end;
+
+procedure PrintIPFields(date td,longint ivser,record LangNrVc LangNrr,record SysFormatBlock SysFormatRec,string custcode,longint contract) 
+begin
+  Record IVVc IVr;
+  Record IPrsVc IPrsr;
+  Boolean wloop,testf,foundf;
+  Record IPVc IPr;
+  Row IPVc IPrw;
+  Integer i,rwc;
+  val sum;
+  date sd,ed;
+  string 255 tstr,curcode;
+  vector boolean vecUsedIP;
+  
+  if FieldInForm("FF_VS_LASTPAYMENT") then begin
+    tstr = "";
+    ResetLoop(IPrsr);
+    IPrsr.TransDate = td;
+    IPrsr.CustCode=custcode;
+    wloop = true;
+    While LoopBackKey("CustTransKey",IPrsr,2,wloop) begin
+      if IPrsr.CustCode!=custcode then begin
+        wloop = false;
+      end else begin
+        testf = true;
+        if IPrsr.TransDate>td then begin
+          testf = false;
+        end;
+        if IPrsr.TransType!=1 then begin
+          testf = false;
+        end;
+        if testf then begin
+          IPr.SerNr = IPrsr.TransNr;
+          if ReadFirstMain(IPr,1,true) then begin
+            tstr = DateToString(IPrsr.TransDate,"DD.MM.YYYY") & ". ";
+            rwc = MatRowCnt(IPr);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(IPr,i,IPrw);
+              if IPrw.CustCode==custcode then begin
+                sum = sum + IPrw.RecVal;
+                curcode = IPrw.RecCurncy;
+              end;
+            end;
+            
+            tstr = tstr & LowerCase(UsetStr(4857)) & " " & ValToString(sum,M4Val,"",".",0) & " " & curcode;
+            wloop = false;
+          end;
+        end;
+      end;
+    end;
+    
+    OutFormField("FF_VS_LASTPAYMENT",tstr);
+  end;
+  
+  if FieldInForm("FF_VS_TOTLASTPAYMENT") then begin
+    wloop=true;
+    IVr.CustCode=custcode;
+    IVr.InvDate=td;
+    While LoopBackKey("CustDate",IVr,2,wloop)begin
+      if IVr.CustCode!=custcode then begin
+        wloop=false;
+      end else begin
+        if IVr.SerNr!=ivser then begin
+          wloop=false;
+          sd=IVr.InvDate;
+          sd.day = sd.day + 1;
+          ed=td;
+          foundf=true;
+        end;
+      end;
+    end;
+    if foundf then begin
+      sum = blankval;
+      ResetLoop(IPrsr);
+      IPrsr.CustCode=custcode;
+      IPrsr.TransType=1;
+      IPrsr.TransDate=sd;
+      wloop=true;
+      while LoopKey("CustTransKey",IPrsr,3,wloop)begin
+        if IPrsr.CustCode!=custcode or IPrsr.TransType!=1 or IPrsr.TransDate>ed then begin
+          wloop=false;
+        end else begin
+          testf=true;
+          if IPrsr.TransType!=1 then begin
+            testf=false;
+          end;
+          if testf then begin
+            IPr.SerNr=IPrsr.TransNr;
+            if ReadFirstMain(IPr,1,true) then begin end;
+            rwc=MatRowCnt(IPr);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(IPr,i,IPrw);
+              if IPrw.CustCode==custcode then begin
+                sum=sum+IPrw.RecVal;
+                curcode = IPrw.RecCurncy;
+              end;
+            end;
+          end;
+        end;
+      end;
+      tstr = ValToString(sum,M4Val,"",".",0);
+      OutFormField("FF_VS_TOTLASTPAYMENT",tstr);
+    end;
+  end;
+
+  if FieldInForm("FF_LASTMONTHPAYEDSUM") then begin
+    sum=blankval;
+    sd=td; 
+    sd=AddMonth(sd,-1);
+    sd.day=1;
+    ed=sd; ed.day = DaysInMonth(Getyear(ed),GetMonth(ed));
+    ResetLoop(IPrsr);
+    IPrsr.TransDate = sd;
+    IPrsr.CustCode=custcode;
+    wloop = true;
+    While LoopKey("CustTransKey",IPrsr,2,wloop) begin
+      if (IPrsr.CustCode!=custcode) then begin
+        wloop = false;
+      end else begin
+        if (IPrsr.TransType==1) and !(ed<IPrsr.TransDate) and !vecUsedIP[IPrsr.TransNr] then begin
+          vecUsedIP[IPrsr.TransNr]=true;
+          IPr.SerNr = IPrsr.TransNr;
+          if ReadFirstMain(IPr,1,true) then begin
+            rwc = MatRowCnt(IPr);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(IPr,i,IPrw);
+              testf=true;
+              if IPrw.CustCode!=custcode then begin
+                testf=false;
+              end;
+              if (contract!=-1) and (IPrw.ContractNr!=Contract) then begin
+                testf=false;
+              end;
+              if testf then begin
+                sum = sum + IPrw.RecVal;
+                curcode = IPrw.RecCurncy;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    if sum>0 then begin
+      OutFormField("FF_LASTMONTHPAYEDSUM",sum & " " & curcode);
+    end else begin
+      OutFormField("FF_LASTMONTHPAYEDSUM","");
+    end;
+  end;
+    
+return;
+end;
+
+global
+procedure PrintPrepayAmount(record IVVc IVr,var val onaccsum)
+begin
+  row IVVc IVrw;
+  integer i,rw;
+
+  onaccsum = GetCustPrepayAmountEx(IVr.CustCode,IVr.InvDate,IVr.Contract);
+
+  
+  //sub current invoice prepayment
+  rw = MatRowCnt(IVr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==6 then begin
+      onaccsum = onaccsum + IVrw.Sum;
+    end;
+  end;
+
+  return;
+end;
+
+procedure PrintCustPrepayAmount(record IVVc IVr,var val onaccsum)
+begin
+  row IVVc IVrw;
+  integer i,rw;
+
+  onaccsum = GetCustPrepayAmountEx(IVr.CustCode,IVr.InvDate,-1);
+  //sub current invoice prepayment
+  rw = MatRowCnt(IVr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==6 then begin
+      onaccsum = onaccsum + IVrw.Sum;
+    end;
+  end;
+  return;
+end;
+
+procedure PrintIVComText(date invdate,longint contract,boolean printwarnf,boolean skipf)
+begin
+  Record BBSIVCommentVc BBSIVCommentr;
+  Row BBSIVCommentVc BBSIVCommentrw;
+  Record NAContractVc NAContractr;
+  Integer i,rwcnt,rwc;
+  string 255 tstr;
+  boolean testf,wloop,printf,contractf;
+  
+  if contract!=-1 then begin
+    NAContractr.SerNr=contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      contractf=true;
+    end;
+  end;
+  
+  wloop=true;
+  While LoopMain(BBSIVCommentr,1,wloop) begin
+    testf=true;
+    if nonblankdate(BBSIVCommentr.StartDate) and BBSIVCommentr.StartDate>invdate then begin
+      testf=false;
+    end;
+    if nonblankdate(BBSIVCommentr.EndDate) and BBSIVCommentr.EndDate<invdate then begin
+      testf=false;
+    end;
+    if testf then begin
+      rwc=MatRowCnt(BBSIVCommentr);
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(BBSIVCommentr,i,BBSIVCommentrw);
+        printf=true;
+        if nonblank(BBSIVCommentrw.Classification) and contractf then begin
+          if SetInSet(BBSIVCommentrw.Classification,NAContractr.Classification) then begin
+            printf=false;
+          end;
+        end;
+        if printf and skipf then begin
+          if i==22 then begin
+            printf=false;
+          end;
+        end;
+        if printf then begin
+          OUTFORMFIELD("FF_IVCOMTEXT" & i,BBSIVCommentrw.RowText);
+        end;
+      end;
+      if printwarnf then begin
+        OUTFORMFIELD("FF_IVWARNTEXT",BBSIVCommentr.WarnText);
+      end;
+      wloop=false;
+    end;
+  end;
+
+  RETURN;
+END;
+
+procedure PrintMergegServInvRows(record IVVc IVr,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  record IVVc tmpIVr;
+  row IVVc IVrw,tmpIVrw;
+  record INVc INr;
+  row INVc INrw;
+  record UnitVc Unitr;
+  integer i,j,rwc,rwc2;
+  boolean foundf;
+  string 255 tstr;
+  val vatprc,vatval,vatexclprc,vatinclprc,rowtax;
+  
+  RecordNew(tmpIVr);
+  ClearRow(tmpIVr,tmpIVrw,1);
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    foundf=false;
+    if IVrw.stp==1 then begin
+      rwc2=MatRowCnt(tmpIVr);
+      for (j=0;j<rwc2;j=j+1) begin
+        MatRowGet(tmpIVr,j,tmpIVrw);
+        if IVrw.ArtCode==tmpIVrw.ArtCode then begin
+          tmpIVrw.Quant=tmpIVrw.Quant+IVrw.Quant;
+          tmpIVrw.Sum=tmpIVrw.Sum+IVrw.Sum;
+          foundf=true;
+          MatRowPut(tmpIVr,j,tmpIVrw);
+        end;
+      end;
+      if !foundf then begin
+        CopyRow(IVr,IVrw,tmpIVrw);
+        MatRowPut(tmpIVr,rwc2,tmpIVrw);
+      end;
+    end;
+  end;
+    
+  rwc = MatRowCnt(tmpIVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(tmpIVr,i,tmpIVrw);
+    OUTFORMFIELD("F_MERGED_ARTCODE",tmpIVrw.ArtCode);
+    if nonblank(IVr.LangCode) then begin
+      OUTFORMFIELD("F_MERGED_SPEC",tmpIVrw.Spec);
+    end else begin
+      INr.Code=tmpIVrw.ArtCode;
+      if ReadFirstMain(INr,1,true) then begin
+        rwc2=MatRowCnt(INr);
+        for (j=0;j<rwc2;j=j+1) begin
+          MatRowGet(INr,j,INrw);
+          if !nonblank(INrw.LangCode) then begin
+            tstr=INrw.Text;
+            j=rwc2;
+          end;
+        end;
+      end;
+      OUTFORMFIELD("F_MERGED_SPEC",tstr); 
+    end;
+    OUTFORMFIELD("F_MERGED_SPEC2",tmpIVrw.Spec);
+    OUTFORMFIELD("F_MERGED_QUANT",tmpIVrw.Quant);
+    OUTFORMFIELD("F_MERGED_SUM",tmpIVrw.Sum);
+    
+    InvVat(1,IVr.InclVAT,IVr.NoTAXonVAT,IVr.ExportFlag,tmpIVrw.VATCode,tmpIVrw.Sum,vatprc,vatval,vatexclprc,vatinclprc,rowtax);
+    OUTFORMFIELD("F_MERGED_SUM2",tmpIVrw.Sum+vatval);
+    
+    Unitr.Code=tmpIVrw.UnitCode;
+    if ReadFirstMain(Unitr,1,true) then begin
+      OUTFORMFIELD("F_MERGED_UNITCODE",Unitr.Comment);
+    end else begin
+      OUTFORMFIELD("F_MERGED_UNITCODE","");
+    end;
+    // OUTFORMFIELD("F_MERGED_PRICE",tmpIVrw.Price);
+    PrintValueInclZero("F_MERGED_PRICE",tmpIVrw.Price,M423Val,LangNrr,SFb,negamountf);
+    EndFormRow; 
+  end;
+  
+  return;
+end;
+
+function boolean FindTotalCounterRes(string CounterType,var string FlatGroup,var string BuildGroup,string FlatCode,string BuildCode,var val amount,var boolean FlatGrf,var boolean BuildGrf,date sd,date ed,string CountResType)
+begin
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprw;
+  record BuildGroupVc BuildGroupr;
+  row BuildGroupVc BuildGrouprw;
+  record CountResVc CountResr;
+  boolean res,TrHs,testf;
+  val aval;
+  integer i,rwc;
+  
+  amount=0;
+
+  if !FlatGrf then begin
+    TrHs=true;
+    FlatGroupr.LinkBuildCode=BuildCode;
+    While LoopKey("LinkBuildCode",FlatGroupr,1,TrHs) begin
+      if FlatGroupr.LinkBuildCode!=BuildCode then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if NonBlankDate(FlatGroupr.StartDate) and (ed<FlatGroupr.StartDate) then begin
+          testf=false;
+        end;
+        if NonBlankDate(FlatGroupr.EndDate) and (FlatGroupr.EndDate<sd) then begin
+          testf=false;
+        end;
+        if testf then begin
+          rwc=MatRowCnt(FlatGroupr);
+          for (i=0;i<rwc;i=i+1) begin
+            MatRowGet(FlatGroupr,i,FlatGrouprw);
+            if FlatGrouprw.RowCode==FlatCode then begin
+              FlatGroup=FlatGroupr.Code;
+              i=rwc;
+              TrHs=true;
+            end;
+          end;
+        end;
+      end;
+    end;
+    FlatGrf=true;  
+  end;
+
+  if NonBlank(FlatGroup) then begin
+    ResetLoop(CountResr);
+    TrHs=true;
+    CountResr.CodeField=FlatGroup;
+    CountResr.CounterType=CounterType;
+    CountResr.StartDate=sd;
+    while LoopKey("CodeTypeSd",CountResr,3,TrHs) begin
+      if (CountResr.CodeField!=FlatGroup) or (CountResr.CounterType!=CounterType) or (ed<CountResr.StartDate) then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if CountResr.RecType!=3 then begin
+          testf=false;
+        end;
+        if CountResr.CountResType!=CountResType then begin
+          testf=false;
+        end;
+        if ed<CountResr.EndDate then begin
+          testf=false;
+        end;
+        if testf then begin
+          if CountResType=="KS9" and CountResr.BuildCode=="E122" then begin
+            if CountResr.InvAmount<0 then begin
+              CountResr.InvAmount = -CountResr.InvAmount;
+            end;
+          end;
+          aval=aval+CountResr.InvAmount;
+          res=true;
+        end;
+      end;
+    end;
+  end;
+
+  if !res then begin 
+    ResetLoop(CountResr);
+    TrHs=true;
+    CountResr.BuildCode=BuildCode;
+    CountResr.FlatCode="";
+    CountResr.StartDate=sd;
+    while LoopKey("BCFCSDEDCTCN",CountResr,3,TrHs) begin
+      if (CountResr.BuildCode!=BuildCode) or (CountResr.FlatCode!="") or (ed<CountResr.StartDate) then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if CountResr.CountResType!=CountResType then begin
+          testf=false;
+        end;
+        if CountResr.CounterType!=CounterType then begin
+          testf=false;
+        end;
+        if CountResr.RecType!=1 then begin
+          testf=false;
+        end;
+        if ed<CountResr.EndDate then begin
+          testf=false;
+        end;
+        if testf then begin
+          if CountResType=="KS9" and CountResr.BuildCode=="E122" then begin
+            if CountResr.InvAmount<0 then begin
+              CountResr.InvAmount = -CountResr.InvAmount;
+            end;
+          end;
+          aval=aval+CountResr.InvAmount;
+          res=true;
+        end;
+      end;
+    end;
+  end;
+
+  if !res then begin
+    if !BuildGrf then begin
+      TrHs=true;
+      While LoopMain(BuildGroupr,1,TrHs) begin
+        rwc=MatRowCnt(BuildGroupr);
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(BuildGroupr,i,BuildGrouprw);
+          if BuildGrouprw.RowCode==BuildCode then begin
+            BuildGroup=BuildGroupr.Code;
+            i=rwc;
+            TrHs=false;
+          end;
+        end;
+      end;
+      BuildGrf=true;
+    end;
+    if NonBlank(BuildGroup) then begin
+      ResetLoop(CountResr);
+      TrHs=true;
+      CountResr.CodeField=BuildGroup;
+      CountResr.CounterType=CounterType;
+      CountResr.StartDate=sd;
+      while LoopKey("CodeTypeSd",CountResr,3,TrHs) begin
+        if (CountResr.CodeField!=BuildGroup) or (CountResr.CounterType!=CounterType) or (ed<CountResr.StartDate) then begin
+          TrHs=false;
+        end else begin
+          testf=true;
+          if CountResr.RecType!=2 then begin
+            testf=false;
+          end;
+          if CountResr.CountResType!=CountResType then begin
+            testf=false;
+          end;
+          if ed<CountResr.EndDate then begin
+            testf=false;
+          end;
+          if testf then begin
+            if CountResType=="KS9" and CountResr.BuildCode=="E122" then begin
+              if CountResr.InvAmount<0 then begin
+                CountResr.InvAmount = -CountResr.InvAmount;
+              end;
+            end;
+            aval=aval+CountResr.InvAmount;
+            res=true;
+          end;
+        end;
+      end;
+    end;
+  end;
+  amount=aval;
+  
+  FindTotalCounterRes = res;
+  return;
+end;
+
+procedure PrintTotalCounterRes(string FlatCode,string BuildCode,date InvDate)
+begin
+  date sd,ed;
+  string 50 FlatGroup,BuildGroup;
+  val amount1,amount2,total;
+  boolean FlatGrf,BuildGrf;
+  string 255 tstr;
+  
+  sd=InvDate;
+  // sd=AddMonth(sd,-1);
+  sd.day=1;
+  ed=sd;
+  ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  
+  if FindTotalCounterRes("KS1",FlatGroup,BuildGroup,FlatCode,BuildCode,amount1,FlatGrf,BuildGrf,sd,ed,"MWH") or FindTotalCounterRes("KS6",FlatGroup,BuildGroup,FlatCode,BuildCode,amount2,FlatGrf,BuildGrf,sd,ed,"MWH") then begin
+    total=amount1+amount2;
+    if BuildCode=="E122" then begin
+      if FindTotalCounterRes("KS9",FlatGroup,BuildGroup,FlatCode,BuildCode,amount1,FlatGrf,BuildGrf,sd,ed,"MWH") then begin
+        total=total-amount1;
+      end;
+    end;
+    // tstr = USetStr(1001377) & total;
+    tstr = ValToString(total,M45Val,"",".",0);;
+  end;
+  if nonblank(BuildCode) and BuildCode=="E167" then begin
+    GoTo LSkipKS2KS7;
+  end;
+  if nonblank(BuildCode) and SetInSet(BuildCode,"E122,E154,E202") then begin
+    if FindTotalCounterRes("KS7",FlatGroup,BuildGroup,FlatCode,BuildCode,amount2,FlatGrf,BuildGrf,sd,ed,"MWH") then begin
+      total = amount2;
+      if nonblank(tstr) then begin
+        tstr = tstr & ", ";
+      end;
+      tstr = tstr & USetStr(1001378) & ValToString(total,M45Val,"",".",0);
+    end;
+  end else begin
+    if FindTotalCounterRes("KS2",FlatGroup,BuildGroup,FlatCode,BuildCode,amount1,FlatGrf,BuildGrf,sd,ed,"MWH") or FindTotalCounterRes("KS7",FlatGroup,BuildGroup,FlatCode,BuildCode,amount2,FlatGrf,BuildGrf,sd,ed,"MWH") then begin
+      total=amount1+amount2;
+      if nonblank(tstr) then begin
+        tstr = tstr & ", ";
+      end;
+      tstr = tstr & USetStr(1001378) & ValToString(total,M45Val,"",".",0);
+    end;
+  end;
+LSkipKS2KS7:;  
+  if FindTotalCounterRes("KS3",FlatGroup,BuildGroup,FlatCode,BuildCode,amount1,FlatGrf,BuildGrf,sd,ed,"MWH") or FindTotalCounterRes("KS8",FlatGroup,BuildGroup,FlatCode,BuildCode,amount2,FlatGrf,BuildGrf,sd,ed,"MWH") then begin
+    total=amount1+amount2;
+    if nonblank(tstr) then begin
+      tstr = tstr & ", ";
+    end;
+    tstr = tstr & USetStr(1001379) & ValToString(total,M45Val,"",".",0);
+  end;
+  tstr = USetStr(1001376) & tstr;
+  OutFormField("F_TOTALCOUNTERRES",tstr);
+  
+  return;
+end;
+
+procedure PrintIntField(record IVVc IVr,record NAContractVc NAContractr,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  record IVVc orgIVr;
+  row IVVc IVrw;
+  integer i,rwc;
+  val t;
+  string 255 IntCodes,tstr;
+  date startdate;
+  
+  GetIntPercArtCode(IntCodes);
+  
+  t=0.00;
+  orgIVr.SerNr=IVr.SerNr;
+  if ReadFirstMain(orgIVr,1,true) then begin
+    rwc=MatRowCnt(orgIVr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(orgIVr,i,IVrw);
+      if IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.ArtCode) then begin
+        if SetInSet(IVrw.ArtCode,IntCodes) then begin
+          t = t + IVrw.Sum;
+        end;
+      end;
+    end;
+  end;
+
+  PrintValueInclZero("FF_INVINTSUM",t,M4Val,LangNrr,SFb,false);
+  PrintValueInclZero("FF_ATTBETALA",IVr.Sum4-t,M4Val,LangNrr,SFb,negamountf);
+  
+  tstr = GetIntStatus2(NAContractr,startdate,orgIVr.InvDate);
+  if nonblankdate(startdate) then begin
+    //Līdz 2019.gada 1.decembrim ir apturēts kavējuma naudas aprēķins. 
+    tstr = USetStr(1001715) & GetYear(startdate) & USetStr(1000023) & " "; 
+    tstr = tstr & GetDay(startdate) & "." & USetStr(1001702 + GetMonth(startdate)) & USetStr(1001716);
+    OutFormField("FF_INTPERCTEXT",tstr);
+  end;
+
+  return;
+end;
+
+procedure PrintVATSumFields(record IVVc IVr,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  row IVVc IVrw;
+  integer i,rwc;
+  array val arrVATSums;
+  val VATPrc;
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if NonBlank(IVrw.VATCode) then begin
+      GetVATproc(IVrw.VATCode,0,VATPrc);
+      if VATPrc==12 then begin
+        arrVATSums[0] = arrVATSums[0] + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end;
+      if (VATPrc==21) or (21.00<VATPrc and VATPrc<22.00)  then begin
+        arrVATSums[1] = arrVATSums[1] + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end;
+    end;
+  end;
+  
+  PrintValueInclZero("FF_VAT12SUM",arrVATSums[0],M4Val,LangNrr,SFb,false);
+  PrintValueInclZero("FF_VAT21SUM",arrVATSums[1],M4Val,LangNrr,SFb,false);
+
+  return;
+end;
+
+global
+procedure OBS_PrintAdditionalIVRowFields(record IVVc IVr,row IVVc IVrw,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  record FlatCountersVc FlatCountersr;
+  string 255 tstr;
+  val t,tt,VATPrc;
+  // array val arrVATSums;
+  
+  if FieldInForm("F_COUNTERLOC") then begin
+    tstr="";
+    if IVrw.CounterSerNr!=-1 then begin
+      FlatCountersr.SerNr=IVrw.CounterSerNr;
+      if ReadFirstMain(FlatCountersr,1,true) then begin
+        tstr=FlatCountersr.Location; 
+      end;
+    end;
+    OutFormField("F_COUNTERLOC",tstr);
+  end;
+  
+  if FieldInForm("FF_PRICEWORND") then begin
+    PrintValueInclZero("FF_PRICEWORND",IVrw.PriceWORound,M45Val,LangNrr,SFb,negamountf);
+  end;
+  
+  if FieldInForm("FF_VAT21ROWSUM") or FieldInForm("FF_VAT12ROWSUM") then begin
+    t=BlankVal;
+    tt=BlankVal;
+    if NonBlank(IVrw.VATCode) then begin
+      GetVATproc(IVrw.VATCode,0,VATPrc);
+      if VATPrc==12 then begin
+        t = Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+        PrintValueInclZero("FF_VAT12ROWSUM",t,M4Val,LangNrr,SFb,false);
+        // arrVATSums[0] = arrVATSums[0] + t;
+      end else begin
+        OutFormField("FF_VAT12ROWSUM","");
+      end;
+      if (VATPrc==21) or (21.00<VATPrc and VATPrc<22.00)  then begin
+        t = Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+        PrintValueInclZero("FF_VAT21ROWSUM",t,M4Val,LangNrr,SFb,false);
+        // arrVATSums[1] = arrVATSums[1] + t;
+      end else begin
+        OutFormField("FF_VAT21ROWSUM","");
+      end;
+    end else begin
+      OutFormField("FF_VAT12ROWSUM","");
+      OutFormField("FF_VAT21ROWSUM","");
+    end;
+  end;
+  
+  return;
+end;
+
+procedure PrintOldContractNIPFields(record NAContractVc oldNAContractr,record IVVc IVr)
+begin
+  record IVVc tmpIVr;
+  val debtot2,debtot3,latesum,onaccsum,t,TotDebtRepAgreeSum;
+  string 255 tstr;
+  boolean skipf;
+  
+  OUTFORMFIELD("FF_INVCONTRACTNR",oldNAContractr.SerNr);
+ 
+  debtot2 = GetCustIPrsSumTillDate(oldNAContractr.CustCode,IVr.InvDate,-1,latesum,oldNAContractr.SerNr);
+  
+  RecordNew(tmpIVr)
+  tmpIVr.InvDate=IVr.InvDate;
+  tmpIVr.CustCode=oldNAContractr.CustCode;
+  tmpIVr.Contract=oldNAContractr.SerNr;
+  PrintPrepayAmount(tmpIVr,onaccsum);
+  // t=debtot2 + IVr.Sum4-onaccsum;  //realIvr
+  t=debtot2-onaccsum;  //realIvr
+  
+  if t<0 then begin
+    OutFormField("FF_DEBTOTSUMONDATE",StringToVal("0",M4Val));
+    tstr="";
+    Val2ToText(tstr,StringToVal("0",M4Val),M4Val,IVr.CurncyCode,IVr.LangCode,tstr);
+    OutFormField("FF_DEBTOTSUMONDATEINTEXT",tstr);
+  end else begin
+    OutFormField("FF_DEBTOTSUMONDATE",t);
+    tstr="";
+    Val2ToText(tstr,t,M4Val,IVr.CurncyCode,IVr.LangCode,tstr);
+    OutFormField("FF_DEBTOTSUMONDATEINTEXT",tstr);
+  end;
+
+  t=debtot2-TotDebtRepAgreeSum-onaccsum;
+  OutFormField("FF_DEBSUMONDATEWODRA",t);
+  
+  tstr = ValToString(t,M4Val,"",".",0);
+  tstr=chr(42) & IVr.SerNr & "-" & tstr & chr(42);
+  OutFormField("FF_Barcode_FOR1_NE",tstr);
+  tstr=IVr.SerNr & "-" & ValToString(t,M4Val,"",".",0);
+  OutFormField("FF_Barcode_FOR1_NESPEC",tstr);
+  
+  return;
+end;
+  
+function string 10 GetCodeMSConstAPKT(record IVVc IVr)
+begin
+  row IVVc IVrw;
+  integer i,rwc;
+  string 10 res;
+  boolean testf;
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    testf=true;
+    if IVrw.ovst!=0 then begin
+      testf=false;
+    end;
+    if IVrw.stp!=kInvoiceRowTypeNormal then begin
+      testf=false;
+    end;
+    if blank(IVrw.ArtCode) then begin
+      testf=false;
+    end;
+    if testf then begin
+      if SetInSet(IVrw.ArtCode,"KS1,KS2,KS3,S01,S03,S05,S10,S12,S14") then begin
+        res="APKT";
+        i=rwc;
+      end;
+      if SetInSet(IVrw.ArtCode,"KS6,KS7,KS8,S02,S04,S06,S09,S11,S13") then begin
+        res="APKT2";
+        i=rwc;
+      end;
+    end;
+  end;
+  
+  GetCodeMSConstAPKT = res;
+  return;
+end;  
+  
+global 
+procedure OBS_PrintAdditionalIVFields(record IVVc IVr,record CUVc CUr,string formcode,string langcode,record LangNrVc LangNrr,record SysFormatBlock SFb,boolean negamountf)
+begin
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  record NAContractVc NAContractr,oldNAContractr;
+  record OwnersVc Ownersr;
+  row OwnersVc Ownersrw;
+  boolean flatfoundf,buildfoundf,testf,contractf,oldcontractf,coperf,skipf;
+  string 255 tstr,exclitem;
+  val t2,bal,latebal,exclsum,lateexclsum,latesum,debtot2,debtot3;
+  val onaccsum,t,TotDebtRepAgreeSum,tlateexclsum;
+  integer length,i,rwc;
+  date sd,ed,orgInvDate;
+  val AInvDateBal,AInvDateLateBal,AInvDateExc,AInvDateLateExc;
+  string 255 IntCodes,custcode,custname,contract;
+  date codate;
+  
+  orgInvDate = IVr.InvDate;
+  if nonblankdate(IVr.AdditInvDate) then begin
+    IVr.InvDate = IVr.AdditInvDate;
+  end;
+
+  GetIntPercArtCode(IntCodes); //soda artikuli
+  GetAdditInvDateVals(orgInvDate,IVr.AdditInvDate,IVr.Contract,IVr.SerNr,IntCodes,AInvDateBal,AInvDateLateBal,AInvDateExc,AInvDateLateExc);
+  
+  Buildr.Code = IVr.BuildCode;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    buildfoundf=true;
+  end;
+  
+  if nonblank(IVr.Contract) then begin
+    NAContractr.SerNr=IVr.Contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      contractf=true;
+    end;
+  end;
+ 
+ 
+  OUTFORMFIELD("FF_LINE","_______________");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+  OUTFORMFIELD("FF_LINE2","|");
+ 
+  Flatsr.FlatCode = IVr.FlatCode;
+  flatfoundf = ReadFirstMain(Flatsr,1,true);
+  if flatfoundf then begin
+    tstr = Flatsr.Address;
+    if nonblank(Flatsr.FlatNo) then begin
+      tstr = tstr & " - " & Flatsr.FlatNo;
+    end;
+    if buildfoundf then begin
+      if nonblank(Buildr.City) then begin
+        tstr= tstr & ", " & Buildr.City;
+      end;
+    end;
+    OutFormField("FF_OBJADDRESS",tstr);
+  end else begin
+    if buildfoundf then begin
+      OutFormField("FF_OBJADDRESS",Buildr.Address);
+    end;
+  end;
+  
+  if buildfoundf then begin  
+    OUTFORMFIELD("F_BUILDCOMMENT",Buildr.InvComment);
+    OUTFORMFIELD("F_BUILDCOMMENT1",Buildr.InvComment);
+    OUTFORMFIELD("F_BUILDCOMMENT2",Buildr.InvComment2);
+    OUTFORMFIELD("F_BUILDCOMMENT3",Buildr.InvComment3);
+    
+    if flatfoundf then begin
+      tstr = Flatsr.Address;
+      if nonblank(Flatsr.FlatNo) then begin
+        tstr = tstr & " - " & Flatsr.FlatNo;
+      end;
+      if nonblank(Buildr.City) then begin
+        tstr = tstr & ", " & Buildr.City;
+      end;
+      if nonblank(Buildr.RuralTer) then begin
+        tstr = tstr & ", " & Buildr.RuralTer;
+      end;
+      if nonblank(Buildr.Municipality) then begin
+        tstr = tstr & ", " & Buildr.Municipality;
+      end;
+      if nonblank(Buildr.PostalCode) then begin
+        tstr = tstr & ", " & Buildr.PostalCode;
+      end;
+      OutFormField("FF_OBJADDRESS_FULL",tstr);
+    end;
+  end;
+  
+  PrintAllFlatFields(formcode,IVr.FlatCode,IVr.InvDate,IVr.InvDate);
+  
+  COGetBalance(IVr.Contract,IVr.InvDate,bal,latebal,exclsum,lateexclsum,IntCodes);
+  bal = bal + AInvDateBal;
+  PrintValueInclZero("FF_CONTRACTDEBT",bal,M4Val,LangNrr,SFb,negamountf);
+  
+  t=bal-exclsum;
+  if t==blankval then begin
+    t=0.00;
+  end;
+  PrintValueInclZero("FF_CONTRACTDEBTWOLS",t,M4Val,LangNrr,SFb,negamountf);
+  // PrintIVComText(IVr.InvDate,IVr.Contract,latebal>0);  moved below
+  PrintUnpayedIntPercSum(IVr.Contract,IVr.CustCode,IVr.InvDate,IVr.SerNr,AInvDateExc);
+  
+  tstr = ValToString(IVr.Sum4,M4Val,"",".",0);
+  OUTFORMFIELD("FF_BARCODE39",chr(42) & "FOR" & chr(47) & IVr.SerNr & chr(47) & tstr & chr(42));
+  
+  tstr=chr(42) & IVr.SerNr & "-" & tstr & chr(42);
+  OutFormField("FF_Barcode_FOR1_NE",tstr);
+  tstr=IVr.SerNr & "-" & ValToString(IVr.Sum4,M4Val,"",".",0);
+  OutFormField("FF_Barcode_FOR1_NESPEC",tstr);
+
+  if FieldInForm("FF_Barcode_FOR2_NE") then begin
+    tstr=chr(42) & IVr.SerNr & chr(42);
+    OutFormField("FF_Barcode_FOR2_NE",tstr);
+    OutFormField("FF_Barcode_FOR2_NESPEC",IVr.SerNr);
+    OutFormField("FF_Barcode_FOR2_NETEXT",USetStr(1000134));
+  end;
+
+  debtot2 = GetCustIPrsSumTillDate2(IVr.CustCode,IVr.InvDate,IVr.SerNr,latesum,IVr.Contract,exclsum,IntCodes,tlateexclsum);
+  debtot2 = debtot2 + AInvDateBal;
+  exclsum = exclsum + AInvDateExc;
+
+  OutFormField("FF_DEBTONDATE",debtot2);
+  
+  if FieldInForm("FF_DEBTONDATEWOLS") then begin
+    PrintValueInclZero("FF_DEBTONDATEWOLS",debtot2-exclsum,M4Val,LangNrr,SFb,negamountf);
+  end;
+  
+  PrintPrepayAmount(IVr,onaccsum);
+  OutFormField("F_ONACCSUM",-onaccsum);
+  OutFormField("FF_ONACCSUM2",onaccsum);
+  
+  t=debtot2 + IVr.Sum4-onaccsum;  //realIvr
+  
+  if FieldInForm("FF_MSCONST_APKT") then begin
+    tstr = GetCodeMSConstAPKT(IVr);
+    if nonblank(tstr) then begin
+      PrintMSConst(tstr,IVr.InvDate,"FF_MSCONST_APKT",LangNrr,SFb,negamountf);
+    end;
+  end;
+  
+  if t<0 then begin
+    OutFormField("FF_DEBTOTSUMONDATE",StringToVal("0",M4Val));
+    tstr="";
+    Val2ToText(tstr,StringToVal("0",M4Val),M4Val,IVr.CurncyCode,IVr.LangCode,tstr);
+    OutFormField("FF_DEBTOTSUMONDATEINTEXT",tstr);
+  end else begin
+    OutFormField("FF_DEBTOTSUMONDATE",t);
+    tstr="";
+    Val2ToText(tstr,t,M4Val,IVr.CurncyCode,IVr.LangCode,tstr);
+    OutFormField("FF_DEBTOTSUMONDATEINTEXT",tstr);
+  end;
+  
+  OutFormField("FF_DEBTOTSUMONDATEZERO",t);
+  
+  t=debtot2;
+  // if t<0 then begin
+    // OutFormField("FF_DEBTOTSUMONDATEBEF",StringToVal("0",M4Val));
+  // end else begin
+    OutFormField("FF_DEBTOTSUMONDATEBEF",t);
+  // end;
+ 
+  if FieldInForm("F_DEBOROVERPAID2") then begin
+    t=debtot2-onaccsum;
+    PrintValueInclZero("F_DEBOROVERPAID2",t,M4Val,LangNrr,SFb,negamountf);
+  end;
+  
+  if FieldInForm("F_DEBOROVERPAID") then begin
+    if debtot2!=0.00 then begin
+      if (onaccsum!=blankval) or (onaccsum!=0.00) then begin
+        t=debtot2-onaccsum;
+        OutFormField("F_DEBOROVERPAID",t);
+      end else begin
+        OutFormField("F_DEBOROVERPAID",debtot2);
+      end;
+    end else begin
+      if (onaccsum!=blankval) or (onaccsum!=0.00) then begin
+        OutFormField("F_DEBOROVERPAID","-" & onaccsum);
+      end else begin
+        OutFormField("F_DEBOROVERPAID","0.00");
+      end;
+    end;
+  end;
+  
+  if FieldInForm("F_MERGED_DEBOROVERPAID") then begin
+    debtot3 = GetCustIPrsSumTillDate(IVr.CustCode,IVr.InvDate,IVr.SerNr,latesum,-1);
+    PrintCustPrepayAmount(IVr,onaccsum)
+    if debtot3!=0.00 then begin
+      OutFormField("F_MERGED_DEBOROVERPAID",debtot3);
+    end else begin
+      if (onaccsum!=blankval) or (onaccsum!=0.00) then begin
+        OutFormField("F_MERGED_DEBOROVERPAID","-" & onaccsum);
+      end else begin
+        OutFormField("F_MERGED_DEBOROVERPAID","0.00");
+      end;
+    end;
+  end;
+  
+  if FieldInForm("FF_DUEDATE") or FieldInForm("FF_INVDATE") then begin
+    LongDateToStr(IVr.PayDate,SetDateOrder(IVr.LangCode),tstr);
+    OUTFORMFIELD("FF_DUEDATE",tstr & ".");
+    LongDateToStr(orgInvDate,SetDateOrder(IVr.LangCode),tstr);
+    OUTFORMFIELD("FF_INVDATE",tstr & ".");
+  end;
+    
+  if FieldInForm("FF_CUREGNR1") then begin
+    testf=true;
+    if NonBlank(CUr.RegNr1) then begin
+      length=len(CUr.RegNr1);
+      for (i=0;i<length;i=i+1) begin
+        if mid(CUr.RegNr1,i,1)=="-" then begin
+          if (i==6) and (length-(i+1)==5)  then begin
+            i=length;
+            testf=false;
+          end;
+        end;
+      end;
+    end;
+    if testf and NonBlank(CUr.RegNr1) then begin
+      if Left(CUr.RegNr1,1)=="#" then begin
+        testf=false;
+      end;
+    end;
+    if testf then begin
+      OUTFORMFIELD("FF_CUPVATREGNR1TEXT",USetStr(12595));
+      OUTFORMFIELD("FF_CUVATREGNR1",CUr.VATNr);
+      OUTFORMFIELD("FF_CUREGNR1TEXT",USetStr(1000403));
+      OUTFORMFIELD("FF_CUREGNR1COTEXT",USetStr(1000377));
+      OUTFORMFIELD("FF_CUREGNR1",CUr.RegNr1);
+      OUTFORMFIELD("FF_CUREGNR1JURADRTEXT",USetStr(1001371));
+      OUTFORMFIELD("FF_ADDR2",IVr.Addr1);
+      if FieldInForm("FF_CONTRACTNR") then begin
+        // NAContractr.SerNr=IVr.Contract;
+        // if ReadFirstMain(NAContractr,1,true) then begin
+        if contractf then begin
+          if NonBlank(NAContractr.ContractNr) then begin    
+            OutFormField("FF_CONTRACTNR",NAContractr.ContractNr);
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if CUr.CustCat=="JUR" then begin
+    if FieldInForm("FF_CUREGNR1TEXT_JUR") or FieldInForm("FF_CUREGNR1_JUR") or FieldInForm("FF_CUPVATREGNR1TEXT_JUR")
+      or FieldInForm("FF_CUVATREGNR1_JUR") or FieldInForm("FF_CUREGNR1JURADRTEXT_JUR") or FieldInForm("FF_ADDR2_JUR") then begin
+      OUTFORMFIELD("FF_CUPVATREGNR1TEXT_JUR",USetStr(12595));
+      OUTFORMFIELD("FF_CUVATREGNR1_JUR",CUr.VATNr);
+      OUTFORMFIELD("FF_CUREGNR1TEXT_JUR",USetStr(1000403));
+      OUTFORMFIELD("FF_CUREGNR1COTEXT",USetStr(1000377));
+      OUTFORMFIELD("FF_CUREGNR1_JUR",CUr.RegNr1);
+      OUTFORMFIELD("FF_CUREGNR1JURADRTEXT_JUR",USetStr(1001371));
+      OUTFORMFIELD("FF_ADDR2_JUR",IVr.Addr1);
+    end;
+  end;  
+
+  if FieldInForm("FF_INVCONTRACTNR") then begin
+    OUTFORMFIELD("FF_INVCONTRACTNR",IVr.Contract);
+  end;
+  
+  if FieldInForm("FF_CONTRACTSD") then begin
+    if contractf then begin
+      LongDateToStr(NAContractr.StartDate,SetDateOrder(IVr.LangCode),tstr);
+      OUTFORMFIELD("FF_CONTRACTSD",tstr);
+    end else begin
+      OUTFORMFIELD("FF_CONTRACTSD","");
+    end;
+  end;
+  
+  if FieldInForm("FF_CONTRDATE") then begin
+    if contractf then begin
+      LongDateToStr(NAContractr.CODate,SetDateOrder(IVr.LangCode),tstr);
+      OUTFORMFIELD("FF_CONTRDATE",tstr);
+    end else begin
+      OUTFORMFIELD("FF_CONTRDATE","");
+    end;
+  end;
+  
+  if FieldInForm("FF_OWNERS") then begin
+    tstr=CUr.Name;
+    if flatfoundf then begin
+      Ownersr.Code=Flatsr.FlatCode;
+      if ReadFirstMain(Ownersr,1,true) then begin
+        rwc=MatRowCnt(Ownersr);
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(Ownersr,i,Ownersrw);
+          testf=true;
+          if NonBlank(Ownersrw.StartDate) and IVr.InvDate<Ownersrw.StartDate then begin
+            testf=false;
+          end;
+          if NonBlank(Ownersrw.EndDate) and IVr.InvDate>Ownersrw.EndDate then begin
+            testf=false;
+          end;
+          if CUr.Code==Ownersrw.CustCode then begin
+            testf=false;
+          end;
+          if testf then begin
+            tstr = tstr & ", " & Ownersrw.CustName;
+            i=rwc;
+          end;
+        end;
+      end;
+    end;
+    OUTFORMFIELD("FF_OWNERS",tstr);
+  end;
+  
+  if FieldInForm("FF_OWNERS2") then begin
+    tstr="";
+    Ownersr.Code="";
+    if flatfoundf then begin
+      Ownersr.Code=Flatsr.FlatCode;
+    end else begin
+      if buildfoundf then begin
+        Ownersr.Code=Buildr.Code;
+      end;
+    end;
+    if nonblank(Ownersr.Code) then begin
+      tstr="";
+      if ReadFirstMain(Ownersr,1,true) then begin
+        coperf = false;
+        sd=IVr.InvDate;
+        sd.day=1;
+        ed=sd;
+        ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+        if nonblankdate(NAContractr.StartDate) and (sd<=NAContractr.StartDate) and (NAContractr.StartDate<=ed) then begin
+          coperf = true;
+        end;
+        if nonblankdate(NAContractr.EndDate) and (sd<=NAContractr.EndDate) and (NAContractr.EndDate<=ed) then begin
+          coperf = true;
+        end;
+        rwc=MatRowCnt(Ownersr);
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(Ownersr,i,Ownersrw);
+          testf=true;
+          if coperf then begin
+            if nonblankdate(Ownersrw.StartDate) and (Ownersrw.StartDate>NAContractr.EndDate) and nonblank(NAContractr.EndDate) then begin
+              testf = false;
+            end;
+            if nonblankdate(Ownersrw.EndDate) and (Ownersrw.EndDate<NAContractr.StartDate) and nonblank(NAContractr.StartDate) then begin
+              testf = false;
+            end;
+          end else begin
+            if NonBlank(Ownersrw.StartDate) and IVr.InvDate<Ownersrw.StartDate then begin
+              testf=false;
+            end;
+            if NonBlank(Ownersrw.EndDate) and IVr.InvDate>Ownersrw.EndDate then begin
+              testf=false;
+            end;
+          end;
+          if testf then begin
+            if nonblank(tstr) then begin
+              tstr = tstr & ", ";
+            end;
+            tstr = tstr & Ownersrw.CustName;
+          end;
+        end;
+      end;
+    end;
+    if blank(tstr) then begin
+      tstr = NAContractr.CustName;
+    end;
+    OUTFORMFIELD("FF_OWNERS2",tstr);
+  end;
+  
+  if FieldInForm("FF_PREVMONTHPERIOD") then begin
+    if nonblank(IVr.ServPeriod) then begin
+      OUTFORMFIELD("FF_PREVMONTHPERIOD",IVr.ServPeriod);
+    end else begin
+      sd=IVr.InvDate;
+      // sd=AddMonth(sd,-1);
+      sd.day=1; 
+      ed=sd;
+      ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+      OUTFORMFIELD("FF_PREVMONTHPERIOD",DateToString(sd,"DD.MM.YYYY") & ".-" & DateToString(ed,"DD.MM.YYYY") & ".");
+    end;
+  end;
+  
+  if FieldInForm("FF_MONTHPERIOD") then begin
+    sd=IVr.InvDate;
+    sd.day=1; 
+    ed=sd;
+    ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+    OUTFORMFIELD("FF_MONTHPERIOD",DateToString(sd,"DD.MM.YYYY") & ".-" & DateToString(ed,"DD.MM.YYYY") & ".");
+  end;
+  
+  if FieldInForm("FF_MONTHPERIODCO") then begin
+    if nonblank(IVr.ServPeriod) then begin
+      OUTFORMFIELD("FF_MONTHPERIODCO",IVr.ServPeriod);
+    end else begin
+      sd=IVr.InvDate;
+      // sd=AddMonth(sd,-1);
+      sd.day=1; 
+      ed=sd;
+      ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+      if contractf then begin
+        if nonblankdate(NAContractr.StartDate) and  sd<NAContractr.StartDate and NAContractr.StartDate<=ed then begin
+          sd = NAContractr.StartDate;
+        end;
+        if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<ed and sd<=NAContractr.EndDate then begin
+          ed = NAContractr.EndDate;
+        end;
+      end;
+      OUTFORMFIELD("FF_MONTHPERIODCO",DateToString(sd,"DD.MM.YYYY") & ".-" & DateToString(ed,"DD.MM.YYYY") & ".");
+    end;
+  end;
+  
+  if FieldInForm("FF_CONTRINVDELADDR") then begin
+    NAContractr.SerNr=IVr.Contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      OUTFORMFIELD("FF_CONTRINVDELADDR",NAContractr.InvDelAddress);
+    end;
+  end;
+  
+  if FieldInForm("FF_CONTRINVDELADDR2") then begin
+    PrintCONTRINVDELADDR(NAContractr,Flatsr,Buildr);
+  end;
+  
+  if FieldInForm("F_MERGED_ARTCODE") or FieldInForm("F_MERGED_SPEC") or FieldInForm("F_MERGED_SUM") or FieldInForm("F_MERGED_QUANT") or FieldInForm("F_MERGED_UNITCODE") or FieldInForm("F_MERGED_PRICE") then begin
+    PrintMergegServInvRows(IVr,LangNrr,SFb,negamountf);
+  end;
+
+  if flatfoundf and buildfoundf then begin
+    PrintTotalCounterRes(IVr.FlatCode,IVr.BuildCode,IVr.InvDate);
+  end;
+
+  PrintIPFields(IVr.InvDate,IVr.SerNr,LangNrr,SFb,IVr.CustCode,IVr.Contract);
+  
+  PrintIVComText(IVr.InvDate,IVr.Contract,latebal>0,skipf);
+  
+  t=debtot2-TotDebtRepAgreeSum-onaccsum;
+  OutFormField("FF_DEBSUMONDATEWODRA",t);
+  
+  PrintBuildUnpayedIVVc(IVr.BuildCode,IVr.InvDate,LangNrr,SFb,negamountf);
+  
+  if IVr.MergedInvFlag==1 then begin
+    tstr = GetMergedInvHeatContractNr(IVr);
+    OutFormField("F_MERGED_HEATCONR",tstr);
+  end;
+  
+  PrintCountersData(IVr.BuildCode,IVr.FlatCode,IVr.InvDate,LangNrr,SFb,negamountf);
+  
+  
+  if FieldInForm("FF_VAT12SUM") or FieldInForm("FF_VAT21SUM") then begin
+    PrintVATSumFields(IVr,LangNrr,SFb,negamountf);
+  end;
+  
+  if FieldInForm("FF_INVINTSUM") or FIELDINFORM("FF_ATTBETALA") or FIELDINFORM("FF_INTPERCTEXT") then begin
+    PrintIntField(IVr,NAContractr,LangNrr,SFb,negamountf);
+  end;
+  
+  if FieldInForm("FF_SERVPERIOD") then begin
+    OUTFORMFIELD("FF_SERVPERIOD",IVr.ServPeriod);
+  end;
+
+  return;
+end;
+
+global
+function boolean ArtCodeWithLangCode(record INVc INr,string langcode,var integer itemround)
+begin
+  boolean res;
+  row INVc INrw;
+  integer i,rwc;
+  
+  rwc=MatRowCnt(INr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(INr,i,INrw);
+    if INrw.LangCode == langcode and nonblank(INrw.Text) then begin
+      itemround = stringtoint(INrw.Text);
+      i=rwc;
+      res=true;
+    end;
+  end;
+  
+  ArtCodeWithLangCode=res;
+  return;
+end;
+
+// global
+// function string 30 GetInvoiceLangCodeOBS(record IVVc IVr)
+// begin
+  // record NAContractVc NAContractr,oldNAContractr;
+  // string 30 res;
+  // val bal,latebal,exclsum,lateexclsum;
+  
+  // res=IVr.LangCode;
+  
+  // if IVr.Contract!=-1 then begin
+    // NAContractr.SerNr=IVr.Contract;
+    // if ReadFirstMain(NAContractr,1,true) then begin
+      // if nonblank(NAContractr.Classification) then begin
+        // if IsNIPCityCouncilInv(NAContractr) then begin
+          // res = "NIP";
+          // if nonblank(NAContractr.Comment2) then begin
+            // oldNAContractr.SerNr=StringToLongInt(NAContractr.Comment2);
+            // if ReadFirstMain(oldNAContractr,1,true) then begin
+              // COGetBalance(oldNAContractr.SerNr,IVr.InvDate,bal,latebal,exclsum,lateexclsum,"");
+              // if latebal>0 then begin
+                // res = "NIP2";
+              // end;
+            // end;
+          // end;
+        // end;
+      // end;
+    // end;
+  // end;
+// LGetInvoiceLangCodeOBS:;  
+  // GetInvoiceLangCodeOBS=res;
+  // return;
+// end;
+
+global
+procedure OBS_RemoveIntRows(var record IVVc oldIVr)
+begin
+  record IVVc IVr;
+  row IVVc IVrw;
+  integer i,rwc;
+  boolean foundf;
+  string 255 IntCodes;
+  
+  GetIntPercArtCode(IntCodes);
+  
+  RecordCopy(IVr,oldIVr);
+  rwc=MatRowCnt(IVr);
+  for (i=rwc-1;i>=0;i=i-1) begin
+    MatRowGet(IVr,i,IVrw);
+    if nonblank(IVrw.ArtCode) and SetInSet(IVrw.ArtCode,IntCodes) then begin
+      MatRowDelete(IVr,i);
+      foundf=true;
+    end;
+  end;
+  
+  if foundf then begin
+    RecordCopy(oldIVr,IVr);
+  end;
+  
+  return;
+end;
+
+global
+function val OBS_GetInvIntSum(record IVVc IVr,boolean fieldf)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  Row IVVc IVrw;
+  integer i,rw,masi,masrw,prevTransType;
+  boolean wloop,foundf;
+  val res;
+  string 20 IntCodes;
+  
+  res=0;
+  GetIntPercArtCode(IntCodes);
+  
+  if fieldf and IVr.InvType!=kInvoiceTypeCredit and IVr.InvType!=kInvoiceTypeCash then begin
+    ItemPayHistr.IVNr = IVr.SerNr;
+    ItemPayHistr.TransDate = IVr.InvDate;
+    wloop = true;
+    While LoopBackKey("IVNr",ItemPayHistr,2,wloop) begin
+      if ItemPayHistr.IVNr!=IVr.SerNr or ItemPayHistr.TransDate!=IVr.InvDate then begin
+        wloop = false;
+      end else begin
+        if SetInSet(ItemPayHistr.ArtCode,IntCodes) then begin
+          if ItemPayHistr.FileName==1 then begin
+            res = res + ItemPayHistr.AmtValBaseCur;
+          // end else begin
+            // res = res - ItemPayHistr.AmtValBaseCur;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  OBS_GetInvIntSum = res;
+  return;
+end;

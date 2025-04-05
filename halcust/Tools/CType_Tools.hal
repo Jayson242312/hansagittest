@@ -1,0 +1,19 @@
+
+global
+function string 60 OBSGetCTypeComment(string ctypecode)
+begin
+  string 60 res;
+  record CTypeVc CTyper;
+  
+  if Blank(ctypecode) then begin
+    goto LOBSGetCTypeComment;
+  end;
+  CTyper.Code = ctypecode;
+  if ReadFirstMain(CTyper,1,true) then begin
+    res = CTyper.Comment;
+  end;
+  
+LOBSGetCTypeComment:;
+  OBSGetCTypeComment = res;
+  return;
+end;

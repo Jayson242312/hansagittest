@@ -1,0 +1,682 @@
+external inner procedure HT2Per(Date, Date , var string);
+external function val GetFlatFieldValue(string,string,date,date);
+external procedure HTBuild(string,var string);
+external procedure HTMSClass(string,var string);
+external procedure HTFlat(string,var string);
+external procedure GenFlatServCache(date,date,var record SMVc,Boolean,integer,integer,record NAContractVc);
+external function boolean ArtCodeIVTemplateTest(record SMVc);
+external procedure FillVecItemsJur(var vector string);
+external function boolean GetMSPriceJurChg(string,date,string,string,longint,var val,var val);
+external inner function roundmode SetRoundModeD(Integer);
+external procedure CalcServInvCorrections(record RcVc,record NAContractVc,var record SMVc);
+
+procedure AddToUniqueMasive(var array string MainElements,var array val Sum1Mas,string ElementToCheck,val Sum1,var array val QtyMas,val qty)
+begin
+  integer i,rw;
+  boolean Exists;
+
+  rw = StringToInt(MainElements[0]);
+  if rw>0 then begin
+    for(i=1;i<=rw;i=i+1)begin
+      if MainElements[i]==ElementToCheck then begin
+        Sum1Mas[i] = Sum1Mas[i] + Sum1;
+        QtyMas[i] = QtyMas[i] + qty;
+        Exists = true;
+        i = rw + 1;
+      end;
+    end;
+  end else begin
+    rw = 0;
+  end;
+  if Exists==false then begin
+    rw = rw + 1;
+    MainElements[0] = rw;
+    MainElements[rw] = ElementToCheck;
+    Sum1Mas[rw] = Sum1;
+    QtyMas[rw] = qty;
+  end;
+end;
+
+
+procedure PrintArraySums(string code,string name,boolean printdbl,var array string ItemMas,array val QtyMas,array val SumInclVATMas,
+                         var integer buildcnt,var array string totItemMas,var array val totQtyMas,var array val totSumInclVATMas,boolean invtobuildf)
+begin
+  integer rw,i;
+  record INVc INr;  
+  val TotalSum;
+  
+  TotalSum = 0;
+  rw = StringToInt(ItemMas[0]);
+  if rw==0 then begin
+    GoTo LPrintArraySums;
+  end;
+  
+  //If invoice is to Erf then only add to total array and do not print anything
+  if invtobuildf then begin
+    buildcnt = buildcnt + 1;
+    for(i=1;i<=rw;i=i+1)begin
+      AddToUniqueMasive(totItemMas,totSumInclVATMas,ItemMas[i],SumInclVATMas[i],totQtyMas,QtyMas[i]);
+    end;
+    ItemMas[0] = 0;
+    GoTo LPrintArraySums;
+  end;
+  
+  buildcnt = buildcnt + 1;
+  
+  StartFormat(15);
+  if printdbl then begin
+    OutString(0,"dblBuildVc",code,false);
+  end else begin
+    OutString(0,"",code,false);
+  end;
+  OutString(100,"",name,false);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  StartFormat(15);
+  OutString(0,0,USetStr(1000645) & ":",false);
+  OutString(360,0,USetStr(1000492),true);
+  OutString(420,0,USetStr(1000490),true);
+  OutString(480,0,USetStr(1000489),true);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  StartFormat(15);
+  for(i=1;i<=rw;i=i+1)begin
+    OutString(20,"DblINVc",ItemMas[i],false);
+    INr.Code = ItemMas[i];
+    if ReadFirstMain(INr,1,true) then begin end;
+    OutString(80,0,INr.Name,false);
+    OutString(280,0,"",true);
+    OutString(360,0,INr.Unittext,true);
+    OutString(420,0,QtyMas[i],true);
+    OutString(480,0,SumInclVATMas[i],true);
+    EndFormat;
+    TotalSum = TotalSum + SumInclVATMas[i];
+    AddToUniqueMasive(totItemMas,totSumInclVATMas,ItemMas[i],SumInclVATMas[i],totQtyMas,QtyMas[i]);
+  end;
+  Black_Divider(0,1);
+  OutString(0,0,USetStr(1000446) & ":",false);
+  OutString(80,0,"",true);
+  OutString(280,0,"",true);
+  OutString(360,0,"",true);
+  OutString(420,0,"",true);
+  OutString(480,0,TotalSum,true);
+  EndFormat;
+  EndFormat;
+  
+  ItemMas[0] = 0;
+  
+LPrintArraySums:;
+  
+return;
+end;
+
+procedure GetSumsFromCacher(record NAContractVc NAContractr,record SMVc Cacher,date sd,date ed,var array val arrSums,var array val arrTotSums,var vector val vecValTariff)
+begin
+  row SMVc Cacherw;
+  integer i,rwc;
+  boolean testf;
+  string 20 counterno;
+  val tval;
+  boolean areaf;
+ 
+  rwc=MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    testf = false;
+    // counterno = "";
+    MatRowGet(Cacher,i,Cacherw);
+    Switch (Cacherw.RowSimStat) begin
+      Case 1: //normal row
+        testf = true;
+        // if blank(Cacherw.Comment) then begin
+          // INr.Code = Cacherw.AccNumber;
+          // if ReadFirstMain(INr,1,true) then begin end;
+          // artname = INr.Name;
+        // end else begin
+          // artname = Cacherw.Comment;
+        // end;
+        // CountResr.SerNr = StringToLongInt(Cacherw.Objects);
+        // if ReadFirstMain(CountResr,1,true) then begin
+          // counterno = CountResr.CounterNo;
+        // end;
+      Case 2: //row from periodic service records
+        testf = true;
+        // INr.Code = Cacherw.AccNumber;
+        // if ReadFirstMain(INr,1,true) then begin end;
+        // artname = INr.Name;
+    end;
+    if testf then begin
+      if (vecValTariff[Cacherw.AccNumber]==blankval) or (vecValTariff[Cacherw.AccNumber]==0.00) then begin
+        if Cacherw.DebVal!=0 then begin
+          vecValTariff[Cacherw.AccNumber]=Cacherw.DebVal;
+        end;
+      end;
+      // 4. Cilv skaits - TDECLPERS (vajag to vidējo konkrētajā mēnesī ja ir mainījies skaits) - idejiski var ņemt daudzumu no S07
+      // 7. KU cilv  - S07 pakalpojuma summa
+      if Cacherw.AccNumber=="S07" then begin
+        arrSums[0] = arrSums[0] + Cacherw.CredVal;
+        arrTotSums[0] = arrTotSums[0] + Cacherw.CredVal;
+        
+        arrSums[3] = arrSums[3] + Cacherw.DebVal2;
+        arrTotSums[3] = arrTotSums[3] + Cacherw.DebVal2;
+      end;   
+      
+      // 5. Rādījums. - S03 skaitītāju rādījums
+      // 6. KU skait - S03 pakalpojuma summa
+      if Cacherw.AccNumber=="S03" then begin
+        arrSums[1] = arrSums[1] + Cacherw.CredVal; 
+        arrTotSums[1] = arrTotSums[1] + Cacherw.CredVal;
+        
+        arrSums[2] = arrSums[2] + Cacherw.DebVal2;
+        arrTotSums[2] = arrTotSums[2] + Cacherw.DebVal2;
+      end;   
+      
+      // 8. KU piegāde - S05 pakalpojuma summa
+      if Cacherw.AccNumber=="S05" then begin
+        arrSums[4] = arrSums[4] + Cacherw.DebVal2;
+        arrTotSums[4] = arrTotSums[4] + Cacherw.DebVal2;
+      end;  
+      
+      // 10. Apkure - S01 pakalpojuma summa
+      
+      if Cacherw.AccNumber=="S01" then begin
+        arrSums[6] = arrSums[6] + Cacherw.DebVal2;
+        arrTotSums[6] = arrTotSums[6] + Cacherw.DebVal2;
+        
+        // 12. Platība - THEATAREA
+        arrSums[8] = arrSums[8] + Cacherw.CredVal;
+        arrTotSums[8] = arrTotSums[8] + Cacherw.CredVal;
+        areaf=true;
+      end;  
+     
+      if nonblank(Cacherw.AccNumber) and SetInSet(Cacherw.AccNumber,"S22,S23") then begin
+        arrSums[6] = arrSums[6] + Cacherw.DebVal2;
+        arrTotSums[6] = arrTotSums[6] + Cacherw.DebVal2;
+      end;
+     
+      // 11. Rēķinu izrakstīšana - S08 pakalpojuma summa      
+      if Cacherw.AccNumber=="S08" or Cacherw.AccNumber=="S21" then begin
+        arrSums[7] = arrSums[7] + Cacherw.DebVal2;
+        arrTotSums[7] = arrTotSums[7] + Cacherw.DebVal2;
+      end;  
+    end;
+  end;
+  
+  // 9. KU Summa = #6+#7+#8
+  tval = arrSums[2] + arrSums[3] + arrSums[4];
+  arrSums[5] = arrSums[5] + tval;
+  arrTotSums[5] = arrTotSums[5] + tval;
+  
+  // 12. Platība - THEATAREA
+  if !areaf then begin
+    tval = GetFlatFieldValue(NAContractr.FlatCode,"THEATAREA",sd,ed);
+    arrSums[8] = arrSums[8] + tval;
+    arrTotSums[8] = arrTotSums[8] + tval;
+  end;
+  
+  // 13.  Cilv skaits - TDECLPERS
+	tval = GetFlatFieldValue(NAContractr.FlatCode,"TDECLPERS",sd,ed);
+  arrSums[9] = arrSums[9] + tval;
+  arrTotSums[9] = arrTotSums[9] + tval;
+  
+  
+  return;
+end;
+
+//prints FlatServCache and adds to uniq mas
+procedure AddOneFlatToCacher(record RcVc RepSpec,record NAContractVc NAContractr,record SMVc Cacher,
+                       var boolean firstf,var array val arrtotSums,var record BuildCountResInputVc Cacher2,var vector val vecValTariff)
+ begin
+  row BuildCountResInputVc Cacherw2;
+  array val arrSums;
+  
+  GetSumsFromCacher(NAContractr,Cacher,RepSpec.sStartDate,RepSpec.sEndDate,arrSums,arrtotSums,vecValTariff);
+    
+  ClearRow(Cacher2,Cacherw2,1)
+  Cacherw2.CountResSerNr=NAContractr.SerNr;
+  Cacherw2.LastAmount1=arrSums[0];
+  Cacherw2.LastAmount2=arrSums[9];
+  Cacherw2.LastAmount3=arrSums[1];
+  Cacherw2.LastAmount4=arrSums[2];
+  Cacherw2.LastAmount5=arrSums[3];
+  Cacherw2.LastAmount6=arrSums[4];
+  Cacherw2.LastAmount7=arrSums[5];
+  Cacherw2.LastAmount8=arrSums[6];
+  Cacherw2.LastAmount9=arrSums[7];
+  Cacherw2.LastAmount10=arrSums[8];
+  MatRowInsert(Cacher2,MatRowCnt(Cacher2),Cacherw2);
+  
+  return;
+end;
+
+function val GetBuildMWHSum(record RcVc RepSpec,record BuildVc Buildr)
+begin
+  record CountResVc CountResr;
+  record FlatGroupVc FlatGroupr;
+  boolean TrHs,testf,TrHs2;
+  string 10 CountResType;
+  val res;
+
+  CountResType = "MWH";
+    
+  if nonblank(RepSpec.f4) then begin
+    ResetLoop(CountResr);      
+    TrHs2=true;
+    CountResr.FlatGroupCode=RepSpec.f4;
+    CountResr.FlatCode="";
+    CountResr.StartDate=RepSpec.sStartDate;
+    while LoopKey("FGFCSDEDCTCN",CountResr,3,TrHs2) begin
+      if (CountResr.FlatGroupCode!=RepSpec.f4) or (CountResr.FlatCode!="") or (RepSpec.sEndDate<CountResr.StartDate) then begin
+        TrHs2=false;
+      end else begin
+        testf=true;
+        if CountResr.RecType!=3 then begin
+          testf=false;
+        end;
+        if CountResr.CountResType!=CountResType then begin
+          testf=false;
+        end;
+        if testf then begin
+          res = res +CountResr.InvAmount;
+        end;
+      end;
+    end;
+  end else begin
+    ResetLoop(CountResr);
+    TrHs=true;
+    CountResr.BuildCode=Buildr.Code;
+    CountResr.FlatCode="";
+    CountResr.StartDate=RepSpec.sStartDate;
+    while LoopKey("BCFCSDEDCTCN",CountResr,3,TrHs) begin
+      if (CountResr.BuildCode!=Buildr.Code) or (CountResr.FlatCode!="") or (RepSpec.sEndDate<CountResr.StartDate) then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if CountResr.RecType!=1 then begin
+          testf=false;
+        end;
+        if CountResr.CountResType!=CountResType then begin
+          testf=false;
+        end;
+        if testf and nonblank(CountResr.BuildCode) then begin
+          if SetInSet(CountResr.BuildCode,"E122,E154,E202") then begin
+            if CountResr.CounterType!="KS1" then begin
+              testf=false;
+            end;
+            if CountResr.BuildCode=="E122" and CountResr.CounterType=="KS9" then begin
+              if CountResr.InvAmount<0 then begin
+                CountResr.InvAmount = - CountResr.InvAmount;
+              end;
+              res = res - CountResr.InvAmount;
+              testf=false;
+            end;
+          end;
+        end;
+        if testf then begin
+          res = res +CountResr.InvAmount;
+        end;
+      end;
+    end;
+    
+    TrHs=true;
+    FlatGroupr.LinkBuildCode=Buildr.Code;
+    While LoopKey("LinkBuildCode",FlatGroupr,1,TrHs) begin
+      if FlatGroupr.LinkBuildCode!=Buildr.Code then begin
+        TrHs=false;
+      end else begin
+        ResetLoop(CountResr);      
+        TrHs2=true;
+        CountResr.FlatGroupCode=RepSpec.f4;
+        CountResr.FlatCode="";
+        CountResr.StartDate=RepSpec.sStartDate;
+        while LoopKey("FGFCSDEDCTCN",CountResr,3,TrHs2) begin
+          if (CountResr.FlatGroupCode!=FlatGroupr.Code) or (CountResr.FlatCode!="") or (RepSpec.sEndDate<CountResr.StartDate) then begin
+            TrHs2=false;
+          end else begin
+            testf=true;
+            if CountResr.RecType!=3 then begin
+              testf=false;
+            end;
+            if CountResr.CountResType!=CountResType then begin
+              testf=false;
+            end;
+            if testf and nonblank(Buildr.Code) then begin
+              if SetInSet(Buildr.Code,"E122,E154,E202") then begin
+                if CountResr.CounterType!="KS1" then begin
+                  testf=false;
+                end;
+              end;
+            end;
+            if testf then begin
+              res = res +CountResr.InvAmount;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  GetBuildMWHSum = res;
+  return;
+end;
+
+function val GetVal(val value)
+begin
+  val res;
+  
+  res=value;
+  if res==blankval then begin
+    res=0.00;
+  end;
+  
+  GetVal=res;
+  return;
+end;
+
+procedure PrintFlats(record RcVc RepSpec,record BuildCountResInputVc Cacher,vector val vecValTariff)
+begin
+  record INVc INr;
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  row BuildCountResInputVc Cacherw;
+  boolean firstf;
+  integer i,rwc;
+  string 255 itemlist,item;
+  Longint pos;
+  
+  rwc=MatRowCnt(Cacher);
+  
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Cacher,i,Cacherw);
+    NAContractr.SerNr=Cacherw.CountResSerNr;
+    if ReadFirstMain(NAContractr,1,true) then begin
+    end;
+    Flatsr.FlatCode=NAContractr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+    end;
+    if !firstf then begin
+      StartFormat(15);
+      EndFormat;
+      Buildr.Code = NAContractr.BuildCode;
+      ReadFirstMain(Buildr,1,true);
+      
+      StartFormat(15);
+      OutStringID(0,"DblBuildVc",Buildr.Address,false,Buildr.Code);
+      EndFormat;
+      
+      StartFormat(15);
+      OutString(0,0,DateToString(RepSpec.sStartDate,"DD.MM.YYYY") & ":" & DateToString(RepSpec.sEndDate,"DD.MM.YYYY"),false);
+      EndFormat;
+
+      itemlist = "S01,S03,S05,S07,S08,S21,S22,S23";
+      pos=-1;
+      While GetNextSubstring(itemlist,pos,",",item) begin
+        if nonblank(item) then begin
+          INr.Code=item;
+          if ReadFirstMain(INr,1,true) then begin
+            if vecValTariff[INr.Code]!=blankval then begin
+              StartFormat(15);
+              OutString(0,0,INr.Code,false);
+              OutString(25,0,INr.Name,false);
+              OutVal(275,0,vecValTariff[INr.Code],M45Val,true);
+              // OutVal(225,0,10.00,M45Val,true);
+              EndFormat;
+            end;
+          end;
+        end;
+      end;
+      StartFormat(15);
+      OutString(0,0,USetStr(1001697),false);
+      OutVal(275,0,GetBuildMWHSum(RepSpec,Buildr),M45Val,true);
+      EndFormat;
+      
+      StartFormat(15);
+      EndFormat;
+      Black_Divider(0,1);
+      StartFormat(15);
+      OutString(0,0,USetStr(1000632),false); //Dzīvoklis 
+      OutString(30,0,USetStr(1000183),false); //Nosaukums 
+      OutString(130,0,USetStr(1000377),false); //Līguma nr.
+      OutString(205,0,USetStr(1000562),true); //cilv.
+      OutString(240,0,USetStr(1001718),true); //rad.
+      OutString(275,0,USetStr(1001719),true); // KU sk.
+      OutString(310,0,USetStr(1001720),true); //NORM
+      OutString(345,0,USetStr(1001721),true); //Cirk
+      OutString(380,0,USetStr(1000129),true); //kopā
+      OutString(415,0,USetStr(1001722),true); //Apk
+      OutString(450,0,USetStr(1001723),true); //Rēķ.
+      OutString(1,0,USetStr(1001724),true); //Apsild. pl.
+      
+      EndFormat;
+      Black_Divider(0,1);
+      firstf=true;
+    end;
+    
+    StartFormat(15);
+    OutString(0,0,Flatsr.FlatNo,false);
+    OutString(30,0,NAContractr.CustName,false); 
+    OutString(130,0,NAContractr.SerNr,false); 
+    // OutVal(170,0,Cacherw.LastAmount1,M45Val,true);
+    OutVal(205,0,Cacherw.LastAmount2,M45Val,true);
+    OutVal(240,0,GetVal(Cacherw.LastAmount3),M45Val,true);
+    OutVal(275,0,GetVal(Cacherw.LastAmount4),M45Val,true);
+    OutVal(310,0,Cacherw.LastAmount5,M45Val,true);
+    OutVal(345,0,Cacherw.LastAmount6,M45Val,true);
+    OutVal(380,0,Cacherw.LastAmount7,M45Val,true);
+    OutVal(415,0,Cacherw.LastAmount8,M45Val,true);
+    OutVal(450,0,Cacherw.LastAmount9,M45Val,true);
+    OutVal(1,0,Cacherw.LastAmount10,M45Val,true);
+    EndFormat;
+    Gray_Divider(0,1);
+  end;
+
+  return;
+end;
+
+procedure PrintTotal(array val arrtotSums)
+begin
+  
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(0,0,"",false);
+  OutString(30,0,"",false); 
+  OutString(100,0,"",false); 
+  // OutVal(140,0,arrtotSums[0],M45Val,true);
+  OutVal(205,0,arrtotSums[9],M45Val,true);
+  OutVal(240,0,arrtotSums[1],M45Val,true);
+  OutVal(275,0,arrtotSums[2],M45Val,true);
+  OutVal(310,0,arrtotSums[3],M45Val,true);
+  OutVal(345,0,arrtotSums[4],M45Val,true);
+  OutVal(380,0,arrtotSums[5],M45Val,true);
+  OutVal(415,0,arrtotSums[6],M45Val,true);
+  OutVal(450,0,arrtotSums[7],M45Val,true);
+  OutVal(1,0,arrtotSums[8],M45Val,true);
+  EndFormat;
+
+  return;
+end;
+
+procedure MSCalcChangeJurItem(record RcVc RepSpec,record NAContractVc NAContractr,vector string vecItemsJur,var record SMVc Cacher)
+begin
+  integer i,rw;
+  row SMVc Cacherw;
+  val vRebate,Price,PriceInclRebate;
+
+  rw = MatRowCnt(Cacher);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    if nonblank(Cacherw.AccNumber) and nonblank(vecItemsJur[Cacherw.AccNumber]) then begin
+      Cacherw.AccNumber=vecItemsJur[Cacherw.AccNumber];
+      if GetMSPriceJurChg(Cacherw.AccNumber,RepSpec.sStartDate,NAContractr.BuildCode,NAContractr.FlatCode,NAContractr.SerNr,vRebate,Price) then begin
+        PriceInclRebate = Price - (Price*(vRebate/100));
+        Cacherw.CurCredVal = vRebate;
+        Cacherw.DebVal=Price;
+        Cacherw.FrRate=Price;
+        Cacherw.DebVal2 = Round(PriceInclRebate*Cacherw.CredVal,SetRoundModeD(2));
+        if RepSpec.flags[29]==1 then begin
+          if Price==blankval then begin
+            Cacherw.DebVal = 0.00;
+            Cacherw.FrRate = 0.00;
+          end;
+        end;
+        MatRowPut(Cacher,i,Cacherw);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure MSCalcCompRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  record SMVc Cacher;
+  record NAContractVc NAContractr;
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprrw;
+  record BuildCountResInputVc Cacher2;
+  record CUVc CUr;
+  integer rw,i,rwc;
+  boolean wLoop,wLoopNAContractf,testf,firstf;
+  string 255 tstr;
+  array val arrtotSums;
+  vector boolean vecFlatGrFlats;
+  vector val vecValTariff;
+  vector string 255 vecItemsJur;
+  
+  StartReportJob(USetStr(1000812));
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  rw = 1;
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  if nonblank(RepSpec.f1) then begin
+    HTBuild(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+    Buildr.Code = RepSpec.f1;
+    if ReadFirstMain(Buildr,1,true) then begin
+      tstr = USetStr(1000181) & ": " & Buildr.Address;
+      Header(rw,tstr,1);
+      rw = rw + 1;
+    end;
+  end;
+  EndHeader;
+  
+  StartFormat(15);
+  if RepSpec.wholemonthf==0 or (GetYear(RepSpec.sStartDate)<>GetYear(RepSpec.sEndDate) or GetMonth(RepSpec.sStartDate)<>GetMonth(RepSpec.sEndDate)) then begin
+    OutString(0,0,USetStr(1163),false);
+    EndFormat;
+    GoTo LMSCalcCompRn;
+  end;
+    
+  FillVecItemsJur(vecItemsJur);  
+    
+  //find build if it is unknown but the flat is known
+  if nonblank(RepSpec.f2) then begin
+    Flatsr.FlatCode = RepSpec.f2;
+    if ReadFirstMain(Flatsr,1,true) then begin end;
+    RepSpec.f1 = Flatsr.Code;
+  end;
+  
+  if nonblank(RepSpec.f4) then begin
+    FlatGroupr.Code=RepSpec.f4;
+    if ReadFirstMain(FlatGroupr,1,true) then begin
+      RepSpec.f1 = FlatGroupr.LinkBuildCode;
+      rwc=MatRowCnt(FlatGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(FlatGroupr,i,FlatGrouprrw);
+        if nonblank(FlatGrouprrw.RowCode) then begin
+          vecFlatGrFlats[FlatGrouprrw.RowCode]=true;
+        end;
+      end;
+    end;
+  end;
+  
+  wLoop = nonblank(RepSpec.f1) or nonblank(RepSpec.f3);
+  
+  ResetLoop(Buildr);
+  Buildr.Code = RepSpec.f1;
+  while LoopMain(Buildr,1,wLoop) begin
+    if nonblank(RepSpec.f1) and Buildr.Code<>RepSpec.f1 then begin
+      wLoop = false;
+    end else begin
+      testf = true;
+      if nonblank(Repspec.f3) and !SetInSet(RepSpec.f3,Buildr.Classification) then begin
+        testf = false;
+      end;
+      if Buildr.Closedf==1 then begin
+        testf = false;
+      end;
+      if testf then begin
+        firstf=false;
+        ResetLoop(NAContractr);
+        wLoopNAContractf = true;
+        NAContractr.BuildCode = Buildr.Code;
+        While LoopKey("BuildCode",NAContractr,1,wLoopNAContractf) begin
+          if NAContractr.BuildCode != Buildr.Code then begin
+            wLoopNAContractf = false;
+          end else begin
+            testf = true;
+            if NAContractr.OKFlag==0 then begin
+              testf = false;
+            end;
+            // if NAContractr.MergedInvFlag==1 then begin
+              // testf = false;
+            // end;
+            if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+              testf = false;
+            end;
+            if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+              testf = false;
+            end;
+            if nonblank(RepSpec.f2) and NAContractr.FlatCode!=RepSpec.f2 then begin
+              testf = false;
+            end;
+            if blank(NAContractr.FlatCode) then begin //rēķinus uz ēku veido citā atskaitē / apkalpošanā
+              testf = false;
+            end;
+            if nonblank(RepSpec.f4) and !vecFlatGrFlats[NAContractr.FlatCode] then begin
+              testf=false;
+            end;
+            if testf and nonblank(NAContractr.FlatCode) then begin
+              Flatsr.FlatCode = NAContractr.FlatCode;
+              if !ReadFirstMain(Flatsr,1,true) then begin
+                testf = false;
+              end;
+            end;
+            if testf then begin
+              GenFlatServCache(RepSpec.sStartDate,RepSpec.sEndDate,Cacher,0,RepSpec.flags[16],0,NAContractr);
+              if !ArtCodeIVTemplateTest(Cacher) then begin
+                RecordClear(Cacher);
+              end else begin
+                CalcServInvCorrections(RepSpec,NAContractr,Cacher);
+              end;
+              // CUr.Code=NAContractr.CustCode;
+              // if ReadFirstMain(CUr,1,true) then begin
+                // if CUr.CustCat=="JUR" then begin
+                  // MSCalcChangeJurItem(RepSpec,NAContractr,vecItemsJur,Cacher);
+                // end;
+              // end;
+              AddOneFlatToCacher(RepSpec,NAContractr,Cacher,firstf,arrtotSums,Cacher2,vecValTariff);
+            end;
+          end;
+        end;
+        
+        PrintFlats(RepSpec,Cacher2,vecValTariff);
+        PrintTotal(arrtotSums);
+        RecordNew(Cacher2);
+        ClearVector(vecValTariff);
+        ClearArray(arrtotSums);
+      end;
+    end;
+  end;
+
+LMSCalcCompRn:;
+  EndJob;
+  
+  return;
+end;

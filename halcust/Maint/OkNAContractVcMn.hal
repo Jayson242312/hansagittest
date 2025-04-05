@@ -1,0 +1,23 @@
+global updating
+procedure OkNAContractVcMn(record RcVc RepSpec)
+begin
+
+record NAContractVc NAContractr,oldNAContractr;
+boolean testf;
+
+NAContractr.OKFlag = 0;
+testf = true;
+
+while (LoopMain(NAContractr, 1, testf)) begin
+  if (NAContractr.OKFlag == 1) then begin
+    testf = false;
+  end;
+  if (testf) then begin
+    if (NAContractr.AccStatus == "ACTIVE") then begin
+    RecordCopy(oldNAContractr,NAContractr);
+    NAContractr.OKFlag = 1;
+    RecordUpdate(oldNAContractr,NAContractr,false);
+    end;
+  end;
+end;
+end;

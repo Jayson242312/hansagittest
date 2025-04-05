@@ -1,0 +1,146 @@
+//JRX - 2011-09-16  : DCT
+//VER 6.4 110920   : Update : JRX - 2011-11-23 : from Ver: 6.3 110726
+
+window RegDelMarkTClass:1
+  wtag("language","SAF"), wtag("product","*"), wtag("productcode","Enterprise"), wtag("device","computer")
+begin
+  Real h,v,vs,h2;
+  vs = 15;
+  WindowBegin("Registers Marked for Deletion",RegDelMarkTClass,CGSbl,-);
+  SetWRect(64,80,1050,600);
+  SetBlid(RegDeleteDCTBlock);
+  v= 6; vs = 16; h=140;
+  ColourPushButton(-100,10,-10,50,"ClearDCTdelBlock","Clear Selection",4);
+  ColourPushButton(-100,60,-10,100,"SelectAllDCTdelBlock","Select All",4);
+
+  CheckBox(h=15,v=20,0,   "Assets (AT2UnitVc)",flags[91]); //TM - Added assets
+  CheckBox(h,v+=vs,0,   "Assets Transactions (AT2TransVc)",flags[92]); //TM- Added Assets Transactions
+  CheckBox(h,v+=vs,0,   "Access Groups (AccessVc)",flags[64]);
+  CheckBox(h,v+=vs,0,     "Activities (ActVc)",flags[10]);
+  CheckBox(h,v+=vs,0,     "Archive (ArchiveVc)",flags[63]);
+  CheckBox(h,v+=vs,0,     "Attachments (Attach2Vc)",flags[62]);
+  CheckBox(h,v+=vs,0,     "Barcodes (BarcodeVc)",flags[61]);
+  CheckBox(h,v+=vs,0,     "Case Events (CashVc)",flags[40]);
+  CheckBox(h,v+=vs,0,     "Cash in (CLInVc)",flags[1]);
+  CheckBox(h,v+=vs,0,     "Cash Out (CLOutVc)",flags[2]);
+  CheckBox(h,v+=vs,0,     "Cheques (CheckVc)",flags[86]);
+  CheckBox(h,v+=vs,0,     "Configuration (CUServiceEnabVc)",flags[78]);
+  CheckBox(h,v+=vs,0,     "Contact Relations (ContactRelVc)",flags[60]);
+  CheckBox(h,v+=vs,0,     "Contacts (CUVc)",flags[18]);
+  CheckBox(h,v+=vs,0,     "Contracts (COVc)",flags[59]);
+  CheckBox(h,v+=vs,0,     "Customer Categories (CCatVc)",flags[83]);
+  CheckBox(h,v+=vs,0,     "Deliveries (SHVc)",flags[24]);
+  CheckBox(h,v+=vs,0,     "Delivery Address (DelAddrVc)",flags[58]);
+  CheckBox(h,v+=vs,0,     "Document forms (DocVc)",flags[56]);
+  CheckBox(h,v+=vs,0,     "Exchange Rates (ERVc)",flags[57]);
+  CheckBox(h,v+=vs,0,     "Goods Received (PUVc)",flags[22]);
+  CheckBox(h,v+=vs,0,     "Hotel Guests (ProfileVc)",flags[46]);
+  CheckBox(h,v+=vs,0,     "Hotel Reservation Quotations (ResAvVc)",flags[31]);
+  CheckBox(h,v+=vs,0,     "Hotel Reservations (JobVc)",flags[30]);
+  CheckBox(h,v+=vs,0,     "Hotel Resource Type Support (ResTypeSupportVc)",flags[87]);
+  CheckBox(h,v+=vs,0,     "Hotel Rooms (ResVc)",flags[32]);
+  CheckBox(h,v+=vs,0,     "Internal Stock Transfer (InTransferVc)",flags[55]);
+  CheckBox(h,v+=vs,0,     "Invoices (IVVc)",flags[7]);
+  CheckBox(h,v+=vs,0,     "Invoices Un-OK only (IVVC)",flags[77]);
+  CheckBox(h,v+=vs,0,     "Item Balances (ItemStatusVc)",flags[54]);
+  CheckBox(h,v+=vs,0,     "Item Clasifications (DiVc)",flags[53]);
+  CheckBox(h,v+=vs,0,     "Item Conversion (ConvItemBlock)",flags[79]);
+  CheckBox(h,v+=vs,0,    "Item Groups (ITVc)",flags[26]);
+  CheckBox(h,v+=vs,0,    "Item History (ItemHistVc)",flags[23]);
+  CheckBox(h,v+=vs,0,  "Item Variety (VARVc)",flags[74]);
+  CheckBox(h2=320,v=20,0,     "Items (INVc)",flags[21]);
+  // ================== CUSTOM ==================
+  CheckBox(h2,v+=vs,0,    "KMTC - Contract (NAContractVc)",flags[97]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Erf (BuildVc)",flags[98]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Premise (FlatsVc)",flags[99]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Premise Field Values (FlatFieldVc)",flags[100]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Meters (FlatCountersVc)",flags[101]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Meter Readings (CountResVc)",flags[102]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Meter History (MhistoryVc)",flags[103]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Reader Entries (ReaderEntryVc)",flags[104]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Bank Transactions (BankTRVc)",flags[105]); //
+  CheckBox(h2,v+=vs,0,    "KMTC - Delete All Invoice History",flags[106]); //
+  // ================== END OF CUSTOM ==================
+  CheckBox(h2,v+=vs,0,    "Locations (LocationVc)",flags[52]);
+  CheckBox(h2,v+=vs,0,    "Logging History (RHistVc)",flags[14]);
+  CheckBox(h2,v+=vs,0,    "Mailbox Browse (ConfVc)",flags[51]);
+  CheckBox(h2,v+=vs,0,    "Minimum Stock Levels (MinPerLOcVc)",flags[50]);
+  CheckBox(h2,v+=vs,0,    "NL Accounts (AccVc)",flags[16]);
+  CheckBox(h2,v+=vs,0,    "NL Budget Accounts (Bud1Vc)",flags[17]);
+  CheckBox(h2,v+=vs,0,    "NL Transactions (TBIVVc)",flags[4]);
+  CheckBox(h2,v+=vs,0,    "Nominal Transactions (TrVc)",flags[45]);
+  CheckBox(h2,v+=vs,0,    "Normalized PhoneNumbers (NormPhoneNumVc)",flags[44]);
+  CheckBox(h2,v+=vs,0,    "Objects (Objvc)",flags[43]);
+  CheckBox(h2,v+=vs,0,    "Objects Balances (ObjBalVc)",flags[93]); //TM Trial Balances
+  CheckBox(h2,v+=vs,0,    "Open Purchase Invoices (APVc)",flags[90]);
+  CheckBox(h2,v+=vs,0,    "Orders (ORVc)",flags[8]);
+  CheckBox(h2,v+=vs,0,    "Payments (OPVc)",flags[39]);
+  CheckBox(h2,v+=vs,0,    "Persons (UserVc)",flags[37]);
+  CheckBox(h2,v+=vs,0,    "POS Balances (PosBalanceVC)",flags[36]);
+  CheckBox(h2,v+=vs,0,    "POS Buttons (POSButtonsVc)",flags[85]);
+  CheckBox(h2,v+=vs,0,    "POS Invoices (IVCashVc)",flags[38]);
+  CheckBox(h2,v+=vs,0,    "POS Sessions (POSEventVc)",flags[33]);
+  CheckBox(h2,v+=vs,0,    "Price Lists (PLDefVc) ",flags[35]);
+  CheckBox(h2,v+=vs,0,    "Prices (PLVc)",flags[19]);
+  CheckBox(h2,v+=vs,0,    "Production (ProdVc)",flags[65]);
+  CheckBox(h2,v+=vs,0,    "Production Order (ProdOrderVc)",flags[34]);
+  CheckBox(h2,v+=vs,0,    "Project Budgets (TBBUVc)",flags[28]);
+  CheckBox(h2=620,v=20,0,    "Projects (PRVc)",flags[27]);
+  CheckBox(h2,v+=vs,0,   "Purchase Invoice (VIVc)",flags[6]);
+  CheckBox(h2,v+=vs,0,    "Purchase Items (PIVc)",flags[66]);
+  CheckBox(h2,v+=vs,0,    "Purchase Orders (POVc)",flags[20]);
+  CheckBox(h2,v+=vs,0,    "Quotations (QTVc)",flags[67]);
+  CheckBox(h2,v+=vs,0,    "Receipts (IPVc)",flags[9]);
+  CheckBox(h2,v+=vs,0,    "Recipe-BOM (RecVc)",flags[68]);
+  CheckBox(h2,v+=vs,0,    "Records Links (RLinkVc)",flags[69]);
+  CheckBox(h2,v+=vs,0,    "Rental Items (RentInVC)",flags[70]);
+  CheckBox(h2,v+=vs,0,    "Restaurant Bar Tabs (RestAccVc)",flags[42]);
+  CheckBox(h2,v+=vs,0,    "Restaurant Bookings (RestBookingVc)",flags[41]);
+  CheckBox(h2,v+=vs,0,    "Returned Goods (RetVc)",flags[13]);
+  CheckBox(h2,v+=vs,0,    "Returned Goods to Suppliers (RetPUVc)",flags[15]);
+  CheckBox(h2,v+=vs,0,    "Rental Agreements  (AgreementVc)",flags[94]); //TM Rental Agreements
+  CheckBox(h2,v+=vs,0,    "Rental Reservations  (RentResVc)",flags[95]); //TM Rental Reservations
+  CheckBox(h2,v+=vs,0,    "Rental Quotations  (RentQTVc)",flags[96]); //TM Rental Quotations
+  CheckBox(h2,v+=vs,0,    "Serial Numbers (SVOSerVc)",flags[71]);
+  CheckBox(h2,v+=vs,0,    "Shopping Basket (ShopBaskVc)",flags[89]);
+  CheckBox(h2,v+=vs,0,    "Simulations (SMVc)",flags[5]);
+  CheckBox(h2,v+=vs,0,    "SMS's (SMSVc)",flags[72]);
+  CheckBox(h2,v+=vs,0,    "Stock Depreciations (SDVc)",flags[25]);
+  CheckBox(h2,v+=vs,0,    "Stock Movements (StockMovVc)",flags[12]);
+  CheckBox(h2,v+=vs,0,    "StockTake (StockTakeVc)",flags[73]);
+  CheckBox(h2,v+=vs,0,    "Supplier Categories (VGVc)",flags[84]);
+  CheckBox(h2,v+=vs,0,    "Target Time (TargTimeVc)",flags[3]);
+  CheckBox(h2,v+=vs,0,    "User Defined Columns (UserDefRepColumnsVc)",flags[82]);
+  CheckBox(h2,v+=vs,0,    "User Defined Lines (UserDefRepLinesVc)",flags[81]);
+  CheckBox(h2,v+=vs,0,    "User Defined Reports (UserDefRepVc)",flags[80]);
+  CheckBox(h2,v+=vs,0,    "Variety Group (VARGVc)",flags[75]);
+  CheckBox(h2,v+=vs,0,    "Variety Subset (VARSubsetsVc)",flags[76]);
+  CheckBox(h2,v+=vs,0,    "Weighted Avarage (WeigAvVc)",flags[11]);
+  CheckBox(h2,v+=vs,0,    "Window Positions (WRVc)",flags[88]);
+
+  EndWindow;
+end;
+
+window HalDelAllRecordsVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer") //TM- Replaced the old wtag
+begin
+  Real h,v,vs,h2;
+  Windowbegin("Run Delete Records",HalDelAllRecordsVClass,CGMnt,RcType); //TM - Changed M to V
+  SetWRect(64,80,549,300);
+  v= 6; vs = 16; h=120;
+  ColourPushButton(10+170,10,100+170,60,"OpenDCTdelBlock","Select Registers to Delete",4);
+  StaticText(h=40,v=80,"Click Run after selecting which registers need to be marked for deletion",false);
+  Endwindow;
+end;
+
+//Update Customer Name
+window HalUpdateCustNameVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,v,vs;
+
+  WindowBegin("Update Customer Name",HalUpdateCustNameVClass,CGMnt,RcType);
+  SetWRect(20,80,200,200);
+  //EditFieldTL(h=100,v=16,50,"Price Coefficient",M4Val,Normal,0,vals0,false,0);
+  EndWindow;
+end;

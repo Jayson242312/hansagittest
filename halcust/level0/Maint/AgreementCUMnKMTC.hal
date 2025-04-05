@@ -1,0 +1,593 @@
+external procedure CheckFlush(var Integer,Integer);
+external function Integer GetIntYc(Date);
+external function LongInt DateDiff(Date,Date);
+external updating procedure SaveTrans(record TRVc);
+external function Boolean GetAccName(string,var string,Integer);
+external procedure AddEuroCurncyTrRow(record TRVc,string,string,string,string,val,Boolean,Boolean,var val,string,val,val,val,val,val,val,val,LongInt,Boolean,string);
+external procedure AddEuroCurncyNomARTrRow(record TRVc,string,string,string,string,val,val,Boolean,
+                                  Boolean,var val,string,val,val,val,val,val,
+                                  val,val,string,LongInt,Integer,val,Date,LongInt,Boolean,string,string,string);
+external procedure AddEuroTrRow(record TRVc,string,string,string,string,val,val,val,Boolean,Boolean,var val,Boolean,string,string,string);
+external function Boolean CheckTTRPerRow(string,string,string,Boolean,var string,Integer);
+
+external procedure CredManSumup(var record CredManVc); // Jh 
+external procedure CredManSetDates(var record CredManVc); // Jh
+external updating procedure StoreCredManEvent(record CredManVc,var record CredManEventVc); // JH
+external function LongInt MonthDiff(Date,Date);
+
+//jh
+global 
+function val getLatestBalance(record CredManVc CredManr)
+Begin
+  record CredmanEventVc CredManEventr;
+  date currDate,prevDate ;
+  val latestBalance , res ;
+  longint prevSerNr , currSerNr;
+
+  latestBalance = 0;
+  if (ReadFirstMain(CredManr,1,true)) then begin
+    CredManEventr.CredManNr = CredManr.SerNr;
+    while (loopmain(CredManEventr,1,true)) begin
+      if (CredManEventr.CredManNr == CredManr.SerNr and CredManEventr.Comment <> "Instalment") then begin
+      currSerNr = CredManEventr.SerNr;
+      if (currSerNr > prevSerNr) then begin
+        prevSerNr = currSerNr;
+        latestBalance =  CredManEventr.CredManBal;
+      end;
+    end;
+  end; 
+    end;
+    res = latestBalance;
+    getLatestBalance = res;
+return ;
+End;
+
+
+
+// Update the instalments when an invoice is added.
+global 
+updating procedure updateInstalments(record CredManVc CredManr)
+Begin
+
+  record CredManEventVc CredManEventr,OldCredManEventr;
+  row CredManEventVc CredManEventrw;
+  record CredManSetBlock CredManSetb;
+  integer i,k,rwcnt;
+  date paymentDate;
+  val monthDif,monthDif2,latestBalance;
+  boolean testf;
+
+  k = 0;
+  BlockLoad(CredManSetb);
+
+  CredManEventr.CredManNr = CredManr.SerNr;
+
+  while(Loopmain(CredManEventr,1,true)) begin
+    if ((CredManEventr.CredManNr == CredManr.SerNr) and (CredManEventr.Comment == "Instalment")) then begin  // need to sort later 
+        latestBalance = getLatestBalance(CredManr);
+        RecordCopy(OldCredManEventr,CredManEventr);
+        CredManEventr.CredManBal = latestBalance;
+        rwcnt = MatRowCnt(CredManEventr);
+        for(i=0;i<rwcnt;i=i+1) begin
+           MatRowGet(CredManEventr,i,CredManEventrw);
+            ClearRow(CredManEventr,CredManEventrw,1);
+            CredManEventrw.Sum = latestBalance/CredManr.InstalmentMonths;
+            CredManEventrw.ArtCode = CredManSetb.InstalmentItem;
+            CredManEventrw.Comment = "";
+            CredManEventrw.ChargeType = 2 ; // monthly fee
+            MatRowPut(CredManEventr,i,CredManEventrw);
+            CredManEventr.TotSum = latestBalance/CredManr.InstalmentMonths;
+            CredManEventr.InvSum = latestBalance/CredManr.InstalmentMonths;
+        end;
+        if RecordUpdate(OldCredManEventr,CredManEventr,false) then begin end; 
+    end;       
+      end;
+  end;
+
+
+// Jh function to update agreement
+updating 
+procedure UpdateCreditAgreement(var longint AgreementNr,var val rval,var LongInt InvoiceNr,string custcode) 
+BEGIN
+  record CredManVc CredManr,OldCredManr;
+  record IVVc IVr;
+  string 255 comment;
+  record CredManEventVc CredManEventr,OldCredManEventr;
+  row CredManEventVc CredManEventrw;
+  record CredManSetBlock CredManSetb;
+  val sum,credManSum,latestBalance;
+  date prevDate,currDate; 
+  longint prevSerNr,currSerNr;
+
+  BlockLoad(CredManSetb);
+  CredManr.SerNr = AgreementNr;
+  if (ReadFirstMain(CredManr,1,true)) then begin
+
+  CredManEventr.CredManNr = CredManr.SerNr;
+  while(Loopmain(CredManEventr,1,true)) begin
+    if (CredManEventr.RecordNr == InvoiceNr) then begin  // JH this code is to make sure no duplicate invoices are added to agreement
+      goto LUpdateCreditAgreement;   
+    end;
+  end;
+
+  latestBalance = getLatestBalance(CredManr);
+
+  RecordCopy(OldCredManr,CredManr);
+
+  sum = rval + latestBalance ;
+  CredManr.InvSum4 = sum;
+  if Blank(CredManr.InvSum4) then begin
+    CredManr.InvSum4 = rval;
+    CredManSumup(CredManr);
+  end;
+
+  recordNew(CredManEventr);
+  CredManEventr.CredManNr = CredManr.SerNr;
+  IVr.SerNr = InvoiceNr;
+  if (ReadFirstMain (IVr,1,true)) then begin
+    CredManEventr.TransDate = CurrentDate;
+    if (rval == 0) then begin
+
+      rval = IVr.Sum4;
+      sum = rval + latestBalance;
+      CredManr.InvSum4 = sum;
+      CredManSumup(CredManr);
+    end;
+    if (IVr.InvType == kInvoiceTypeInterest) then begin
+      comment = "Interest: ";
+    end else begin
+      comment = "Invoice: ";
+    end;
+  end;
+  // to create credmanevent //
+  CredManEventr.FileName = "IVVc";
+  CredManEventr.CredManBal = latestBalance + rval; // 
+  CredManr.MonthlySum = CredManEventr.CredManBal/CredManr.InstalmentMonths;
+  CredManr.agreedInstallmentAmount = CredManr.MonthlySum;
+  CredManEventr.PaidFlag = 0;
+  CredManEventr.Comment = comment & InvoiceNr; 
+  CredManEventr.RecordNr = InvoiceNr;
+  CredManEventr.InvoiceFlag = 1 ;
+  CredManEventrw.ArtCode = CredManSetb.InstalmentItem;
+  CredManEventrw.Comment = "";
+  CredManEventrw.ChargeType = 2 ; // monthly fee
+  CredManEventrw.Sum = rval;  // This changed to payval
+
+  MatRowPut(CredManEventr,MatRowCnt(CredManEventr),CredManEventrw);
+  StoreCredManEvent(CredManr,CredManEventr);
+  if RecordUpdate(OldCredManr,CredManr,false) then begin end;
+
+  updateInstalments (CredManr);
+  // updatePayments(CredManr);
+
+LUpdateCreditAgreement:;
+  end;
+  // end;
+  RETURN;
+END;
+
+updating                                  
+procedure UpdateInvoice(record IVVc oldIVr,string agreementAccount,var Integer flushcnt,var longint AgreementNr) // Added agreementNr
+BEGIN
+  record IVVc IVr;
+  
+  RecordCopy(IVr,oldIVr);
+  IVr.DisputedFlag = 1;
+  if (nonblank(agreementAccount)) then begin
+    IVr.ARAcc = agreementAccount;
+  end;
+  IVr.CredManNr = AgreementNr;   //jh
+  if (RecordUpdate(oldIVr,IVr,false)==0) then begin
+  end;
+  CheckFlush(flushcnt,10);
+  RETURN;
+END;
+
+
+updating function Integer MakeAgreementTrans(LongInt InvoiceNr,val rval,val bookrval,Integer ARUseObj,string agreementAccount,Date transdate,LongInt oldsernr,var Integer flushcnt,var longint AgreementNr) //Jh::  Added agreement field
+BEGIN
+  Integer res;
+  record IVVc IVr;
+  record TRVc gTRp; //Transaction 
+  string 255 tstr;
+  string 255 cuobj;
+  val TotSum,nilv;
+  Boolean dc1,dc2;
+  
+  dc1 = false;
+  dc2 = true;
+  IVr.SerNr = InvoiceNr;
+  if (ReadFirstMain(IVr,1,true)) then begin
+    if (IVr.DisputedFlag!=0) then begin
+      res = 0;
+      goto LMakeAgreementTrans;
+    end;
+    RecordNew(gTRp);
+    gTRp.RegDate = CurrentDate;
+    gTRp.TransDate = transdate;
+    if (blankdate(gTRp.TransDate)) then begin
+      gTRp.TransDate = CurrentDate;
+    end;
+    gTRp.IntYc = GetIntYc(gTRp.TransDate);                
+    gTRp.Number = NextSerNr("TRVc",gTRp.TransDate,oldsernr,false,"");
+    gTRp.RefStr = USetStr(1150) & "." ;
+    gTRp.RefStr = gTRp.RefStr & IVr.SerNr;
+    gTRp.Comment = "Transfer to Agreement Debtors";
+    
+    if (ARUseObj!=0) then begin
+      if (nonblank(IVr.Objects)) then begin
+        if (nonblank(cuobj)) then begin
+          cuobj = cuobj & ",";
+        end;  
+        cuobj = cuobj & IVr.Objects;
+      end;
+    end;    
+    if (GetAccName(IVr.ARAcc,tstr,60)==false) then begin 
+      res = 1908;
+      goto LMakeAgreementTrans;
+    end;
+    if (IVr.ARonTR!=0) then begin
+//      AddEuroCurncyNomARTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,blankval,false,dc1,TotSum,
+//                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+//                              IVr.CustCode,IVr.SerNr,1,nilv,IVr.PayDate,-1,false,"","","");
+
+      AddEuroCurncyNomARTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,blankval,false,dc1,TotSum,
+                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+                              "",-1,1,nilv,IVr.PayDate,-1,false,"","","");
+//otherwise we think inocei is paid
+
+    end else begin
+      AddEuroCurncyTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,false,dc1,TotSum,
+                         IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,-1,false,"");
+    end;
+    if (GetAccName(agreementAccount,tstr,60)==false) then begin 
+      res = 1908;
+      goto LMakeAgreementTrans;
+    end;
+    if (IVr.ARonTR!=0) then begin
+      AddEuroCurncyNomARTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,blankval,false,dc2,TotSum,
+                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+                              "",-1,0,nilv,IVr.PayDate,-1,false,"","","");
+    end else begin
+      AddEuroCurncyTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,false,dc2,TotSum,
+                         IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,-1,false,"");
+    end;
+    if (gTRp.Number>0) then begin
+      SaveTrans(gTRp);
+      UpdateInvoice(IVr,agreementAccount,flushcnt,AgreementNr); // 
+      res = 0;
+    end else begin
+      res = 1747;
+    end;  
+  end;
+LMakeAgreementTrans:;
+  MakeAgreementTrans = res;
+  RETURN;
+END;
+
+// Used to make a NL transaction that reverst the transfers
+global
+updating function Integer MakeDebtorsTrans(LongInt InvoiceNr,val rval,val bookrval,Integer ARUseObj,string agreementAccount,Date transdate,LongInt oldsernr,var Integer flushcnt) 
+BEGIN
+  Integer res;
+  record IVVc IVr;
+  record TRVc gTRp; //Transaction 
+  string 255 tstr;
+  string 255 cuobj;
+  val TotSum,nilv;
+  Boolean dc1,dc2;
+  
+  dc1 = false;
+  dc2 = true;
+  IVr.SerNr = InvoiceNr;
+  if (ReadFirstMain(IVr,1,true)) then begin
+    if (IVr.DisputedFlag!=0) then begin
+      res = 0;
+      goto LMakeDebtorsTrans;
+    end;
+    RecordNew(gTRp);
+    gTRp.RegDate = CurrentDate;
+    gTRp.TransDate = transdate;
+    if (blankdate(gTRp.TransDate)) then begin
+      gTRp.TransDate = CurrentDate;
+    end;
+    gTRp.IntYc = GetIntYc(gTRp.TransDate);                
+    gTRp.Number = NextSerNr("TRVc",gTRp.TransDate,oldsernr,false,"");
+    gTRp.RefStr = USetStr(1150) & "." ;
+    gTRp.RefStr = gTRp.RefStr & IVr.SerNr;
+    gTRp.Comment = "Transfer from Loan Debtors To Normal Debtors";
+    
+    if (ARUseObj!=0) then begin
+      if (nonblank(IVr.Objects)) then begin
+        if (nonblank(cuobj)) then begin
+          cuobj = cuobj & ",";
+        end;  
+        cuobj = cuobj & IVr.Objects;
+      end;
+    end;    
+    if (GetAccName(IVr.ARAcc,tstr,60)==false) then begin 
+      res = 1908;
+      goto LMakeDebtorsTrans;
+    end;
+    if (IVr.ARonTR!=0) then begin
+//      AddEuroCurncyNomARTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,blankval,false,dc1,TotSum,
+//                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+//                              IVr.CustCode,IVr.SerNr,1,nilv,IVr.PayDate,-1,false,"","","");
+
+      AddEuroCurncyNomARTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,blankval,false,dc1,TotSum,
+                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+                              "",-1,1,nilv,IVr.PayDate,-1,false,"","","");
+//otherwise we think inocei is paid
+
+    end else begin
+      AddEuroCurncyTrRow(gTRp,IVr.ARAcc,cuobj,"",tstr,bookrval,false,dc1,TotSum,
+                         IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,-1,false,"");
+    end;
+    if (GetAccName(agreementAccount,tstr,60)==false) then begin 
+      res = 1908;
+      goto LMakeDebtorsTrans;
+    end;
+    if (IVr.ARonTR!=0) then begin
+      AddEuroCurncyNomARTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,blankval,false,dc2,TotSum,
+                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+                              "",-1,0,nilv,IVr.PayDate,-1,false,"","","");
+    end else begin
+      AddEuroCurncyTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,false,dc2,TotSum,
+                         IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,-1,false,"");
+    end;
+    if (gTRp.Number>0) then begin
+      SaveTrans(gTRp);
+      res = 0;
+    end else begin
+      res = 1747;
+    end;  
+  end;
+LMakeDebtorsTrans:;
+  MakeDebtorsTrans = res;
+  RETURN;
+END;
+
+
+updating function Integer MakeAgreementProvisionTrans(LongInt InvoiceNr,val rval,val bookrval,Integer ARUseObj,string agreementAccount,Date transdate,LongInt oldsernr,var Integer flushcnt,var longint AgreementNr)
+BEGIN
+  Integer res;
+  record IVVc IVr;
+  record TRVc gTRp;
+  string 255 tstr;
+  string 255 cuobj,taccnumber,accstr;
+  val TotSum,nilv;
+  Boolean dc1,dc2;
+  record AccBlock APb;
+  
+  BlockLoad(APb);
+  dc1 = true;
+  dc2 = false;
+  IVr.SerNr = InvoiceNr;
+  if (ReadFirstMain(IVr,1,true)) then begin
+    if (IVr.DisputedFlag!=0) then begin
+      res = 0;
+      goto LMakeAgreementTrans;
+    end;
+    RecordNew(gTRp);
+    gTRp.RegDate = CurrentDate;
+    gTRp.TransDate = transdate;
+    if (blankdate(gTRp.TransDate)) then begin
+      gTRp.TransDate = CurrentDate;
+    end;
+    gTRp.IntYc = GetIntYc(gTRp.TransDate);                
+    gTRp.Number = NextSerNr("TRVc",gTRp.TransDate,oldsernr,false,"");
+    gTRp.RefStr = USetStr(1150) & "." ;
+    gTRp.RefStr = gTRp.RefStr & IVr.SerNr;
+    // gTRp.Comment = USetStr(11781);// this does not work because level 0;
+    gTRp.Comment = "Transfer to Agreement Debtors";  
+    if (ARUseObj!=0) then begin
+      if (nonblank(IVr.Objects)) then begin
+        if (nonblank(cuobj)) then begin
+          cuobj = cuobj & ",";
+        end;  
+        cuobj = cuobj & IVr.Objects;
+      end;
+    end;    
+    accstr = APb.WriteOffLossAcc;
+    if (blank(accstr)) then begin
+      accstr = APb.CredAcc;
+    end;
+    if (GetAccName(accstr,tstr,60)==false) then begin
+      res = 1917;
+      goto LMakeAgreementTrans;
+    end;
+    if (CheckTTRPerRow("IVVc",accstr,"",dc1,taccnumber,0)) then begin end;      
+    AddEuroTrRow(gTRp,accstr,cuobj,"",tstr,bookrval,IVr.BaseRate1,IVr.BaseRate2,false,dc1,TotSum,false,taccnumber,"","");
+
+
+    if (GetAccName(agreementAccount,tstr,60)==false) then begin 
+      res = 1908;
+      goto LMakeAgreementTrans;
+    end;
+    if (IVr.ARonTR!=0) then begin
+      AddEuroCurncyNomARTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,blankval,false,dc2,TotSum,
+                              IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,
+                              "",-1,0,nilv,IVr.PayDate,-1,false,"","","");
+    end else begin
+      AddEuroCurncyTrRow(gTRp,agreementAccount,cuobj,"",tstr,bookrval,false,dc2,TotSum,
+                         IVr.CurncyCode,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,rval,nilv,-1,false,"");
+    end;
+    if (gTRp.Number>0) then begin
+      SaveTrans(gTRp);
+      UpdateInvoice(IVr,"",flushcnt,AgreementNr);
+      res = 0;
+    end else begin
+      res = 1747;
+    end;  
+  end;
+LMakeAgreementTrans:;
+  MakeAgreementProvisionTrans = res;
+  RETURN;
+END;
+
+global
+updating procedure AgreementCUMn(record RcVc RepSpec)
+BEGIN
+  record ARVc ARr;
+  record CUVc CUr;
+  record IVVc IVr; // Jh this is used for validation
+  record CCatVc CCatr;
+  record AccBlock ARAccRec;
+  record CredManVc CredManr; // Jh this used for validation in this procedure
+  record CredManSetBlock CredManSetRec;
+  Boolean TrHs,testf,valTest,agreementTest;
+  string 20 frcu,tocu;
+  LongInt latedays;
+  LongInt friv,toiv,toagree;
+  string 10 agreementAccount;
+  string 30 keys;
+  string 100 errMessage;
+  Integer sorting,flushcnt;
+  Integer err;
+  Date testDate,testDate2,testDate3; //Jh
+
+  BlockLoad(ARAccRec);
+  Blockload(CredManSetRec);
+  frcu = FirstInRange(RepSpec.f1,20);  //customer
+  tocu = LastInRange(RepSpec.f1,20);
+  friv = FirstInRange(RepSpec.f2,20); //invoice
+  toiv = LastInRange(RepSpec.f2,20);
+
+  toagree = RepSpec.f3;
+
+
+// Jh Agreement Validations
+  valTest = false;
+
+  if (blank(RepSpec.f3) or (toagree == -1)) then begin
+      valTest = true;
+      errMessage = "Please Enter Agreement Nr";
+      goto valTest2;
+  end;
+
+  CredManr.SerNr = RepSpec.f3;
+  if (ReadFirstMain(CredManr, 1, true) == false) then begin
+      valTest = true;
+      errMessage = "Agreement with this number does not exist";
+      goto valTest2;
+  end else begin
+      agreementTest = true;
+      if (frcu <> CredManr.CustCode) then begin
+          valTest = true;
+          errMessage = "Customer does not match agreement";
+          goto valTest2;
+      end;
+      if (agreementTest) then begin
+          if (CredManr.Approved == 1 or CredManr.OKFlag == 1) then begin
+              valTest = true;
+              errMessage = "Cannot add anymore invoices to this agreement";
+              goto valTest2;
+          end;
+      end;
+  end;
+
+  IVr.SerNr = RepSpec.f2;
+  if (ReadFirstMain(IVr, 1, true)) then begin 
+      if (RepSpec.f1 <> IVr.CustCode) then begin
+          valTest = true;
+          errMessage = "Incorrect Invoice for this customer";
+      end;
+  end;
+
+valTest2:;
+  if (valTest) then begin
+      MessageBox(0,errMessage);
+      OpenWindow("AgreementCUVClass", 1, 0, "", "", RepSpec);
+      goto LBadCUMn;
+  end;
+
+
+// Cust end
+  if (nonblank(RepSpec.f2)) then begin
+    keys = "InvoiceNr";
+    ARr.InvoiceNr = friv;
+    sorting = 0;
+  end else begin
+    keys = "CustCode";
+    ARr.CustCode = frcu;
+    sorting = 1;
+  end;
+  TrHs = true;
+  while LoopKey(keys,ARr,1,TrHs) begin
+    switch (sorting) begin
+      case 0:
+        if (ARr.InvoiceNr>toiv) then begin
+          TrHs = false;
+         end;
+      case 1:
+        if (nonblank(RepSpec.f1)) then begin
+          if (ARr.CustCode>tocu) then begin
+            TrHs = false;
+          end;
+        end;
+    end;
+    if (TrHs) then begin
+     testf = true;
+     switch (sorting) begin
+        case 0:
+          if (nonblank(RepSpec.f1)) then begin
+            if (ARr.CustCode<frcu) then begin
+              testf = false;
+            end;
+            if (ARr.CustCode>tocu) then begin
+              testf = false;
+            end;
+          end;          
+     end;
+     latedays = DateDiff(ARr.DueDate,CurrentDate);
+     if (-latedays<RepSpec.long1) then begin
+       testf = false;        
+     end;
+     if (testf) then begin
+        CUr.Code = ARr.CustCode;
+        if (ReadFirstMain(CUr,1,true)) then begin 
+        end;
+        if (nonblank(RepSpec.FirstAcc)) then begin
+          if (CUr.CustCat!=RepSpec.FirstAcc) then begin 
+            testf = false; 
+          end;
+        end;
+        if (CUr.CUType==0) then begin testf = false; end;
+        if (testf) then begin
+          // if (RepSpec.flags[0]==0) then begin
+          //   agreementAccount = CredManSetRec.CredManAcc;
+          // end else begin
+            agreementAccount = CredManSetRec.CredManAcc; // Changed from bad debt account to Cred Man account
+          // end;
+          // CCatr.Code = CUr.CustCat;
+          // if (ReadFirstMain(CCatr,1,true)) then begin 
+          //   if (nonblank(CCatr.agreementAccount)) then begin
+          //     if (RepSpec.flags[0]==1) then begin
+          //       agreementAccount = CCatr.agreementAccount;
+          //     end;
+          //   end;
+          // end;
+          if (nonblank(agreementAccount)) then begin
+            if (RepSpec.flags[0]==0) then begin
+              err = MakeAgreementProvisionTrans(ARr.InvoiceNr,ARr.RVal,ARr.BookRVal,ARAccRec.ARUseObj,agreementAccount,RepSpec.d1,RepSpec.long2,flushcnt,toagree);
+              UpdateCreditAgreement(toagree,ARr.RVal,ARr.InvoiceNr,frcu);//jh custom
+            end else begin
+              err = MakeAgreementTrans(ARr.InvoiceNr,ARr.RVal,ARr.BookRVal,ARAccRec.ARUseObj,agreementAccount,RepSpec.d1,RepSpec.long2,flushcnt,toagree);
+              UpdateCreditAgreement(toagree,ARr.RVal,ARr.InvoiceNr,frcu); //jh custom
+              //
+            end;
+            if (err!=0) then begin
+              MessageBox(err,"");
+              switch (err) begin
+                case 1747:
+                  goto LBadCUMn;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+LBadCUMn:;  
+  RETURN;
+END;

@@ -1,0 +1,720 @@
+external inner function roundmode SetRoundModeD(integer);
+external inner procedure FindUserMailboxName(string,var string,var string);
+external function boolean CountResExists(longint,date,date,boolean);
+external function boolean PrevCounterRes(record CountResVc,var record CountResVc);
+external procedure SumUpCountResVc(var record CountResVc,val,val);
+external updating procedure RemoveIntSumCalcVc(longint);
+external function boolean IsTwoTypeFlatCounter(longint);
+external procedure PasteFlatCounterInCountRes(record FlatCountersVc,var record CountResVc);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external function boolean IPVc_PasteContractNr(var record IPVc,integer);
+external inner procedure IPVc_PasteRecVal(var record IPVc,Integer);
+external inner function val FindVAT(string,val,Integer,Integer);
+external updating function longint CountResInputVcRecordCheck(var record CountResInputVc,record CountResInputVc,LongInt,LongInt);
+external inner procedure SDSumUp(var record SDVc);
+external inner function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external inner function Boolean CheckIntORRowShipd(row IntORVc,Integer);
+external inner function string 60 AddObjectToObjectList(string,string);
+
+
+global
+updating procedure UpdatePeriodicServRecFromIV(Record IVVc IVp,boolean unokf)
+begin
+  Record PeriodicServRecVc PeriodicServRecr,oldPeriodicServRecr;
+  Row IVVc IVrw;
+  integer i,rwc;
+  boolean wloop,update;
+
+  rwc=MatRowCnt(IVp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVp,i,IVrw);
+    if IVrw.stp==1 then begin
+      PeriodicServRecr.SerNr = IVrw.PerServRecSerNr;
+      if ReadFirstMain(PeriodicServRecr,1,true) then begin
+        update=false;
+        if PeriodicServRecr.AddedToInvoice==0 and !unokf then begin
+          RecordCopy(oldPeriodicServRecr,PeriodicServRecr);
+          PeriodicServRecr.AddedToInvoice=1;
+          update=true;
+        end;
+        if PeriodicServRecr.AddedToInvoice==1 and unokf then begin
+          RecordCopy(oldPeriodicServRecr,PeriodicServRecr);
+          PeriodicServRecr.AddedToInvoice=0;
+          update=true;
+        end;
+        if update then begin
+          RecordUpdate(oldPeriodicServRecr,PeriodicServRecr,true);
+        end;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+global
+function integer FlatCountersWithNumber(string CounterNo,boolean ignoreclosed,boolean ignorechanged) begin
+  Record FlatCountersVc FlatCountersr;
+  boolean wloop,testf;
+  integer res;
+
+  res=0;
+  wloop = true;
+  FlatCountersr.CounterNo = CounterNo;
+  While LoopKey("CounterNo",FlatCountersr,1,wloop) begin
+    if FlatCountersr.CounterNo != CounterNo then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if FlatCountersr.Closedf == 1 and ignoreclosed then begin
+        testf=false;
+      end;
+      if FlatCountersr.Changed == 1 and ignorechanged then begin
+        testf=false;
+      end;
+      if testf then begin
+        res = res + 1;
+      end;
+    end;
+  end;
+
+  FlatCountersWithNumber=res;
+return;
+end;
+
+global
+procedure CountResFlatsSClassOnOpen(string CounterNo,var array string arrFlatcodes,var array string arrAddress,boolean ignoreclosed,boolean ignorechanged) begin
+  Record FlatCountersVc FlatCountersr;
+  boolean wloop,testf;
+  integer size;
+
+  size = 0;
+  if nonblank(CounterNo) then begin
+    FlatCountersr.CounterNo = CounterNo;
+    wloop=true;
+    While LoopKey("CounterNo",FlatCountersr,1,wloop) begin
+      if FlatCountersr.CounterNo != CounterNo then begin
+        wloop = false;
+      end else begin
+        testf = true;
+        if FlatCountersr.Closedf == 1 and ignoreclosed then begin
+          testf=false;
+        end;
+        if FlatCountersr.Changed == 1 and ignorechanged then begin
+          testf=false;
+        end;
+        if testf then begin
+          size = size + 1;
+          arrFlatcodes[size] = FlatCountersr.FlatCode;
+          arrAddress[size] = FlatCountersr.Address & " " & USetStr(1000632) & " " & FlatCountersr.FlatNo;
+        end;
+      end;
+    end;
+  end;
+
+  arrFlatcodes[0] = size;
+
+return;
+end;
+
+function boolean FlatCounterInCountResInput(Record FlatCountersVc FlatCountersp,Record CountResInputVc CountResInputp,string crestype)
+begin
+  Row CountResInputVc CountResInputrw;
+  integer i,rwc;
+  boolean res;
+
+  res=false;
+  rwc=MatRowCnt(CountResInputp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountResInputp,i,CountResInputrw);
+    if CountResInputrw.FlatCounterSerNr==FlatCountersp.SerNr and CountResInputrw.FlatCode==FlatCountersp.FlatCode and CountResInputrw.CountResType==crestype then begin
+      res=true;
+      i=rwc;
+    end;
+  end;
+
+  FlatCounterInCountResInput=res;
+  return;
+end;
+
+procedure AddRowToCountResInput(var record CountResInputVc Crir,record FlatCountersVc FlatCountersr,string crestype) begin
+  record CountResVc CountResr,prevCountResr;
+  row CountResInputVc Crirw;
+  val prevcr;
+  date prevdate;
+  integer rwc,i;
+  boolean foundf;
+
+  if !FlatCounterInCountResInput(FlatCountersr,Crir,crestype) then begin
+    CountResr.StartDate = AddYear(CurrentDate,10);
+    CountResr.CountResType = crestype;
+    CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+    foundf = PrevCounterRes(CountResr,prevCountResr);
+    if !foundf then begin
+      prevCountResr.EndDate=FlatCountersr.InstallDate;
+      if blank(crestype) or crestype=="MWH" then begin
+        prevCountResr.EndVal=FlatCountersr.InitAmount;
+      end else begin
+        prevCountResr.EndVal=FlatCountersr.InitAmount2;
+      end;
+    end;
+    if !foundf or prevCountResr.EndDate < Crir.StartDate then begin
+      Crirw.FlatCode         = FlatCountersr.FlatCode;
+      Crirw.CounterNo        = FlatCountersr.CounterNo;
+      Crirw.PrevDate         = prevCountResr.EndDate;
+      Crirw.PrevAmount       = prevCountResr.EndVal;
+      // Crirw.RowAddress       = FlatCountersr.Address & " " & FlatCountersr.FlatNo;
+      Crirw.RowAddress       = FlatCountersr.FlatNo;
+      Crirw.FlatCounterSerNr = FlatCountersr.SerNr;
+      Crirw.CounterType      = FlatCountersr.CounterType;
+      Crirw.CountResType     = crestype;
+      MatRowPut(Crir,MatRowCnt(Crir),Crirw);
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure GetFlatCounters(var record CountResInputVc Crir)
+begin
+  Record FlatCountersVc FlatCountersr;
+  Record FlatsVc Flatsr;
+  Boolean wloop,testf;
+  string 20 crestype;
+
+  ResetLoop(Flatsr);
+  While LoopKey("BuildCodeIntFlatNo:" & Crir.BuildCode,Flatsr,1,true) begin
+    ResetLoop(FlatCountersr);
+    FlatCountersr.FlatCode = Flatsr.FlatCode;
+    wloop=true;
+    While LoopKey("FlatCode",FlatCountersr,1,wloop)begin
+      if FlatCountersr.FlatCode!=Flatsr.FlatCode then begin
+        wloop=false;
+      end else begin
+        testf=true;
+        if FlatCountersr.Closedf==1 then begin
+          testf=false;
+        end;
+        if FlatCountersr.Changed==1 then begin
+          testf = false;
+        end;
+        // if FlatCountersr.Changed==1 and (BlankDate(FlatCountersr.RemoveDate) or !DateInRange(FlatCountersr.RemoveDate,Crir.StartDate,Crir.EndDate)) then begin
+          // testf=false;
+        // end;
+        if ((nonblank(Crir.InputCTypes)) and (!SetInSet(FlatCountersr.CounterType,Crir.InputCTypes))) then begin
+          testf = false;
+        end;
+        if testf then begin
+          if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+            AddRowToCountResInput(Crir,FlatCountersr,"MWH");
+            AddRowToCountResInput(Crir,FlatCountersr,"M3");
+          end else begin
+            AddRowToCountResInput(Crir,FlatCountersr,"");
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+updating
+function boolean CreateCountRes(longint FlatCounterSerNr,date sd,date ed,val PrevAmount,val CurAmount,string crestype,var longint countressernr,date DelivDate)
+begin
+  integer i,rwc;
+  Record CountResVc CountResr,PrevCountResr;
+  record FlatCountersVc FlatCountersr;
+  // record NApsSetBlock NApsSetr;
+  boolean res;
+
+  // BlockLoad(NApsSetr);
+  countressernr = -1;
+  res = false;
+  RecordNew(CountResr);
+  CountResr.RegDate=CurrentDate;
+  FlatCountersr.SerNr = FlatCounterSerNr;
+  if (ReadFirstMain(FlatCountersr,1,true)) then begin
+    if !CountResExists(FlatCountersr.SerNr,sd,ed,false) then begin
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      CountResr.DelivDate=DelivDate;
+      CountResr.StartDate = sd;
+      CountResr.EndDate = ed;
+      CountResr.StartVal = PrevAmount;
+      CountResr.EndVal = CurAmount;
+      CountResr.CountResType = crestype;
+      SumUpCountResVc(CountResr,0,0);
+      
+      if nonblank(CountResr.BuildCode) then begin
+        CountResr.CodeField=CountResr.BuildCode;
+        CountResr.RecType=1;
+      end;
+      if nonblank(CountResr.BuildGroupCode) then begin
+        CountResr.CodeField=CountResr.BuildGroupCode;
+        CountResr.RecType=2;
+      end;
+      if nonblank(CountResr.FlatGroupCode) then begin
+        CountResr.CodeField=CountResr.FlatGroupCode;
+        CountResr.RecType=3;
+      end;
+
+      CountResr.SerNr=NextSerNr("CountResVc",CountResr.StartDate,-1,false,"");
+      if RecordStore(CountResr,false) then begin
+        res = true;
+        countressernr = CountResr.SerNr;
+      end else begin
+        LogText(0,"ERROR Saving CountResVc");
+      end;
+    end else begin
+      LogText(0,"ERROR CountResVc record already exists, FlatCounter " & FlatCountersr.SerNr);
+    end;
+  end else begin
+    LogText(0,"ERROR Cannot find FlatCountersVc");
+  end;
+
+  CreateCountRes = res;
+  return;
+end;
+
+global updating
+procedure CreateCountResFromCRI(var record CountResInputVc CRIr,var boolean update,var integer cnt) begin
+  row CountResInputVc CRIrw;
+  longint countressernr;
+  integer i,rwc;
+  date td;
+
+  update=false; cnt=0;
+
+  rwc=MatRowCnt(CRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Crir,i,Crirw);
+    if Crirw.Type==0 then begin
+      if CreateCountRes(Crirw.FlatCounterSerNr,Crir.StartDate,Crir.EndDate,Crirw.PrevAmount,Crirw.CurAmount,Crirw.CountResType,countressernr,td) then begin
+        Crirw.Type=1;
+        Crirw.CountResNr=countressernr;
+        MatRowPut(Crir,i,Crirw);
+        cnt=cnt+1;
+        update = true;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+global updating
+procedure CreateCountResFromBCRI(var record BuildCountResInputVc BCRIr,var boolean update,var integer cnt) begin
+  row BuildCountResInputVc BCRIrw;
+  record FlatCountersVc FlatCountersr;
+  longint countressernr;
+  integer i,rwc;
+
+  update=false; cnt=0;
+
+  rwc=MatRowCnt(BCRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BCRIr,i,BCRIrw);
+    if BCRIrw.Type==0 then begin
+      FlatCountersr.CounterNo=BCRIrw.CounterNo;
+      if ReadFirstKey("CounterNo",FlatCountersr,1,true) begin
+        if CreateCountRes(FlatCountersr.SerNr,BCRIr.StartDate,BCRIr.EndDate,BCRIrw.PrevAmount,BCRIrw.CurAmount,"",countressernr,BCrirw.DelivDate) then begin
+          BCrirw.Type=1;
+          BCrirw.CountResSerNr=countressernr;
+          MatRowPut(BCRIr,i,BCRIrw);
+          cnt=cnt+1;
+          update = true;
+        end;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+global
+function longint CheckCountResInput(record CountResInputVc CountResInputr) begin
+  row CountResInputVc CountResInputrw;
+  integer i,rwc;
+  longint res;
+
+  res = 0;
+  rwc = MatRowCnt(CountResInputr);
+  if rwc==0 then begin
+    res = 1000885;
+    GoTo LCheckCountResInput;
+  end;
+  //OBS MV ORDER 08.07.2019
+  // for(i=0;i<rwc;i=i+1)begin
+    // MatRowGet(CountResInputr,i,CountResInputrw);
+    // if CountResInputrw.PrevAmount!=blankval and CountResInputrw.PrevAmount!=0 and (CountResInputrw.CurAmount==0 or CountResInputrw.CurAmount==blankval) then begin
+      // res = 1000083;
+      // GoTo LCheckCountResInput;
+    // end;
+  // end;
+
+LCheckCountResInput:;
+  CheckCountResInput = res;
+return;
+end;
+
+global
+function longint CheckBuildCountResInput(record BuildCountResInputVc BuildCountResInputr) begin
+  row BuildCountResInputVc BuildCountResInputrw;
+  integer i,rwc;
+  longint res;
+
+  res = 0;
+  rwc = MatRowCnt(BuildCountResInputr);
+  if rwc==0 then begin
+    res = 1000885;
+    GoTo LCheckBuildCountResInput;
+  end;
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildCountResInputr,i,BuildCountResInputrw);
+    if BuildCountResInputrw.PrevAmount!=blankval and BuildCountResInputrw.PrevAmount!=0 and (BuildCountResInputrw.CurAmount==0 or BuildCountResInputrw.CurAmount==blankval) then begin
+      res = 1000083;
+      GoTo LCheckBuildCountResInput;
+    end;
+  end;
+
+LCheckBuildCountResInput:;
+  CheckBuildCountResInput = res;
+return;
+end;
+
+global
+function boolean FindAnotherCountResInputWithType(record CountResInputVc CountResInputp,string ctype)
+begin
+  boolean res,wloop;
+  record CountResInputVc tempCountResInputr;
+
+  res = false;
+
+  if (blank(ctype)) then begin
+    goto LFindAnotherCountResInputWithType;
+  end;
+  if (blank(CountResInputp.BuildCode)) then begin
+    goto LFindAnotherCountResInputWithType;
+  end;
+  if (blankdate(CountResInputp.StartDate)) then begin
+    goto LFindAnotherCountResInputWithType;
+  end;
+  if (blankdate(CountResInputp.EndDate)) then begin
+    goto LFindAnotherCountResInputWithType;
+  end;
+  tempCountResInputr.BuildCode = CountResInputp.BuildCode;
+  tempCountResInputr.StartDate = CountResInputp.StartDate;
+  tempCountResInputr.EndDate = CountResInputp.EndDate;
+  wloop = true;
+  while (LoopKey("BCStartEndD:" & ctype,tempCountResInputr,3,wloop)) begin
+    if ((tempCountResInputr.BuildCode != CountResInputp.BuildCode) or (tempCountResInputr.StartDate != CountResInputp.StartDate) or
+        (tempCountResInputr.EndDate != CountResInputp.EndDate)) then begin
+      wloop = false;
+    end else begin
+      if (CountResInputp.SerNr != tempCountResInputr.SerNr) then begin
+        res = true;
+        wloop = false;
+      end;
+    end;
+  end;
+
+LFindAnotherCountResInputWithType:;
+  FindAnotherCountResInputWithType = res;
+  return;
+end;
+
+global updating
+procedure CreateErrorMail(array string error_array,integer type) begin
+  record MailSettingsBlock MailSettingsr;
+  Record MailVc Mailr;
+  Row MailVc Mailrw;
+  integer size,i,line,size2;
+  longint pos;
+  string 255 tstr,mailboxnr;
+  Array string 50 VarArray;
+
+  BlockLoad(MailSettingsr);
+  line = 0;
+  
+  if nonblank(MailSettingsr.FromSystem) and nonblank(MailSettingsr.Postmaster) then begin
+    RecordNew(Mailr);
+    Mailrw.RowTyp = 1;
+    Mailrw.AddrCode = MailSettingsr.FromSystem;
+    MatRowPut(Mailr,0,Mailrw);
+
+    Mailrw.RowTyp = 0;
+    Mailrw.AddrCode = MailSettingsr.Postmaster;
+    MatRowPut(Mailr,1,Mailrw);
+    
+    FindUserMailboxName("TEG",mailboxnr,tstr);
+    if tstr!="" then begin
+      Mailrw.RowTyp = 0;
+      Mailrw.AddrCode = tstr;
+      MatRowPut(Mailr,MatRowCnt(Mailr),Mailrw);
+    end;
+    
+    FindUserMailboxName("JAR",mailboxnr,tstr);
+    if tstr!="" then begin
+      Mailrw.RowTyp = 0;
+      Mailrw.AddrCode = tstr;
+      MatRowPut(Mailr,MatRowCnt(Mailr),Mailrw);
+    end;
+
+    Mailr.Header = USetStr(1000109);
+    
+    Switch (type) begin
+      case 1: 
+          tstr = USetStr(1001510); //telpas
+      case 2:
+          tstr = USetStr(1001511); //ekas
+      case 3:
+          tstr = USetStr(1001346); //apvienotie
+      otherwise
+          tstr = "";
+    end;
+    
+    if tstr!="" then begin
+       Mailr.Header = Mailr.Header & ". " & tstr;
+    end;
+    
+    size = StringToInt(error_array[0]);
+    for(i=1;i<=size;i=i+1)begin
+
+      tstr = "";
+      ClearArray(VarArray);
+      size2 = 0; pos = 0;
+      while (GetNextSubstring(error_array[i],pos,",",tstr)) begin
+        VarArray[size2] = tstr; size2=size2+1;
+      end;
+      
+      if VarArray[3]!="" then begin
+        tstr = USetStr(StringToLongInt(VarArray[3]));
+      end else begin
+        tstr = USetStr(1000110);
+      end;
+      
+      tstr = tstr & " (" & USetStr(1000715) & "/" & USetStr(1001053) & "-" & VarArray[0] & " "
+              & USetStr(8156) & "-" & VarArray[2] & " "
+              & USetStr(8104) & "-" & VarArray[1] & ")";
+      tstr = tstr & chr(13) & Chr(10);
+      LineTextPut(Mailr,line,tstr);
+      line = line + 1;
+    end;
+
+    Mailr.TransDate = CurrentDate;
+    Mailr.SerNr = NextSerNr("MailVc",Mailr.TransDate,-1,false,"");
+    Mailr.SendFlag=1;
+    RecordStore(Mailr,false);
+  end;
+
+return;
+end;
+
+updating
+procedure UpdateOneContractDate(longint sernr) begin
+  record NAContractVc NAContractr,NAContract2r;
+
+  NAContractr.SerNr = sernr;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    if nonblankdate(NAContractr.LastInvDate) then begin
+      RecordCopy(NAContract2r,NAContractr);
+      NAContractr.LastInvDate = "";
+      if (RecordUpdate(NAContract2r,NAContractr,true)==0) then begin
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+global updating
+function longint UndoOneInvoice(longint sernr)
+begin
+  record IVVc IVr,oldIVr;
+  row IVVc IVrw;
+  record NAContractVc NAContractr,NAContract2r;
+  longint res;
+  boolean DeleteIV,foundNewIV;
+  integer i,rwc;
+
+  res = 0;
+  IVr.SerNr = sernr;
+  if !ReadFirstMain(IVr,1,true) then begin
+    GoTo LUndoOneInvoice;
+  end;
+  if IVr.Contract==-1 and IVr.MergedInvFlag==0 then begin
+    res = 1001328;
+    GoTo LUndoOneInvoice;
+  end;
+  if IVr.OKFlag<>0 then begin
+    RecordCopy(oldIVr,IVr);
+    IVr.OKFlag = 0;
+    if RecordUpdate(oldIVr,IVr,true)!=0 then begin
+      res = 1001329;
+      LogText(0,"UndoOneInvoice ERROR :: Could not unok invoice " & IVr.SerNr);
+      GoTo LUndoOneInvoice;
+    end;
+  end;
+  if IVr.MergedInvFlag==0 then begin
+    UpdateOneContractDate(IVr.Contract);
+  end;
+  if IVr.MergedInvFlag==1 then begin
+    rwc = MatRowCnt(IVr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(IVr,i,IVrw);
+      if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ContractNr!=-1 then begin
+        UpdateOneContractDate(IVrw.ContractNr);
+      end;
+    end;
+  end;
+  // UpdatePeriodicServRecFromIV(IVr,true);
+  RemoveIntSumCalcVc(IVr.SerNr);
+  RecordDelete(IVr);
+
+LUndoOneInvoice:;
+  UndoOneInvoice = res;
+return;
+end;
+
+global
+procedure PasteInvItems(var record IPVc IPp,integer rownr) begin
+  record IVVc IVr;
+  row IVVc IVrw;
+  row IPVc IPrw,insIPrw;
+  record INVc INr;
+  integer insRow,i,size;
+  boolean firstRowf;
+  array string 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+
+  firstRowf = true;
+  insRow = rownr;
+
+  MatRowGet(IPp,rownr,IPrw);
+  if IPrw.InvoiceNr!=-1 then begin
+    IVr.SerNr = IPrw.InvoiceNr;
+    if !ReadFirstMain(IVr,1,true) then begin
+      GoTo LPasteInvItems;
+    end;
+    
+    if IVr.InvType!=kInvoiceTypeCredit then begin
+      GetIVUnPayedArtCodeUniqMasOnDate(IVr,AddYear(CurrentDate,1),false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+      size=StringToInt(ArtCodeMas[0]);
+      for(i=1;i<=size;i=i+1)begin
+        if UnPayedSumMas[i] > 0 then begin
+          CopyRow(IPp,IPrw,insIPrw);
+          insIPrw.rkRecNumber = ArtCodeMas[i];
+          INr.Code=insIPrw.rkRecNumber;
+          if ReadFirstMain(INr,1,true) then begin
+            insIPrw.ArtCodeName=INr.Name;
+          end;
+          insIPrw.ContractNr = arrContractNrs[i];
+          if firstRowf then begin
+            MatRowPut(IPp,insRow,insIPrw);
+          end else begin
+            MatRowInsert(IPp,insRow,insIPrw);
+          end;
+          IPVc_PasteContractNr(IPp,insRow);
+
+          MatRowGet(IPp,insRow,insIPrw);
+          insIPrw.RecVal = UnPayedSumMas[i];
+          MatRowPut(IPp,insRow,insIPrw);
+          IPVc_PasteRecVal(IPp,insRow);
+
+          insRow = insRow + 1;
+        end;
+      end;
+    end else begin
+      size=MatRowCnt(IVr);
+      for (i=0;i<size;i=i+1) begin
+        MatRowGet(IVr,i,IVrw);
+        if IVrw.stp==kInvoiceRowTypeNormal then begin
+          CopyRow(IPp,IPrw,insIPrw);
+          insIPrw.rkRecNumber = IVrw.ArtCode;
+          INr.Code=insIPrw.rkRecNumber;
+          if ReadFirstMain(INr,1,true) then begin
+            insIPrw.ArtCodeName=INr.Name;
+          end;
+          insIPrw.ContractNr = IVr.Contract;
+          if firstRowf then begin
+            MatRowPut(IPp,insRow,insIPrw);
+          end else begin
+            MatRowInsert(IPp,insRow,insIPrw);
+          end;
+          IPVc_PasteContractNr(IPp,insRow);
+
+          MatRowGet(IPp,insRow,insIPrw);
+          insIPrw.RecVal = - (IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,0,0),SetRoundModeD(2)));  
+          MatRowPut(IPp,insRow,insIPrw);
+          IPVc_PasteRecVal(IPp,insRow);
+
+          insRow = insRow + 1;
+        
+        end;
+      end;
+    end;
+
+  end;
+
+LPasteInvItems:;
+  return;
+end;
+
+global updating
+function boolean StoreCountResImportRemote(var record CountResInputVc CRIr)
+begin
+  record CountResInputVc dummyCRIr;
+  boolean res;
+  
+  if CRIr.SerNr<0 then begin
+    if CountRecords("CountResInputVc")==0 then begin
+      CRIr.SerNr=10001;
+    end else begin
+      CRIr.SerNr=NextSernr("CountResInputVc",CurrentDate,-1,false,"");
+    end;
+  end;
+  if CountResInputVcRecordCheck(CRIr,dummyCRIr,0,0)==0 then begin
+    RecordStore(CRIr,false);
+    res=true;
+  end;
+  
+  StoreCountResImportRemote = res;
+  return;
+end;
+
+global
+function boolean GetFlatVcRec(string code,var record FlatsVc Flatsr)
+begin
+  boolean res;
+  
+  if nonblank(code) then begin
+    Flatsr.FlatCode=code;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      res = true;
+    end;
+  end;
+  
+  GetFlatVcRec = res;
+  return;
+end;
+
+global
+function boolean GetBuildVcRec(string code,var record BuildVc Buildr)
+begin
+  boolean res;
+  
+  if nonblank(code) then begin
+    Buildr.Code=code;
+    if ReadFirstMain(Buildr,1,true) then begin
+      res = true;
+    end;
+  end;
+  
+  GetBuildVcRec = res;
+  return;
+end;
+
+
+

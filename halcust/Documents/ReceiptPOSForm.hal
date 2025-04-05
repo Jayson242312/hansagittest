@@ -1,0 +1,154 @@
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+global
+procedure PrintReceiptPOSFields(record IPVc IPr)
+begin
+  row IPVc IPrw;
+  record CUVc CUr;
+  integer i, rwcnt;
+  String 150 custCode, custName;
+  longint currentInv, prevInv;
+  val invoiceSum;
+  boolean firstInvoice;
+
+  // Output standard receipt fields
+  OUTFORMFIELD("F_SERNRX", IPr.SerNr);
+  OUTFORMFIELD("F_RECEIVEDX", IPr.PayVal);
+  OUTFORMFIELD("F_CHANGEX", IPr.ChangeVal);
+  OUTFORMFIELD("F_DATEX", IPr.TransDate);
+  OUTFORMFIELD("F_TIMEX", IPr.RegTime); 
+  OUTFORMFIELD("F_PAYMODEX", IPr.Comment); 
+  OUTFORMFIELD("F_TILLX", IPr.MachineName); 
+  OUTFORMFIELD("F_CASHIERX", IPr.SalesMan); 
+  OUTFORMFIELD("F_TOTALX", IPr.CurPayVal);
+
+  rwcnt = MatRowCnt(IPr);
+  prevInv = -1;
+  invoiceSum = 0;   
+  firstInvoice = true;
+
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(IPr, i, IPrw);
+    currentInv = IPrw.InvoiceNr;
+    if (currentInv != prevInv) then begin
+      if (!firstInvoice) then begin
+        OutFormField("F_INVCODEX", prevInv);    //last invoice {only if its not first invoice} 
+        OutFormField("F_PAYVALUEX", invoiceSum); 
+        ENDFORMROW;
+      end;
+      invoiceSum = 0;
+      firstInvoice = false;
+    end;
+    invoiceSum = invoiceSum + IPrw.RecVal;  // if invoice numbers are the same we sum them
+    prevInv = currentInv;
+
+      // Handle unallocated payments or account credits
+    if (currentInv < 0) then begin
+      if (IPrw.RecVal > 0) then begin
+        OutFormField("F_INVCODEX", "UnAllocated Payment");
+        OutFormField("F_PAYVALUEX", IPrw.RecVal);
+        ENDFORMROW;
+      end else begin
+        OutFormField("F_INVCODEX", "Paid from Account Credit");
+        OutFormField("F_PAYVALUEX", IPrw.RecVal);
+        ENDFORMROW;
+      end;
+    end;
+
+  end;
+
+  if (rwcnt > 0 and prevInv >= 0) then begin
+    OutFormField("F_INVCODEX", prevInv);
+    OutFormField("F_PAYVALUEX", invoiceSum);
+    ENDFORMROW;
+  end;
+
+  MatRowGet(IPr, 0, IPrw);
+  CUr.Code = IPrw.CustCode;
+  if (ReadFirstMain(CUr, 1, true)) then begin
+    OutFormField("F_CUSTCODEXX", CUr.Code);
+    OutFormField("F_CUSTNAMEXX", CUr.Name);
+  end;
+end;
+
+global
+procedure ReceiptPOSForm(record RcVc RepSpec) 
+begin
+  record IPVc IPr;
+  
+  if (blank(RepSpec.f1)) then begin
+    goto LReceiptPOSForm;
+  end;
+  
+  IPr.SerNr = StringToLongInt(RepSpec.f1);
+  if (ReadFirstMain(IPr,1,true)) then begin
+    if IPr.OKFlag == 1 then begin
+      PrintDocument(IPr,"ReceiptPOSForm",false);
+    end;
+  end;
+  
+LReceiptPOSForm:;
+  return;
+end;
+
+
+global
+procedure DoReceiptPOSForm(record RcVc RepSpec, record IPVc IPr)
+BEGIN
+  Integer i,rwcnt;
+  Boolean printf,testf;
+  Integer intdocnr;
+  string 30 formcode,langcode;
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+  
+  testf = true;
+
+  if (IPr.OKFlag==0) then begin
+    MessageBox(0,"Cant Print Unokayed record");
+    testf = false;
+  end;
+
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    testf = false;
+  end;
+  if testf then begin
+    langcode = "";
+    intdocnr = 1;
+    printf = true; //ff
+    rwcnt = MatRowCnt(FDr);
+    while (printf) begin
+      formcode = "";
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(FDr,i,FDrw);
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,-1,FDrw.PrintGroupCode,
+                          langcode,intdocnr,"",formcode)) then
+          begin
+          goto LBREAKPrint;
+        end;
+      end;
+  LBREAKPrint:;
+      
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          PrintReceiptPOSFields(IPr);
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);  
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));  
+        end;
+      end;
+      intdocnr = intdocnr + 1;
+    end;
+  end;
+
+  return;
+end;

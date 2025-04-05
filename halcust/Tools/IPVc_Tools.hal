@@ -1,0 +1,54 @@
+external inner function string 60 AddObjectToObjectList(string,string);
+external inner function Boolean IPVc_PasteCustCode(var record IPVc,Integer,var longint);
+
+global
+function boolean IPVc_PasteContractNr(var record IPVc IPr,integer rownr)
+begin
+  row IPVc IPrw;
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  longint error;
+  boolean res;
+  
+  MatRowGet(IPr,rownr,IPrw);
+  NAContractr.SerNr=IPrw.ContractNr;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    IPrw.CustCode=NAContractr.CustCode;
+    IPrw.CustAddress=NAContractr.FlatAddress;
+    //JH :: CUST BEGIN (When contract selected we paste the payprior)
+    IPr.INPayPriority = NAContractr.INPayPriority;
+    //CUST END
+    if nonblank(NAContractr.Objects) then begin
+      IPrw.Objects = AddObjectToObjectList(IPrw.Objects,NAContractr.Objects);
+    end;
+    MatRowPut(IPr,rownr,IPrw);
+    if IPVc_PasteCustCode(IPr,rownr,error) then begin
+      res=true;
+    end;
+  end;
+  
+  IPVc_PasteContractNr=res;
+  return;
+end;
+
+global
+function boolean IPCheckForFidaIP(record IPVc IPr,var longint sernr)
+begin
+  Record FidaIPVc Fidar;
+  Record RlinkVc RLr;
+  integer i;
+  boolean res;
+  
+  sernr=-1;
+  i = 1;
+  while (ReadRecordLink(IPr,i,Fidar,RLr)) begin
+    if sernr==-1 then begin
+      sernr=Fidar.SerNr;
+    end;
+    res = true;
+    i=i+1;
+  end;
+  
+  IPCheckForFidaIP=res;
+  return;
+end;

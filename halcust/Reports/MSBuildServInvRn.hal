@@ -1,0 +1,733 @@
+external inner procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external inner procedure PastePDInInv(var record IVVc,string,Boolean);
+external inner function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,var string,Boolean,var Integer);
+external inner function Boolean IVDchrsum(var record IVVc,Integer);
+external inner procedure IVSumup(var record IVVc,Boolean);
+external inner procedure IVDchsum(var record IVVc,Integer);
+external inner procedure IVVc_PasteQuant(var record IVVc,Integer,Boolean,var Boolean,string);
+external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+external inner function string 60 AddObjectToObjectList(string,string);
+external inner procedure HT2Per(Date, Date , var string);
+external inner function roundmode SetRoundModeD(Integer);
+external procedure HTBuild(string,var string);
+external procedure HTMSClass(string,var string);
+external procedure AddUnUsedPrepaymentToIV(var record IVVc);
+external function longint GetIVSerNrFromFlatCode(date,integer,record NAContractVc);
+external procedure GenFlatServCache(date,date,var record SMVc,Boolean,integer,integer,record NAContractVc);
+external procedure GenFlatServCacheIntSum(record NAContractVc,date,var record SMVc,longint,var string,boolean);
+external procedure AddUnUsedPrepaymentToFlatServCache(record NAContractVc,date,var record SMVc);
+external procedure GetFlatServCacheFromIV(longint,record SMVc,integer);
+external function string 100 GetDIVcNameWithType(string,string);
+external updating procedure OBS_CreateAndAttachPdfToIVVc(Record IVVc,Record IVVc,string,string);
+external procedure FillVecItemsJur(var vector string);
+external function boolean GetMSPriceJurChg(string,date,string,string,longint,var val,var val);
+external procedure CalcServInvCorrections(record RcVc,record NAContractVc,var record SMVc);
+
+procedure AddToUniqueMasive(var array string MainElements,var array val Sum1Mas,string ElementToCheck,val Sum1,var array val QtyMas,val qty)
+begin
+  integer i,rw;
+  boolean Exists;
+
+  rw = StringToInt(MainElements[0]);
+  if rw>0 then begin
+    for(i=1;i<=rw;i=i+1)begin
+      if MainElements[i]==ElementToCheck then begin
+        Sum1Mas[i] = Sum1Mas[i] + Sum1;
+        QtyMas[i] = QtyMas[i] + qty;
+        Exists = true;
+        i = rw + 1;
+      end;
+    end;
+  end else begin
+    rw = 0;
+  end;
+  if Exists==false then begin
+    rw = rw + 1;
+    MainElements[0] = rw;
+    MainElements[rw] = ElementToCheck;
+    Sum1Mas[rw] = Sum1;
+    QtyMas[rw] = qty;
+  end;
+end;
+
+//prints FlatServCache and adds to uniq mas
+procedure PrintBuildServCache(record NAContractVc NAContractr,record SMVc Cacher,longint IVSerNr,
+                             var array string ItemMas,var array val SumInclVATMas,var array val QtyMas,
+                             var array string ItemClassMas,var array val ClassSumInclVATMas,var array val ClassQtyMas,
+                             record SMVc FlatGroupCacher,boolean donotallowneg,string artcode) begin
+  record INVc INr;
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  row SMVc Cacherw;
+  integer i,rw;
+  val totsum;
+  string 255 tstr,transnr,artname,counterno;
+  // Record NApsSetBlock NApsSetr;
+  Longint sourcesernr;
+  boolean printrowf;
+
+  // BlockLoad(NApsSetr);
+  
+  rw = MatRowCnt(Cacher);
+  
+  StartFormat(15);
+  Buildr.Code = NAContractr.BuildCode;
+  ReadFirstMain(Buildr,1,true);
+  
+  OutStringID(0,"DblBuildVc",USetStr(1001053) & ": " & Buildr.Code,false,Buildr.Code);
+  OutString(65,0,USetStr(1000400) & ": " & Buildr.Address,false);
+  OutStringID(200,"DblNAContractVc",USetStr(1000541) & ": " & NAContractr.SerNr,false,NAContractr.SerNr);
+  OutString(260,0,NAContractr.CustName,false);
+  if IVSerNr==-1 then begin
+    OutStringID(1,"dblMSBuildServInv2Mn",USetStr(1000638),true,Buildr.Code);
+  end else begin
+    OutStringID(1,"DblIVVc",USetStr(1000523) & ": " & IVSerNr,true,IVSerNr);
+  end;
+  EndFormat;
+  //print prepayments
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    if Cacherw.RowSimStat==6 then begin
+      OutString(80,0,"",false);
+      OutString(280,0,USetStr(1288) & ": " & Cacherw.AccNumber,false);
+      OutString(420,0,"",true);
+      OutString(420,0,"",true);
+      OutString(480,0,Cacherw.DebVal2,true);
+      EndFormat;
+    end else begin
+      i = rw;
+    end;
+  end;
+  Black_Divider(0,1);
+  OutString(15,0,USetStr(1000488),false);
+  OutString(65,0,USetStr(1000402),false);
+  OutString(260,0,USetStr(1000431),false);
+  OutString(345,0,USetStr(1000491),true);
+  OutString(380,0,USetStr(1000639),true);
+  OutString(430,0,USetStr(1000640),true);
+  OutString(480,0,USetStr(1000489),true);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  for(i=0;i<rw;i=i+1)begin
+    printrowf = false;
+    counterno = "";
+    artname = "";
+    MatRowGet(Cacher,i,Cacherw);
+    Switch (Cacherw.RowSimStat) begin
+      Case 1: //normal row
+        printrowf = true;
+        if blank(Cacherw.Comment) then begin
+          INr.Code = Cacherw.AccNumber;
+          if ReadFirstMain(INr,1,true) then begin end;
+          artname = INr.Name;
+        end else begin
+          artname = Cacherw.Comment;
+        end;
+        counterno = Cacherw.Objects;
+      Case 2: //row from periodic service records
+        printrowf = true;
+        INr.Code = Cacherw.AccNumber;
+        if ReadFirstMain(INr,1,true) then begin end;
+        artname = INr.Name;
+    end;
+    if printrowf then begin
+      OutString(15,0,Cacherw.AccNumber,false);
+      OutString(65,0,artname,false);
+      OutString(260,0,counterno,false);
+      // OutString(345,0,Cacherw.DebVal,true);
+      OutVal(345,0,Cacherw.DebVal,M4Uval,true);
+      OutString(380,0,Cacherw.CurCredVal,true);
+      OutVal(420,0,Cacherw.CredVal,M45Val,true);
+      OutString(480,0,Cacherw.DebVal2,true);
+      EndFormat;
+      totsum=totsum+Cacherw.DebVal2;
+      AddToUniqueMasive(ItemMas,SumInclVATMas,Cacherw.AccNumber,Cacherw.DebVal2,QtyMas,Cacherw.CredVal);
+      // AddToUniqueClassMasive(ItemClassMas,ClassSumInclVATMas,Cacherw.AccNumber,Cacherw.DebVal2,ClassQtyMas,Cacherw.CredVal);
+      // AddToFlatGroupCacher(FlatGroupCacher,Flatsr.FlatCode,Cacherw.AccNumber,Cacherw.DebVal,Cacherw.CurCredVal,Cacherw.CredVal,Cacherw.DebVal2);
+    end;
+  end;
+  
+  Black_Divider(0,1);
+  OutVal(480,0,totsum,M4Val,true);
+  EndFormat;
+  if donotallowneg and totsum<0 then begin
+    tstr = NAContractr.SerNr & " " & USetStr(1000819);
+    MessageBox(0,tstr);
+  end;
+  
+  return;
+end;
+ 
+global updating 
+procedure CreateIVFromBuildServCache(record RcVc RepSpec,record NAContractVc NAContractr,record BuildVc Buildr,date InvDate,string IntFormulaStr,
+                                            record SMVc Cacher,var integer cnt,var longint IVCounter,
+                                            integer MakeTR, integer updatePBIf, LongInt PBISerNr,
+                                            var longint TRIVCounter,boolean donotallowneg,var boolean res, 
+                                            integer ItemMark,var longint newInvNumber,boolean addprepayf)
+begin
+  record NAContractVc oldNAContractr;
+  record FlatsVc Flatsr;
+  record IVVc IVr,oldIVr,checkIVr;
+  record CUVc CUr;
+  record CCatVc CCatr;
+  record INVc INr;
+  record CountResVc CountResr;
+  row SMVc Cacherw;
+  row IVVc IVrw;
+  record SRBlock SRRec;
+  record AccBlock AccBl;
+  record NApsSetBlock NSr;
+  record FlatGroupVc FlatGroupr;
+  string 5 CurncyCode;
+  string 255 inwarning,tstr,artname,counterno;
+  val fr,to1,to2,br1,br2,t,vRebate,Price,PriceInclRebate;
+  integer i,rw,ivrow,curcomp,pos;
+  boolean chsum,printrowf,countresf,flatgroupf;
+  string 20 strSerNr;
+  longint ivsernr;
+  Integer sernrf;
+  boolean jurf;
+  vector string 10 vecItemsJur;
+  
+  res = true;
+  newInvNumber = -1;
+  
+  ivrow=0;
+  curcomp = CurrentCompany;
+  CUr.Code = NAContractr.CustCode;
+  if ReadFirstMain(CUr,1,true) then begin end;
+  
+  if nonblank(NAContractr.FlatCode) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    ReadFirstMain(Flatsr,1,true);
+  end;
+  
+  BlockLoad(SRRec);
+  BlockLoad(AccBl);
+  BlockLoad(NSr);
+  RecordNew(IVr);
+  IVr.InvDate = InvDate;
+  IVr.TransDate = IVr.InvDate;
+  if nonblank(NAContractr.LangCode) then begin
+    IVr.LangCode=NAContractr.LangCode;
+  end else begin
+    IVr.LangCode=CUr.LangCode;
+  end;
+  if blank(IVr.LangCode) then begin
+    if CUr.CustCat=="JUR" then begin
+      IVr.LangCode="JUR";
+    end;
+  end;
+  IVr.SerNr = NextSerNr("IVVc",IVr.TransDate,SRRec.LastCOInvNr,false,IVr.LangCode);
+  IVr.Contract = NAContractr.SerNr;
+  IVr.CustCode = NAContractr.CustCode;
+  IVr.Addr0 = NAContractr.CustName;
+  IVr.Addr1 = CUr.InvAddr0;
+  IVr.Addr2 = CUr.InvAddr1;
+  IVr.Addr3 = CUr.InvAddr2;
+  IVr.InvAddr3 = CUr.InvAddr3;
+  IVr.InvAddr4 = CUr.InvAddr4;
+  
+  if (nonblank(CUr.DelAddr0) or nonblank(CUr.DelAddr1) or nonblank(CUr.DelAddr2) or nonblank(CUr.DelAddr3) or nonblank(CUr.DelAddr4)) then begin
+    IVr.ShipAddr0 = NAContractr.CustName;
+    IVr.ShipAddr1 = CUr.DelAddr0;
+    IVr.ShipAddr2 = CUr.DelAddr1;
+    IVr.ShipAddr3 = CUr.DelAddr2;
+    IVr.DelAddr3 = CUr.DelAddr3;
+    IVr.DelAddr4 = CUr.DelAddr4;
+    IVr.DelCountry = CUr.DelCountry;
+  end else begin
+    IVr.ShipAddr0 = "";
+    IVr.ShipAddr1 = "";
+    IVr.ShipAddr2 = "";
+    IVr.ShipAddr3 = "";
+    IVr.DelAddr3 = "";
+    IVr.DelAddr4 = "";
+    IVr.DelCountry = "";
+  end;
+  
+  CCatr.Code = CUr.CustCat;
+  if (ReadFirstMain(CCatr,1,true)) then begin end;
+  
+  IVr.VATNr = CUr.VATNr;
+  IVr.InvCountry = CUr.CountryCode;
+  IVr.ClientContact = CUr.Person;
+  IVr.CustCat = CUr.CustCat;
+  IVr.ExportFlag = CUr.ExportFlag;
+  IVr.Sorting = CUr.Sorting;
+  IVr.Region = CUr.Region;
+  IVr.Phone = CUr.Phone;
+  IVr.Fax = CUr.Fax;
+  IVr.PriceList = CUr.PLCode;
+  IVr.RebCode = CUr.RebCode;
+  if (blank(IVr.RebCode)) then begin
+    IVr.RebCode = CCatr.RebCode;
+  end;
+  
+  // IVr.PayDeal = NAContractr.PayDeal;
+  if blank(IVr.PayDeal) then begin
+    IVr.PayDeal = CUr.PayDeal;
+  end;
+  PastePDInInv(IVr,"",false);
+  IVr.BuildCode = NAContractr.BuildCode;//buildcode reference, here, because PastePDInInv pastes empty string
+  IVr.FlatCode = NAContractr.FlatCode;
+  IVr.IntFlatNo = Flatsr.IntFlatNo;
+  
+  IVr.Objects = AddObjectToObjectList(IVr.Objects,CUr.Objects);
+  IVr.Objects = AddObjectToObjectList(IVr.Objects,NAContractr.Objects);
+  IVr.Objects = AddObjectToObjectList(IVr.Objects,Flatsr.Objects);
+  IVr.Objects = AddObjectToObjectList(IVr.Objects,Buildr.Objects);
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,CCatr.Objects);
+  
+  if (AccBl.BasePriceInclVAT==2) then begin
+    IVr.InclVAT = 1;
+  end else begin
+    IVr.InclVAT = 0;
+    //IVr.InclVAT = NAContractr.InclVAT;
+  end;
+  IVr.InvComment = Left(IntFormulaStr,190);
+  IVr.SalesMan = NAContractr.SalesMan;
+  CurncyCode = NAContractr.CurncyCode;
+  GetFullCurncyRate(CurncyCode,IVr.TransDate,fr,to1,to2,br1,br2);
+  IVr.CurncyCode = CurncyCode;
+  IVr.FrRate = fr;
+  IVr.ToRateB1 = to1;
+  IVr.ToRateB2 = to2;
+  IVr.BaseRate1 = br1;
+  IVr.BaseRate2 = br2;
+  IVr.NoTax1 = CUr.NoTax1;
+  IVr.NoTax2 = CUr.NoTax2;
+  IVr.ShipDeal = CUr.ShipDeal;
+  IVr.ShipMode = CUr.ShipMode;
+  
+  IVr.ServInvf=1;
+  
+  IVr.LastRemndr = 0;
+  
+  if CUr.CustCat=="JUR" then begin
+    jurf=true;
+    FillVecItemsJur(vecItemsJur);
+  end;
+  
+  rw = MatRowCnt(Cacher);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    printrowf = false;
+    counterno = "";
+    artname = "";
+    countresf = false;
+    flatgroupf = false; 
+    if jurf then begin
+      if nonblank(Cacherw.AccNumber) then begin
+        if nonblank(vecItemsJur[Cacherw.AccNumber]) then begin
+          Cacherw.AccNumber=vecItemsJur[Cacherw.AccNumber];
+          if GetMSPriceJurChg(Cacherw.AccNumber,RepSpec.sStartDate,NAContractr.BuildCode,NAContractr.FlatCode,NAContractr.SerNr,vRebate,Price) then begin
+            PriceInclRebate = Price - (Price*(vRebate/100));
+            Cacherw.CurCredVal = vRebate;
+            Cacherw.DebVal=Price;
+            Cacherw.FrRate=Price;
+            Cacherw.DebVal2 = Round(PriceInclRebate*Cacherw.CredVal,SetRoundModeD(2));
+            if RepSpec.flags[29]==1 then begin
+              if Price==blankval then begin
+                Cacherw.DebVal = 0.00;
+                Cacherw.FrRate = 0.00;
+              end;
+            end;
+            MatRowPut(Cacher,i,Cacherw);
+            MatRowGet(Cacher,i,Cacherw);
+          end;
+        end;
+      end;
+    end;
+    Switch (Cacherw.RowSimStat) begin
+      Case 1: //normal row
+        printrowf = true;
+        if blank(Cacherw.Comment) then begin
+          INr.Code = Cacherw.AccNumber;
+          if ReadFirstMain(INr,1,true) then begin end;
+          artname = INr.Name;
+        end else begin
+          artname = Cacherw.Comment;
+        end;
+        CountResr.FlatCounterSerNr = StringToLongInt(Cacherw.Objects);
+        if ReadFirstKey("FlatCounterSerNr",CountResr,1,true) then begin
+          countresf = true;
+          counterno = CountResr.FlatCounterSerNr;
+        end;
+      Case 2: //row from periodic service records
+        printrowf = true;
+        INr.Code = Cacherw.AccNumber;
+        if ReadFirstMain(INr,1,true) then begin end;
+        artname = INr.Name;
+    end;
+    if printrowf then begin
+      if nonblank(Cacherw.CurncyCode) and Cacherw.CurncyCode!=IVr.CurncyCode then begin
+        CurValToOtherCur(IVr.TransDate,Cacherw.CurncyCode,Cacherw.DebVal,IVr.CurncyCode,t,DefaultCurRoundoff);
+        Cacherw.DebVal = t;
+      end;
+      ClearRow(IVr,IVrw,1);
+      IVrw.ArtCode = Cacherw.AccNumber;
+      MatRowPut(IVr,ivrow,IVrw);
+      if (IVVc_PasteArtCode(IVr,ivrow,inwarning,inwarning,false,sernrf)) then begin
+        MatRowGet(IVr,ivrow,IVrw);
+        tstr = IVrw.Spec;
+        if Cacherw.RowSimStat==1 then begin
+          IVrw.PeriodCode = Cacherw.VATCode;
+        end;
+        if Cacherw.RowSimStat==2 then begin
+          IVrw.SourceTransNr=FirstInRange(Cacherw.Objects,20);
+          IVrw.SourceType=StringToInt(Cacherw.VATCode);
+          IVrw.PerServRecSerNr=StringToLongInt(LastInRange(Cacherw.Objects,20));
+        end;
+        
+        IVrw.Spec = artname;
+        IVrw.CounterSerNr = -1;
+        if countresf then begin
+          IVrw.CounterSerNr = counterno;
+          // IVrw.CounterSerNr = CountResr.FlatCounterSerNr;
+        end;
+        IVrw.Quant = Cacherw.CredVal;
+        IVrw.Price = Cacherw.DebVal;
+        IVrw.PriceWORound = Cacherw.DebVal;
+        IVrw.QtyCoef = Cacherw.CredVal2;
+        // IVrw.FullPrice = Cacherw.FrRate;
+        IVrw.vRebate = Cacherw.CurCredVal;
+        MatRowPut(IVr,ivrow,IVrw);
+        IVVc_PasteQuant(IVr,ivrow,false,chsum,"");
+        chsum = IVDchrsum(IVr,ivrow);
+        if (chsum) then begin
+          IVDchsum(IVr,ivrow);
+        end;
+        MatRowGet(IVr,ivrow,IVrw);
+        if IVrw.Sum<>0 or Cacherw.RowSimStat==3 then begin
+          ivrow = ivrow + 1;
+          if countresf then begin
+            ClearRow(IVr,IVrw,1);
+            IVrw.ArtCode = "";
+            // IVrw.Spec = USetStr(1000431) & ": " & CountResr.CounterNo & ", " & USetStr(1000636) & ": " & ValToString(CountResr.StartVal,M45Val,"",".",0) & " - " & ValToString(CountResr.EndVal,M45Val,"",".",0);
+            FlatGroupr.Code=CountResr.FlatGroupCode;
+            if ReadFirstMain(FlatGroupr,1,true) then begin
+              IVrw.Spec=FlatGroupr.Comment;
+              MatRowPut(IVr,ivrow,IVrw);
+              ivrow = ivrow + 1;  
+            end;
+            // MatRowPut(IVr,ivrow,IVrw);
+            // ivrow = ivrow + 1;  
+          end;
+        end else begin
+          MatRowDelete(IVr,ivrow);
+        end;
+      end;
+    end;
+  end;
+  IVSumup(IVr,true);
+  if addprepayf then begin
+    AddUnUsedPrepaymentToIV(IVr);
+  end;
+
+  if !donotallowneg or IVr.Sum4>=0 then begin
+    if MatRowCnt(IVr)>0 then begin
+      checkIVr.SerNr = IVr.SerNr;
+      if !ReadFirstMain(checkIVr,1,true) then begin
+        if RecordStore(IVr,true) then begin
+          newInvNumber = IVr.SerNr;
+          IVCounter = IVCounter + 1;
+          // if updatePBIf == 2 then begin
+          //   FillIVSerNrPBIVc(IVr.SerNr,PBISerNr,ItemMark);
+          // end;
+          if MakeTR == 1 then begin
+            RecordCopy(oldIVr,IVr);
+            IVr.OKFlag = 1;
+            if RecordUpdate(oldIVr,IVr,true)==0 then begin
+              TRIVCounter = TRIVCounter + 1;
+            end;
+          end;
+          if NSr.AddPDFToInvoice!=0 then begin
+            OBS_CreateAndAttachPdfToIVVc(IVr,IVr,"InvForm",IVr.SerNr & ".pdf");
+          end;  
+        end;
+        RecordCopy(oldNAContractr,NAContractr);    
+        NAContractr.LastInvDate = IVr.InvDate;
+        if RecordUpdate(oldNAContractr,NAContractr,true)==0 then begin end;
+        // CreateRecordLink(IVr,curcomp,NAContractr,curcomp);
+        // CreateRecordLink(NAContractr,curcomp,IVr,curcomp);
+      end else begin
+        res = false;
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"ERROR cannot create invoice for customer " & IVr.CustCode & " creating invoice would overwrite another one");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+// function boolean CheckIfPrepBuildInvExists(Record RcVc RepSpec,var LongInt PBINr)
+// Begin
+//   Record PrepBuildInvVc PrepBuildInvr;
+//   boolean res, wloop;
+//   boolean TrHs;
+  
+//   res = false;
+//   TrHs = true;
+//   ResetLoop(PrepBuildInvr);
+//   PrepBuildInvr.BuildCode = RepSpec.f1;
+//   PrepBuildInvr.StartDate = RepSpec.sStartDate;
+//   PrepBuildInvr.EndDate = RepSpec.sEndDate;
+  
+//   while LoopBackKey("BuildStartDate",PrepBuildInvr,3,TrHs) begin
+//     if PrepBuildInvr.BuildCode!=RepSpec.f1 and PrepBuildInvr.StartDate!=RepSpec.sStartDate and PrepBuildInvr.EndDate!=RepSpec.sEndDate then begin
+//       TrHs = false;
+//     end else begin
+//       if RepSpec.flags[16]==PrepBuildInvr.AddToInv then begin
+//         PBINr = PrepBuildInvr.SerNr;
+//         TrHs = false;
+//         res = true;
+//       end;      
+//     end;
+//   end;
+    
+//   CheckIfPrepBuildInvExists = res;
+// return;
+// end;
+
+procedure PrintArraySums(string code,string name,boolean printdbl,var array string ItemMas,array val QtyMas,array val SumInclVATMas,
+                         var integer buildcnt,var array string totItemMas,var array val totQtyMas,var array val totSumInclVATMas,boolean invtobuildf)
+begin
+  integer rw,i;
+  record INVc INr;  
+  val TotalSum;
+  
+  TotalSum = 0;
+  rw = StringToInt(ItemMas[0]);
+  if rw==0 then begin
+    GoTo LPrintArraySums;
+  end;
+  
+  //If invoice is to erf then only add to total array and do not print anything
+  if invtobuildf then begin
+    buildcnt = buildcnt + 1;
+    for(i=1;i<=rw;i=i+1)begin
+      AddToUniqueMasive(totItemMas,totSumInclVATMas,ItemMas[i],SumInclVATMas[i],totQtyMas,QtyMas[i]);
+    end;
+    ItemMas[0] = 0;
+    GoTo LPrintArraySums;
+  end;
+  
+  buildcnt = buildcnt + 1;
+  
+  StartFormat(15);
+  if printdbl then begin
+    OutString(0,"dblBuildVc",code,false);
+  end else begin
+    OutString(0,"",code,false);
+  end;
+  OutString(100,"",name,false);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  StartFormat(15);
+  OutString(0,0,USetStr(1000645) & ":",false);
+  OutString(360,0,USetStr(1000492),true);
+  OutString(420,0,USetStr(1000490),true);
+  OutString(480,0,USetStr(1000489),true);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  StartFormat(15);
+  for(i=1;i<=rw;i=i+1)begin
+    OutString(20,"DblINVc",ItemMas[i],false);
+    INr.Code = ItemMas[i];
+    if ReadFirstMain(INr,1,true) then begin end;
+    OutString(80,0,INr.Name,false);
+    OutString(280,0,"",true);
+    OutString(360,0,INr.Unittext,true);
+    OutString(420,0,QtyMas[i],true);
+    OutString(480,0,SumInclVATMas[i],true);
+    EndFormat;
+    TotalSum = TotalSum + SumInclVATMas[i];
+    AddToUniqueMasive(totItemMas,totSumInclVATMas,ItemMas[i],SumInclVATMas[i],totQtyMas,QtyMas[i]);
+  end;
+  Black_Divider(0,1);
+  OutString(0,0,USetStr(1000446) & ":",false);
+  OutString(80,0,"",true);
+  OutString(280,0,"",true);
+  OutString(360,0,"",true);
+  OutString(420,0,"",true);
+  OutString(480,0,TotalSum,true);
+  EndFormat;
+  EndFormat;
+  
+  ItemMas[0] = 0;
+  
+LPrintArraySums:;
+  
+return;
+end;
+
+global
+procedure MSBuildServInvRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr,Flats2r;
+  record SMVc Cacher,FlatGroupCacher;
+  Record FlatGroupVc FlatGroupr;
+  record NAContractVc NAContractr;
+  Record CUVc CUr;
+  Row SMVc Cacherw;
+  record INVc INr;
+  // Record NApsSetBlock NApsSetr;
+  string 200 IntFormulaStr;
+  val TotalSum;
+  longint IVSerNr,IVCounter,PBINr,TRIVCounter;
+  integer i,rw,cnt,kcnt,buildcnt;
+  boolean wLoop,wLoopNAContractf,testf,classf;
+  string 255 tstr,prevFlatGroup;
+  array string 20 ItemMas,arrTransNr,totItemMas;
+  array string 100 ClassItemMas;
+  array val SumInclVATMas,QtyMas,ClassSumInclVATMas,ClassQtyMas;
+  array val totSumInclVATMas,totQtyMas;
+  array string 255 Error_array;
+
+  TRIVCounter = 0;
+  // blockload(NApsSetr);
+  
+  StartReportJob(USetStr(1000812));
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  rw = 1;
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  if nonblank(RepSpec.f1) then begin
+    HTBuild(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  // if nonblank(RepSpec.f2) then begin
+  //   HTFlat(RepSpec.f2,tstr);
+  //   Header(rw,tstr,1);
+  //   rw = rw + 1;
+  // end;
+  if nonblank(RepSpec.f3) then begin
+    HTMSClass(RepSpec.f3,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  if RepSpec.flags[1]==0 then begin
+    Header(rw,USetStr(1000813),1);
+  end else begin
+    Header(rw,USetStr(1000814),1);
+  end;
+  rw = rw + 1;
+  EndHeader;
+  
+  StartFormat(15);
+  if RepSpec.wholemonthf==0 or (GetYear(RepSpec.sStartDate)<>GetYear(RepSpec.sEndDate) or GetMonth(RepSpec.sStartDate)<>GetMonth(RepSpec.sEndDate)) then begin
+    OutString(0,0,USetStr(1163),false);
+    EndFormat;
+    GoTo LMSBuildServInvRn;
+  end;
+  
+  //find build if it is unknown but the flat is known
+  // if nonblank(RepSpec.f2) then begin
+  //   Flatsr.FlatCode = RepSpec.f2;
+  //   if ReadFirstMain(Flatsr,1,true) then begin end;
+  //   RepSpec.f1 = Flatsr.Code;
+  // end;
+  
+  // wLoop = nonblank(RepSpec.f1) or nonblank(RepSpec.f3);
+  wLoop = true;
+  if wLoop then begin
+    OutString(1,"dblMSBuildServInvMn",USetStr(1000643),true);
+    EndFormat;
+  end;
+  
+  classf = (nonblank(RepSpec.f3) and blank(Repspec.f1));
+  
+  ResetLoop(Buildr);
+  Buildr.Code = RepSpec.f1;
+  while LoopMain(Buildr,1,wLoop) begin
+    if nonblank(RepSpec.f1) and Buildr.Code<>RepSpec.f1 then begin
+      wLoop = false;
+    end else begin
+      testf = true;
+      if nonblank(Repspec.f3) and !SetInSet(RepSpec.f3,Buildr.Classification) then begin
+        testf = false;
+      end;
+      if Buildr.Closedf==1 then begin
+        testf = false;
+      end;
+      if Buildr.InvToBuild==0 then begin
+        testf = false;
+      end;
+      if testf then begin
+        ResetLoop(NAContractr);
+        wLoopNAContractf = true;
+        NAContractr.BuildCode = Buildr.Code;
+        While LoopKey("BuildCode",NAContractr,1,wLoopNAContractf) begin
+          if NAContractr.BuildCode != Buildr.Code then begin
+            wLoopNAContractf = false;
+          end else begin
+            testf = true;
+            if NAContractr.OKFlag==0 then begin
+              testf = false;
+            end;
+            if NAContractr.MergedInvFlag==1 then begin
+              testf = false;
+            end;
+            if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+              testf = false;
+            end;
+            if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+              testf = false;
+            end;
+            // if nonblank(RepSpec.f2) and NAContractr.FlatCode!=RepSpec.f2 then begin
+            //   testf = false;
+            // end;
+            if nonblank(NAContractr.FlatCode) then begin //tikai rēķini uz ēku
+              testf = false;
+            end;
+            // if testf and nonblank(NAContractr.FlatCode) then begin
+            //   Flatsr.FlatCode = NAContractr.FlatCode;
+            //   if !ReadFirstMain(Flatsr,1,true) then begin
+            //     testf = false;
+            //   end;
+            // end;
+            if testf then begin
+              IVSerNr = GetIVSerNrFromFlatCode(RepSpec.RegDate,RepSpec.flags[16],NAContractr);
+              if IVSerNr==-1 or RepSpec.flags[0]==0 then begin
+                if IVSerNr==-1 or RepSpec.flags[1]==0 then begin
+                  GenFlatServCache(RepSpec.sStartDate,RepSpec.sEndDate,Cacher,0,RepSpec.flags[16],RepSpec.flags[29],NAContractr);
+                  if RepSpec.flags[2]==1 then begin
+                    GenFlatServCacheIntSum(NAContractr,RepSpec.RegDate,Cacher,IVSerNr,IntFormulaStr,false);
+                  end;
+                  AddUnUsedPrepaymentToFlatServCache(NAContractr,RepSpec.RegDate,Cacher);
+                  CalcServInvCorrections(RepSpec,NAContractr,Cacher);
+                end else begin
+                   GetFlatServCacheFromIV(IVSerNr,Cacher,RepSpec.flags[16]);
+                end;
+                PrintBuildServCache(NAContractr,Cacher,IVSerNr,ItemMas,SumInclVATMas,
+                                   QtyMas,ClassItemMas,ClassSumInclVATMas,ClassQtyMas,
+                                   FlatGroupCacher,true,"");
+              end;
+            end;
+          end;
+        end;
+        PrintArraySums(Buildr.Code,Buildr.Address,true,ItemMas,QtyMas,SumInclVATMas,buildcnt,totItemMas,totQtyMas,totSumInclVATMas,Buildr.InvToBuild==1);
+      end;
+    end;
+  end;
+  
+  if buildcnt>1 then begin
+    PrintArraySums(UsetStr(1001290),"",false,totItemMas,totQtyMas,totSumInclVATMas,buildcnt,ItemMas,QtyMas,SumInclVATMas,false);
+  end;
+
+LMSBuildServInvRn:;
+  EndJob;
+  
+  return;
+end;
+

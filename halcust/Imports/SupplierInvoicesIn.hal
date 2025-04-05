@@ -1,0 +1,169 @@
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean PasteVendInVI(record VIVc,var string,Boolean);
+external inner procedure VIGetRate(var record VIVc);
+external inner procedure VICalcEReb(record VIVc);
+external inner function val CalculateVINettVal(record VIVc,Boolean);
+remote inner procedure VICalcVals(var record VIVc);
+external inner procedure VISumup(record VIVc,var val);
+remote inner procedure VIVc_PastePayDeal(var record VIVc);
+// ============================================== CUSTOM ==============================================
+
+global
+updating procedure supplierInvIn()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record VIVc VIVr;
+  record OPVc OPr;
+  row OPVc OPrw;
+  row VIVc VIVrw;
+
+  boolean isInvoice,isPayment,isCreditNote;
+
+  string 255 CreditorCode,CreditorName,DueDate,DocDate,DocType,DocNumber,PONumber,Net,Doc,Balance,Vat,Unclaim;
+  Integer NoError,TotalimportSum,rwcnt,rwcnt2;
+
+  val totalInvoice,totalReceipt,sum,ct,totalCredit; 
+
+  totalInvoice = 0;
+  totalReceipt = 0;
+  totalCredit = 0 ;
+   
+  DueDate = "15/02/2025";
+  while (NextImportLine(false)) begin
+    CreditorCode = ImportField;
+    CreditorName = ImportField;
+    DocDate = ImportField;
+    DocType = ImportField;
+    DocNumber = ImportField;
+    PONumber = ImportField;
+    Net = ImportField;
+    Vat = ImportField; 
+
+    isInvoice = false;
+    isPayment = false;
+    isCreditNote = false;
+
+    if (DocType == "INV") then begin isInvoice = true; end;
+    if (DocType == "PAY") then begin isPayment = true; end;
+    if (DocType == "CRN") then begin isCreditNote = true; end;
+
+    if (isCreditNote) then begin
+      VIVr.SerNr = NextSerNr("VIVc",CurrentDate,-1,false,"");
+      VIVr.VECode = "S" & CreditorCode; // jj
+      VIVr.VEName = CreditorName;
+      VIVr.PayDeal = "CN";
+      VIVr.InvType = 3;
+      VIVr.RcvDate = DocDate;
+      VIVr.CredMark = "C";
+      VIVr.InvDate = DocDate;
+      
+      // VIVr.VATVal = StringToVal(Vat,M4Val);
+      VIVr.TransDate = DocDate;
+      VIVr.DueDate = StringToDate(DueDate);
+      VIVr.RefStr = PONumber ; // Invoice number from katima
+      VIVr.CredInv = PONumber;
+      VIVrw.AccNumber = "80000";  //CREDITOR control
+      VIVrw.Sum = StringToVal(Net,M4Val);
+      VIVrw.qty = 1;
+      VIVrw.Comment = "Open Invoices Take-on";
+      // VIVrw.VATCode = "0";
+      VIVr.PayVal = VIVrw.Sum; 
+      VIVr.Objects = "DEPT10,HQ,HQLG,KMTC,SJ";
+      // VIVr.OKFlag = 1;
+      totalCredit = totalCredit + VIVrw.Sum ;
+      MatRowPut(VIVr,0,VIVrw);
+
+      VISumup(VIVr,ct);   
+      VICalcVals(VIVr);  
+
+      RecordStore(VIVr,true);
+    end;
+
+
+
+    if (isInvoice) then begin
+      RecordNew(VIVr);
+      VIVr.SerNr = NextSerNr("VIVc",CurrentDate,-1,false,"");
+      VIVr.VECode = "S" & CreditorCode; // jj
+      VIVr.VEName = CreditorName;
+      VIVr.InvoiceNr =  VIVr.SerNr ;
+      VIVr.RcvDate = DocDate;
+
+      CUr.Code = VIVr.VECode;
+      if (ReadfirstMain(CUr,1,true)) then begin
+          VIVr.PayDeal = CUr.VEPayDeal;
+      end;
+
+      if (Blank(VIVr.PayDeal)) then begin
+          RecordNew(CUr);
+          CUr.Code =  VIVr.VECode ;
+          CUr.Name = VIVr.VEName ;
+          CUr.VEPayDeal= "30";
+          CUr.VEType = 1; // supplier
+          CUr.CUType = 0; // customer
+          CUr.VECat = "SUPP";
+          CUr.CustCat = blankval;
+          VIVr.PayDeal = CUr.VEPayDeal;
+          RecordStore(CUr,false); 
+      end;
+
+      VIVr.InvDate = DocDate;
+      // VIVr.VATVal = StringToVal(Vat,M4Val);
+      VIVr.TransDate = DocDate;
+      // VIVr.DueDate = DueDate;
+      VIVr.RefStr = PONumber ; // Invoice number from katima
+      VIVr.Objects = "DEPT10,HQ,HQLG,KMTC,SJ";
+      VIVrw.AccNumber = "80000";  //CREDITOR control
+      VIVrw.Sum = StringToVal(Net,M4Val);
+      VIVrw.qty = 1;
+      VIVrw.Comment = "Open Invoices Take-on";
+      // VIVrw.VATCode = "0";
+      // VIVrw.VATVal = StringToVal(Vat,M4Val);
+      VIVr.PayVal = VIVrw.Sum; 
+      VIVc_PastePayDeal(VIVr);
+
+
+      VIVr.DueDate = StringToDate(DueDate);
+      // VIVr.OKFlag = 1;
+      totalInvoice = totalInvoice + VIVrw.Sum ;
+      MatRowPut(VIVr,0,VIVrw);
+
+      VISumup(VIVr,ct);   
+      VICalcVals(VIVr);  
+
+      RecordStore(VIVr,true); 
+    end;
+
+    if (isPayment) then begin
+      RecordNew(OPr);
+      OPr.SerNr = NextSerNr("OPVc",CurrentDate,-1,false,"");
+      OPr.PayMode = "C";
+      OPr.PayNumber = PONumber; // referencte
+      OPr.BankName = "Cash";
+      OPr.PayDate = StringToDate(DocDate);
+      OPr.TransDate = StringToDate(DocDate);
+
+      VIVr.RefStr = PONumber;
+
+      if (ReadFirstKey("RefStr", VIVr, 1, true)) then begin  
+        OPrw.VISerNr = VIVr.SerNr; 
+        OPrw.VECode = "S"&CreditorCode;
+        OPrw.Comment = "Payment For Invoice :" & VIVr.SerNr; // item.no
+        OPrw.APAcc = "80000" ; //creditors account
+        OPrw.RecVal = StringToVal(Net,M4Val); // SENT VAL value
+        OPrw.PInvOutstand = VIVr.PayVal; //open inv value
+        OPrw.PInvVal = VIVr.PayVal; // invoice value
+        OPrw.RecCurncy = "NAD";
+        OPrw.BankVal = VIVr.PayVal;
+        OPrw.BankCurncy = "NAD";
+        OPrw.Objects = "DEPT10,HQ,HQLG,KMTC,SJ";
+        OPr.CurPayVal = VIVr.PayVal; //withdrawn
+        OPr.PayCurCode = "NAD";
+        // OPr.DoneFlag = 1;
+        totalReceipt = totalReceipt + OPrw.RecVal;
+      MatRowPut(OPr,0,OPrw);
+      end;
+      RecordStore(OPr,true);  
+    end;
+  end;
+end;

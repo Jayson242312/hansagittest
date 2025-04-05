@@ -1,0 +1,2363 @@
+external inner function Boolean HasObjects();
+external inner function Boolean HasContactClassification();
+external inner function Boolean HasCategories();
+external inner function Boolean HasBase2();
+external inner function Boolean HasMultiCurrency();
+external inner function Boolean HasLimitedAccess();
+external inner function Boolean HasIntegratedNL();
+external inner function Boolean HasExtTax();
+external inner function Boolean HasLanguages();
+external inner function Boolean IsEnterprise();
+external inner function Boolean HasModSO();
+external inner function Boolean HasOfficialSerNr();
+external inner function Boolean HasModNL();
+external inner procedure RateField(real,real,real,string,integer,string,boolean,real,real,string,boolean);
+external inner function Boolean HasNumberSeries();
+external inner function Boolean HasModPL();
+external inner function Boolean HasModPO();
+//
+external inner function Boolean HasMultiCurrency();
+external inner function Boolean HasMultiLocations();
+external inner function Boolean HasModTS();
+external inner function Boolean HasApprovals();
+external inner function Boolean HasJewelleryInterface();
+external inner function Boolean HasVarieties();
+external inner function Boolean HasSerialNumbers();  //
+external inner function Boolean StandardHansa();
+external inner function Boolean HasAdvancedStock();
+external inner function Boolean HasSecondQuantity();
+external inner function Boolean HasAdvancedAccounting();
+external inner function Boolean HasPositions();
+external inner function Boolean HasQualityControl();
+
+
+
+//  =========================== DEED OF SALE ===========================
+
+// ===> D CLASS
+ 
+window DeedOfSaleDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  integer TileNr;
+  real h,v,vs;
+  WindowBegin("Deed Of Sale", DeedOfSaleDClass, CGview, -);
+  SetWRect(20,80,200,500);   
+  Sizeable(-1,-1,0,0); 
+  UseView(DeedOfSaleVc);
+  FormName(DeedOfSaleForm);
+  v=20; h=100;
+  EditField(h,v,50,"Code",St_i,SerNr,false,0);
+  EditField(h+=120,v,150,"Deed No.",Normal,DeedNo,false,0);
+  CheckBox(h+=460,v,0,"Ok",OKFlag);
+  v=60; h=100;
+  EditField(h,v,50,"Title",Normal,Title,false,TitleSClass);
+  EditField(h+=100,v,50,"Rep.",Normal,Rep,false,UserSClass);
+  EditField(h+=150,v,160,"Representative",ViewOnly,Representative,false,0);
+  EditField(h+=300,v,60,"Land Size",Normal,LandSize,false,0);
+  v=100; h=100;
+  EditField(h,v,50,"HoD",Normal,HoD,false,UserSClass);
+  EditField(h+125,v,150,"HoD Name",ViewOnly,HoDName,false,0);
+  EditField(h+=350,v,50,"Customer",Normal,Customer,false,CUSClass);
+  EditField(h+=100,v,160,"Name",ViewOnly,CustomerName,false,0);
+  v=140; h=100;
+  EditField(h,v,100,"Erf",Normal,BuildCode,false,BuildSClass);
+  EditField(h+=150,v,70,"Zoning",Normal,Zoning,false,ZoneSClass);
+  EditField(h+=130,v,70,"Township",Normal,Township,false,VVSuburbSClass);
+  EditField(h+=130,v,70,"Extension",Normal,Extension,false,ExtensionSClass);
+  EditField(h+=130,v,70,"Division",Normal,Division,false,DivisionSClass);
+  v=180; h=100;
+  EditField(h,v,610,"Address",Normal,Address,false,0);
+  v=220; h=100;
+  EditField(h+50,v,250,"Purch.Price (In Words)",Normal,PurchasePriceString,false,0);
+  EditField(h+=400,v,80,"Purch. Price",Normal,PurchasePriceVal,false,0);
+  // ButtonFrame(h+=110,v+=10,70,4,"VAT"); 
+  RadioButton(h+=110,v,0,0,"Excluding VAT",VatRadioButton);
+  RadioButton(h,v+25,1,0,"Including VAT",VatRadioButton);
+  // tilenr = 1;
+  // TileButton(1,"Notarial Registration"); 
+  // tilenr = 1;
+   v=270; h=60;
+   StaticText(h+50,v,"Notarial",true)
+  // Tile(tilenr,200,false,"1",Math2);
+  TextField(h+=20,v+=10,600,160,Math2,0);
+  EditField(h+=100,v+=175,70,"Purchaser Signed On",Normal,DatePurchaserSign,false,PasteCurDate);
+  EditField(h+=300,v,70,"Katima Signed On",Normal,DateKatimaSign,false,PasteCurDate);  
+  EndWindow;
+End;
+
+// ===> L CLASS
+window DeedOfSaleLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Deed Of Sale", DeedOfSaleLClass, CGmlist, -);
+  SpawnClass(DeedOfSaleDClass);
+  SetWRect(64,80,900,350);
+  Sizeable(-1,-1,0,0);
+  UseView(DeedOfSaleVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(14,14,"Code",SerNr,false,SerNr);
+  RlColKey(100,100,"Customer",Customer,false,Customer);
+  RlCol(210,210, "Customer Name",CustomerName,false);
+  RlColKey(350,350,"HoD",HoD,false,HoD);
+  RlCol(410,410, "HoD Name",HoDName,false); 
+  RlColKey(-300,300,"ERF",BuildCode,false,BuildCode);
+  RlColKey(-150,-150,"Zone",Zoning,false,Zoning);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+//  =========================== DEED OF DONATION ===========================
+
+// ===> D CLASS
+window DeedOfDonationDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Deed Of Donation", DeedOfDonationDClass, CGview, -);
+  SetWRect(20,80,800,400);
+  Sizeable(-1,-1,-1,0);
+  UseView(DeedOfDonationVc);
+  FormName(DeedOfDonationForm);
+  v=20; h=100;
+  EditField(h,v,50,"Code",St_i,SerNr,false,0);
+  EditField(h+=120,v,150,"Deed No.",Normal,DeedNo,false,0);
+  CheckBox(h+=460,v,0,"Ok",OKFlag);
+  v=60; h=100;
+  EditField(h,v,50,"Title",Normal,Title,false,TitleSClass);
+  EditField(h+=100,v,50,"Rep.",Normal,Rep,false,UserSClass);
+  EditField(h+=150,v,160,"Representative",ViewOnly,Representative,false,0);
+  EditField(h+=300,v,60,"Land Size",Normal,LandSize,false,0);
+  v=100; h=100;
+  EditField(h,v,50,"HoD",Normal,HoD,false,UserSClass);
+  EditField(h+125,v,150,"HoD Name",ViewOnly,HoDName,false,0);
+  EditField(h+=350,v,50,"Donee Code",Normal,DoneeCode,false,CUSClass);
+  EditField(h+=100,v,160,"Name",ViewOnly,DoneeName,false,0);
+  v=140; h=100;
+  EditField(h,v,100,"Erf",Normal,BuildCode,false,BuildSClass);
+  EditField(h+=150,v,70,"Zoning",Normal,Zoning,false,ZoneSClass);
+  EditField(h+=130,v,70,"Township",Normal,Township,false,VVSuburbSClass);
+  EditField(h+=130,v,70,"Extension",Normal,Extension,false,ExtensionSClass);
+  EditField(h+=130,v,70,"Division",Normal,Division,false,DivisionSClass);
+  v=180; h=100;
+  EditField(h,v,610,"Address",Normal,Address,false,0);
+  v=220; h=100;
+  EditField(h+50,v,250,"Donation (In Words)",Normal,DonationString,false,0);
+  EditField(h+=400,v,80,"Donation amount",Normal,DonationVal,false,0);
+  ButtonFrame(h+=110,v+=10,70,4,"VAT");
+  RadioButton(h,v,0,0,"Excluding VAT",VatRadioButton);
+  RadioButton(h,v+15,1,0,"Including VAT",VatRadioButton);
+  v=260; h=100;
+  EditField(h+50,v,70,"Donee Signed On",Normal,DateDoneeSign,false,PasteCurDate);
+  EditField(h+=230,v,70,"Katima Signed On",Normal,DateKatimaSign,false,PasteCurDate);
+  EndWindow;
+End;
+
+// ===> L CLASS
+window DeedOfDonationLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Deed Of Donation", DeedOfDonationLClass, CGmlist, -);
+  SpawnClass(DeedOfDonationDClass);
+  SetWRect(64,80,900,350); 
+  Sizeable(-1,-1,0,0);
+  UseView(DeedOfDonationVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(14,14,"Code",SerNr,false,SerNr);
+  RlColKey(100,100,"Donee",DoneeCode,false,DoneeCode);
+  RlCol(210,210, "Donee Name",DoneeName,false);
+  RlColKey(350,350,"HoD",HoD,false,HoD);
+  RlCol(410,410, "HoD Name",HoDName,false); 
+  RlColKey(-300,300,"ERF",BuildCode,false,BuildCode);
+  RlColKey(-150,-150,"Zone",Zoning,false,Zoning);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+
+//  =========================== LEASE AGREEMENT ===========================
+
+// ===> D CLASS
+window LeaseAgreementDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Lease Agreement", LeaseAgreementDClass, CGview, -);
+  SetWRect(20,80,800,400);
+  Sizeable(-1,-1,-1,0);
+  UseView(LeaseAgreementVc);
+  FormName(LeaseAgreementForm); //fff
+  v=20; h=80;
+  EditField(h,v,50,"Code",St_i,SerNr,false,0);
+  EditField(h+=360,v,65,"Start Date",Normal,LeaseStartDate,false,PasteCurDate);
+  EditField(h+=140,v,65,"End Date",Normal,LeaseEndDate,false,PasteCurDate);
+  CheckBox(h+=90,v,0,"Ok",OKFlag);
+  v=60; h=80;
+  EditField(h,v,50,"Title",Normal,Title,false,TitleSClass);
+  EditField(h+=100,v,50,"Rep.",Normal,Rep,false,UserSClass);
+  EditField(h+=150,v,220,"Representative",ViewOnly,Representative,false,0);
+  EditField(h+=320,v,60,"Land Size",Normal,LandSize,false,0);
+  v=100; h=80;
+  EditField(h,v,50,"HoD",Normal,HoD,false,UserSClass);
+  EditField(h+125,v,150,"HoD Name",ViewOnly,HoDName,false,0);
+  EditField(h+=370,v,50,"Customer",Normal,Customer,false,CUSClass);
+  EditField(h+=100,v,160,"Name",ViewOnly,CustomerName,false,0);
+  v=140; h=80;
+  EditField(h,v,100,"Erf",Normal,BuildCode,false,BuildSClass);
+  EditField(h+=150,v,70,"Zoning",Normal,Zoning,false,ZoneSClass);
+  EditField(h+=130,v,70,"Township",Normal,Township,false,VVSuburbSClass);
+  EditField(h+=150,v,70,"Extension",Normal,Extension,false,ExtensionSClass);
+  EditField(h+=130,v,70,"Division",Normal,Division,false,DivisionSClass);
+  v=180; h=80;
+  EditField(h,v,630,"Address",Normal,Address,false,0);
+  v=220; h=110;
+  EditField(h+40,v,250,"Lease Amount (In Words)",Normal,LeaseString,false,0);
+  EditField(h+=390,v,80,"Lease Amount",Normal,LeaseVal,false,0);
+  ButtonFrame(h+=110,v+=10,70,4,"VAT");
+  RadioButton(h,v,0,0,"Excluding VAT",VatRadioButton);
+  RadioButton(h,v+15,1,0,"Including VAT",VatRadioButton);
+  v=260; h=110;
+  EditField(h+40,v,65,"Leasee Signed On",Normal,DateLeaseSign,false,PasteCurDate);
+  EditField(h+=225,v,65,"Katima Signed On",Normal,DateKatimaSign,false,PasteCurDate);
+  EndWindow;
+End;
+
+// ===> L CLASS
+window LeaseAgreementLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Lease Agreement", LeaseAgreementLClass, CGmlist, -);
+  SpawnClass(LeaseAgreementDClass);
+  SetWRect(64,80,900,350); 
+  Sizeable(-1,-1,0,0);
+  UseView(LeaseAgreementVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(14,14,"Code",SerNr,false,SerNr);
+  RlColKey(100,100,"Customer",Customer,false,Customer);
+  RlCol(210,210, "Customer Name",CustomerName,false);
+  RlColKey(350,350,"HoD",HoD,false,HoD);
+  RlCol(410,410, "HoD Name",HoDName,false); 
+  RlColKey(-300,300,"ERF",BuildCode,false,BuildCode);
+  RlColKey(-150,-150,"Zone",Zoning,false,Zoning);
+  SearchField("Search");
+  EndWindow;
+end;
+
+// ===========================   ===========================
+
+// ERF Type Report
+window ERFTypeRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("ERF Type Report",ERFTypeRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"ERF Type",Normal,f1,false,BuildTypeSClass);
+	EndWindow;
+end;
+
+
+// Meter Classification Report
+window MeterClassificationsRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Meter Classification Report",MeterClassificationsRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=30;
+	EditField(h,v+=vs,100,"Classification Type",Normal,f1,false,CClassSClass);
+  StaticText(h-40,v+=vs+5,"Filter by just one classification",false);
+	EndWindow;
+end;
+
+
+// Custom Interest Invoicing
+window InterestInvoicingVClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Interest Invoicing (Custom)",InterestInvoicingVClass,CGMnt,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  CheckBox(h-50,v+=vs,0,"Include Interest for Interest Invoices",flags[0]);
+	EndWindow;
+end;
+
+
+// Maintenace - Calc. Average Readings
+window EstimateReadingsVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,v,vs;
+
+  WindowBegin("Create Estimate Readings",EstimateReadingsVClass,CGMnt,RcType);
+    SetWRect(100,100,400,220);
+    h=120; v=10;
+    EditField(h,v,82,"Contract",Normal,f1,false,NAContractSClass);
+  EndWindow;
+  return;
+end;
+
+
+// Estimation Report Class
+window MeterEstimationsRClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+  WindowBegin("Meter Estimation Report",MeterEstimationsRClass,CGRcW,RcType);
+    SetWRect(100,100,420,240);
+    h = 100;v=10;
+  EndWindow;
+  return;
+end;
+
+
+// Import Meter Reading - Specification Class
+window ReadingsIClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vm;
+  WindowBegin("Meter readings import",ReadingsIClass,CGIcW,RcType);
+    h=120; v=19;
+    vm = 20;
+    SetWRect(20,80,350,240); 
+    useview(RcVc);
+    EditFieldTL(h,v+=vm ,80,"Period Start Date",M4Date,Normal,50,d1,false,PasteCurDate);
+    EditFieldTL(h,v+=vm ,80,"Period End Date",M4Date,Normal,50,d2,false,PasteCurDate);
+    RadioButton(h,v+=vm,0,0,"Actual Readings",flags[0]);
+    RadioButton(h,v+=vm,1,0,"Estimate Readings",flags[0]);
+    // RadioButton(h,v+=vm,2,0,"Initial Readings(Only for Admin)",flags[0]);
+  EndWindow;
+  return;
+end;
+
+// ================================== METER HISTORY ==================================
+
+window MhistoryLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Meter readings history",MhistoryLClass,CGmlist,-);
+    SpawnClass(MhistoryDClass);
+    SetWRect(20,80,550,298);
+    Sizeable(-1,-1,0,0);
+    UseView(MHistoryVc);
+    RecordList(4,17,-21,-39);
+    RlColKey(74,74,"Meter ID",FlatCounterSerNr,false,FlatCounterSerNr);
+    RlColKey(140,140,"Meter No",MeterNo,false,MeterNo);
+    RlColKey(280,280,"Premise",FlatCode,false,FlatCode);
+    RlColKey(420,420,"Start date",StartDate,false,StartDate);
+    RlColKey(520,520,"End Date",EndDate,false,EndDate);
+    SearchField("Search");
+  EndWindow;
+  return;
+end;
+
+window MhistoryDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h1,h2,v,vs;
+  WindowBegin("Meter readings history",MhistoryDClass,CGview,-);
+    SetWRect(64,80,600,600);
+    UseView(MHistoryVc); 
+    h=120; h1=360; h2=450;
+    vs = 20;
+    EditField(h,v=6,100,"Meter ID.",ViewOnly,FlatCounterSerNr,false,FlatCounters2SClass);
+    EditField(h1,v=6,100,"Meter No",ViewOnly,MeterNo,false,0);
+    EditField(h,v+=vs,100,"Premise",ViewOnly,FlatCode,false,FlatsSClass);
+    EditField(h1,v,100,"Erf",ViewOnly,BuildCode,false,BuildSClass);
+
+    EditField(h,v+=vs,100,"Start Date",ViewOnly,StartDate,false,PasteCurDate);
+    EditField(h1,v,100,"End Date",ViewOnly,EndDate,false,PasteCurDate);
+    
+    EditField(h,v+=vs,100,"Old Reading",ViewOnly,oldReading,false,0);
+    EditField(h1,v,100,"Old Consumption",ViewOnly,oldConsumption,false,0);
+    EditField(h,v+=vs,100,"Prev Reading",ViewOnly,prevReading,false,0);
+    EditField(h1,v,100,"Prev Consumption",ViewOnly,prevConsumption,false,0);
+    EditField(h,v+=vs,100,"Curr. Reading",ViewOnly,currReading,false,0);
+    EditField(h1,v,100,"Curr. Consumption",ViewOnly,currConsumption,false,0);
+    EditField(h,v+=vs,100,"Average",ViewOnly,Average,false,0);
+    EditField(h1,v,100,"Contract Nr.",Normal,ContractNr,false,NAContractSClass);
+  EndWindow;
+  return;
+end;
+
+
+
+// ========================== REPORT -> CUSTOMERS ==========================
+
+window CustAccountsAgedRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Credit Agreement Accounts Report",CustAccountsAgedRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EditField(h,v+=vs,100,"Debtors A/C",Normal,f3,false,AccSClass);
+	EndWindow;
+end;
+
+window CustLeviesAgedRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Customer Levies",CustLeviesAgedRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window CustPaymentsAgedRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Customer Payments",CustPaymentsAgedRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window CustLevyVsPaymentRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Customer Levies Vs Payments",CustLevyVsPaymentRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window CustUnpaidWaterLeviesRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Customer Unpaid Water Levies",CustUnpaidWaterLeviesRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Levy Item",Normal,f2,false,INSClass);
+	EndWindow;
+end;
+
+window CustPaymentsByInvoiceRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Customer Payments By Invoice Date",CustPaymentsByInvoiceRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+  PeriodField(h-25,v+=vs,"Period");
+	EditField(h,v+=vs+5,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Category",Normal,f2,false,CCatSClass);
+	EndWindow;
+end;
+
+
+// ========================== REPORT -> LEVIES ==========================
+
+window LeviesByItemRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Levies By Item",LeviesByItemRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window LeviesByItemCustRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Levies By Item Per Customer",LeviesByItemCustRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window LeviesBySuburbRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Levies by Suburb",LeviesBySuburbRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Suburb",Normal,f1,false,VVSuburbSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window LeviesByCustTypeRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Levies by Customer Type",LeviesByCustTypeRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer Type",Normal,f1,false,AccountTypeSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window LevyVsPaymentByItemRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Levies Vs Payments By Item",LevyVsPaymentByItemRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+// ========================== REPORT -> PAYMENTS ==========================
+
+window PaymentsByItemRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Payments By Item",PaymentsByItemRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer",Normal,f1,false,CUSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window PaymentBySuburbRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Payments by Suburb",PaymentBySuburbRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Suburb",Normal,f1,false,VVSuburbSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+window PaymentByCustTypeRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Payments by Customer Type",PaymentByCustTypeRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EditField(h,v+=vs,100,"Customer Type",Normal,f1,false,AccountTypeSClass);
+  EditField(h,v+=vs,100,"Date (To)",Normal,f2,false,PasteCurDate);
+	EndWindow;
+end;
+
+
+//  ======================== ACCOUNT TRANSFER ========================
+
+// ===> D CLASS
+window AccountTransferDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Account Transfer", AccountTransferDClass, CGview, -);
+  SetWRect(20,80,800,400);
+  Sizeable(-1,-1,-1,0);
+  UseView(AccountTransferVc);
+  v=20; h=120;
+  EditField(h,v,50,"Code",ViewOnly,SerNr,false,0);
+  EditField(h+=140,v,70,"Contract Nr.",Normal,ContractNr,false,NAContractSClass);
+  EditField(h+=160,v,70,"New Contract",ViewOnly,ContractNrNew,false,NAContractSClass);
+  EditField(h+=150,v,70,"Trans. Date",ViewOnly,TransferDate,false,PasteCurDate);
+  CheckBox(h+=100,v,0,"Completed",OKFlag);
+  v=45; h=120;
+  EditField(h,v,70,"Erf",ViewOnly,BuildCode,false,BuildSClass);
+  EditField(h+=140,v,70,"Premise",ViewOnly,FlatCode,false,FlatsSClass);
+  EditField(h+=140,v,70,"Meter ID",ViewOnly,MeterID,false,FlatCounters2SClass);
+  v=65; h=120;
+  EditField(h,v,70,"From (Client)",ViewOnly,CustCodeFrom,false,CUSClass);
+  EditField(h+=140,v,210,"Name",ViewOnly,CustNameFrom,false,0);
+  v=85; h=120;
+  EditField(h,v,70,"To (Client)",Normal,CustCodeTo,false,CUSClass);
+  EditField(h+=140,v,210,"Name",ViewOnly,CustNameTo,false,0);
+  EndWindow;
+End;
+
+// ===> L CLASS
+window AccountTransferLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Account Transfer", AccountTransferLClass, CGmlist, -);
+  SpawnClass(AccountTransferDClass);
+  SetWRect(64,80,610,350);
+  Sizeable(-1,-1,0,0);
+  UseView(AccountTransferVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(14,14,"Code",SerNr,false,SerNr);
+  RlColKeyTL(64,64,"OK",M4Mark,OKFlag,false,OKFlag);
+  RlColKey(104,104,"Contract Nr.",ContractNr,false,ContractNr);
+  RlColKey(180,180,"From",CustNameFrom,false,CustNameFrom);
+  RlColKey(340,340,"To",CustNameTo,false,CustNameTo);
+  RlColKey(504,504,"Date",TransferDate,false,TransferDate);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+
+//  ======================== CLEARANCE CERTIFICATE ========================
+
+// ===> D CLASS
+window ClearanceCertDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Clearance Certificate", ClearanceCertDClass, CGview, -);
+  SetWRect(20,80,800,400);
+  Sizeable(-1,-1,-1,0);
+  UseView(ClearanceCertVc);
+  FormName(PrintClearanceCertDClass);
+  v=20; h=120;
+  EditField(h,v,70,"Code",ViewOnly,SerNr,false,0);
+  EditField(h+=120,v,70,"From",Normal,PeriodStartDate,false,PasteCurDate);
+  EditField(h+=130,v,70,"To",Normal,PeriodEndDate,false,PasteCurDate);
+  EditField(h+=170,v,70,"Last Updated",ViewOnly,LastUpdated,false,PasteCurDate);
+  CheckBox(h+=130,v,0,"Ok",OKFlag);
+  v=45; h=120;
+  EditField(h,v,70,"Contract Nr.",Normal,ContractNr,false,NAContractSClass);
+  EditField(h+=120,v,70,"Erf",ViewOnly,BuildCode,false,BuildSClass);
+  EditField(h+=130,v,70,"Premise",ViewOnly,FlatCode,false,FlatsSClass);
+  EditField(h+=170,v,70,"User",ViewOnly,User,false,0);
+  CheckBox(h+=130,v,0,"Transferred",OKFlag2);
+  v=65; h=120;
+  EditField(h,v,70,"Client ID",ViewOnly,CustCode,false,CUSClass);
+  EditField(h+=120,v,200,"Client",ViewOnly,CustName,false,0);
+  v=85; h=120;
+  EditField(h,v,160,"Lawyer/Rep.",Normal,LawyerName,false,0);
+  EditField(h+=200,v,120,"Tel.",Normal,LawyerPhone,false,0);
+  v=105; h=170;
+  EditField(h,v+=22,80,"Outstanding",Normal,PrevOutstanding,false,0);
+  EditField(h+210,v,80,"Application Fees",Normal,AppFees,false,0);
+  EditField(h,v+=22,80,"Interest on Outstanding",Normal,InterestOnOutstanding,false,0);
+  EditField(h+210,v,80,"Service Fees",Normal,ServiceFees,false,0);
+  EditField(h,v+=22,80,"On Acc.Payments",Normal,OnAccPayment,false,0);
+  EditField(h,v+=22,80,"Total Payable",Normal,TotalOpen,false,0);
+  v=106; h=250;
+  CheckBox(h+60,v+=88,0,"Totals Payable is Fully Paid",CBTotalDue);
+  //
+  
+  SpecialMenu("1. Generate Invoice - Interest on Outstanding Payments",'',0,"OpenCertificateInterestInvoicesm");
+  SpecialMenu("2. Generate Invoice - Application Fee",'',0,"OpenCertificateFeeInvoicesm");
+  SpecialMenu("3. Generate Invoice - Contract Services in Advance",'',0,"OpenCertificateServiceInvoicesm");
+  SpecialMenu("4. View Client Status",'e',0,"ClientFinStatusm1");
+  EndWindow;
+End;
+
+// ===> L CLASS
+window ClearanceCertLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Clearance Certificate", ClearanceCertLClass, CGmlist, -);
+  SpawnClass(ClearanceCertDClass);
+  SetWRect(64,80,610,350);
+  Sizeable(-1,-1,0,0);
+  UseView(ClearanceCertVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(14,14,"Code",SerNr,false,SerNr);
+  RlColKeyTL(70,70,"OK",M4Mark,OKFlag,false,OKFlag);
+  RlColKey(104,104,"Contract Nr.",ContractNr,false,ContractNr);
+  RlColKey(180,180,"Customer",CustName,false,CustName);
+  RlColKey(340,340,"Erf",BuildCode,false,BuildCode);
+  RlColKey(450,450,"Open",TotalOpen,false,TotalOpen);
+  SearchField("Search");
+  EndWindow;
+end;
+
+//  =================== BLOCK CLEARANCE CERTIFICATE PERIOD WINDOW ===================
+
+window ComplianceCertTClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+	WindowBegin("Compliance Certificate Period Settings",ComplianceCertTClass,CGSbl,-);
+	SetWRect(64,80,400,130);
+	SetBlid(ComplianceCertBlock);
+	v=6;h=180;vs=20;
+	Sizeable(-1,-1,0,0);
+	EditField(h,v,50,"Period (No. of months)",Normal,Months,false,0);
+	EditField(h,v+22,50,"Certificate Fee Charge",Normal,CertificateFeeItem,false,INSClass);
+	EndWindow;
+end;
+
+
+
+// ======================= METER READING ROUTES ENTRY =======================
+
+window ReaderEntryLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Meter Books", ReaderEntryLClass, CGmlist, -);
+  SpawnClass(ReaderEntryDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(ReaderEntryVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",SerNr,false,SerNr);
+  RlColKey(124,124,"Book No.",BookNo,false,BookNo);
+  RlCol(240,240,"StartDate",PeriodStartDate,false);
+  RlCol(360,360,"EndDate",PeriodEndDate,false);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window ReaderEntryDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Meter Books", ReaderEntryDClass, CGview, -);
+  SetWRect(20,80,800,400);
+  Sizeable(-1,-1,-1,0);
+  UseView(ReaderEntryVc);
+  v=10; h=70;
+  Tile(0,87,false,"",SerNr);
+  EditField(h,v,70,"Code",St_i,SerNr,false,0);
+  EditField(h+=150,v,75,"StartDate",ViewOnly,PeriodStartDate,false,PasteCurDate);
+  EditField(h+=150,v,75,"EndDate",ViewOnly,PeriodEndDate,false,PasteCurDate);
+
+  EditField(h+=140,v,70,"Book No.",Normal,BookNo,false,0);
+  EditField(h+=140,v,80,"Reader",Normal,Person,false,UserSClass);
+  v=20;
+  TileButton(1,"Reader Meter Readings");
+  Tile(1,100,false,"1",-);
+  MatrixBegin(4,v,-50,-25,-,1000);
+    Flip(0);
+    MatCol(1,20,"Meter ID.",0,MeterID,false,FlatCounters2SClass);
+    MatCol(1,80,"Alpha No.",0,AlphaNo,false,0);
+    MatCol(1,150,"Meter No.",0,MeterNo,false,0);
+    Flip(1);
+    MatCol(1,280,"Erf No.",0,SeqNo,false,0);
+    MatCol(1,350,"Cust. No.",0,CustCode,false,CUSClass);
+    MatCol(1,430,"Address",0,Address,false,0);
+    MatCol(1,550,"Last Reading",0,PrevReading,false,0);
+    Flip(2);
+    MatCol(1,280,"Customer",0,Customer,false,0);
+    MatCol(1,400,"Last Reading Period",0,LatestReadingPeriod,false,0);
+    MatCol(1,520,"New Reading",0,CurrReading,false,0);
+    MatCol(1,620,"Date Of Reading",0,ReadingDate,false,PasteCurDate);
+  EndMatrix;
+  vs = 20;
+  v = 28;
+  VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  SpecialMenu("Export Meter Entries",' ',1,"ExportMeterEntryDsm");
+
+  EndWindow;
+End;
+
+
+
+// =======================  EXTENSION =======================
+
+window ExtensionDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Extension Details", ExtensionDClass, CGview, -);
+  SetWRect(64,80,570,180);
+  UseView(ExtensionVc);
+  vs = 20; h = 80;
+  EditField(h,v=6,120,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,-50,"Name",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window ExtensionLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Extension", ExtensionLClass, CGmlist, -);
+  SpawnClass(ExtensionDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(ExtensionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window ExtensionSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Regions", ExtensionSClass, CGslist, -);
+  SpawnClass(ExtensionDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(ExtensionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= DIVISION =======================
+
+window DivisionLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Division", DivisionLClass, CGmlist, -);
+  SpawnClass(DivisionDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(DivisionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Division",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window DivisionDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Division", DivisionDClass, CGview, -);
+  SetWRect(64,80,570,180);
+  UseView(DivisionVc);
+  vs = 20; h = 80;
+  EditField(h,v=6,120,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,-50,"Division",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window DivisionSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Division", DivisionSClass, CGslist, -);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(DivisionDClass);
+  UseView(DivisionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Division",Name,false,Name);
+  EndWindow;
+end;
+
+
+// ======================= SUBURB =======================
+
+window VVSuburbLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Suburb", VVSuburbLClass, CGmlist, -);
+  SpawnClass(VVSuburbDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(VVSuburbVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Suburb",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window VVSuburbDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Suburb Details", VVSuburbDClass, CGview, -);
+  SetWRect(64,80,570,180);
+  UseView(VVSuburbVc);
+  vs = 20; h = 80;
+  EditField(h,v=6,120,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,-50,"Suburb",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window VVSuburbSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Suburbs", VVSuburbSClass, CGslist, -);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(VVSuburbDClass);
+  UseView(VVSuburbVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Suburb",Name,false,Name);
+  EndWindow;
+end;
+
+
+// =======================  REGION =======================
+
+window VVRegionDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Region Details", VVRegionDClass, CGview, -);
+  SetWRect(64,80,570,180);
+  UseView(VVRegionVc);
+  vs = 20; h = 80;
+  EditField(h,v=6,120,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,-50,"Name",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window VVRegionLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Regions", VVRegionLClass, CGmlist, -);
+  SpawnClass(VVRegionDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(VVRegionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window VVRegionSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Regions", VVRegionSClass, CGslist, -);
+  SpawnClass(VVRegionDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(VVRegionVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= TOWN =======================
+
+window VVTownDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Town Details", VVTownDClass, CGview, -);
+  SetWRect(64,80,570,180);
+  UseView(VVTownVc);
+  vs = 20; h = 80;
+  EditField(h,v=6,120,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,-50,"Name",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window VVTownLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Towns", VVTownLClass, CGmlist, -);
+  SpawnClass(VVTownDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(VVTownVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window VVTownSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Towns", VVTownSClass, CGslist, -);
+  SpawnClass(VVTownDClass);
+  SetWRect(64,80,509,298);
+  Sizeable(-1,-1,0,0);
+  UseView(VVTownVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(124,124,"Name",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= ZONE TYPE =======================
+
+window ZoneLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Zone Setting",ZoneLClass,CGmlist,-);
+  SpawnClass(ZoneDClass);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(ZoneVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Zone",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window ZoneDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Zone Setting",ZoneDClass,CGview,-);
+  SetWRect(20,80,465,298);
+  UseView(ZoneVc);
+  h=120; v=6; vs=20;
+  EditField(h,v,100,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,300,"Zone",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window ZoneSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Zone Setting",ZoneSClass,CGslist,-);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(ZoneVc);
+  SpawnClass(ZoneDClass);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Zone",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= OWNER TYPE =======================
+
+window OwnerTypeLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Owner Type",OwnerTypeLClass,CGmlist,-);
+  SpawnClass(OwnerTypeDClass);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(OwnerTypeVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Owner Type",Name,false,Name);
+  SearchField("Search");
+EndWindow;
+end;
+
+window OwnerTypeDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Owner Type",OwnerTypeDClass,CGview,-);
+  SetWRect(20,80,465,298);
+  UseView(OwnerTypeVc);
+  h=120; v=6; vs=20;
+  EditField(h,v,100,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,300,"Owner Type",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window OwnerTypeSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Owner Type",OwnerTypeSClass,CGslist,-);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(OwnerTypeDClass);
+  UseView(OwnerTypeVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Owner Type",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= ACCOUNT STATUS =======================
+
+window AccountStatusLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Owner Type",AccountStatusLClass,CGmlist,-);
+  SpawnClass(AccountStatusDClass);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(AccountStatusVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Acc. Status",Name,false,Name);
+  SearchField("Search");
+EndWindow;
+end;
+
+window AccountStatusDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Account Status",AccountStatusDClass,CGview,-);
+  SetWRect(20,80,465,298);
+  UseView(AccountStatusVc);
+  h=120; v=6; vs=20;
+  EditField(h,v,100,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,300,"Acc. Status",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window AccountStatusSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Account Status",AccountStatusSClass,CGslist,-);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(AccountStatusDClass);
+  UseView(AccountStatusVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Acc. Status",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= ACCOUNT TYPE =======================
+
+window AccountTypeLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Customer Type",AccountTypeLClass,CGmlist,-);
+  SpawnClass(AccountTypeDClass);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(AccountTypeVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Customer Type",Name,false,Name);
+  SearchField("Search");
+EndWindow;
+end;
+
+window AccountTypeDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Customer Type",AccountTypeDClass,CGview,-);
+  SetWRect(20,80,465,298);
+  UseView(AccountTypeVc);
+  h=120; v=6; vs=20;
+  EditField(h,v,100,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,300,"Customer Type",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window AccountTypeSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Customer Type",AccountTypeSClass,CGslist,-);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(AccountTypeDClass);
+  UseView(AccountTypeVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Customer Type",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// ======================= TITLE SETTINGS =======================
+
+window TitleLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Titles",TitleLClass,CGmlist,-);
+  SpawnClass(TitleDClass);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  UseView(TitleVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Titles",Name,false,Name);
+  SearchField("Search");
+EndWindow;
+end;
+
+window TitleDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Titles",TitleDClass,CGview,-);
+  SetWRect(20,80,465,298);
+  UseView(TitleVc);
+  h=120; v=6; vs=20;
+  EditField(h,v,100,"Code",Normal,Code,false,0);
+  EditField(h,v+=vs,300,"Titles",Normal,Name,false,0);
+  EndWindow;
+end;
+
+window TitleSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Titles",TitleSClass,CGslist,-);
+  SetWRect(64,80,609,298);
+  Sizeable(-1,-1,0,0);
+  SpawnClass(TitleDClass);
+  UseView(TitleVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(300,300,"Titles",Name,false,Name);
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+// Deposit Report
+window DEORClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vm,vs;
+  WindowBegin("Specify Deposit Book",DEORClass,CGRcW,RcType);
+  SetWRect(20,80,400,300);
+  v= 6; vs = 20;
+  PeriodField(130,v, "Period");
+  EditFieldTL(130,v+=vs, 30,"Payment Mode",M4UStr,Normal,2,f1,false,PMSClass);
+  EditFieldTL(130,v+=vs, 100,"Customer",M4UStr,Normal,41,f2,false,AllCUSClass);
+  if (HasContactClassification) then begin
+    EditFieldTL(130,v+=vs,150,"Customer Class.",M4UStr,Normal,30,f5,false,CClassSClass);
+  end;
+  if (HasCategories) then begin
+    EditFieldTL(130,v+=vs,50,"Cust. Category",M4UStr,Normal,5,f4,false,CCatSClass);
+  end;  
+  if (HasObjects) then begin
+    EditFieldTL(130,v+=vs ,100,"Tag/Object",M4UStr,Normal,30,LastAcc,false,ObjSClass);
+  end;
+  EditFieldTL(130,v+=vs, 100,"Cashier",M4Str,Normal,30,Stext,false,0);
+  EditFieldTL(130,v+=vs, 100,"Bookkeeper",M4Str,Normal,30,ObjStr,false,0);
+  ButtonFrame(h=40,vm=(v+=41),130,2,"Specify");
+  CheckBox(h,v,0,"OKed",flags[1]);
+  CheckBox(h,v+=16,0,"Not OKed",flags[0]);
+  ButtonFrame(h=200,vm=(v+=-16),130,2,"Function");
+  RadioButton(h,v=(v+=-2),0,0,"Overview",ArtMode);
+  RadioButton(h,v+=16,1,0,"Detailed",ArtMode);
+  CheckBox(40,v+=32,0,"Per day",flags[2]);
+  if (HasMultiCurrency or HasBase2) then begin
+    CheckBox(40,v+=16,0,"Show Currency Amounts",flags[3]);
+  end;
+  EndWindow;
+end;
+
+
+
+window CLInDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,l,t,v,vs;
+  Integer tilenr;
+  
+  WindowBegin("Cash In",CLInDClass,CGview,-);
+  SetWRect(20,80,700,550);
+  UseView(CLInVc);
+  ActiveFieldOnNew("TransDate");
+
+
+  FormName(PrintCLInVcDClass);
+
+//  Sizeable(-1,-1,0,0);
+  vs = 20; h = 130; h2=h+200; h3 = 472; v=6;
+  if (HasOfficialSerNr and HasLocalization("POL")==false) then begin
+    Tile(0,70,false,"",SerNr);
+  end else begin
+    Tile(0,50,false,"",SerNr);
+  end;
+  if (HasNumberSeries) then begin
+    EditField(h,v,80,"No.",St_i,SerNr,false,TSerSClass);
+  end else begin
+    EditField(h,v,80,"No.",St_i,SerNr,false,0);
+  end;
+  EditField(h2,v,82,"Date",Normal,TransDate,false,PasteCurDate);
+  if (HasOfficialSerNr and HasLocalization("POL")==false) then begin
+    EditField(h,v+=vs,80,"Official No.",Normal,OfficialSerNr,false,LegalCLInNrSClass);
+  end;
+  tilenr = 1;
+  TileButton(tilenr,"Amounts");  tilenr = tilenr + 1;
+  if (HasMultiCurrency or HasBase2) then begin
+    TileButton(tilenr,"Currency"); tilenr = tilenr + 1;
+  end;
+  TileButton(tilenr,"Payments"); tilenr = tilenr + 1;
+  CheckBox(-100,v,0,"OK",OKFlag);
+  tilenr = 1;
+  Tile(tilenr,300,false,tilenr,PayMode); tilenr = tilenr + 1;
+  EditField(h,v=6,30,"Pay Mode",Normal,PayMode,false,PMSClass);
+  EditField(h2,v,50,"Person",Normal,Person,false,UserSClass);
+  CheckBox(400,v,0,"Info on Trans.",ARonTR);
+  EditField(h,v+=vs,120,"Expense A/C",Normal,CorspCode,false,CLCorspSClass);
+  EditField(h2,v,-20,"Comment",Normal,CorspComment,false,0);
+  EditField(h,v+=vs,120,"Customer",Normal,CUCode,false,CUSClass);
+  if (HasModNL) then begin
+    EditField(h2,v,-20,"Reference",Normal,RefStr,false,0);
+  end;
+  EditField(h,v+=vs,-20,"Name",Normal,CUName,false,0);
+  EditField(h,v+=vs,-20,"Address",Normal,Addr0,false,0);
+  EditField(h,v+=vs,-20,"",Normal,Addr1,false,0);
+  EditField(h,v+=vs,-20,"",Normal,Addr2,false,0);
+  EditField(h,v+=vs,-20,"",Normal,Addr3,false,0);
+  EditField(h,v+=vs,-20,"",Normal,Addr4,false,0);
+  EditField(h,v+=vs,-20,"Specification",Normal,Comment,false,0);
+  if (HasObjects) then begin
+    EditField(h,v+=vs,-20,"Tags/Objects",Normal,Objects,false,ObjSClass);
+  end;
+//  CheckBox(20,-20,0,"OK",OKFlag);
+  EditField(h,v+=vs,100,"Total",Normal,Total,true,0);
+  if (HasLocalization("POL")==false) then begin
+    EditField(h2,v,50,"#VAT# Code",Normal,VATCode,false,VATCodeSClass);
+  end;
+  if (HasLanguages) then begin
+    EditField(h3,v,50,"Language",Normal,LangCode,true,LangSClass);
+  end;
+  EditField(h,v+=vs,100,"Net",Normal,NetVal,true,0);
+  if (HasLocalization("POL")==false) then begin
+    EditField(h2,v,50,"#VAT#",Normal,VATVal,true,0);
+  end;
+  if (HasExtTax) then begin
+    EditField(h3,v,50,"Tax",Normal,TAX1Sum,true,0);
+  end;
+  if (HasMultiCurrency or HasBase2) then begin
+    Tile(tilenr,70,false,tilenr,CurncyCode); tilenr = tilenr + 1;
+    vs = 20;
+    EditField(h=110,v=6,50,"Currency",Normal,CurncyCode,false,CurncyCodeSClass);
+    if (HasMultiCurrency) then begin
+      if (HasBase2) then begin
+        EditField(h,v+vs,50,"Base Currency 1",Normal,BaseRate1,true,0);
+      end else begin
+        EditField(h,v+vs,50,"Base Currency",Normal,BaseRate1,true,0);
+      end;
+      if (HasBase2) then begin
+        EditField(h,v+(vs*2),50,"Base Currency 2",Normal,BaseRate2,true,0);
+      end;  
+      EditField(h2=295,v,50,"Rate",Normal,FrRate,true,0);
+      if (HasBase2) then begin
+        RateField(h3=360,v,50,":",Normal,"ToRateB1",true,h3+60,v+14,"Base Currency 1",false);
+        RateField(h3,v+=vs,50,":",Normal,"ToRateB2",true,h3+60,v+14,"Base Currency 2",false);
+      end else begin
+        RateField(h3=360,v,50,":",Normal,"ToRateB1",true,h3+60,v+14,"Base Currency",false);
+      end;
+    end else begin
+      EditField(h,v+=vs,50,"Base Currency 1",Normal,BaseRate1,true,0);
+      EditField(h,v+=vs,50,"Base Currency 2",Normal,BaseRate2,true,0);
+    end;
+  end;
+  Tile(tilenr,200,false,tilenr,Math); tilenr = tilenr + 1;
+  h = 8; v=24; l = 35;
+  MatrixBegin(4,v,-50,-10,-,99);
+  Flip(1);
+  MatTypedRow(stp);
+  MatCol(t=1,h=34,"Type",0,Type,false,SetSClass);
+  if (HasLocalization("POL") and IsStandardProduct) then begin
+    MatCol(t,h+=120,"Number",0,TransOfficialSerNr,false,ARSClass);
+  end else begin
+    MatCol(t,h+=120,"Number",0,TransNr,false,ARSClass);
+  end;
+  if (HasModSO) then begin
+    MatCol(t,h+=70,"Order",0,OrderNr,false,ORSClass);
+  end;
+  if (HasObjects) then begin
+    MatCol(t,h+=70,"Tags/Objects",0,Objects,false,ObjSClass);
+  end;
+  MatCol(t,-180,"Company",ViewOnly,Company,false,0);
+  MatCol(t,-80,"Sum",0,Sum,true,0);
+  MatText(t=2,h=34,"Set. Disc.",true);
+  MatCol(t,h+=80,"",0,Type,false,0);
+  if (HasLocalization("POL") and IsStandardProduct) then begin
+    MatCol(t,h+=200,"",0,TransOfficialSerNr,false,0);
+  end else begin
+    MatCol(t,h+=200,"",0,TransNr,false,0);
+  end;
+  MatCol(t,-180,"Company",ViewOnly,Company,false,0);
+  MatCol(t,-80,"Sum",0,Sum,true,0);
+  Flip(2);
+  MatCol(t=1,h=34,"Type",0,Type,false,SetSClass);
+  MatCol(t,h+=120,"Expense A/C",ViewOnly,CorspCode,false,CLCorspSClass);
+  MatCol(t,h+=80,"Pay. Mode",Normal,PayMode,false,PMSClass);
+  MatCol(t,h+=70,"Comment",0,Comment,false,0);
+  MatText(t=2,h=34,"Set. Disc.",true);
+  MatCol(t,h+=120,"Expense A/C",ViewOnly,CorspCode,false,CLCorspSClass);
+  MatCol(t,h+=70,"Comment",0,Comment,false,0);
+  InsertRowTest;
+  DeleteRowTest;
+  EndMatrix;
+  vs = 22;
+  v=v+ 1; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  if (HasIntegratedNL) then begin
+    SpecialMenu("Open #NL# Transaction",'t',0,"OpenTRFromCLIn");
+  end;
+  if (IsEnterprise) then begin
+    if (UserCanReport("CLInColIVRn","",true)) then begin
+      SpecialMenu("Show Invoices",' ',0,"ShowColIVDsm");
+    end;
+  end;
+  EndWindow;
+end;
+
+
+window CLInLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Deposit In",CLInLClass,CGmlist,-);
+  SpawnClass(CLInDClass);
+  Sizeable(-1,-1,0,0);
+  SetWRect(64,80,600,298);
+  UseView(CLInVc);
+  FormName(PrintCLInL);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Ser. No.",SerNr,false,SerNr);
+  RlColKey(84,84,"OK",OKFlag,false,OKFlag);
+  RlColKey(114,114,"Date",TransDate,false,TransDate);
+  RlColKey(194,194,"Specification",Comment,false,Comment);
+  RlCol(-100,-100,"Sum",Total,true);
+  if (HasMultiCurrency or HasBase2) then begin
+    RlCol(-30,-30,"Cur.",CurncyCode,true);
+  end;
+  RlCol(-1,-1,"",Invalid,true);
+  if (HasLimitedAccess) then begin
+    BrowseSubsetButton(-40,-15);
+  end;
+  SearchField("Search");
+  EndWindow;
+end;
+
+
+
+
+
+window CLOutDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,l,t,v,vs;
+  Integer pos,tilenr,flipnr,f;
+  
+  WindowBegin("Cash Out",CLOutDClass,CGview,-);
+  SetWRect(20,80,700,550);
+  UseView(CLOutVc);
+  ActiveFieldOnNew("TransDate");
+//  Sizeable(-1,-1,0,0);
+  vs = 20; h = 100; h2=h+200; h3 = 430; v = 6;
+  Tile(0,50,false,"",SerNr);
+  FormName(PrintCLOUTVcDClass);
+  if (HasNumberSeries) then begin
+    EditField(h,v,80,"No.",St_i,SerNr,false,TSerSClass);
+  end else begin
+    EditField(h,v,80,"No.",Normal,SerNr,false,0);
+  end;
+  EditField(h+150,v,82,"Date",Normal,TransDate,false,PasteCurDate);
+  if (HasOfficialSerNr and HasLocalization("POL")==false) then begin
+    EditField(h,v+=vs,80,"Official No.",Normal,OfficialSerNr,false,LegalCLOutNrSClass);
+  end;
+//  EditField(h3,v,82,"Local Machine",ViewOnly,LocalMachineCode,false,0);
+  tilenr = 1;
+  TileButton(tilenr,"Amounts"); tilenr = tilenr + 1;
+  if (HasMultiCurrency or HasBase2) then begin
+    TileButton(tilenr,"Currency"); tilenr = tilenr + 1;
+  end;
+  TileButton(tilenr,"Payments"); tilenr = tilenr + 1;
+  CheckBox(-100,v,0,"OK",OKFlag);
+  tilenr = 1;
+  Tile(tilenr,270,false,tilenr,PayMode); tilenr = tilenr + 1;
+  EditField(h,v=6,30,"Pay Mode",Normal,PayMode,false,PMSClass);
+  EditField(h2,v,50,"Person",Normal,Person,false,UserSClass);
+  CheckBox(400,v,0,"Info on Trans.",ARonTR);
+  EditField(h,v+=vs,120,"Expense A/C",Normal,CorspCode,false,CLCorspSClass);
+  EditField(h2,v,-20,"Comment",Normal,CorspComment,false,0);
+  if (HasModPL or HasModPO) then begin
+    EditField(h,v+=vs,120,"#Customer#",Normal,CUCode,false,VESClass);
+  end;
+  if ((HasModNL and HasModPL==false) or (HasModNL==false and HasModPL==false)) then begin
+    EditField(h2,v+=vs,-20,"Reference",Normal,RefStr,false,0);
+  end else begin
+    EditField(h2,v,-20,"Reference",Normal,RefStr,false,0);
+  end;
+  if (HasModPL or HasModPO) then begin
+    EditField(h,v+=vs,-20,"Name",Normal,CUName,false,0);
+    EditField(h,v+=vs,-20,"Address",Normal,Addr0,false,0);
+    EditField(h,v+=vs,-20,"",Normal,Addr1,false,0);
+    EditField(h,v+=vs,-20,"",Normal,Addr2,false,0);
+    EditField(h,v+=vs,-20,"",Normal,Addr3,false,0);
+    EditField(h,v+=vs,-20,"",Normal,Addr4,false,0);
+  end;
+  EditField(h,v+=vs,-20,"Specification",Normal,Comment,false,0);
+  if (HasObjects) then begin
+    EditField(h,v+=vs,-20,"Tags/Objects",Normal,Objects,false,ObjSClass);
+  end;
+//  CheckBox(20,-20,0,"OK",OKFlag);
+  EditField(h,v+=vs,100,"Total",Normal,Total,true,0);
+  if (HasLocalization("POL")==false) then begin
+    EditField(h2,v,50,"#VAT# Code",Normal,VATCode,false,VATCodeSClass);
+  end;
+  if (HasLanguages) then begin
+    EditField(h3,v,50,"Language",Normal,LangCode,true,LangSClass);
+  end;
+  EditField(h,v+=vs,100,"Net",Normal,NetVal,true,0);
+  if (HasLocalization("POL")==false) then begin
+    EditField(h2,v,50,"#VAT#",Normal,VATVal,true,0);
+  end;
+  if (HasExtTax) then begin
+    EditField(h3,v,50,"Tax",Normal,TAX1Sum,true,0);
+  end;
+  if (HasMultiCurrency or HasBase2) then begin
+    Tile(tilenr,70,false,tilenr,CurncyCode); tilenr = tilenr + 1;
+    vs = 20;
+    EditField(h=110,v=6,50,"Currency",Normal,CurncyCode,false,CurncyCodeSClass);
+    if (HasMultiCurrency) then begin
+      if (HasBase2) then begin
+        EditField(h,v+vs,50,"Base Currency 1",Normal,BaseRate1,true,0);
+      end else begin
+        EditField(h,v+vs,50,"Base Currency",Normal,BaseRate1,true,0);
+      end;
+      if (HasBase2) then begin
+        EditField(h,v+(vs*2),50,"Base Currency 2",Normal,BaseRate2,true,0);
+      end;  
+      EditField(h2=295,v,50,"Rate",Normal,FrRate,true,0);
+      if (HasBase2) then begin
+        RateField(h3=360,v,50,":",Normal,"ToRateB1",true,h3+60,v+14,"Base Currency 1",false);
+        RateField(h3,v+=vs,50,":",Normal,"ToRateB2",true,h3+60,v+14,"Base Currency 2",false);
+      end else begin
+        RateField(h3=360,v,50,":",Normal,"ToRateB1",true,h3+60,v+14,"Base Currency",false);
+      end;
+    end else begin
+      EditField(h,v+=vs,50,"Base Currency 1",Normal,BaseRate1,true,0);
+      EditField(h,v+=vs,50,"Base Currency 2",Normal,BaseRate2,true,0);
+    end;
+  end;  
+  Tile(tilenr,200,false,tilenr,Math); tilenr = tilenr + 1;
+  h = 8; v=24; l = 35; t = 1;
+  MatrixBegin(4,v,-50,-10,-,99);
+  Flip(1);
+  MatTypedRow(stp);
+  MatCol(t=1,h=34,"Type",0,Type,false,SetSClass);
+  if (HasLocalization("POL") and IsStandardProduct) then begin
+    MatCol(t,h+=120,"Number",0,TransOfficialSerNr,false,ARSClass);
+  end else begin
+    MatCol(t,h+=120,"Number",0,TransNr,false,ARSClass);
+  end;
+  if (HasModSO) then begin
+    MatCol(t,h+=70,"Order",0,OrderNr,false,ORSClass);
+  end;
+  if (HasObjects) then begin
+    MatCol(t,h+=70,"Tags/Objects",0,Objects,false,ObjSClass);
+  end;
+  MatCol(t,-180,"Company",ViewOnly,Company,false,0);
+  MatCol(t,-80,"Sum",0,Sum,true,0);
+  MatText(t=2,h=34,"Set. Disc.",true);
+  MatCol(t,h+=80,"",0,Type,false,0);
+  MatCol(t,h+=200,"",0,TransNr,false,0);
+  MatCol(t,-180,"Company",ViewOnly,Company,false,0);
+  MatCol(t,-80,"Sum",0,Sum,true,0);
+  Flip(2);
+  t=1; h = 34;
+  if (HasModPL) then begin
+    MatCol(t,h,"Type",0,Type,false,SetSClass);
+    h = h + 120;
+  end;
+  MatCol(t,h,"Expense A/C",ViewOnly,CorspCode,false,CLCorspSClass);
+  MatCol(t,h+=80,"Pay. Mode",Normal,PayMode,false,PMSClass);
+  MatCol(t,h+=70,"Comment",0,Comment,false,0);
+  MatText(t=2,h=34,"Set. Disc.",true);
+  MatCol(t,-180,"Company",ViewOnly,Company,false,0);
+  MatCol(t,-80,"Sum",0,Sum,true,0);
+  if (IsEnterprise) then begin
+    Flip(3);
+    MatCol(1,80,"Date",0,ExpDate,false,PasteCurDate);
+    pos = 155;
+    if (HasModPL) then begin
+      MatCol(1,pos,"#Supplier#",0,Company,false,VESClass);
+      pos = 225;
+    end;
+    MatCol(1,pos,"Identifier",0,Identifier,true,0);
+    if (HasModPL) then begin
+      MatCol(1,-365,"#Supplier# Name",0,VEName,true,0);
+    end;
+    MatCol(1,-130,"Document No.",0,DocNr,true,0);
+    MatCol(1,-45,"#V-Cd#",0,VATCode,false,VATCodeSClass);
+  end;
+  InsertRowTest;
+  DeleteRowTest;
+  EndMatrix;
+  vs = 22;
+  v=v+ 1; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  if (IsEnterprise) then begin
+    v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+  end;
+  if (HasIntegratedNL) then begin
+    SpecialMenu("Open #NL# Transaction",'t',0,"OpenTRFromCLOut");
+  end;
+  if (IsEnterprise) then begin
+    if (UserCanReport("CLOutColVIRn","",true)) then begin
+      SpecialMenu("Show Invoices",' ',1,"ShowColVIDsm");
+    end;
+  end;
+  EndWindow;
+end;
+
+window CLOutLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Deposit Out",CLOutLClass,CGmlist,-);
+  SpawnClass(CLOutDClass);
+  Sizeable(-1,-1,0,0);
+  SetWRect(64,80,600,298);
+  UseView(CLOutVc);
+  FormName(PrintCLOutL);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Ser. No.",SerNr,false,SerNr);
+  RlColKey(84,84,"OK",OKFlag,false,OKFlag);
+  RlColKey(114,114,"Date",TransDate,false,TransDate);
+  RlColKey(194,194,"Specification",Comment,false,Comment);
+  RlCol(-100,-100,"Sum",Total,true);
+  if (HasMultiCurrency or HasBase2) then begin
+    RlCol(-30,-30,"Cur.",CurncyCode,true);
+  end;
+  RlCol(-1,-1,"",Invalid,true);
+  SearchField("Search");
+  if (HasLimitedAccess) then begin
+    BrowseSubsetButton(-40,-15);
+  end;
+  EndWindow;
+end;
+
+
+// this code is for the letters 
+
+  window DebtLetRClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+  begin
+  real h,v,vm,vs;
+  WindowBegin("Specify Debtors Letter",DebtLetRClass,CGRcW,RcType);
+  SetWRect(20,80,450,440);
+  vs=20;
+  EditFieldTL(h=180,v=6, 150,"Customer",   M4UStr,Normal,30,f1,false,CUSClass);
+  EditFieldTL(h=180,v+=vs, 150,"Contract",   M4Long,Normal,30,long2,false,NAContractSClass);
+  EndWindow;
+  end;
+
+
+
+// Reasons for depreciation
+
+
+
+window StandProblemsSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Paste Reasons",StandProblemsSClass,CGslist,StandProblemView);
+  SetWRect(240,80,600,298);
+  Sizeable(-1,-1,0,0);
+  UseView(StandProblemVc);
+  SpawnClass(StandProblemDClass);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(75,75, "Description",ShortDesc,false,ShortDesc);
+  RlColKey(220,220, "Account",Account,false,Account);
+  SearchField("Search");
+  EndWindow;
+end;
+
+window StandProblemLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("Reasons",StandProblemLClass,CGmlist,StandProblemView);
+  SpawnClass(StandProblemDClass);
+  SetWRect(64,80,470,298);
+  Sizeable(-1,-1,0,0);
+  UseView(StandProblemVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",Code,false,Code);
+  RlColKey(75,75, "Description",ShortDesc,false,ShortDesc);
+  RlColKey(220,220, "Account",Account,false,Account);
+  SearchField("Search");
+  // SpecialMenu("GSX Standard Problems",' ',1,"GSXStandProblemLsm");
+  EndWindow;
+end;
+
+window StandProblemDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Reasons",StandProblemDClass,CGview,StandProblemView);
+  SetWRect(64,73,509,240);
+  UseView(StandProblemVc);
+  v = 10; vs = 20; h = 100;
+  EditField(h,v, 200,     "Code",Normal,Code,false,0);
+  EditField(h,v+=vs ,-20,"Short Desc.",Normal,ShortDesc,false,0);
+  EditField(h,v+=vs ,100,"Account",Normal,Account,false,AccSClass);//VN added
+  EditField(h,v+=vs ,-20,"Description",Normal,Comment1,false,0);
+  if (IsEnterprise) then begin 
+    EditField(h,v+=vs ,-20,"",Normal,Comment2,false,0);
+    EditField(h,v+=vs ,-20,"",Normal,Comment3,false,0);
+  end;    
+  EndWindow;
+end;
+
+
+window SDDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,h4,v,vm,vs;
+  Integer f,flipnr;
+
+  WindowBegin("#Internal Stock Issue#",SDDClass,CGview,-);
+  SetWRect(20,80,560,350);
+  Sizeable(-1,-1,0,0);
+  FormName(SDForm);
+  UseView(SDVc);
+  ActiveFieldOnNew("TransDate");
+  vs = 20; h2 = 260; h3 = 460; h4 = 580;
+  EditField(h=80,v=6, 82,"No.",St_i,SerNr,false,TSerSClass);
+  EditField(h2,v,82,"Trans. Date",Normal,TransDate,false,PasteCurDate);
+  if (IsEnterprise) then begin
+    EditField(h3,v,100,"Reasons",Normal,Reason,false,StandProblemsSClass);
+    CheckBox(h4,v,0,"OK",OKFlag);
+    if (HasLocalization("LTU")) then begin
+      Checkbox(h4,v+vs,0,"Exclude from Exports",ExcludeFromExports);
+    end;
+  end;
+  if (IsEnterprise) then begin
+    EditField(h,v+=vs,82,"Cost A/C",Normal,CostAcc,false,AccSClass);
+    EditField(h2,v,82,"Order Class",Normal,SDClass,false,OrderClassSClass);
+    EditField(h3,v,100,"Reference",Normal,RefStr,false,0);
+    v = v + vs;
+  end else begin
+    if (HasModNL) then begin
+      EditField(h3,v,82,"Cost A/C",Normal,CostAcc,false,AccSClass);
+    end;
+    CheckBox(h4,v,0,"OK",OKFlag);
+    v = v + vs;
+  end;
+  if (HasMultiLocations) then begin
+    EditField(h,v,82,"From Location",Normal,Location,false,LocationSClass);
+  end;
+  if (HasAdvancedAccounting) then begin
+    EditField(h2,v,82,"Short Code",Normal,ACShort,false,ACShortSClass);
+  end;
+  if (HasModTS or IsEnterprise) then begin
+    EditField(h3,v,100,"Project",Normal,PRCode,false,PRSClass);
+  end;
+  v = v + vs;
+  if (HasApprovals) then begin
+    SoftEditField(h,v,82,"Appr. Status",ViewOnly,"AcceptanceStatusFlag",false,0,M4Str,255);
+  end;
+
+  if (HasObjects) then begin
+    EditField(h2,v,82,"Vote/Department",Normal,Objects,false,ObjSClass); // changed to department
+  end;
+  EnterSkip(Math);
+//  CheckBox(450,6,0,"OK",OKFlag);
+  v = v + 40;
+  if (IsEnterprise or WindowsMode) then begin
+    vm = v + 1;
+    MatrixBegin(4,v,-50,-23,-,200);
+  end else begin
+    MatrixBegin(4,v,-40,-27,-,99);
+  end;
+  Flip(0);
+  if (HasJewelleryInterface) then begin
+    MatCol(1,24,"Serial No.",0,SerialNr,false,SerialNrSClass);
+    EnterSkip(Quant);
+    MatCol(1,130,"Item",0,ArtCode,false,INSClass);
+    if (HasVarieties) then begin
+      MatCol(1,192,"Qty",0,Qty,true,MATVARINSClass);
+    end else begin
+      MatCol(1,192,"Qty",0,Qty,true,0);
+    end;
+    MatCol(1,254,"Description",0,Spec,false,0);
+  end else begin
+    MatCol(1,32,"Item",0,ArtCode,false,INSClass);
+//  MatCol(1,94,"Var",0,VARList,false,VARSClass);
+//  MatCol(1,144,"Qty",0,Qty,true,0);
+    if (HasVarieties) then begin
+      MatCol(1,94,"Qty",0,Qty,true,MATVARINSClass);
+    end else begin
+      MatCol(1,94,"Qty",0,Qty,true,0);
+    end;
+    MatCol(1,154,"Description",0,Spec,false,0);
+  end;
+  flipnr = 1;
+  Flip(flipnr); flipnr = flipnr + 1;
+  if (HasJewelleryInterface==false) and (HasSerialNumbers) then begin
+    MatCol(1,-280,"Serial No.",0,SerialNr,false,SerialNrSClass);
+  end;
+  if (HasMultiLocations) then begin
+    MatCol(1,-160,"Location",0,Location,false,LocationSClass);
+  end;
+  if (HasPositions) then begin
+    MatCol(1,-100,"Position",0,PosCode,false,UsedPosSClass);
+  end;
+  if (IsEnterprise) then begin
+    MatCol(1,-40,"Coeff.",0,Coefficient,false,0);
+    Flip(flipnr); flipnr = flipnr + 1;
+    MatCol(1,-270,"Short Code",0,ACShort,false,ACShortSClass);
+    MatCol(1,-200,"Cost A/C",0,CostAcc,false,AccSClass);
+    MatCol(1,-100,"Vote/Department",0,Objects,false,ObjSClass); // objects
+    Flip(flipnr); flipnr = flipnr + 1;
+    MatCol(1,-210,"FIFO",0,FIFO,true,0);
+    MatCol(1,-125,"Row FIFO",0,FIFORowVal,true,0);
+    MatCol(1,-40,"Coeff.",0,Coefficient,true,0);
+    Flip(flipnr); flipnr = flipnr + 1;
+    MatCol(1,-240,"Recipe",0,Recepy,false,RecSClass);
+    if (StandardHansa==false) then begin
+      MatCol(1,-180,"Project",0,PRCodeRow,false,PRSClass);
+    end;
+    MatCol(1,-120,"Base Price",0,BasePrice,true,0);
+    MatCol(1,-40,"Coeff.",0,Coefficient,false,0);
+    Flip(flipnr); flipnr = flipnr + 1;
+    MatCol(1,-140,"Width",0,UnitXval,true,0);
+    MatCol(1,-95,"Height",0,UnitYval,true,0);
+    MatCol(1,-50,"Depth",0,UnitZval,true,0);
+  end else begin
+    if (HasModNL) then begin
+      MatCol(1,-200,"Cost Account",0,CostAcc,false,AccSClass);
+    end;
+    MatCol(1,-100,"Unit #Stock# Value",0,FIFO,true,0);
+  end;
+  InsertRowTest;
+  DeleteRowTest;
+  RowMenuBegin("");
+  RowMenuItem(0,"Item Status",'I','I',0,"ItemStatusSDDsm");
+  if (HasQualityControl) then begin
+    RowMenuItem(0,"Quality Control",'u','u',0,"QualConFromSDDsm");
+  end;
+  EndRowMenu;
+  EndMatrix;
+  vs = 22;
+  v = vm;/* 28 */
+  if (flipnr>2) then begin
+    for (f=1;f<flipnr;f=f+1) begin
+      VTab(-35,v,-16,v+vs,ToolFlip,f,chr(asc("A") + f - 1));
+      v = v + vs;
+    end;
+  end;
+//  CheckBox(20,-20,0,"OK",OKFlag);
+  EditField(h=150,-25,70,"Tot. Qty.",ViewOnly,TotQty,false,0);
+  EditField(h=290,-25,-40,"Comment",Normal,Comment,false,0);
+/*
+//oldapprovals  
+  if (HasApprovals) then begin
+    Tile(2,200,true,"1",AcceptanceStatus);
+    if (HasApprovals) then begin
+      SoftEditField(h3=-163,v=16,123,"Approval Status",ViewOnly,"AcceptanceStatusFlag",false,0,M4Str,255);
+    end;
+    ButtonFrame(h3=-163,v=16,123,6,"Approval Status");
+    RadioButton(h3,v,kAcceptanceStateNotRequired,0,"Not Required",AcceptanceStatus);
+    RadioButton(h3,v+=16,kAcceptanceStateNotStarted,0,"Not Started",AcceptanceStatus);
+    RadioButton(h3,v+=16,kAcceptanceStateNotRequested,0,"Not Reuested",AcceptanceStatus);
+    RadioButton(h3,v+=16,kAcceptanceStatePending,0,"Pending",AcceptanceStatus);
+    RadioButton(h3,v+=16,kAcceptanceStateApproved,0,"Approved",AcceptanceStatus);
+    RadioButton(h3,v+=16,kAcceptanceStateRejected,0,"Rejected",AcceptanceStatus);
+  end;
+*/    
+  if (HasAdvancedStock) then begin
+    SpecialMenu("#Internal Stock Issue# Status",'r',4,"SDStatusDsm");
+  end;
+  if (HasIntegratedNL) then begin
+    SpecialMenu("Open #NL# Transaction",'t',1,"OpenTRFromSD");
+  end;
+  SpecialMenu("Item Search",'f',1,"ItemSearchDsm");
+  if (HasApprovals) then begin
+    SpecialMenu("Request Approval",' ',6,"SDSendforAcceptanceSDDsm");
+    SpecialMenu("Cancel Approval Request",' ',2,"CancelApprovalRequestDsm");
+  end;
+  EndWindow;
+end;
+
+// window SDJRClass:1
+//   wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+//   real h,v,vm,vs;
+//   WindowBegin("Specify #Stock Depreciations# Journal",SDJRClass,CGRcW,RcType);
+//   if (IsEnterprise) then begin
+//     SetWRect(20,80,465,298);
+//   end else begin
+//     SetWRect(20,80,400,298);
+//   end;
+//   vs = 20; h = 150;
+//   EditFieldTL(h,v=6, 150,"#Stock# #Depr.# No.",M4Str,Normal,30,f1,false,0);
+//   PeriodField(h,v+=vs,"Period");
+//   if (HasMultiLocations) then begin
+//     EditFieldTL(h,v+=vs ,150,"Location",M4UStr,Normal,60,f3,false,LocationSClass);
+//   end;
+//   if (HasModNL) then begin
+//     EditFieldTL(h,v+=vs ,150,"Cost Account",M4Str,Normal,20,TransStr,false,AccSClass);
+//   end;
+//   if (HasObjects) then begin
+//     EditFieldTL(h,v+=vs ,150,"Vote/Department",M4Str,Normal,60,f2,false,ObjSClass);
+//   end;
+//   ButtonFrame(h=30,vm=(v+=40),123,2,"Function");
+//   RadioButton(h,v,0,0,"Overview",ArtMode);
+//   RadioButton(h,v+=16,1,0,"Detailed",ArtMode);
+//   if (HasSecondQuantity) then begin
+//     CheckBox(h,v+=25,0,"Show Quantity 2",flags[3]);
+//   end;
+//   ButtonFrame(h+=145,v = vm,123,2,"Status");
+//   CheckBox(h,v,0,"Not OKed",flags[1]);
+//   CheckBox(h,v+=16,0,"OKed",flags[2]);
+//   if (IsEnterprise) then begin
+//     ButtonFrame(h+=145,v = vm,100,3,"Values");
+//     RadioButton(h,v,0,0,"No _values",flags[4]);
+//     RadioButton(h,v+=16,1,0,"Cost Posted",flags[4]);
+//     RadioButton(h,v+=16,2,0,"Base Price",flags[4]);
+//   end;
+//   EndWindow;
+// end;
+
+window SDLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  WindowBegin("#Internal Stock Issues#",SDLClass,CGmlist,-);
+  SpawnClass(SDDClass);
+  SetWRect(20,80,600,298);
+  Sizeable(-1,-1,0,0);
+  UseView(SDVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"No.",SerNr,false,SerNr);
+  RlColKey(79,79,"OK",OKFlag,false,OKFlag);
+  RlColKey(111,111,"Trans. Date",TransDate,false,TransDate);
+  if (HasMultiLocations) then begin
+    RlColKey(191,191,"Location",Location,false,LocOK);
+    RlCol(261,261,"Comment",Comment,false);
+  end else begin
+    RlCol(191,191,"Comment",Comment,false);
+  end;
+  // if (AcceptanceStatusColumnTest("SDVc")) then begin
+  //   CalculatedColumn(-40,-40,"Appr.","SDLClassAcceptanceStatus",false);
+  // end;
+  if (HasLimitedAccess) then begin
+    BrowseSubsetButton(-40,-15);
+  end;
+  SearchField("Search");
+//  SpecMenuItem("OK",'G',0);
+  EndWindow;
+end;
+
+
+
+
+// Internal Order 
+window IntORDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h1,h2,h3,h4,t,v,vm,vs;
+  WindowBegin("Internal Order",IntORDClass,CGview,-);
+  SetWRect(20,80,615,350);
+  Sizeable(-1,-1,0,0);
+  UseView(IntORVc);
+  FormName(IntORForm);
+  ActiveFieldOnNew("OurUser");
+  h = 100; h2 = 230; h3 = 450; vs = 20;
+  Tile(0,50+24,false,"",OurUser);
+  EditField(75,vm=(v=6),95,"No.",St_i,SerNr,false,TSerSClass);
+  EditField(75,v+=20,95,"Person",ViewOnly,OurUser,false,UserSClass);
+  EnterSkip(PlanShip);
+  EditField(h2=250,v=vm,-40,"Name",Normal,Name,false,0);
+  EditField(h2=320,vm=(v+=20),95,"Requesting Department",Normal,Department,false,depsClass);//     
+  CheckBox(h2+120,vm,0,"Closed",Closed);
+  TileButton(1,"Terms");
+  TileButton(2,"Items");
+  TileButton(3,"Del. Address");
+  TileButton(4,"Comments");
+  Tile(1,70,false,"1",PlanShip);
+  vs = 20; h1 = 110; h2 = 290; h3 = 530; h4 = 600;
+  EditField(h1,v=6,82,"Date",Normal,TransDate,false,PasteCurDate);
+  EditField(h1,v+=vs,82,"Planned Delivery",Normal,PlanShip,false,PasteCurDate);
+  EditField(h1,v+=vs,82,"From Location",Normal,FrLocation,false,LocationSClass);
+  EditField(h2,v=6,82,"Delivery Terms",Normal,ShipDeal,false,ShipDealSClass);
+  EditField(h2,v+=vs,82,"Delivery Mode",Normal,ShipMode,false,DMSClass);
+  EditField(h2,v+=vs,82,"To Location",Normal,Location,false,LocationSClass);
+  EditField(h3,v=6,82,"Internal Order Class",Normal,IntORClass,false,IntORClassSClass);
+  EditField(h3,v+=vs,82,"Language",Normal,LangCode,false,LangSClass);
+  EditField(h3,v+=vs,135,"Reference",Normal,Reference,false,0);
+//  EditField(h,v+=vs,280,"#Authorised# By",ViewOnly,OKPersons,false,UserSClass);// funcionality removed, no operations menu
+  EnterSkip(Math2);
+  Tile(2,120,true,"2",Math2);
+  EditField(-144,-21,90,"TOTAL",ViewOnly,Total,true,0);
+  v = 24;
+  MatrixBegin(3,v,-50,-27,-,99);
+  MatOverStrike(ovst);
+  Flip(0);
+  MatCol(1,24,"Item",0,ArtCode,false,INSClass);
+  if (HasVarieties) then begin
+    MatCol(1,94,"Qty",0,Quant,true,MATVARINSClass);
+  end else begin
+    MatCol(1,94,"Qty",0,Quant,true,0);
+  end;
+  MatCol(1,144,"Treated",0,Shipd1,true,0);
+  MatCol(1,194,"Deliv.",0,Shipd2,true,0);
+  EnterSkip(ArtCode);
+  Flip(1);
+  MatCol(1,244,"Description",0,Spec,false,0);
+  MatCol(1,-180,"Cost Price",0,Price,true,0);
+  MatCol(1,-90,"Total Cost",0,Sum,true,0);
+  Flip(2);
+  MatCol(t=1,144,"Description",0,Spec,false,0);
+  MatCol(t,-304,"Serial No.",0,SerialNr,false,SerialNrSClass);
+  MatCol(t,-204,"Cost A/C",0,CostAcc,false,AccSClass);
+  MatCol(t,-124,"Tags/Objects",0,Objects,false,ObjSClass);
+  MatCol(1,-70,"Recipe",0,Recepy,false,RecSClass);
+  Flip(3);
+  MatCol(t=1,144,"Desc.",0,Spec,false,0);
+  MatCol(1,-280,"Treated",0,Shipd1,false,0);
+  MatCol(1,-210,"Deliv.",0,Shipd2,false,0);
+  MatCol(t,-140,"Sent",0,Sent,true,0);
+  MatCol(t,-70,"P/Ord.",0,POOrd,true,0);
+  DeleteRowTest;
+  EndMatrix;
+  vs = 20;
+  v = 18; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+  Tile(3,170,false,"3",ShipAddr0);
+  EditField(h,v=6,-20,"Delivery",Normal,ShipAddr0,false,0);
+  EditField(h,v+=vs,-20,"Address",Normal,ShipAddr1,false,0);
+  EditField(h,v+=vs,-20,"",Normal,ShipAddr2,false,0);
+  EditField(h,v+=vs,-20,"",Normal,ShipAddr3,false,0);
+  EditField(h,v+=vs,-20,"",Normal,DelAddr3,false,0);
+  EditField(h,v+=vs,-20,"",Normal,DelAddr4,false,0);
+  EditField(h2=-170,v+=vs,150,"Telephone",Normal,Phone,false,0);
+  EditField(h2,v+=vs,150,"Fax",Normal,Fax,false,0);
+  Tile(4,160,false,"4",Math); vs = 20;
+  if (HasApprovals) then begin
+    SoftEditField(h,v=6,123,"Approval Status",ViewOnly,"AcceptanceStatusFlag",false,0,M4Str,255);
+  end;
+  StaticText(h-6,v+=40,"Comments",true);
+  TextField(h,v-5,-170,-10,Math,0);
+/*
+//oldapprovals  
+  ButtonFrame(h3=-150,v=16,123,6,"Approval Status");
+  RadioButton(h3,v,kAcceptanceStateNotRequired,0,"Not Required",AcceptanceStatus);
+  RadioButton(h3,v+=16,kAcceptanceStateNotStarted,0,"Not Started",AcceptanceStatus);
+  RadioButton(h3,v+=16,kAcceptanceStateNotRequested,0,"Not Reuested",AcceptanceStatus);
+  RadioButton(h3,v+=16,kAcceptanceStatePending,0,"Pending",AcceptanceStatus);
+  RadioButton(h3,v+=16,kAcceptanceStateApproved,0,"Approved",AcceptanceStatus);
+  RadioButton(h3,v+=16,kAcceptanceStateRejected,0,"Rejected",AcceptanceStatus);
+*/  
+//  SpecialMenu("#Authorise#",' ',3,"AuthorizeIntORDsm");changed to below
+  SpecialMenu("Internal Order Status",'r',5,"IntORStatIntORDsm");
+  SpecialMenu("Item Search",'f',1,"ItemSearchDsm");
+  SpecialMenu("Reservations",' ',15,"IntORReservIntORDsm");
+  if (HasApprovals) then begin
+    SpecialMenu("Request Approval",' ',6,"IntORSendforAcceptanceIntORDsm");
+    SpecialMenu("Cancel Approval Request",' ',2,"CancelApprovalRequestDsm");
+  end;
+  SpecMenuGroup("",kSpecMenuGroupTypeExtendedPlusMenu,0);
+  SpecialMenu("#Stock# Movement",' ',0,"StockMovFromIntORDsm");
+  SpecialMenu("#Internal Stock Issue#",' ',1,"SDFromIntORDsm");
+  SpecialMenu("Purchase Order",' ',2,"POFromIntORDsm");
+  EndWindow;
+end;
+
+
+// Agreement Debtors
+window AgreementCUVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Specify Transfer to Agreement",AgreementCUVClass,CGMnt,RcType);
+  SetWRect(20,80,400,230);
+  h = 130; vs = 20; v = 6;
+  EditFieldTL(h,v, 100,"Invoice",M4UStr,Normal,21,f2,false,ARSClass);
+  EditFieldTL(h,v+=vs, 100,"Customer",M4UStr,Normal,41,f1,false,CUSClass);
+  EditFieldTL(h,v+=vs, 100,"AgreementNr",M4UStr,Normal,41,f3,false,CredManSClass);
+  ButtonFrame(h,v+=50,153,2,"Action");
+  RadioButton(h,v,1,0,"Transfer to Agreement debtors",flags[0]);
+  EndWindow;
+end;
+
+
+
+window TarrifCUVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Update Tarrif Rates In Contracts",TarrifCUVClass,CGMnt,RcType);
+  SetWRect(20,80,400,230);
+  h = 130; vs = 20; v = 6;
+  EditFieldTL(h,v, 100,"Update Item",M4UStr,Normal,21,f1,false,INSClass);
+  EndWindow;
+end;
+
+
+
+
+window EmptyVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Verify erf",EmptyVClass,CGMnt,RcType);
+  SetWRect(20,80,400,230);
+  // h = 130; vs = 20; v = 6;
+  // EditFieldTL(h,v, 100,"Update Item",M4UStr,Normal,21,f1,false,INSClass);
+  EndWindow;
+end;
+
+
+
+
+
+window CredManDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,h4,t,v,vm,vs;
+  WindowBegin("Credit Agreement",CredManDClass,CGview,-);
+  SetWRect(20,80,900,500);
+  Sizeable(-1,-1,0,0);
+  UseView(CredManVc);
+  FormName(CredManForm);
+  h = 120; h2 = 320; h3 = 550; h4 = 670; vs = 20;
+  Tile(0,230,false,"",SerNr);
+  EditField(h,vm=(v=6), 82,"No.",St_i,SerNr,false,TSerSClass);
+  EditField(h,v+=vs,82,"Type",Normal,Type,false,CredManTypeSClass);
+  EditField(h2,v,-40,"Interest",Normal,InstalmentType,false,SetSClass);
+  EditField(h,v+=vs,82, "Customer",Normal,CustCode,false,CUSClass);
+  EnterSkip(InvSum4);
+  EditField(h2,v,-40,"Name",Normal,Addr0,false,0);
+  EditField(h,v+=vs,82,"#Salesman#",Normal,SalesMan,false,UserSClass);
+  EditField(h2,v,-40,"Attn.",Normal,ClientContact,false,ContactSClass);
+  EditField(h,vm=(v+=vs),82,"Total Sum",Normal,InvSum4,true,0);
+  // EditField(h,v+=vs,82,"Interest Rate %",Normal,IntRate,false,0);  //
+  EditField(h,v+=vs,82,"Months",Normal,InstalmentMonths,false,0);
+  // EditField(h,v+=vs,82,"Pay. Terms",Normal,PayDeal,false,PDSClass);
+  // EditField(h,v+=vs,82,"Deposit % ",Normal,DepositPrc,false,0);
+  // EditField(h,v+=vs,82,"Deposit Sum",Normal,DepositSum,true,0);
+  EditField(h2,v=vm,82,"Start Date",Normal,startDate,false,PasteCurDate);
+  // EditField(h2,v+=vs,82,"First Invoice Date",Normal,FirstInvDate,false,PasteCurDate);
+  // EditField(h2,v+=vs,82,"First Interest Date",Normal,FirstIntDate,false,PasteCurDate);
+  EditField(h2,v+=vs,82,"End Date",ViewOnly,endDateKM,false,PasteCurDate); // Jh changed to km
+  EditField(h2,v+=vs,82,"Create Date",ViewOnly,TransDate,false,PasteCurDate);
+  EditField(h3+10,v=vm,82,"Suggested Monthly #Instalment#",ViewOnly,MonthlySum,false,0); // Jh moved to the right
+  EditField(h3+10,v=vm+vs,82,"Agreed#Instalment#Amount",ViewOnly,agreedInstallmentAmount,false,0); // Jh added new field
+  ButtonFrame(h4,v=vm+20,150,2,"Charge Method");
+  RadioButton(h4,v,0,0,"Running Balance",ChargeMethod);
+  // RadioButton(h4,v+=16,1,0,"Monthly Invoices",ChargeMethod);
+
+//  EditField(h2,v,82,"Specific #Instalment#",Normal,#Instalment#,false,InstallmentSClass);
+/*
+  ButtonFrame(h3,v=vm+vs,100,2,"Interest Type");
+  RadioButton(h3,v,0,0,"Fixed",RateType);
+  RadioButton(h3,v+=16,1,0,"Floating",RateType);
+*/
+  TileButton(1,"Events");
+  // TileButton(2,"Planned Fees");
+  // TileButton(3,"Currency");
+  // TileButton(4,"Terms");
+  Tile(1,200,true,"",CurncyCode);
+  // CheckBox(40,-51,0,"Settled",Settled); 
+  CheckBox(40,-36,0,"Approved",Approved);
+  // CheckBox(40,-21,0,"OK",OKFlag);
+  // EditField(200,-21,50,"Currency",Normal,CurncyCode,false,CurncyCodeSClass);
+  // EditField(-340,-41,80,"Total Interest",ViewOnly,TotalInterest,true,0);
+  // EditField(-340,-21,80,"Total Value in Base",ViewOnly,BaseTotalSum,true,0);
+  // EditField(-120,-41,80,"Total Excl. Deposit",ViewOnly,TotalSumExclDep,true,0);
+  // EditField(-120,-21,80,"Total Value",ViewOnly,TotalSum,true,0);
+  if (WindowsMode) then begin
+    RecordList2(10,10,-10,-50,"CredManEventVc");  
+  end else begin
+    RecordList2(10,10,-10,-80,"CredManEventVc");
+  end;
+  RLColKey(4,4,"Trans. Date",TransDate,false,CredManSerNr);  // jh changed to sort using doc type
+  RLColKey(100,100,"Due Date",DueDate,false,CredManSerNr);
+  RLColKey(200,200,"Comment",Comment,false,CredManSerNr);
+  // RlColKey(300,-300,"Sub. Type",FileName,false,FindOriginalRecord);
+  // RlColKey(370,370,"Sub. Record",RecordNr,false,FindOriginalRecord);
+  RLColKey(450,450,"Issued",InvSum,false,CredManSerNr);  
+  RLColKey(550,550,"Paid",PaidSum,false,CredManSerNr);
+  RLColKey(700,700,"Balance",CredManBal,false,CredManSerNr);
+
+//   Tile(2,70,true,"2",Math);
+//   MatrixBegin(10,v=24,-50,-20,-,99);
+//   Flip(0);
+//   MatCol(t=1,32,"Item",0,ArtCode,false,INSClass);
+//   MatCol(t,100,"Qty",0,Quant,true,0);
+//   MatCol(t,160,"Type",0,ChargeType,false,SetSClass);
+//   MatCol(t,310,"Description",0,Comment,false,0);
+//   Flip(1);
+//   MatCol(t,-240,"Unit Price",0,Price,true,0);
+//   MatCol(t,-140,"%",0,vRebate,true,0);
+//   MatCol(t,-100,"Sum",0,Sum,true,0);
+//   Flip(2);
+//   MatCol(t,-300,"Invoice No.",0,InvoicedOn,false,0);
+//   MatCol(t,-200,"Invoiced Sum",0,InvoicedSum,true,0);
+//   MatCol(t,-100,"Sum",0,Sum,true,0);
+//   EndMatrix;
+//   vs = 22;
+//   v = 24; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+//   v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+//   InsertRowTest;
+//   DeleteRowTest;
+//   Tile(3,70,false,"3",FrRate);
+//   vs = 20;
+//   EditField(h=120,v=6,50,"Currency",Normal,CurncyCode,false,CurncyCodeSClass);
+//   EditField(h,v+vs,50,"Base Currency 1",Normal,BaseRate1,true,0);
+//   EditField(h,v+(vs*2),50,"Base Currency 2",Normal,BaseRate2,true,0);  
+//   EditField(h2=295,v,50,"Rate",Normal,FrRate,true,0);
+//   RateField(h3=360,v,50,":",Normal,"ToRateB1",true,h3+60,v+14,"Base Currency 1",false);
+//   RateField(h3,v+=vs,50,":",Normal,"ToRateB2",true,h3+60,v+14,"Base Currency 2",false);   
+//   Tile(4,190,false,"4",InvoiceToCode);
+//   h = 120; h2 = 360; h3 = 230; vs = 20;
+//   EditField(h,v=6,82,"Invoice To",Normal,InvoiceToCode,false,CUSClass);
+//   EditField(h2,v,-40,"Our Ref",Normal,OurContact,false,0);
+//   EditField(h,v+=vs,82,"Control Acc.",Normal,CredManAcc,false,AccSClass);
+//   EditField(h2,v,-40,"Tags/Objects",Normal,Objects,false,ObjSClass);
+//   EditField(h,v+=vs,82,"Debtors",Normal,ARAcc,false,AccSClass);
+//   EditField(h2,v,-40,"Debt. Tags/Objects",Normal,ARAccObject,false,ObjSClass);
+//   EditField(h,v+=vs,82,"Invoice",ViewOnly,IVNr,false,0);
+//   EditField(h,vm=(v+=vs),82,"Quotation",ViewOnly,QTNr,false,0);
+//   EditField(h,v+=vs,82,"Price List",Normal,PriceList,false,PLDefSClass);
+//   EditField(h,v+=vs,82,"Language",Normal,LangCode,false,LangSClass);
+//   EditField(h,v+=vs,50,"Max Late Days",Normal,LateFeeDays,false,0);
+//   EditField(h,v+=vs,40,"Interest Free Days",Normal,FreeDays,false,0);
+//   EditField(h,v+=vs,50,"Settlement Months",Normal,SettleLimit,false,0);
+//   ButtonFrame(h2,v=vm,150,2,"Late Interest Based On");
+//   RadioButton(h2,v,0,0,"Due Date",LateRateOption);
+//   RadioButton(h2,v+=16,1,0,"Trans. Date",LateRateOption);
+  SpecialMenu("Open #NL# Transaction",'t',2,"OpenTRFromCredMan");
+  SpecialMenu("Open Subsystem Record",' ',3,"OpenSubsysCredManDsm");
+  SpecMenuGroup("",kSpecMenuGroupTypeExtendedPlusMenu,0);
+  SpecialMenu("Create  #Instalments#",' ',24,"CreateInstalmentCredManDsm");
+  // SpecialMenu("View #Instalments#",' ',24,"EditInstalmentCredManDsm");
+  SpecialMenu("Credit Agreement Info",'I',0,"CredManInfoDsm");
+  // SpecialMenu("Invoice",'F',1,"InvoiceCredManDsm");
+  SpecialMenu("Receipt",'r',1,"ReceiptFromCredMansm"); // ReceiptCredManDsm
+  SpecialMenu("Revert Added Invoices",'j',1,"RevertAgreementDsm"); 
+  EndWindow;
+end;
+
+
+window CredManEventDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,t,v,vm,vs;
+  WindowBegin("Credit Agreement Event",CredManEventDClass,CGview,-);
+  SetWRect(20,80,520,350);
+  h = 110; h2 = 250; v = 6; vs=20;
+  UseView(CredManEventVc);
+  EditField(h,v,80,"Trans. Date",Normal,TransDate,false,PasteCurDate);
+  EditField(h,v+=vs,80,"Due Date",Normal,DueDate,false,PasteCurDate);
+  EditField(h,v+=vs,80,"Cred. Man. Bal.",Normal,CredManBal,false,0);
+  EditField(h,v+=vs,80,"Subsystem No.",Normal,RecordNr,false,0);
+  EditField(h,vm=(v+=vs),320,"Comment",Normal,Comment,false,0);
+  ButtonFrame(h2,v=20,130,3,"Type of Event");
+  RadioButton(h2,v,0,0,"Issued/Invoiced",PaidFlag);
+  RadioButton(h2,v+=16,1,0,"Paid",PaidFlag);
+  RadioButton(h2,v+=16,-1,0,"Deposit",PaidFlag);
+  CheckBox(h2,v+=16,0,"Invoice",InvoiceFlag); //jh added
+
+  if(WindowsMode) then begin
+    MatrixBegin(20,v=vm+40,-40,-5,-,99);
+  end else begin
+    MatrixBegin(20,v=vm+40,-40,-25,-,99);
+  end;
+  MatCol(t=1,32,"Item",0,ArtCode,false,INSClass);
+  MatCol(t,100,"Type",0,ChargeType,false,SetSClass);
+  MatCol(t,200,"Description",0,Comment,false,0);
+  MatCol(t,-100,"Sum",0,Sum,true,0);
+  EndMatrix;
+  InsertRowTest;
+  DeleteRowTest;
+//  CheckBox(20,-21,0,"#N/L# Trans",NLTrans);
+  EditField(200,-25,50,"Currency",Normal,CurncyCode,false,CurncyCodeSClass);
+  EditField(-120,-25,80,"Sum",ViewOnly,TotSum,true,0);
+  SpecialMenu("Open Subsystem Record",' ',6,"OpenSubsysCredManEventDsm");
+  EndWindow;
+end;
+
+
+window OkNAContractVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Specify OK Contracts",OkNAContractVClass,CGMnt,RcType);
+    SetWRect(100,100,340,310);
+    // EditFieldTL(h=120,v=6, 150,"Contracts",M4Str,Normal,30,f1,false,0);
+  EndWindow;
+  return;
+end;
+
+window OkVIVVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Specify OK Purchase Invoice",OkVIVVClass,CGMnt,RcType);
+    SetWRect(100,100,340,310);
+    // EditFieldTL(h=120,v=6, 150,"Contracts",M4Str,Normal,30,f1,false,0);
+  EndWindow;
+  return;
+end;
+
+
+window OkOPVVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+  WindowBegin("Specify Payments",OkOPVVClass,CGMnt,RcType);
+    SetWRect(100,100,340,310);
+    // EditFieldTL(h=120,v=6, 150,"Contracts",M4Str,Normal,30,f1,false,0);
+  EndWindow;
+  return;
+end;
+
+
+
+window OKIPvVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+  WindowBegin("Specify Receipts",OKIPvVClass,CGMnt,RcType);
+    SetWRect(100,100,340,310);
+    // EditFieldTL(h=120,v=6, 150,"Receipts",M4Str,Normal,30,f1,false,0);
+  EndWindow;
+  return;
+end;
+
+
+window MassReadingsRClass:1
+	wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+	real h,v,vs;
+  WindowBegin("Meter Readings (All Books) Export",MassReadingsRClass,CGRcW,RcType);
+	SetWRect(20,80,420,150);
+	h=150; v=6; vs=20;
+	EndWindow;
+end;
+
+
+
+
+window AddPremiseValuesToPremVClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+
+  WindowBegin("Add Premise Values to Prem",AddINtoNAContrVClass,CGMnt,RcType);
+    SetWRect(100,100,340,310);
+    h = 100; v = 10; vs = 20;
+    EditFieldTL(h,v+=vs,100,"Zoning",M4Code,Normal,20,f1,false,ZoneSClass);
+    EditFieldTL(h,v+=vs,100,"Value",M4Val,Normal,20,vals0,false,0);
+
+  EndWindow;
+
+  return;
+end;

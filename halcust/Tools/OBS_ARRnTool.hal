@@ -1,0 +1,810 @@
+external inner function Boolean GetARPayRate(LongInt,LongInt,var val,var val,var val,var val,var val,string,Date);
+external inner procedure ARRnAddToDebtorsAccounts(string,Integer,val,Array string,Array val,var Integer);
+external inner function string 255 GetCustomerOnAccountAC(string);
+external inner function Integer GetIntYc(Date);
+external inner function string 255 CreateInvoiceNumber(LongInt,string);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner function val MulRateToBase2(var string,val,val,val,val,val,val,roundmode);
+external inner function val MulWithRateToBase2(var string,Date,val,roundmode);
+external inner function val MulWithRateToBase1(var string,Date,val,roundmode);
+external inner procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
+external inner procedure Base1ToBase2(var val,Date,var val);
+external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+external inner function Boolean ObjectTypeMatch(string,string);
+external inner procedure AddCurTotalsRow(string,val,val,val,var record SMVc);
+
+function Boolean PrepaymentObjectMatch(LongInt CUPNr,string ObjStr,string ObjType)
+BEGIN
+  record ARPayHistVc ARPayHistr;  
+  record IPVc IPr;  
+  row IPVc IPrw;
+  Boolean foundf,res;
+  Integer i,rwcnt;
+
+  res = true;
+  if ((blank(ObjType)) and (blank(ObjStr))) then begin
+    goto LPrepaymentObjectMatch;
+  end;
+  ARPayHistr.CUPNr = CUPNr;
+  ARPayHistr.FileName = "IPVc";
+  foundf = true;
+  while (LoopMain(ARPayHistr,2,foundf)) begin
+    if ((ARPayHistr.CUPNr<>CUPNr) or (ARPayHistr.FileName<>"IPVc")) then begin foundf = false; end;
+    if (foundf) then begin
+      IPr.SerNr = ARPayHistr.SerNr;
+      if (ReadFirstMain(IPr,1,true)) then begin
+        rwcnt = MatRowCnt(IPr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(IPr,i,IPrw);
+          if (IPrw.CUPNr==CUPNr) then begin
+            if (nonblank(ObjType)) then begin
+              res = ObjectTypeMatch(IPrw.Objects,ObjType);
+            end;
+            if (nonblank(ObjStr)) then begin
+              res = SetInSet(ObjStr,IPrw.Objects);
+            end;
+            goto LPrepaymentObjectMatch;
+          end;
+        end;
+      end;
+    end;
+  end;
+LPrepaymentObjectMatch:;
+  PrepaymentObjectMatch = res;
+  RETURN;
+END;
+
+global
+procedure OBS_GetOnAccBalance(record RcVc RepSpec,string cucode,string cucrncy,Boolean backdate,Integer foreigncur,var val sump,var val bc2sump,var val rvalp,var val sumbooked,var val sumnow,var val sumcurncy,var val sumdiff,record SMVc CurTotalsr,
+                          Array string debaccs,Array val debbal,var Integer debcnt,boolean noprepay)
+BEGIN
+  val t,t2,curval;
+  record IPrsVc IPrsr;
+  record ARPayHistVc ARPayHistr,tmpARPayHistr;  
+  record ARPayHistVc firstARPayHistr;  
+  record IVVc IVr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record PurgeTRVc PurgeTRr;
+  record TRVc TRr;
+  row TRVc TRrw;
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  record CLOutVc CLOutr;
+  row CLOutVc CLOutrw;
+  Boolean found,ipf,b1bankf;
+  Integer rwcnt,i;
+  Boolean testf;
+  val onaccv,onaccv2,onacccurv,lossv;
+  string 20 aracc;
+  record BaseCurBlock bcur;  
+  vector Boolean viprowprntdf;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  val pfrrate,ptorate1,ptorate2,pbaserate1,pbaserate2;
+  Date agedate;
+
+  agedate = RepSpec.d1;
+  if (blankdate(agedate)) then begin
+    agedate = CurrentDate;
+  end;
+  if (HasLocalization("POL")) then begin
+    agedate = AddDay(agedate,1);
+  end;
+  BlockLoad(bcur);
+  sump = 0;
+  bc2sump = 0;
+  rvalp = 0;
+  sumbooked = 0;
+  sumnow = 0;
+  sumcurncy = 0;
+  sumdiff = 0;
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = kIPrsTransTypeReceipt;
+  IPrsr.CustCode = cucode;
+  found = true;
+  while (LoopKey("OnAcc",IPrsr,3,found)) begin
+    if (found) then begin
+      testf = true;
+      if (IPrsr.CustCode!=cucode) then begin found = false; end;
+      if (IPrsr.IVNr!=-1) then begin found = false; end;
+      if (IPrsr.TransType!=kIPrsTransTypeReceipt) then begin found = false; end;
+      if (backdate) then begin
+        if (IPrsr.TransDate>RepSpec.d1) then begin testf = false; end;
+      end;
+      if (found and testf) then begin
+        IPr.SerNr = IPrsr.TransNr;
+        if (ReadFirstMain(IPr,1,true)) then begin
+          if (IPr.RejectedFlag==0) then begin
+          rwcnt = MatRowCnt(IPr);
+          for (i=0;i<rwcnt;i=i+1) begin
+            MatRowGet(IPr,i,IPrw);
+            if ((IPrw.InvoiceNr==-1) and (IPrw.CUPNr==-1) and (IPrw.stp==1)) then begin
+//              if (IPrw.PayDate==IPrsr.CustDate) then begin
+              if (IPr.TransDate==IPrsr.TransDate) and ((IPrsr.TransDate<=RepSpec.d1) or backdate==false) then begin
+                if (IPrw.CustCode==cucode) and (viprowprntdf[IPr.SerNr & ":" & i]==false) then begin
+                  viprowprntdf[IPr.SerNr & ":" & i] = true;
+                  testf = true;
+                  if (testf) then begin
+                    if (backdate) then begin
+                      if (RepSpec.d1<IPrsr.CustDate) then begin
+                        testf = false;
+                      end;
+                    end;
+                    if (nonblank(RepSpec.ObjStr)) then begin
+                      if (SetInSet(RepSpec.ObjStr,IPrw.Objects)==false) then begin
+                        testf = false;
+                      end;
+                    end;                                        
+                    if (nonblank(RepSpec.CurncyCode)) then begin
+                      if (RepSpec.CurncyCode!=IPrw.InvCurncy) then begin
+                        testf = false;
+                      end;
+                    end;                                        
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(IPrw.Objects,RepSpec.ObjType);
+                    end;                                        
+                    aracc = IPrw.ARAcc;
+                    if (blank(aracc)) then begin
+                      aracc = GetCustomerOnAccountAC(IPrw.CustCode);
+                    end;
+                    if (nonblank(RepSpec.AccStr)) then begin
+                      if (RepSpec.AccStr!=aracc) then begin
+                        testf = false;
+                      end;
+                    end;
+                  end;
+                  if (testf) then begin
+                    if (nonblank(cucrncy)) then begin
+                      if (cucrncy!=bcur.BaseCur1) then begin
+                        CurValToOtherCur(IPr.TransDate,IPrw.InvCurncy,IPrw.InvVal,cucrncy,t,DefaultCurRoundOff);
+                      end else begin
+                        if (IPrw.BankCurncy!=bcur.BaseCur1) then begin
+                          CurValToOtherCur(IPr.TransDate,IPrw.InvCurncy,IPrw.InvVal,cucrncy,t,DefaultCurRoundOff);
+                        end else begin
+                          t = IPrw.BankVal;
+                        end;
+                      end;
+                    end else begin
+                      if (nonblank(IPrw.InvCurncy)) then begin
+                        if (foreigncur==1) then begin
+                          AddCurTotalsRow(IPrw.InvCurncy,-IPrw.InvVal,blankval,blankval,CurTotalsr);
+                        end else begin
+                          AddCurTotalsRow(bcur.BaseCur1,MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,-IPrw.InvVal,DefaultCurRoundOff),blankval,blankval,CurTotalsr);
+                        end;
+                      end;
+                      t = IPrw.InvVal;
+//                      AddCurncyTotals(acur,av1,curcnt,IPrw.InvCurncy,IPrw.InvVal); // Should we have CurncyTotals in GetOnAccBalance????
+                    end;
+                    curval = t;
+                    rvalp = rvalp - t;
+                    if (IPrw.B1BankVal==0) then begin
+                      if (IPrw.BankCurncy!=bcur.BaseCur1) then begin
+                        t = MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,t,DefaultCurRoundOff);
+                      end else begin
+                        t = IPrw.BankVal;
+//                        t = MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,t,DefaultCurRoundOff);
+//must show same as On Account account
+                      end;
+                    end else begin
+                      t = IPrw.B1BankVal;
+                    end;
+                    sump = sump - t;
+                    if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+                      ARRnAddToDebtorsAccounts(aracc,0,-t,debaccs,debbal,debcnt);
+                    end;
+                    if (IPrw.B2BankVal==0) then begin
+                      if (nonblank(cucrncy)) then begin
+                        t = MulWithRateToBase2(cucrncy,IPr.TransDate,curval,DefaultCurRoundOff);
+                      end else begin
+                        t = MulWithRateToBase2(IPrw.InvCurncy,IPr.TransDate,IPrw.InvVal,DefaultCurRoundOff);
+                      end;
+                    end else begin
+                      t = IPrw.B2BankVal;
+                    end;
+                    bc2sump = bc2sump - t;
+                    if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) then begin
+                      sumcurncy = sumcurncy + IPrw.InvVal;
+                      if (backdate) then begin
+                        if (IPrw.InvCurncy<>IPrw.BankCurncy) then begin                      
+                          t = MulWithRateToBase1(IPrw.BankCurncy,RepSpec.d1,IPrw.BankVal,DefaultCurRoundOff);
+                        end else begin
+                          t = MulWithRateToBase1(IPrw.InvCurncy,RepSpec.d1,IPrw.InvVal,DefaultCurRoundOff);
+                        end;  
+                      end else begin
+                        if (IPrw.InvCurncy<>IPrw.BankCurncy) then begin                      
+                          t = MulWithRateToBase1(IPrw.BankCurncy,IPr.TransDate,IPrw.BankVal,DefaultCurRoundOff);
+                        end else begin
+                          t = MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,IPrw.InvVal,DefaultCurRoundOff);
+                        end;  
+                      end;
+                      sumbooked = sumbooked + t;
+                      t2 = MulWithRateToBase1(IPrw.InvCurncy,agedate,IPrw.InvVal,DefaultCurRoundOff);
+                      sumnow = sumnow + t2;
+                      t2 = t2 - t;
+                      sumdiff = sumdiff + t2;
+                    end;                    
+                  end;
+                end;
+              end;
+            end;
+          end;
+          end;
+        end;
+      end;
+    end;
+LSkipOnAcc:;    
+  end;
+  
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = kIPrsTransTypeNLTransaction;
+  IPrsr.CustCode = cucode;
+  found = true;
+  ResetLoop(IPrsr);
+  while (LoopKey("OnAcc",IPrsr,3,found)) begin
+    if (found) then begin
+      if (IPrsr.CustCode<>cucode) then begin found = false; end;
+      if (IPrsr.IVNr<>-1) then begin found = false; end;      
+      if (IPrsr.TransType!=kIPrsTransTypeNLTransaction) then begin found = false; end;
+      if (found) then begin      
+        testf = true;
+        TRr.Number = IPrsr.TransNr;
+        TRr.IntYc = GetIntYc(IPrsr.TransDate);                
+        if (ReadFirstMain(TRr,2,true)) then begin
+          if (backdate) then begin
+            if (RepSpec.d1<TRr.TransDate) then begin
+              testf = false;
+            end;
+          end;          
+          if (TRr.TransDate!=IPrsr.TransDate) then begin
+            testf = false;
+          end;
+          if (testf) then begin          
+            rwcnt = MatRowCnt(TRr);
+            for (i=0; i<rwcnt; i=i+1) begin
+              MatRowGet(TRr,i,TRrw);
+              if (TRrw.ovst==0) then begin
+                if (TRrw.stp==1) then begin
+                  if (TRrw.SerNr==-1) then begin
+                    if (TRrw.CompCode==cucode) and (TRrw.Typ==1) then begin 
+                      if (nonblank(TRrw.CredVal)) then begin
+                        onaccv = TRrw.CredVal;
+                        onaccv2 = TRrw.CredVal2;
+                        onacccurv = TRrw.CurCredVal;
+                      end else begin
+                        onaccv = -TRrw.DebVal;
+                        onaccv2 = -TRrw.DebVal2;
+                        onacccurv = -TRrw.CurDebVal;
+                      end;        
+                      if (nonblank(onacccurv)) or ((RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+                        if (nonblank(cucrncy)) then begin
+                          if (onacccurv!=blankval) then begin                   
+                            CurValToOtherCur(TRr.TransDate,TRrw.Curncy,onacccurv,cucrncy,t,DefaultCurRoundOff);
+                          end else begin
+                            CurValToOtherCur(TRr.TransDate,TRrw.Curncy,onaccv,cucrncy,t,DefaultCurRoundOff);
+                          end;  
+                        end else begin            
+                          if (nonblank(TRrw.Curncy)) then begin                  
+                            if (onacccurv!=blankval) then begin 
+                              AddCurTotalsRow(TRrw.Curncy,-onacccurv,blankval,blankval,CurTotalsr);
+  //                          AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,onacccurv);
+                            end else begin
+                              AddCurTotalsRow(TRrw.Curncy,-onaccv,blankval,blankval,CurTotalsr);
+  //                          AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,onaccv);
+                            end;
+                          end;
+                        end;    
+                        sump = sump - onaccv;
+                        bc2sump = bc2sump - onaccv2;
+                        if (nonblank(onacccurv)) then begin
+                          rvalp = rvalp - onacccurv;
+                        end else begin
+                          rvalp = rvalp - onaccv;
+                        end;
+                        if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) begin
+                          sumcurncy = sumcurncy + onacccurv;
+                          if (backdate) then begin
+                            if (onacccurv!=blankval) then begin                   
+                              t = MulWithRateToBase1(TRrw.Curncy,RepSpec.d1,onacccurv,DefaultCurRoundOff);
+                            end else begin
+                              t = onaccv;
+                            end;
+                          end else begin
+                            t = onaccv;
+                          end;
+                          sumbooked = sumbooked + t;
+                          t2 = MulWithRateToBase1(TRrw.Curncy,agedate,onacccurv,DefaultCurRoundOff);
+                          sumnow = sumnow + t2;
+                          t2 = t2 - t;
+                          sumdiff = sumdiff + t2;                        
+                        end;
+                      end;
+                    end;
+                  end;                
+                end;
+              end;
+            end;                
+          end;
+        end;
+      end;          
+    end;
+  end;
+
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = kIPrsTransTypePurgeNLTransaction;
+  IPrsr.CustCode = cucode;
+  found = true;
+  ResetLoop(IPrsr);
+  while (LoopKey("OnAcc",IPrsr,3,found)) begin
+    if (found) then begin
+      if (IPrsr.CustCode<>cucode) then begin found = false; end;
+      if (IPrsr.IVNr<>-1) then begin found = false; end;      
+      if (IPrsr.TransType!=kIPrsTransTypePurgeNLTransaction) then begin found = false; end;
+      if (found) then begin      
+        testf = true;
+        PurgeTRr.Number = IPrsr.TransNr;
+        PurgeTRr.IntYc = GetIntYc(IPrsr.TransDate);                
+        PurgeTRr.TransRow = IPrsr.TransRow;
+        if (ReadFirstMain(PurgeTRr,3,true)) then begin
+          if (backdate) then begin
+            if (RepSpec.d1<PurgeTRr.TransDate) then begin
+              testf = false;
+            end;
+          end;          
+          if (PurgeTRr.TransDate!=IPrsr.TransDate) then begin
+            testf = false;
+          end;
+          if (testf) then begin          
+
+            if (PurgeTRr.SerNr==-1) then begin
+              if (PurgeTRr.CompCode==cucode) and (PurgeTRr.Typ==1) then begin 
+                if (nonblank(PurgeTRr.CredVal)) then begin
+                  onaccv = PurgeTRr.CredVal;
+                  onaccv2 = PurgeTRr.CredVal2;
+                  onacccurv = PurgeTRr.CurCredVal;
+                end else begin
+                  onaccv = -PurgeTRr.DebVal;
+                  onaccv2 = -PurgeTRr.DebVal2;
+                  onacccurv = -PurgeTRr.CurDebVal;
+                end;        
+                if (nonblank(cucrncy)) then begin
+                  if (onacccurv!=blankval) then begin                   
+                    CurValToOtherCur(PurgeTRr.TransDate,PurgeTRr.Curncy,onacccurv,cucrncy,t,DefaultCurRoundOff);
+                  end else begin
+                    CurValToOtherCur(PurgeTRr.TransDate,PurgeTRr.Curncy,onaccv,cucrncy,t,DefaultCurRoundOff);
+                  end;  
+                end else begin            
+                  if (nonblank(PurgeTRr.Curncy)) then begin                  
+                    if (onacccurv!=blankval) then begin 
+                      AddCurTotalsRow(PurgeTRr.Curncy,-onacccurv,blankval,blankval,CurTotalsr);
+//                          AddCurncyTotals(acur,av1,curcnt,PurgeTRr.Curncy,onacccurv);
+                    end else begin
+                      AddCurTotalsRow(PurgeTRr.Curncy,-onaccv,blankval,blankval,CurTotalsr);
+//                          AddCurncyTotals(acur,av1,curcnt,PurgeTRr.Curncy,onaccv);
+                    end;
+                  end;
+                end;    
+                sump = sump - onaccv;
+                bc2sump = bc2sump - onaccv2;
+                if (nonblank(onacccurv)) then begin
+                  rvalp = rvalp - onacccurv;
+                end else begin
+                  rvalp = rvalp - onaccv;
+                end;
+                if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) begin
+                  sumcurncy = sumcurncy + onacccurv;
+                  if (backdate) then begin
+                    if (onacccurv!=blankval) then begin                   
+                      t = MulWithRateToBase1(PurgeTRr.Curncy,RepSpec.d1,onacccurv,DefaultCurRoundOff);
+                    end else begin
+                      t = onaccv;
+                    end;
+                  end else begin
+                    t = onaccv;
+                  end;
+                  sumbooked = sumbooked + t;
+                  t2 = MulWithRateToBase1(PurgeTRr.Curncy,agedate,onacccurv,DefaultCurRoundOff);
+                  sumnow = sumnow + t2;
+                  t2 = t2 - t;
+                  sumdiff = sumdiff + t2;                        
+                end;
+              end;
+            end;                
+          end;
+        end;
+      end;          
+    end;
+  end;
+  ARPayHistr.CustCode = cucode;
+  found = false;
+  if (RepSpec.flags[29]==0) then begin
+    found = true;
+  end;
+  while (LoopKey("CustCode",ARPayHistr,1,found)) begin
+    if (found) then begin
+      if (ARPayHistr.CustCode<>cucode) then begin found = false; end;
+      if (found) then begin
+        if (ARPayHistr.FileName=="IVVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if (PrepaymentObjectMatch(ARPayHistr.CUPNr,RepSpec.ObjStr,RepSpec.ObjType)==false) then begin
+            testf = false;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          aracc = ARPayHistr.ARAcc;
+          if (blank(aracc)) then begin
+            aracc = GetCustomerOnAccountAC(ARPayHistr.CustCode);
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            if (RepSpec.AccStr!=aracc) then begin
+              testf = false;
+            end;
+          end;
+          if (testf) then begin
+            if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) begin
+              t = ARPayHistr.BookVal;
+              t2 = MulWithRateToBase1(ARPayHistr.CurncyCode,agedate,ARPayHistr.Val,DefaultCurRoundOff);
+              sumcurncy = sumcurncy - ARPayHistr.Val;
+              sumbooked = sumbooked - ARPayHistr.BookVal;
+              sumnow = sumnow - t2;
+              t2 = t2 - t;
+              sumdiff = sumdiff - t2;
+            end else begin
+              if (nonblank(cucrncy)) then begin
+                CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,ARPayHistr.Val,cucrncy,t,DefaultCurRoundOff);
+              end else begin
+                if (nonblank(ARPayHistr.CurncyCode)) then begin
+                  AddCurTotalsRow(ARPayHistr.CurncyCode,ARPayHistr.Val,blankval,blankval,CurTotalsr);
+                end;
+                t = ARPayHistr.Val;
+  //              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,ARPayHistr.Val);
+              end;          
+              rvalp = rvalp + t;
+  // Why? It should take whatever was booked, or?
+              sump = sump + ARPayHistr.BookVal;
+  //            sump = sump + MulWithRateToBase1(ARPayHistr.CurncyCode,ARPayHistr.TransDate,ARPayHistr.Val,DefaultCurRoundOff);
+              GetARPayRate(-1,ARPayHistr.CUPNr,frrate,torate1,torate2,baserate1,baserate2,ARPayHistr.CurncyCode,ARPayHistr.TransDate);          
+              t = MulRateToBase1(ARPayHistr.CurncyCode,ARPayHistr.Val,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+  /*
+  StartFormat(15);
+   OutString(0,0,"3.jarek",false);
+   OutString(100,0,sump,false);
+   OutString(200,0,rvalp,false);
+   OutString(300,0,IPr.SerNr,false);
+  EndFormat;
+  */
+              lossv = ARPayHistr.BookVal - t;
+              sump = sump - lossv;
+  //            if (t==0) or (t==ARPayHistr.BookVal) then begin
+              if (t==0) or (t==ARPayHistr.BookVal) then begin
+  //              Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+                t = MulRateToBase2(ARPayHistr.CurncyCode,ARPayHistr.Val,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+  //lossv?               
+              end;
+              bc2sump = bc2sump + t;            
+              if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+                ARRnAddToDebtorsAccounts(aracc,0,ARPayHistr.BookVal,debaccs,debbal,debcnt);
+              end;
+            end;
+          end;  
+        end;
+        if (ARPayHistr.FileName=="IPVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+//OBS-->
+          if noprepay then begin
+            tmpARPayHistr.CUPNr=ARPayHistr.CUPNr;
+            tmpARPayHistr.FileName="IVVc";
+            if ReadFirstMain(tmpARPayHistr,2,true) then begin
+              if (RepSpec.d1<ARPayHistr.TransDate) then begin
+                testf = false;
+              end;
+            end else begin
+              testf=false;
+            end;
+          end;
+//OBS<--
+          IPr.SerNr = ARPayHistr.SerNr;
+          ipf = ReadFirstMain(IPr,1,true);
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            IPr.SerNr = ARPayHistr.SerNr;
+            if (ipf) then begin
+              rwcnt = MatRowCnt(IPr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(IPr,i,IPrw);
+                if (IPrw.CUPNr==ARPayHistr.CUPNr) then begin
+                  if (nonblank(RepSpec.ObjType)) then begin
+                    testf = ObjectTypeMatch(IPrw.Objects,RepSpec.ObjType);
+                  end;                                                        
+                  if (SetInSet(RepSpec.ObjStr,IPrw.Objects)==false) then begin
+                    testf = false;
+                  end;
+                  i = rwcnt;
+                end;
+              end;
+            end;
+          end;
+          aracc = ARPayHistr.ARAcc;
+          if (blank(aracc)) then begin
+            aracc = GetCustomerOnAccountAC(ARPayHistr.CustCode);
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            if (RepSpec.AccStr!=aracc) then begin
+              testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) begin
+              t = ARPayHistr.BookVal;
+              t2 = MulWithRateToBase1(ARPayHistr.CurncyCode,agedate,ARPayHistr.Val,DefaultCurRoundOff);
+              sumcurncy = sumcurncy + ARPayHistr.Val;
+              sumbooked = sumbooked + ARPayHistr.BookVal;
+              sumnow = sumnow + t2;
+              t2 = t2 - t;
+              sumdiff = sumdiff + t2;
+            end else begin                                                   
+              if (nonblank(cucrncy)) then begin
+                CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,DefaultCurRoundOff);
+                if (RepSpec.ArtMode==3) then begin// Saldo          
+                  AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+                end;
+              end else begin
+                t = -ARPayHistr.Val;
+                if (nonblank(ARPayHistr.CurncyCode)) then begin
+                  if (foreigncur==1) then begin
+                    AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+                  end else begin
+                    AddCurTotalsRow(bcur.BaseCur1,-ARPayHistr.BookVal,blankval,blankval,CurTotalsr);
+                  end;
+                end else begin
+                  AddCurTotalsRow(bcur.BaseCur1,-ARPayHistr.BookVal,blankval,blankval,CurTotalsr);
+                end;
+              end;
+
+  /*            
+  ARPayHistr.BookVal should contain Bank amount or On Account A/C amount
+              if (ARPayHistr.Val<0) then begin
+                if (nonblank(ARPayHistr.CurncyCode)) then begin
+                  firstARPayHistr.CUPNr = ARPayHistr.CUPNr;
+                  if (ReadFirstMain(firstARPayHistr,1,true)) then begin
+                    ARPayHistr.BookVal = (firstARPayHistr.BookVal*ARPayHistr.Val)/firstARPayHistr.Val;
+                  end;
+                end;
+              end;
+  */            
+              RecordClear(IVr);
+              rvalp = rvalp + t;
+  //            sump = sump - ARPayHistr.BookVal;//**
+  //same as Prepayment Account 
+              b1bankf = false;
+              if (ipf) then begin
+                rwcnt = MatRowCnt(IPr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(IPr,i,IPrw);
+                  if (IPrw.CUPNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(IPrw.B1BankVal)) then begin
+                      t = IPrw.B1BankVal;
+                      i = rwcnt;
+                      b1bankf = true;
+                    end;
+                  end;
+                end;
+              end;
+              if (b1bankf==false) then begin
+                if (GetARPayRate(-1,ARPayHistr.CUPNr,frrate,torate1,torate2,baserate1,baserate2,ARPayHistr.CurncyCode,ARPayHistr.TransDate)) then begin
+                  t = MulRateToBase1(ARPayHistr.CurncyCode,ARPayHistr.Val,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+                end else begin            
+                  t = MulWithRateToBase1(ARPayHistr.CurncyCode,ARPayHistr.TransDate,ARPayHistr.Val,DefaultCurRoundOff);
+                end;
+              end;
+
+              sump = sump - t;          
+              lossv = blankval;
+  /*
+  ARPayHistr.BookVal is not same as On AccAcc posting in NL now so we need calculation for losses findings
+  */
+              if (ARPayHistr.CurncyCode==bcur.BaseCur1) then begin
+              end else begin
+                if (ipf) then begin
+                  rwcnt = MatRowCnt(IPr);
+                  for (i=0;i<rwcnt;i=i+1) begin
+                    MatRowGet(IPr,i,IPrw);
+                    if (IPrw.CUPNr==ARPayHistr.CUPNr) then begin
+                      if (nonblank(IPrw.B1BankVal)) then begin
+                        sump = sump + t;
+                        sump = sump - IPrw.B1BankVal;
+                      end;
+                      if (GetARPayRate(IPr.SerNr,IPrw.CUPNr,pfrrate,ptorate1,ptorate2,pbaserate1,pbaserate2,IPrw.InvCurncy,IPr.TransDate)) then begin
+                        lossv = MulRateToBase1(IPrw.BankCurncy,IPrw.BankVal,pfrrate,ptorate1,ptorate2,pbaserate1,pbaserate2,DefaultCurRoundOff);
+                      end else begin
+                        lossv = MulRateToBase1(IPrw.InvCurncy,IPrw.InvVal,pfrrate,ptorate1,ptorate2,pbaserate1,pbaserate2,DefaultCurRoundOff);
+                      end;                    
+                      lossv = lossv - t;
+                      sump = sump - lossv;
+  /*
+  changing code to be same as in MakeTransFromIP
+                      FindAllPrepayLosses(IPrw.InvCurncy,IPr.TransDate,IPrw.InvVal,IPrw.CUPNr,IPrw.InvVal,lossv,IVr,IPrw.InvoiceNr,-1,bcur,IPrw.B1BankVal,IPrw.BankCurncy);
+                      if (lossv!=t) then begin
+                        sump = sump + lossv;
+                      end;
+  */                    
+  //                  i = rwcnt; // people put more than 1 row with same CUPNr
+                    end;
+                  end;
+                end;
+              end;
+/*              
+StartFormat(15);
+ OutString(0,0,"2.jarek",false);
+ OutString(100,0,sump,false);
+ OutString(200,0,rvalp,false);
+ OutString(300,0,IPr.SerNr,false);
+EndFormat;
+*/
+  //            GetARPayRate(-1,ARPayHistr.CUPNr,frrate,torate1,torate2,baserate1,baserate2,ARPayHistr.CurncyCode,ARPayHistr.TransDate);
+              t = MulRateToBase2(ARPayHistr.CurncyCode,ARPayHistr.Val,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+              if (t==0) or (t==ARPayHistr.BookVal) then begin
+                Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+              end;
+              bc2sump = bc2sump - t;
+              if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+                ARRnAddToDebtorsAccounts(aracc,0,-ARPayHistr.BookVal,debaccs,debbal,debcnt);
+              end;
+            end;
+          end;  
+        end;
+        if (ARPayHistr.FileName=="CLInVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+//OBS-->
+          if noprepay then begin
+            tmpARPayHistr.CUPNr=ARPayHistr.CUPNr;
+            tmpARPayHistr.FileName="CLOutVc";
+            if ReadFirstMain(tmpARPayHistr,2,true) then begin
+              if (RepSpec.d1<ARPayHistr.TransDate) then begin
+                testf = false;
+              end;
+            end else begin
+              testf=false;
+            end;
+          end;
+//OBS<--
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            CLInr.SerNr = ARPayHistr.SerNr;
+            if (ReadFirstMain(CLInr,1,true)) then begin
+              rwcnt = MatRowCnt(CLInr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(CLInr,i,CLInrw);
+                if (CLInrw.Type==4) then begin
+                  if (CLInrw.TransNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(CLInrw.Objects,RepSpec.ObjType);
+                    end;                                                        
+                    if (SetInSet(RepSpec.ObjStr,CLInrw.Objects)==false) then begin
+                      testf = false;
+                    end;
+                    i = rwcnt;
+                  end;
+                end;
+              end;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          aracc = ARPayHistr.ARAcc;
+          if (blank(aracc)) then begin
+            aracc = GetCustomerOnAccountAC(ARPayHistr.CustCode);
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            if (RepSpec.AccStr!=aracc) then begin
+              testf = false;
+            end;
+          end;
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,DefaultCurRoundOff);
+            end else begin
+              t = -ARPayHistr.Val;
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+              end;
+//              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,-ARPayHistr.Val);            
+            end;
+            rvalp = rvalp + t;
+            sump = sump - ARPayHistr.BookVal;
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump - t;
+            if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+              ARRnAddToDebtorsAccounts(aracc,0,-ARPayHistr.BookVal,debaccs,debbal,debcnt);
+            end;
+          end;          
+        end;        
+        if (ARPayHistr.FileName=="CLOutVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            CLOutr.SerNr = ARPayHistr.SerNr;
+            if (ReadFirstMain(CLOutr,1,true)) then begin
+              rwcnt = MatRowCnt(CLOutr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(CLOutr,i,CLOutrw);
+                if (CLOutrw.Type==5) then begin
+                  if (CLOutrw.TransNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(CLOutrw.Objects,RepSpec.ObjType);
+                    end;                                                        
+                    if (SetInSet(RepSpec.ObjStr,CLOutrw.Objects)==false) then begin
+                      testf = false;
+                    end;
+                    i = rwcnt;
+                  end;
+                end;
+              end;
+            end;
+          end;
+          aracc = ARPayHistr.ARAcc;
+          if (blank(aracc)) then begin
+            aracc = GetCustomerOnAccountAC(ARPayHistr.CustCode);
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            if (RepSpec.AccStr!=aracc) then begin
+              testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,DefaultCurRoundOff);
+            end else begin
+              t = -ARPayHistr.Val;
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+              end;
+//              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,-ARPayHistr.Val);            
+            end;
+            rvalp = rvalp - t;
+            sump = sump + ARPayHistr.BookVal;
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump + t;
+            if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+              ARRnAddToDebtorsAccounts(aracc,0,ARPayHistr.BookVal,debaccs,debbal,debcnt);
+            end;
+          end;          
+        end;                
+      end;
+    end;
+  end;
+  if (rvalp==0) then begin sump = 0; end;
+  return;
+end;

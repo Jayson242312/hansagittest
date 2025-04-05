@@ -1,0 +1,35 @@
+external procedure DividerStr(string,string,var array string,var integer);
+
+global procedure MSChangeFlatGroupCountRn(Record RcVc RepSpec)
+Begin
+  Record FlatCountersVc FlatCountersr;
+  Boolean wloop,testf;
+  Record INVc INr;
+  
+  StartReportNoHeaderJob(USetStr(1000817));
+  FlatCountersr.FlatGroupCode=RepSpec.f1;
+  wloop=true;
+  //While LoopKey("FlatCode",FlatCountersr,1,wloop) begin 
+  While LoopKey("FlatGroupType",FlatCountersr,1,wloop) begin 
+    if FlatCountersr.FlatGroupCode!=RepSpec.f1 then begin
+      wloop=false;
+    end else begin
+      if FlatCountersr.Changed==0 then begin
+        INr.Code=FlatCountersr.CounterType;
+        if ReadFirstMain(INr,1,true) then begin end;
+        StartFormat(15);
+        OutString(0,"",FlatCountersr.FlatCode,0);
+        OutStringID(50,"DblFlatCountersVc",FlatCountersr.CounterNo,0,FlatCountersr.SerNr);
+        OutString(120,"",FlatCountersr.Address,0);
+        OutString(240,"",FlatCountersr.CounterType,0);
+        OutString(270,"",INr.Name,0);
+        OutStringID(480,"dblChangeCounter",USetStr(1000818),1,FlatCountersr.SerNr);
+        EndFormat;
+        Gray_Divider(1,0);
+      end;
+    end;
+  end;
+  EndJob;
+
+return;
+end;

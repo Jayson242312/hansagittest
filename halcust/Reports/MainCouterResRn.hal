@@ -1,0 +1,396 @@
+external inner procedure GetMonthText(string,Date,var string);
+external inner procedure HT2Per(Date,Date,var string);
+external function boolean GetCountResRecInPeriod(longint,string,date,date,var record CountResVc);
+external function boolean PrevCounterRes(record CountResVc,var record CountResVc);
+external function boolean IsTwoTypeFlatCounter(longint);
+external procedure GetCountResPeriodReport(var date,var date);
+
+procedure SetDates(var date sd,var date ed,date td,integer monthtoadd) begin
+  
+  sd=addmonth(td,-1*monthtoadd);
+  sd.day=1;
+  
+  ed=sd;
+  ed.day=DaysInMonth(getyear(ed),getmonth(ed));
+  
+return;
+end;
+
+procedure PrintCurrentRow(record FlatCountersVc FlatCountersr,date preved,date ed,date sd,string type,array longint ColX) begin
+  record CountResVc CountResr,tCountResr;
+  record INVc Inr;
+  boolean wloop,foundf,prevfoundf;
+  longint intStatuss;
+  string 5 tstr;
+  // val prevval;
+  
+  // tCountResr.StartDate        = AddDay(preved,1);
+  // tCountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  // tCountResr.CountResType     = type;
+  // if PrevCounterRes(tCountResr,CountResr) then begin
+    // prevval=CountResr.EndVal;
+    // prevfoundf = true;
+  // end else begin
+    // if type=="MWH" or blank(type) then begin
+      // prevval = FlatCountersr.InitAmount;
+    // end else begin
+      // prevval = FlatCountersr.InitAmount2;
+    // end;
+  // end;
+  
+  //check weather exists current period countres
+  foundf=false;
+  foundf = GetCountResRecInPeriod(FlatCountersr.SerNr,type,sd,ed,CountResr);
+  
+  if !foundf and FlatCountersr.Changed==1 then begin
+    GoTo Skip_PrintCurrentRow;
+  end;
+  
+  if foundf then begin
+    intStatuss=1000439;
+  end else begin
+    intStatuss=1000438;
+  end;
+  INr.Code=FlatCountersr.CounterType;
+  if ReadFirstMain(INr,1,true) then begin end;
+  StartFormat(15);
+  if FlatCountersr.Changed==1 then begin
+    tstr="   N";
+  end;
+  OutStringID(ColX[1],"DblFlatCountersVc",FlatCountersr.CounterNo & tstr,0,FlatCountersr.SerNr);
+  OutString(ColX[2],"",FlatCountersr.CounterType,0);
+  OutString(ColX[3],"",INr.Name,0);
+  OutString(ColX[4],"",type,0);
+  OutStringID(ColX[5],"dblOpenCountResVc",USetStr(intStatuss),0,FlatCountersr.SerNr & ":" & foundf & ":" & sd & ":" & false & ":" & type);
+  // OutVal(ColX[6],"",prevval,M4Val,1);
+  if foundf then begin
+    OutVal(ColX[6],"",CountResr.StartVal,M4Val,1);
+    OutVal(ColX[7],"",CountResr.EndVal,M4Val,1);
+    // OutVal(ColX[8],"",CountResr.EndVal-prevval,M4Val,1);
+    OutVal(ColX[8],"",CountResr.EndVal-CountResr.StartVal,M4Val,1);
+  end else begin
+    OutString(ColX[6],"","_______",1);
+    OutString(ColX[7],"","_______",1);
+    OutString(ColX[8],"","_______",1);
+  end;
+  EndFormat;
+  
+Skip_PrintCurrentRow:;
+  return;
+end;
+
+procedure PrintOneType(record FlatCountersVc FlatCountersr,string type,date sd,date ed,array longint colX)begin
+  record CountResVc CountResr;
+  record INVc INr;
+  boolean foundf;
+  string 255 tstr;
+  
+  foundf = GetCountResRecInPeriod(FlatCountersr.SerNr,type,sd,ed,CountResr);
+  INr.Code=FlatCountersr.CounterType;
+  if ReadFirstMain(INr,1,true) then begin end;
+  if foundf then begin
+    StartFormat(15);
+    OutStringID(ColX[1],"DblFlatCountersVc",FlatCountersr.CounterNo,0,FlatCountersr.SerNr);
+    OutString(ColX[2],"",FlatCountersr.CounterType,0);
+    OutString(ColX[3],"",INr.Name,0);
+    OutString(ColX[4],"",type,0);
+    GetMonthText("",sd,tstr);
+    OutString(ColX[5]+15,"",tstr,0);
+    //if foundf then begin
+      OutVal(ColX[6]+10,"",CountResr.StartVal,M4Val,1);
+      OutVal(ColX[7]+10,"",CountResr.EndVal,M4Val,1);
+      OutVal(ColX[8],"",CountResr.EndVal-CountResr.StartVal,M4Val,1);
+    //end else begin
+      //OutString(ColX[5],"","",0);
+      //OutString(ColX[6],"","",0);
+      //OutString(ColX[8],"",USetStr(1000438),1);
+    //end;
+    EndFormat;
+    Gray_divider(1,0);
+  end;
+  
+  return;
+end;
+
+global 
+procedure MainCounterResRn(Record RcVc RepSpec)
+Begin
+  record FlatCountersVc FlatCountersr;
+  // record NApsSetBlock NApsSetr;
+  boolean wloop;
+  array longint ColX;
+  date prevsd,preved,sd,ed,td;
+  integer i;
+  string 255 tstr;
+  
+  ColX[1]=0;
+  ColX[2]=ColX[1]+45;
+  ColX[3]=ColX[2]+45;
+  ColX[4]=ColX[3]+120;
+  ColX[5]=ColX[4]+50;
+  ColX[6]=360;
+  ColX[7]=420;
+  ColX[8]=480;
+  
+  // BlockLoad(NApsSetr);
+  // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+    // sd=currentdate;
+    // sd.day=1;
+    // prevsd=currentdate;
+    // prevsd.day=1;
+    // prevsd=addmonth(prevsd,-1);
+  // end else begin
+    // sd=NApsSetr.DefaultCountResSDate;
+    // prevsd=NApsSetr.DefaultCountResSDate;
+    // prevsd=addmonth(prevsd,-1);
+  // end;
+  // if blankdate(NApsSetr.DefaultCountResEDate) then begin
+    // ed=sd;
+    // ed.day=DaysInMonth(getyear(ed),getmonth(ed));
+  // end else begin
+    // ed=NApsSetr.DefaultCountResEDate;
+  // end;
+  // preved=prevsd;
+  // preved.day=DaysInMonth(getyear(preved),getmonth(preved));
+  GetCountResPeriodReport(sd,ed);
+  prevsd=sd;
+  prevsd=AddMonth(prevsd,-1);
+  preved=prevsd;
+  preved.day=DaysInMonth(getyear(preved),getmonth(preved));
+  td=sd;
+  
+  StartReportNoHeaderJob(USetStr(1000430));
+  StartFormat(15);
+  HT2Per(sd,ed,tstr);
+  OutString(ColX[1],"",tstr,0);
+  EndFormat;
+  StartFormat(15);
+  OutString(ColX[1],"",USetStr(1000431),0);
+  OutString(ColX[2],"",USetStr(1000432),0);
+  OutString(ColX[3],"",USetStr(5443),0);
+  OutString(ColX[4],"",USetStr(1001178),0);
+  OutString(ColX[5],"",USetStr(1000434),0);
+  OutString(ColX[6],"",USetStr(1001300),1); //1000435
+  OutString(ColX[7],"",USetStr(1001301),1); //1000436
+  OutString(ColX[8],"",USetStr(1000437),1);
+  EndFormat;
+  Black_Divider(1,0);
+  FlatCountersr.CodeField=RepSpec.f1;
+  FlatCountersr.RecType=RepSpec.flags[0];
+  ResetLoop(FlatCountersr);
+  wloop=true;
+  While LoopKey("CodeIndex",FlatCountersr,2,wloop) begin
+    if FlatCountersr.CodeField!=RepSpec.f1 or FlatCountersr.RecType!=RepSpec.flags[0] then begin
+      wloop=false;
+    end else begin
+      if blank(FlatCountersr.FlatCode) then begin
+        if FlatCountersr.CounterType=="KS9" then begin
+          PrintCurrentRow(FlatCountersr,preved,ed,sd,"MWH",ColX);
+        end else begin
+          if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+            PrintCurrentRow(FlatCountersr,preved,ed,sd,"MWH",ColX);
+            PrintCurrentRow(FlatCountersr,preved,ed,sd,"M3",ColX);
+          end else begin
+            PrintCurrentRow(FlatCountersr,preved,ed,sd,"",ColX);
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  Black_Divider(1,0);
+  //Find countres for previous 3 months
+  FlatCountersr.CodeField=RepSpec.f1;
+  FlatCountersr.RecType=RepSpec.flags[0];
+  ResetLoop(FlatCountersr);
+  wloop=true;
+  While LoopKey("CodeIndex",FlatCountersr,2,wloop) begin
+    if FlatCountersr.CodeField!=RepSpec.f1 or FlatCountersr.RecType!=RepSpec.flags[0] then begin
+      wloop=false;
+    end else begin
+      if blank(FlatCountersr.FlatCode) then begin
+        StartFormat(15); EndFormat;
+        if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            PrintOneType(FlatCountersr,"MWH",sd,ed,ColX);
+          end;
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            PrintOneType(FlatCountersr,"M3",sd,ed,ColX);
+          end;
+        end else begin
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            if FlatCountersr.CounterType=="KS9" then begin
+              PrintOneType(FlatCountersr,"MWH",sd,ed,ColX);
+            end else begin
+              PrintOneType(FlatCountersr,"",sd,ed,ColX);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  EndJob;
+
+return;
+end;
+
+global 
+procedure CounterResRn(Record RcVc RepSpec)
+Begin
+  record FlatCountersVc FlatCountersr;
+  // record NApsSetBlock NApsSetr;
+  boolean wloop,counterf;
+  array longint ColX;
+  date prevsd,preved,sd,ed,td;
+  integer i;
+  string 255 tstr;
+  
+  ColX[1]=0;
+  ColX[2]=ColX[1]+45;
+  ColX[3]=ColX[2]+45;
+  ColX[4]=ColX[3]+120;
+  ColX[5]=ColX[4]+50;
+  ColX[6]=360;
+  ColX[7]=420;
+  ColX[8]=480;
+  
+  // BlockLoad(NApsSetr);
+  // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+    // sd=currentdate;
+    // sd.day=1;
+    // prevsd=currentdate;
+    // prevsd.day=1;
+    // prevsd=addmonth(prevsd,-1);
+  // end else begin
+    // sd=NApsSetr.DefaultCountResSDate;
+    // prevsd=NApsSetr.DefaultCountResSDate;
+    // prevsd=addmonth(prevsd,-1);
+  // end;
+  // if blankdate(NApsSetr.DefaultCountResEDate) then begin
+    // ed=sd;
+    // ed.day=DaysInMonth(getyear(ed),getmonth(ed));
+  // end else begin
+    // ed=NApsSetr.DefaultCountResEDate;
+  // end;
+  // preved=prevsd;
+  // preved.day=DaysInMonth(getyear(preved),getmonth(preved));
+  GetCountResPeriodReport(sd,ed);
+  prevsd=sd;
+  prevsd=AddMonth(prevsd,-1);
+  preved=prevsd;
+  preved.day=DaysInMonth(getyear(preved),getmonth(preved));
+  td=sd;
+  
+  StartReportNoHeaderJob(USetStr(1000430));
+  StartFormat(15);
+  HT2Per(sd,ed,tstr);
+  OutString(ColX[1],"",tstr,0);
+  EndFormat;
+  StartFormat(15);
+  OutString(ColX[1],"",USetStr(1000431),0);
+  OutString(ColX[2],"",USetStr(1000432),0);
+  OutString(ColX[3],"",USetStr(5443),0);
+  OutString(ColX[4],"",USetStr(1001178),0);
+  OutString(ColX[5],"",USetStr(1000434),0);
+  OutString(ColX[6],"",USetStr(1000435),1);
+  OutString(ColX[7],"",USetStr(1000436),1);
+  OutString(ColX[8],"",USetStr(1000437),1);
+  EndFormat;
+  Black_Divider(1,0);
+  
+  FlatCountersr.FlatCode=RepSpec.f1;
+  ResetLoop(FlatCountersr);
+  wloop=true;
+  While LoopKey("EnterSortOrder",FlatCountersr,1,wloop) begin
+    if FlatCountersr.FlatCode!=RepSpec.f1 then begin
+      wloop=false;
+    end else begin
+      if nonblank(FlatCountersr.FlatCode) then begin
+        if !counterf then begin
+          counterf=true;
+        end;
+        if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+          PrintCurrentRow(FlatCountersr,preved,ed,sd,"MWH",ColX);
+          PrintCurrentRow(FlatCountersr,preved,ed,sd,"M3",ColX);
+        end else begin
+          PrintCurrentRow(FlatCountersr,preved,ed,sd,"",ColX);
+        end;
+      end;
+    end;
+  end;
+  
+  Black_Divider(1,0);
+  //Find countres for previous 3 months
+  FlatCountersr.FlatCode=RepSpec.f1;
+  ResetLoop(FlatCountersr);
+  wloop=true;
+  While LoopKey("EnterSortOrder",FlatCountersr,1,wloop) begin
+    if FlatCountersr.FlatCode!=RepSpec.f1 then begin
+      wloop=false;
+    end else begin
+      if nonblank(FlatCountersr.FlatCode) then begin
+        StartFormat(15); EndFormat;
+        if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            PrintOneType(FlatCountersr,"MWH",sd,ed,ColX);
+          end;
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            PrintOneType(FlatCountersr,"M3",sd,ed,ColX);
+          end;
+        end else begin
+          for(i=1;i<=3;i=i+1)begin
+            // if blankdate(NApsSetr.DefaultCountResSDate) then begin
+              // SetDates(sd,ed,currentdate,i);
+            // end else begin
+              // SetDates(sd,ed,NApsSetr.DefaultCountResSDate,i);
+            // end;
+            SetDates(sd,ed,td,i);
+            PrintOneType(FlatCountersr,"",sd,ed,ColX);
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if !counterf then begin
+    StartFormat(15);
+    OutStringID(ColX[1],"DblCreateFC",USetStr(1001599),false,RepSpec.f1);
+    
+    EndFormat;
+    
+  end;
+  
+  EndJob;
+
+return;
+end;

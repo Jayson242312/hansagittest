@@ -1,0 +1,91 @@
+
+function boolean ServCalcValueDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServCalcValueVc ServCalcValuer;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServCalcValuer);
+  Buildr.Code = ServCalcValuer.BuildCode;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    ServCalcValuer.Comment = Buildr.Address;
+    PutWindowRecord(wn,ServCalcValuer);
+  end else begin
+    beep;
+  end;
+  ServCalcValueDClassBuildCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServCalcValueDClassBuildGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildGroupVc BuildGroupr;
+  record ServCalcValueVc ServCalcValuer;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServCalcValuer);
+  BuildGroupr.Code = ServCalcValuer.BuildGroupCode;
+  if (ReadFirstMain(BuildGroupr,1,true)) then begin
+    ServCalcValuer.Comment = BuildGroupr.Comment;
+    PutWindowRecord(wn,ServCalcValuer);
+  end else begin
+    beep;
+  end;
+  ServCalcValueDClassBuildGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServCalcValueDClassFlatGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatGroupVc FlatGroupr;
+  record ServCalcValueVc ServCalcValuer;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServCalcValuer);
+  FlatGroupr.Code = ServCalcValuer.FlatGroupCode;
+  if (ReadFirstMain(FlatGroupr,1,true)) then begin
+    ServCalcValuer.Comment = FlatGroupr.Comment;
+    PutWindowRecord(wn,ServCalcValuer);
+  end else begin
+    beep;
+  end;
+  ServCalcValueDClassFlatGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServCalcValueDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record ServCalcValueVc ServCalcValuer;
+  boolean res;
+  Date ed;
+
+  res = true;
+  GetWindowRecord(wn,ServCalcValuer);
+  ed = ServCalcValuer.StartDate;
+  ed.day = 1; ed = addmonth(ed,1); ed = addday(ed,-1);
+  ServCalcValuer.EndDate = ed;
+  PutWindowRecord(wn,ServCalcValuer);
+  
+  ServCalcValueDClassStartDateEFAfter  = res;
+return;
+end;
+
+global
+function boolean ServCalcValueDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "BuildCode": res = ServCalcValueDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+      case "BuildGroupCode": res = ServCalcValueDClassBuildGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatGroupCode": res = ServCalcValueDClassFlatGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "StartDate": res = ServCalcValueDClassStartDateEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  ServCalcValueDClassAfterEditField	 = res;
+return;
+end;

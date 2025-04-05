@@ -1,0 +1,396 @@
+external inner function Boolean PasteCust2InInv(var record IVVc,record LocalMachineBlock,string,Boolean,var string,var string,var string,var string,var string);
+external inner procedure RecalcIVSubtotal(var record IVVc);
+external inner function string 60 AddObjectToObjectList(string,string);
+external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+external inner function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,var string,Boolean,var Integer);
+external inner procedure IVVc_PasteQuant(var record IVVc,Integer,Boolean,var Boolean,string);
+external inner procedure IVSumup(var record IVVc,Boolean);
+external inner function Boolean IVDchrsum(var record IVVc,Integer);
+external inner procedure IVDchsum(var record IVVc,Integer);
+external function longint GetIVSerNrFromFlatCode(date,integer,record NAContractVc);
+external procedure GenFlatServCache(date,date,var record SMVc,Boolean,integer,integer,record NAContractVc);
+external procedure GenFlatServCacheIntSum(record NAContractVc,date,var record SMVc,longint,var string,boolean);
+external updating procedure CreateErrorMail(array string,integer);
+external procedure AddUnUsedPrepaymentToIV(var record IVVc);
+external updating procedure OBS_CreateAndAttachPdfToIVVc(Record IVVc,Record IVVc,string,string);
+external procedure FillVecItemsJur(var vector string);
+external function boolean GetMSPriceJurChg(string,date,string,string,longint,var val,var val);
+external inner function roundmode SetRoundModeD(Integer);
+external procedure CalcServInvCorrections(record RcVc,record NAContractVc,var record SMVc);
+
+procedure AddToTotCacher(var record SMVc totCacher,record SMVc Cacher,longint SerNr) begin
+  row SMVc Cacherw;
+  integer i,rwc;
+  
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    Cacherw.ExtraComment = sernr;
+    MatRowPut(totCacher,MatRowCnt(totCacher),Cacherw);
+  end;
+  
+  return;
+end;
+
+procedure AddSubTotalLine(var record IVVc IVr,var integer rownr,longint contractnr) begin
+  row IVVc IVrw;
+  record NAContractVc NAContractr;
+  
+  NAContractr.SerNr = contractnr;
+  ReadFirstMain(NAContractr,1,true);
+  
+  ClearRow(IVr,IVrw,9);
+  IVrw.ContractNr = contractnr;
+  IVrw.Spec = NAContractr.FlatAddress;
+  MatRowInsert(IVr,rownr,IVrw);
+  RecalcIVSubtotal(IVr);
+  rownr = rownr + 1;
+  
+  return;
+end;
+
+procedure AddObjectsToIVRow(var row IVVc IVrw,longint ContractNr) begin
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  
+  NAContractr.SerNr = contractnr;
+  if !ReadFirstMain(NAContractr,1,true) then begin
+    GoTo LAddObjectsToIVRow;
+  end;
+  
+  IVrw.Objects = AddObjectToObjectList(IVrw.Objects,NAContractr.Objects);
+  
+  Flatsr.FlatCode = NAContractr.FlatCode;
+  if ReadFirstMain(Flatsr,1,true) then begin
+    IVrw.Objects = AddObjectToObjectList(IVrw.Objects,Flatsr.Objects);
+  end;
+  
+  Buildr.Code = NAContractr.BuildCode;
+  if ReadFirstMain(Buildr,1,true) then begin
+    IVrw.Objects = AddObjectToObjectList(IVrw.Objects,Buildr.Objects);
+  end;
+  
+LAddObjectsToIVRow:;
+  return;
+end;
+
+updating
+procedure UpdateNAContractLastDate(var record IVVc IVr,integer curcomp) begin
+  record NAContractVc NAContractr,oldNAContractr;
+  row IVVc IVrw;
+  integer i,rwc;
+  
+  rwc = MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ContractNr!=-1 then begin
+      NAContractr.SerNr = IVrw.ContractNr;
+      if ReadFirstMain(NAContractr,1,true) then begin
+        RecordCopy(oldNAContractr,NAContractr);    
+        NAContractr.LastInvDate = IVr.InvDate;
+        if RecordUpdate(oldNAContractr,NAContractr,true)==0 then begin end;
+        // CreateRecordLink(IVr,curcomp,NAContractr,curcomp);
+        // CreateRecordLink(NAContractr,curcomp,IVr,curcomp);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global updating 
+procedure CreateMergedIVFromServCache(record RcVc RepSpec,record CUVc CUr,date InvDate,
+                                            record SMVc Cacher,var longint IVCounter,
+                                            integer MakeTR,var longint TRIVCounter,boolean donotallowneg,var boolean res, 
+                                            var longint newInvNumber,boolean addprepayf)
+begin
+  record IVVc IVr,oldIVr,checkIVr;
+  record CCatVc CCatr;
+  Record INVc INr;
+  row SMVc Cacherw;
+  row IVVc IVrw;
+  record SRBlock SRRec;
+  record AccBlock AccBl;
+  record LocalMachineBlock LMb;
+  record NApsSetBlock NSr;
+  record NAContractVc NAContractr;
+  string 5 CurncyCode;
+  string 255 inwarning,tstr,artname,counterno,oldcontrnr;
+  string 255 warning,errstr,prepstr,invdatewarn,transdatewarn;
+  val fr,to1,to2,br1,br2,t,PriceInclRebate,Price,vRebate;
+  integer i,rw,ivrow,curcomp,pos;
+  boolean chsum,printrowf;
+  string 20 strSerNr;
+  longint ivsernr;
+  Integer sernrf;
+  boolean jurf;
+  vector string 10 vecItemsJur;
+  res = true;
+  newInvNumber = -1;
+  
+  ivrow=0;
+  curcomp = CurrentCompany;
+  BlockLoad(LMb);
+  BlockLoad(SRRec);
+  BlockLoad(AccBl);
+  BlockLoad(NSr);
+  RecordNew(IVr);
+  IVr.MergedInvFlag = 1;
+  IVr.InvDate = InvDate;
+  IVr.TransDate = IVr.InvDate;
+  IVr.SerNr = NextSerNr("IVVc",IVr.TransDate,SRRec.LastCOInvNr,false,IVr.LangCode);
+  IVr.CustCode = CUr.Code;
+  PasteCust2InInv(IVr,LMb,"",true,warning,errstr,prepstr,invdatewarn,transdatewarn);
+  
+  if blank(IVr.LangCode) then begin
+    if CUr.CustCat=="JUR" then begin
+      IVr.LangCode="JUR";
+    end;
+  end;
+  
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,CUr.Objects);
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,NAContractr.Objects);
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,Flatsr.Objects);
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,Buildr.Objects);
+  // IVr.Objects = AddObjectToObjectList(IVr.Objects,CCatr.Objects);
+  
+  if (AccBl.BasePriceInclVAT==2) then begin
+    IVr.InclVAT = 1;
+  end else begin
+    IVr.InclVAT = 0;
+    //IVr.InclVAT = NAContractr.InclVAT;
+  end;
+  // IVr.InvComment = Left(IntFormulaStr,190);
+  
+  oldcontrnr = "";
+  
+  if CUr.CustCat=="JUR" then begin
+    jurf=true;
+    FillVecItemsJur(vecItemsJur);
+  end;
+  
+  IVr.ServInvf = 1;
+  IVr.LastRemndr = 0;
+  rw = MatRowCnt(Cacher);
+  for(i=0;i<rw;i=i+1)begin
+    printrowf = false;
+    counterno = "";
+    artname = "";
+    MatRowGet(Cacher,i,Cacherw);
+    if jurf then begin
+      if nonblank(Cacherw.AccNumber) then begin
+        if nonblank(vecItemsJur[Cacherw.AccNumber]) then begin
+          Cacherw.AccNumber=vecItemsJur[Cacherw.AccNumber];
+          if nonblank(Cacherw.ExtraComment) then begin
+            NAContractr.SerNr=StringToLongint(Cacherw.ExtraComment);
+            if ReadFirstMain(NAContractr,1,true) then begin
+              if GetMSPriceJurChg(Cacherw.AccNumber,RepSpec.sStartDate,NAContractr.BuildCode,NAContractr.FlatCode,NAContractr.SerNr,vRebate,Price) then begin
+                PriceInclRebate = Price - (Price*(vRebate/100));
+                Cacherw.CurCredVal = vRebate;
+                Cacherw.DebVal=Price;
+                Cacherw.FrRate=Price;
+                Cacherw.DebVal2 = Round(PriceInclRebate*Cacherw.CredVal,SetRoundModeD(2));
+                if RepSpec.flags[29]==1 then begin
+                  if Price==blankval then begin
+                    Cacherw.DebVal = 0.00;
+                    Cacherw.FrRate = 0.00;
+                  end;
+                end;
+                MatRowPut(Cacher,i,Cacherw);
+                MatRowGet(Cacher,i,Cacherw);
+              end;
+            end;
+          end;          
+        end;
+      end;
+    end;
+    if nonblank(oldcontrnr) and oldcontrnr!=Cacherw.ExtraComment then begin
+      //Pievieno starpsummas rindu
+      AddSubTotalLine(IVr,ivrow,StringToLongInt(oldcontrnr));
+    end;
+    oldcontrnr = Cacherw.ExtraComment;
+    
+    Switch (Cacherw.RowSimStat) begin
+      Case 1: //normal row
+        printrowf = true;
+        if blank(Cacherw.Comment) then begin
+          INr.Code = Cacherw.AccNumber;
+          if ReadFirstMain(INr,1,true) then begin end;
+          artname = INr.Name;
+        end else begin
+          artname = Cacherw.Comment;
+        end;
+        counterno = Cacherw.Objects;
+      Case 2: //row from periodic service records
+        printrowf = true;
+        INr.Code = Cacherw.AccNumber;
+        if ReadFirstMain(INr,1,true) then begin end;
+        artname = INr.Name;
+    end;
+    if printrowf then begin
+      if nonblank(Cacherw.CurncyCode) and Cacherw.CurncyCode!=IVr.CurncyCode then begin
+        CurValToOtherCur(IVr.TransDate,Cacherw.CurncyCode,Cacherw.DebVal,IVr.CurncyCode,t,DefaultCurRoundoff);
+        Cacherw.DebVal = t;
+      end;
+      ClearRow(IVr,IVrw,1);
+      IVrw.ContractNr = StringToLongint(Cacherw.ExtraComment);
+      IVrw.ArtCode = Cacherw.AccNumber;
+      MatRowPut(IVr,ivrow,IVrw);
+      if (IVVc_PasteArtCode(IVr,ivrow,inwarning,inwarning,false,sernrf)) then begin
+        MatRowGet(IVr,ivrow,IVrw);
+        tstr = IVrw.Spec;
+        if Cacherw.RowSimStat==1 then begin
+          IVrw.PeriodCode = Cacherw.VATCode;
+        end;
+        if Cacherw.RowSimStat==2 then begin
+          IVrw.SourceTransNr=FirstInRange(Cacherw.Objects,20);
+          IVrw.SourceType=StringToInt(Cacherw.VATCode);
+          IVrw.PerServRecSerNr=StringToLongInt(LastInRange(Cacherw.Objects,20));
+        end;
+        
+        IVrw.Spec = artname;
+        IVrw.CounterSerNr = StringToLongInt(counterno);
+        IVrw.Quant = Cacherw.CredVal;
+        IVrw.Price = Cacherw.DebVal;
+        IVrw.PriceWORound = Cacherw.DebVal;
+        IVrw.QtyCoef = Cacherw.CredVal2; 
+        // IVrw.FullPrice = Cacherw.FrRate;
+        IVrw.vRebate = Cacherw.CurCredVal;
+        AddObjectsToIVRow(IVrw,IVrw.ContractNr);
+        MatRowPut(IVr,ivrow,IVrw);
+        IVVc_PasteQuant(IVr,ivrow,false,chsum,"");
+        chsum = IVDchrsum(IVr,ivrow);
+        if (chsum) then begin
+          IVDchsum(IVr,ivrow);
+        end;
+        MatRowGet(IVr,ivrow,IVrw);
+        
+        if IVrw.Sum<>0 or Cacherw.RowSimStat==3 then begin
+          ivrow = ivrow + 1;
+        end else begin
+          MatRowDelete(IVr,ivrow);
+        end;
+      end;
+    end;
+  end;
+  
+  if nonblank(oldcontrnr) then begin
+    //Pievieno starpsummas rindu
+    AddSubTotalLine(IVr,ivrow,StringToLongInt(oldcontrnr));
+  end;
+  
+  IVSumup(IVr,true);
+  if addprepayf then begin
+    AddUnUsedPrepaymentToIV(IVr);
+  end;
+
+  if !donotallowneg or IVr.Sum4>=0 then begin
+    if MatRowCnt(IVr)>0 then begin
+      checkIVr.SerNr = IVr.SerNr;
+      if !ReadFirstMain(checkIVr,1,true) then begin
+        if RecordStore(IVr,true) then begin
+          newInvNumber = IVr.SerNr;
+          IVCounter = IVCounter + 1;
+          if MakeTR == 1 then begin
+            RecordCopy(oldIVr,IVr);
+            IVr.OKFlag = 1;
+            if RecordUpdate(oldIVr,IVr,true)==0 then begin
+              TRIVCounter = TRIVCounter + 1;
+            end;
+          end;
+          if NSr.AddPDFToInvoice!=0 then begin
+            OBS_CreateAndAttachPdfToIVVc(IVr,IVr,"InvForm",IVr.SerNr & ".pdf");
+          end;
+        end;
+        UpdateNAContractLastDate(IVr,curcomp);
+      end else begin
+        res = false;
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"ERROR cannot create invoice for customer " & IVr.CustCode & " creating invoice would overwrite another one");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+        LogText(0,"------------------------------------------------------------------------------------------------------");
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure MSMergegServInvMn(Record RcVc RepSpec)
+Begin
+  record CUVc CUr;
+  record NAContractVc NAContractr;
+  record SMVc Cacher,totCacher;
+  boolean wloopcu,wloopnc,testf,res;
+  longint IVSerNr,IVCounter,TRIVCounter,newInvNumber;
+  string 255 IntFormulaStr;
+  array string 255 Error_array;
+  vector string 255 vecIntFormulas;
+  
+  CUr.Code = RepSpec.f1;
+  wloopcu = true;
+  While LoopMain(CUr,1,wloopcu) begin
+    if nonblank(RepSpec.f1) and RepSpec.f1!=CUr.Code then begin
+      wloopcu = false;
+    end else begin
+      testf = true;
+      if nonblank(RepSpec.f2) and !SetInSet(RepSpec.f2,Cur.Classification) then begin
+        testf = false;
+      end;
+
+      ResetLoop(NAContractr);
+      NAContractr.CustCode = CUr.Code;
+      wloopnc = testf;
+      While LoopKey("CustCode",NAContractr,1,wloopnc) begin
+        if NAContractr.CustCode != CUr.Code then begin
+          wloopnc = false;
+        end else begin
+          testf = true;
+          if NAContractr.OKFlag==0 then begin
+            testf = false;
+          end;
+          if NAContractr.MergedInvFlag==0 then begin
+            testf = false;
+          end;
+          if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+            testf = false;
+          end;
+          if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+            testf = false;
+          end;
+          if testf then begin
+            IVSerNr = GetIVSerNrFromFlatCode(RepSpec.RegDate,0,NAContractr);
+            if IVSerNr==-1 then begin
+              GenFlatServCache(RepSpec.sStartDate,RepSpec.sEndDate,Cacher,0,0,RepSpec.flags[29],NAContractr);
+              GenFlatServCacheIntSum(NAContractr,RepSpec.RegDate,Cacher,IVSerNr,IntFormulaStr,true);
+              vecIntFormulas[NAContractr.SerNr] = IntFormulaStr;
+              CalcServInvCorrections(RepSpec,NAContractr,Cacher);
+              AddToTotCacher(totCacher,Cacher,NAContractr.SerNr);
+            end else begin
+              Error_array[0] = StringToInt(Error_array[0]) + 1;
+              Error_array[StringToInt(Error_array[0])] = NAContractr.FlatCode & "," & NAContractr.CustCode & "," & NAContractr.SerNr & "," & "1001512";
+            end;
+          end;
+        end;
+      end;
+      if MatRowCnt(totCacher)>0 then begin
+        qupdating.CreateMergedIVFromServCache(RepSpec,CUr,RepSpec.RegDate,totCacher,IVCounter,RepSpec.flags[4],TRIVCounter,true,res,newInvNumber,true)
+        RecordClear(totCacher);
+        if !res then begin 
+          //Add to error array
+          Error_array[0] = StringToInt(Error_array[0]) + 1;
+          Error_array[StringToInt(Error_array[0])] = NAContractr.FlatCode & "," & NAContractr.CustCode & "," & NAContractr.SerNr;
+        end;
+      end;
+    end;
+  end;
+  
+  if StringToInt(Error_array[0])>0 then begin
+    queued.CreateErrorMail(Error_array,3);
+  end;
+  
+return;
+end;

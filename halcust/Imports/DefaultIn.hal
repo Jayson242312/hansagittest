@@ -1,0 +1,182 @@
+//  ======================= DEFAULT KMTC DATA =======================
+
+global
+updating procedure DefaultIn()
+begin
+
+  // records
+  record VVRegionVc VVRegionr;
+  record VVTownVc VVTownr;
+  record VVSuburbVc VVSuburbr;
+  record ZoneVc Zoner;
+  
+  record AccountTypeVc AccountTyper;
+  record OwnerTypeVc OwnerTyper;
+  record AccountStatusVc AccountStatusr;
+
+  record TitleVc Titlr;
+
+  record INPayPriorityVc INPayPriorityr;
+  
+  // record ComplianceCertBlock ComplianceCertsb;
+
+  // arrays
+  array String 225 arr_VVRegion; array String 225 arr_VVRegion2;
+  array String 225 arr_VVTown; array String 225 arr_VVTown2;
+  array String 225 arr_VVSuburb; array String 225 arr_VVSuburb2;
+  array String 225 arr_Zone; array String 225 arr_Zone2;
+
+  array String 225 arr_OwnerType; array String 225 arr_OwnerType2;
+  array String 225 arr_AccountStatus; array String 225 arr_AccountStatus2;
+  array String 225 arr_AccountType; array String 225 arr_AccountType2;
+  array String 225 arr_Title; array String 225 arr_Title2;
+
+  Integer i;
+
+  
+  // loops through txt file
+  while (NextImportLine(false)) begin
+
+
+    // // item payment priority
+    if(i==0) then begin
+      RecordNew(INPayPriorityr);
+      INPayPriorityr.SerNr = 1;
+      INPayPriorityr.INPayType = 1;
+      INPayPriorityr.Comment = "Priority - Proportional";
+      RecordImportStore(INPayPriorityr,false);
+    end;
+
+
+    // // title
+    arr_Title[0] = "MR."; arr_Title2[0] = "Mr";
+    arr_Title[1] = "MRS."; arr_Title2[1] = "Mrs";
+    arr_Title[2] = "MS."; arr_Title2[2] = "MS";
+    arr_Title[4] = "DR."; arr_Title2[4] = "Dr";
+    arr_Title[3] = "CEO"; arr_Title2[3] = "CHIEF EXECUTIVE OFFICER";
+    arr_Title[5] = "HON."; arr_Title2[5] = "HONORABLE";
+    
+    for(i=0; i<arr_Title.length; i=i+1) begin
+      RecordNew(Titlr);
+      Titlr.Code = arr_Title[i];
+      Titlr.Name = arr_Title2[i];
+      RecordImportStore(Titlr,false);
+    end;
+
+
+    // // region
+    arr_VVRegion[0] = "ZAMBEZI"; arr_VVRegion2[0] = "ZAMBEZI";
+    
+    for(i=0; i<arr_VVRegion.length; i=i+1) begin
+      RecordNew(VVRegionr);
+      VVRegionr.Code = arr_VVRegion[i];
+      VVRegionr.Name = arr_VVRegion2[i];
+      RecordImportStore(VVRegionr,false);
+    end;
+
+
+    // // town
+    arr_VVTown[0] = "KATIMA_MULILO"; arr_VVTown2[0] = "KATIMA MULILO";
+      
+    for(i=0; i<arr_VVTown.length; i=i+1) begin
+      RecordNew(VVTownr);
+      VVTownr.Code = arr_VVTown[i];
+      VVTownr.Name = arr_VVTown2[i];
+      RecordImportStore(VVTownr,false);
+    end;
+
+
+    // // suburb
+    arr_VVSuburb[0] = "KATIMA_MULILO_BOMA"; arr_VVSuburb2[0] = "KATIMA MULILO BOMA";
+    arr_VVSuburb[1] = "NGWEZE"; arr_VVSuburb2[1] = "NGWEZE";
+    arr_VVSuburb[2] = "MAVULUMA_EXTENTION_1"; arr_VVSuburb2[2] = "MAVULUMA EXTENTION 1";
+    arr_VVSuburb[3] = "MAVULUMA_EXTENTION_2"; arr_VVSuburb2[3] = "MAVULUMA EXTENTION 2";
+    arr_VVSuburb[4] = "MAVULUMA_EXTENTION_3"; arr_VVSuburb2[4] = "MAVULUMA EXTENTION 3";
+    arr_VVSuburb[5] = "SOWETO"; arr_VVSuburb2[5] = "SOWETO";
+    arr_VVSuburb[6] = "LYAMBAI_LOCATION"; arr_VVSuburb2[6] = "LYAMBAI LOCATION";
+    arr_VVSuburb[7] = "GREEN_WELL_MATONGO"; arr_VVSuburb2[7] = "GREEN WELL MATONGO";
+    arr_VVSuburb[8] = "BEBI"; arr_VVSuburb2[8] = "BEBI";
+    arr_VVSuburb[9] = "NAMBWEZA"; arr_VVSuburb2[9] = "NAMBWEZA";
+    arr_VVSuburb[10] = "MAHOHOMA"; arr_VVSuburb2[10] = "MAHOHOMA";
+    arr_VVSuburb[11] = "BUTTERFLY"; arr_VVSuburb2[11] = "BUTTERFLY";
+    arr_VVSuburb[12] = "ZAMBEZI_SAVINGS_SCHEME"; arr_VVSuburb2[12] = "ZAMBEZI SAVINGS SCHEME";
+    arr_VVSuburb[13] = "CHOTO_LOCATION"; arr_VVSuburb2[13] = "CHOTO LOCATION";
+    arr_VVSuburb[14] = "COWBOY_COMPOUND"; arr_VVSuburb2[14] = "COWBOY COMPOUND";
+    arr_VVSuburb[15] = "SHIKUH_HOUSES"; arr_VVSuburb2[15] = "SHIKUH HOUSES";
+    arr_VVSuburb[16] = "BUSINESS_AND_MINISTRIES"; arr_VVSuburb2[16] = "BUSINESS AND MINISTRIES";
+    arr_VVSuburb[17] = "GREEN_VALLEY_LOCATION"; arr_VVSuburb2[17] = "GREEN VALLEY LOCATION";
+    arr_VVSuburb[18] = "COWBOY_SQUATTER_COMPOUND"; arr_VVSuburb2[18] = "COWBOY SQUATTER COMPOUND";
+    arr_VVSuburb[19] = "BUILD_TOGETHER"; arr_VVSuburb2[19] = "BUILD TOGETHER";
+    arr_VVSuburb[20] = "DAILY_REPORT_FAULT_30/6/20"; arr_VVSuburb2[20] = "DAILY REPORT FAULT 30/6/20";
+    arr_VVSuburb[21] = "INDUSTRIAL"; arr_VVSuburb2[21] = "INDUSTRIAL";
+    arr_VVSuburb[22] = "KUYUNYI_INVESTMENT_LOCATION"; arr_VVSuburb2[22] = "KUYUNYI INVESTMENT LOCATION";
+    arr_VVSuburb[23] = "SUNDRY_DEBTOR"; arr_VVSuburb2[23] = "SUNDRY DEBTOR";
+    arr_VVSuburb[24] = "NOVA_LOCATION"; arr_VVSuburb2[24] = "NOVA LOCATION";
+
+    for(i=0; i<arr_VVSuburb.length; i=i+1) begin
+      RecordNew(VVSuburbr);
+      VVSuburbr.Code = arr_VVSuburb[i];
+      VVSuburbr.Name = arr_VVSuburb2[i];
+      RecordImportStore(VVSuburbr,false);
+    end;
+
+
+    // // zones
+    arr_Zone[0] = "RESIDENTIAL"; arr_Zone2[0] = "RESIDENTIAL";
+    arr_Zone[1] = "BUSINESS"; arr_Zone2[1] = "BUSINESS";
+    arr_Zone[2] = "STATE_BUSINESS"; arr_Zone2[2] = "STATE BUSINESS";
+    arr_Zone[3] = "INDUSTRIAL"; arr_Zone2[3] = "INDUSTRIAL";
+    arr_Zone[4] = "CHURCH"; arr_Zone2[4] = "CHURCH";
+    arr_Zone[5] = "STATE_OF_HOUSEHOLD"; arr_Zone2[5] = "STATE OF HOUSEHOLD";
+
+    for(i=0; i<arr_Zone.length; i=i+1) begin    
+      RecordNew(Zoner);
+      Zoner.Code = arr_Zone[i];
+      Zoner.Name = arr_Zone2[i];
+      RecordImportStore(Zoner,false);
+    end;
+
+
+    // // owner type
+    // arr_OwnerType[0] = "1"; arr_OwnerType2[0] = "Owner";
+    // arr_OwnerType[1] = "2"; arr_OwnerType2[1] = "Occupier";
+    // for(i=0; i<arr_OwnerType.length; i=i+1) begin    
+    //   RecordNew(OwnerTyper);
+    //   OwnerTyper.Code = arr_OwnerType[i];
+    //   OwnerTyper.Name = arr_OwnerType2[i];
+    //   RecordImportStore(OwnerTyper,false);
+    // end;
+
+
+    // // account status
+    arr_AccountStatus[0] = "ACTIVE"; arr_AccountStatus2[0] = "ACTIVE";
+    arr_AccountStatus[1] = "INACTIVE"; arr_AccountStatus2[1] = "INACTIVE";
+
+    for(i=0; i<arr_AccountStatus.length; i=i+1) begin    
+      RecordNew(AccountStatusr);
+      AccountStatusr.Code = arr_AccountStatus[i];
+      AccountStatusr.Name = arr_AccountStatus2[i];
+      RecordImportStore(AccountStatusr,false);
+    end;
+
+
+    // // account type
+    arr_AccountType[0] = "STAFF"; arr_AccountType2[0] = "STAFF";
+    arr_AccountType[1] = "OWNER"; arr_AccountType2[1] = "OWNER";
+    arr_AccountType[2] = "CONSUMER"; arr_AccountType2[2] = "CONSUMER";
+    arr_AccountType[3] = "OWNER/CONSUMER"; arr_AccountType2[3] = "OWNER/CONSUMER";
+    arr_AccountType[4] = "GOVERNMENT"; arr_AccountType2[4] = "GOVERNMENT";
+    arr_AccountType[5] = "SUNDRIES"; arr_AccountType2[5] = "SUNDRIES";
+    arr_AccountType[6] = "OTHER"; arr_AccountType2[6] = "OTHER";
+    
+    for(i=0; i<arr_AccountType.length; i=i+1) begin    
+      RecordNew(AccountTyper);
+      AccountTyper.Code = arr_AccountType[i];
+      AccountTyper.Name = arr_AccountType2[i];
+      RecordImportStore(AccountTyper,false);
+    end;
+    
+  end;
+
+  return;
+end;

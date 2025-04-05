@@ -1,0 +1,34 @@
+
+function boolean PDFInvTextTClassCodeAE(integer wn,integer rownr) begin
+  Record PDFInvTextBlock Blr;
+  Row PDFInvTextBlock Blrw;
+  Record LTxtVc LTxtr;
+  Boolean res;
+  
+  GetWindowRecord(wn,Blr);
+  MatRowGet(Blr,rownr,Blrw);
+  if nonblank(Blrw.Code) /*and blank(Blrw.Comment)*/ then begin
+    LTxtr.Code=Blrw.Code;
+    if ReadFirstMain(LTxtr,1,true) then begin
+      Blrw.Comment=LTxtr.Comment;
+      MatRowPut(Blr,rownr,Blrw);
+      PutWindowRecord(wn,Blr);
+    end else begin
+      beep;
+    end;
+  end;
+  
+  PDFInvTextTClassCodeAE=res;
+end;
+
+global function Boolean PDFInvTextTClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed) begin
+  Boolean res;
+
+  if changed!=0 then begin
+    Switch (fieldname) begin
+      Case "Code": res=PDFInvTextTClassCodeAE(wn,rownr);
+    end;
+  end;
+  
+  PDFInvTextTClassAfterEditField=res;
+end;

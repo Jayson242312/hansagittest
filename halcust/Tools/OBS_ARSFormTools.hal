@@ -1,0 +1,334 @@
+external inner procedure PrintValueInclZero(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
+external inner function Boolean PasteActTypeInAct(string,var record ActVc);
+external inner function Boolean CheckIfIVOpen(Date,record IVVc,string,var val,Boolean,Boolean);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external procedure GetIntPercArtCode(var string);
+external procedure PrintCONTRINVDELADDR(record NAContractVc,record FlatsVc,record BuildVc);
+
+global
+function boolean OBS_CuPerFormCustCheck(string custcode,date sd,date ed)
+begin
+  record IVVc IVr;
+  date td;
+  boolean res;
+  
+  res=true;
+  if GetMonth(sd)==1 and GetMonth(ed)==12 then begin
+    td.year=GetYear(ed);
+    td.month=12;
+    td.day=1;
+    IVr.CustCode=custcode;
+    if ReadFirstKey("CustDate",IVr,1,true) then begin
+      if IVr.InvDate>=td then begin
+        res=false;
+      end;
+    end;
+  end;
+  
+  
+  OBS_CuPerFormCustCheck=res;
+  return;
+end;
+
+procedure GetIntSums(string custcode,date ondate,string items,var val exclsum,var val latesum,longint contract,integer sumtype,integer exclDRA)
+begin
+  val res,rval,ARSum;
+  Record IPrsVc IPrsr;
+  Record IVVc IVr;
+  boolean wloop,testf;
+  date td;
+  val fr,to1,to2,br1,br2;
+  Array String 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+  integer arraysize,i;
+  longint contractnr;
+  vector boolean vecInvIgnoreList;
+  
+  exclsum = 0;
+  latesum = 0;
+  res=0;
+  wloop=true;
+  td.year=1980; td.month=1; td.day=1;
+  IPrsr.TransDate=td;
+  IPrsr.CustCode=custcode;
+  While LoopKey("CustTransKey",IPrsr,2,wloop) begin
+    if IPrsr.CustCode!=custcode or IPrsr.TransDate>ondate then begin
+      wloop=false;
+    end else begin
+      Switch (IPrsr.TransType) Begin
+        Case 0: //IVVc
+          Begin
+            testf=true;
+            if exclDRA==1 and vecInvIgnoreList[IPrsr.TransNr] then begin
+              testf=false;
+            end;
+            if IPrsr.TransDate<=ondate and testf then begin
+              IVr.SerNr = IPrsr.TransNr;
+              testf = true;
+              if (ReadFirstMain(IVr,1,true)==false) then begin testf = false;; end;
+              if (IVr.Invalid!=0) then begin testf = false; end;
+              if (IVr.InvType==2) then begin testf = false; end;
+              if (IVr.InvType==6) then begin testf = false; end;
+              if (IVr.InvType==3) then begin
+                if (IVr.CredInv!=-1) then begin testf = false; end;
+              end;
+              // if /* (Contract!=-1) and  */ (IVr.Contract!=Contract) then begin testf = false; end;
+              if (testf) then begin
+                //testf = CheckIfIVOpen(addday(ondate,-1),IVr,"",rval,true,false);
+                testf = CheckIfIVOpen(ondate,IVr,"",rval,true,false);
+              end;
+              if (testf) then begin
+                if sumtype==2 then begin
+                  if IVr.PayDate<ondate then begin
+                    if contractnr==-1 and IVr.Contract!=-1 then begin
+                      if contract!=-1 then begin
+                        contractnr=contract;
+                      end else begin
+                        contractnr=IVr.Contract;
+                      end;
+                    end;
+                  end;
+                end else begin
+                  if contractnr==-1 and IVr.Contract!=-1 then begin
+                    if contract!=-1 then begin
+                      contractnr=contract;
+                    end else begin
+                      contractnr=IVr.Contract;
+                    end;
+                  end;
+                end;
+              end;
+              if /* (Contract!=-1) and  */ (IVr.Contract!=contractnr) then begin testf = false; end;
+              if testf then begin
+                ClearArray(ArtCodeMas);
+                ClearArray(UnPayedSumMas);
+                ClearArray(arrContractNrs);
+                ArtCodeMas[0]=0;
+                GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+                arraysize=StringToInt(ArtCodeMas[0]);
+                for(i=1;i<=arraysize;i=i+1)begin
+                  if SetInSet(ArtCodeMas[i],items) then begin
+                    exclsum = exclsum + UnPayedSumMas[i];
+                    if IVr.PayDate<ondate then begin
+                      latesum = latesum + UnPayedSumMas[i];
+                    end;
+                  end;
+                end;  
+              end;
+            end;
+          end;
+        Case 1: //IPVc
+        Case 2: //CLInVc
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure OBS_PrintAdditionalARSFormFields(record RcVc RepSpec,record CUVc CUr,record LangNrVc LangNrr,record SysFormatBlock SFb,val ARSSum)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  integer i,rw,masi,masrw,prevTransType;
+  boolean wloop,foundf,buildfoundf,flatfoundf,TrHs;
+  array val UnPayedSumMas;
+  array String 20 ArtCodeMas;
+  string 255 IntPercArtCodes,tstr;
+  val IntPercSum,latesum,debtot;
+  longint contractnr;
+     
+  /* if FieldInForm("FF_ENDDATEINTSUM") or FieldInForm("FF_ENDDATEINTSUM2") or FieldInForm("FF_PERIODENDDEBTSUM") then begin
+    GetIntPercArtCode(IntPercArtCodes);
+    ResetLoop(ItemPayHistr);
+    ItemPayHistr.CustCode = CUr.Code;
+    wloop = true;
+    While LoopBackKey("CustCode",ItemPayHistr,1,wloop) begin
+      if ItemPayHistr.CustCode!= CUr.Code then begin
+        wloop = false;
+      end else begin
+        if (ItemPayHistr.TransDate<=RepSpec.sEndDate) then begin
+          foundf = false;
+          for(masi=1;masi<=masrw;masi=masi+1)begin
+            if ArtCodeMas[masi]==ItemPayHistr.ArtCode then begin
+              foundf = true;
+              if ItemPayHistr.FileName==1 then begin
+                UnPayedSumMas[masi] = UnPayedSumMas[masi] + ItemPayHistr.AmtValBaseCur;
+              end else begin
+                UnPayedSumMas[masi] = UnPayedSumMas[masi] - ItemPayHistr.AmtValBaseCur;
+              end;
+            end;
+          end;
+          if !foundf then begin
+            masrw = masrw + 1;
+            ArtCodeMas[masrw]     = ItemPayHistr.ArtCode;
+            if ItemPayHistr.FileName==1 then begin
+              UnPayedSumMas[masrw] = ItemPayHistr.AmtValBaseCur;
+            end else begin
+              UnPayedSumMas[masrw] = -ItemPayHistr.AmtValBaseCur;
+            end;
+          end;
+        end;
+      end;
+      ArtCodeMas[0] = masrw;
+    end;
+    masrw=StringToInt(ArtCodeMas[0]);
+    for (i=1;i<=masrw;i=i+1) begin
+      debtot=debtot+UnPayedSumMas[i];
+      if (IntPercArtCodes!="") and SetInSet(ArtCodeMas[i],IntPercArtCodes) then begin
+        IntPercSum=IntPercSum + UnPayedSumMas[i];
+      end;
+    end;
+    PrintValueInclZero("FF_ENDDATEINTSUM",IntPercSum,M4Val,LangNrr,SFb,false);
+    if IntPercSum>0 then begin
+      OUTFORMFIELD("FF_ENDDATEINTSUM2",USetStr(1000340) & " " & ValToString(IntPercSum,M4Val,"",".",0));
+    end;
+    PrintValueInclZero("FF_PERIODENDDEBTSUM",debtot,M4Val,LangNrr,SFb,false);
+  end; */
+  OUTFORMFIELD("FF_PERIODENDDATE",RepSpec.sEndDate);
+
+  if FieldInForm("FF_DEBTSUM") or FieldInForm("FF_INTSUM") or FieldInForm("FF_TOTAL") then begin
+    GetIntPercArtCode(IntPercArtCodes);
+    GetIntSums(CUr.Code,RepSpec.d1,IntPercArtCodes,IntPercSum,latesum,RepSpec.long2,RepSpec.flags[0],RepSpec.sflags[0]);
+    PrintValueInclZero("FF_TOTAL",ARSSum,M4Val,LangNrr,SFb,false);
+    if RepSpec.flags[0]==2 then begin //kavētie tikai
+      PrintValueInclZero("FF_INTSUM",latesum,M4Val,LangNrr,SFb,false);
+      PrintValueInclZero("FF_DEBTSUM",ARSSum - latesum,M4Val,LangNrr,SFb,false);
+    end else begin
+      PrintValueInclZero("FF_INTSUM",IntPercSum,M4Val,LangNrr,SFb,false);
+      PrintValueInclZero("FF_DEBTSUM",ARSSum - IntPercSum,M4Val,LangNrr,SFb,false);
+    end;
+  end;
+  
+  // if FieldInForm("FF_OBJADDRESS") or FieldInForm("FF_CONTRINVDELADDR2") then begin
+    if RepSpec.long2!=-1 then begin
+      NAContractr.SerNr=RepSpec.long2;
+      if ReadFirstMain(NAContractr,1,true) then begin
+        if nonblank(NAContractr.FlatCode) then begin
+          Flatsr.FlatCode=NAContractr.FlatCode;
+          if ReadFirstMain(Flatsr,1,true) then begin
+            flatfoundf=true;
+          end;
+        end;
+        if nonblank(NAContractr.BuildCode) then begin
+          Buildr.Code=NAContractr.BuildCode;
+          if ReadFirstMain(Buildr,1,true) then begin
+            buildfoundf=true;
+          end;
+        end;
+      end;
+      if flatfoundf then begin
+        tstr = Flatsr.Address;
+        if nonblank(Flatsr.FlatNo) then begin
+          tstr = tstr & " - " & Flatsr.FlatNo;
+        end;
+        if buildfoundf then begin
+          if nonblank(Buildr.City) then begin
+            tstr= tstr & ", " & Buildr.City;
+          end;
+        end;
+        OutFormField("FF_OBJADDRESS",tstr);
+      end else begin
+        if buildfoundf then begin
+          OutFormField("FF_OBJADDRESS",Buildr.Address);
+        end;
+      end;
+      if FieldInForm("FF_CONTRINVDELADDR2") then begin
+        PrintCONTRINVDELADDR(NAContractr,Flatsr,Buildr);
+      end;
+      OutFormField("FF_CODATE",DateToString(NAContractr.CODate,"DD.MM.YYYY"));
+      OutFormField("FF_CONTRACTNR",NAContractr.ContractNr);
+      
+    end;
+  // end;
+
+  OutFormField("FF_CUSTNAME",CUr.Name);
+  OutFormField("FF_REGNR1",CUr.RegNr1);
+  OutFormField("FF_DATE",DateToString(RepSpec.d1,"DD.MM.YYYY"));
+  OutFormField("FF_CURDATE",DateToString(CurrentDate,"DD.MM.YYYY"));
+  
+  return;
+end;
+
+global updating
+procedure OBS_CreateActivityARSForm(record RcVc RepSpec,record CUVc CUr,integer comp,string usercode)
+begin
+  record ActVc Actr;
+  record ActTypeGrVc ATGRr;
+  record ActTypeVc ATr;
+  // record ASTBlock ASTRec;
+  // record UserVc USr;
+  record CUVc MainCUr;
+  Integer curcomp,oldcomp;
+  record ContactRelVc ContactRelr;
+  string 255 fname;
+  boolean createf;
+  
+  oldcomp = CurrentCompany;
+  SetServerCompany(comp);
+  
+  RecordNew(Actr);
+  ContactRelr.ContactCode = CUr.Code;
+  ContactRelr.ContactName = CUr.Name;
+  if (ReadFirstKey("ContactName",ContactRelr,2,true)) then begin
+    MainCUr.Code = ContactRelr.CustCode;
+    if (ReadFirstMain(MainCUr,1,true)) then begin
+    end;
+    Actr.CUCode = MainCUr.Code;
+    Actr.Phone = CUr.Phone;
+    Actr.Contact = CUr.Name;
+    Actr.CUName = MainCUr.Name;
+  end else begin
+    Actr.CUCode = CUr.Code;
+    Actr.Phone = CUr.Phone;
+    Actr.Contact = CUr.Person;
+    Actr.CUName = CUr.Name;
+  end;
+  Actr.ActType = RepSpec.f20;
+  if (PasteActTypeInAct("",Actr)) then begin
+  end;
+  Actr.MainPersons = usercode;
+  Actr.TodoFlag = 1;
+  Actr.TransDate = CurrentDate;
+  Actr.EndDate = CurrentDate;
+  Actr.StartTime = CurrentTime;
+  Actr.EndTime = CurrentTime;
+
+  ATr.Code = Actr.ActType;
+  if (ReadFirstMain(ATr,1,true)) then begin
+    Actr.Comment = ATr.Comment;
+    Actr.ItemCode = ATr.ItemCode;
+    ATGRr.Code = ATr.ActTypeGr;
+    if (ReadFirstMain(ATGRr,1,true)) then begin
+      Actr.CalTimeFlag = ATGRr.DefTimeFlag;
+    end;
+  end;
+  Actr.Invalid = 0;
+  Actr.SerNr = NextSerNr("ActVc",Actr.TransDate,-1,false,"");
+  if (RecordStore(Actr,false)) then begin
+    createf = true;
+  end;
+  
+  if createf then begin
+    SetMedia(mtPdf);
+    fname = "tmp/" & Actr.SerNr & ".pdf";
+    SetDocumentFilename(fname);
+    RepSpec.flags[29]=0;  //No need to make another activity.
+    PrintDocument(RepSpec,"ARSForm",false);
+    if FileExists(fname) then begin
+      RecordLinkFile(fname,0,Actr,CurrentCompany);
+      Delete_File(fname);
+    end else begin
+      LogText(0,"OBS_CreateActivityARSForm ERROR :: Cant create PDF");
+    end;
+    SetDocumentFilename("");
+  end;
+  
+  ResetCompany(oldcomp);
+
+  return;
+end;

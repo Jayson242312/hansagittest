@@ -9,6 +9,17 @@ external function Boolean ImportVal(var val,Integer);
 external function Boolean ImportInt(var Integer);
 external function Boolean ImportLongInt(var LongInt);
 
+event startup
+begin
+
+  SetLangMode(LangEnglish,"ENG",0);
+
+  Import("Contacts",0,UquipCustVn,modDCT);
+
+  return;
+end;
+
+
 global
 function Boolean ImportCodeElseBlank(var string Field,Integer MaxLen)
 begin
@@ -38,7 +49,7 @@ begin
 end;
 
 global
-updating procedure UquipCustVn()
+updating procedure CustIn()
 BEGIN
   record CUVc CUr,OldCUr;
   string 255 inputLine;
@@ -46,7 +57,7 @@ BEGIN
   Boolean ItemExists;
   string 255 t3,Code;
   while (TestEOF==false) begin
-    if (ImportItemCode(Code)) then begin   //Strips Spaces in the Items Code
+    if (ImportCode(Code,255)) then begin   //Strips Spaces in the Customer Code
       CUr.Code = Code;
       if (ReadFirstMain(CUr,1,true)) then begin
         ItemExists = true;
@@ -57,74 +68,77 @@ BEGIN
         CUr.Code = Code;
       end;
       ImportString(CUr.Name,255);         //Name
+     // ImportString(CUr.PLCode,255);       //Price Lists - Specific to CP-BW
       ImportInt(CUr.VEType);              //Supplier check box
+      LogText(0,CUr.VEType & "Supplier Check Box"); 
       ImportInt(CUr.CUType);              //Customer check box
+      LogText(0,CUr.CUType & "Customer Check Box"); 
       ImportInt(CUr.blockedFlag);         //Blocked
       ImportString(CUr.CustCat,255);      //Cust Category
       ImportString(CUr.Classification,255); //Cust Classifications
      // ImportString(CUr.Objects,255);      //Cust Objects
-     // ImportCode(CUr.Person,255);         //Primary Contact
-     // ImportString(CUr.eMail,255);        //E-Mail
-     // ImportString(CUr.Phone,255);        //Telephone
-     // ImportString(CUr.Fax,255);          //Fax
-      //ImportString(CUr.Mobile,255);       //Mobile
-      //ImportString(CUr.InvAddr0,255);     //Invoice Addres 0 (Rename P.O.Box)
+      ImportCode(CUr.Person,255);         //Primary Contact
+    //  ImportString(CUr.eMail,255);        //E-Mail
+    //  ImportString(CUr.Phone,255);        //Telephone
+    //  ImportString(CUr.Fax,255);          //Fax
+     ImportString(CUr.Mobile,255);       //Mobile
+     ImportString(CUr.InvAddr0,255);     //Invoice Addres 0 (Rename P.O.Box)
     //  ImportString(CUr.InvAddr1,255);     //Invoice Addres 1 (Street)
-     // ImportString(CUr.InvAddr2,255);     //Invoice Addres 2 (Suburb)
-     // ImportString(CUr.InvAddr3,255);     //Invoice Addres 3 (Town)
-     // ImportString(CUr.InvAddr4,255);     //Invoice Addres 4 (Postcode)
-     // ImportString(CUr.DelAddr0,255);     //Delivery Addres 0 (Rename P.O.Box)
+     ImportString(CUr.InvAddr2,255);     //Invoice Addres 2 (Suburb)
+     ImportString(CUr.InvAddr3,255);     //Invoice Addres 3 (Town)
+    //  ImportString(CUr.InvAddr4,255);     //Invoice Addres 4 (Postcode)
+    //  ImportString(CUr.DelAddr0,255);     //Delivery Addres 0 (Rename P.O.Box)
      // ImportString(CUr.DelAddr1,255);     //Delivery Addres 1 (Street)
-     // ImportString(CUr.DelAddr2 ,255);    //Delivery Addres 2 (Suburb)
-     // ImportString(CUr.DelAddr3,255);     //Delivery Addres 3 (Town)
-     // ImportString(CUr.DelAddr4,255);     //Delivery Addres 4 (Postcode)
+    //  ImportString(CUr.DelAddr2 ,255);    //Delivery Addres 2 (Suburb)
+    //  ImportString(CUr.DelAddr3,255);     //Delivery Addres 3 (Town)
+    //  ImportString(CUr.DelAddr4,255);     //Delivery Addres 4 (Postcode)
       ImportString(CUr.PayDeal,255);      //Customer (Sales) Pay Terms (Pay Deal includes settlement discount)
-    //  ImportCode(CUr.CountryCode,255);    //Country
-     // ImportCode(CUr.CountryCode,255);    //Customer Sales Currency
+      ImportCode(CUr.CountryCode,255);    //Country
+      ImportCode(CUr.CurncyCode,255);    //Customer Sales Currency CurncyCode
     //  if (ItemExists) then begin 
     //    ImportCode(CUr.SalesMan,255);       //Salesman
     //  end else begin
     //    ImportCodeElseBlank(CUr.SalesMan,255);   //JRX - 2011-06-28 : Made this change since it was placing the logged in user if it was blank
     //  end;  
-    //  ImportVal(CUr.CreditLimit,M4Val);   //Customer Credit Limit
-    //  ImportString(CUr.ShipDeal,255);     //Sales Delivery Terms
-    //  ImportString(CUr.ShipMode,255);     //Sales Delivery mode
-    //  ImportCode(CUr.VATCode,255);        //Sales VAT code
+      ImportVal(CUr.CreditLimit,M4Val);   //Customer Credit Limit
+      ImportString(CUr.ShipDeal,255);     //Sales Delivery Terms
+      ImportString(CUr.ShipMode,255);     //Sales Delivery mode
+      ImportCode(CUr.VATCode,255);        //Sales VAT code
       ImportCode(CUr.SearchKey ,255);     //Short
-    //  ImportCode(CUr.InvoiceToCode,255);  //Invoice To code
-     // ImportString(CUr.VATNr,255);        //Cust VAT No
+      ImportCode(CUr.InvoiceToCode,255);  //Invoice To code
+      ImportString(CUr.VATNr,255);        //Cust VAT No
       ImportCode(CUr.LangCode,255);       //Language
-     // ImportCode(CUr.SalesGroup,255);     //Sales Group
-     // ImportString(CUr.Department,255);   //Contact's Department
-     // ImportString(CUr.AccOperator,255);  //Bank Name
-     // ImportString(CUr.BankAccount,255);  //Bank Account Nr
-    //  ImportCode(CUr.SortCode,255);       //Bank Branch Code
-    //  ImportString(CUr.Bank ,255);        //Bank Branch Name
-    //  ImportCode(CUr.IBANCode,255);       //Bank Account Type
-    //  ImportString(CUr.RegNr1,255);       //Company Registration Number
-    //  ImportString(CUr.RegNr2,255);       //Company Registration Number 2
-     // ImportString(CUr.wwwAddr,255);      //Website Company
-     // ImportVal(CUr.IntRate,M4Val);       //Interest Rate
-     // ImportInt(CUr.OnHoldFlag);          //On Hold Flag
-     // ImportInt(CUr.NoLetterPosting);     //No Letter Flag
-     // ImportInt(CUr.AllowLogin);          //Allow Login
-     // ImportInt(CUr.NoRepa);              //No Environment Tax
-     // ImportInt(CUr.OnAccount);           //Is this Cash Account
-    //  ImportString(CUr.VEVATCode,255);    //Purchases VAT code
-    //  ImportString(CUr.VEPayDeal,255);    //Supplier Pay Terms (Pay Deal includes settlement discount)
-     // ImportVal(CUr.VECreditLimit,M4Val); //Supplier Credit Limit
-     // ImportString(CUr.VECat,255);        //Supplier Category
-    //  ImportString(CUr.VECurncyCode,255); //Supplier Purchase Currency
-    //  ImportString(CUr.TheirCode,255);    //Customer:Supplier code for us
-     // ImportString(CUr.WarnText1,255);    //Customer:Warning in Sales
-     // ImportString(CUr.VECustID,255);     //Supplier:Customer code for us
-     // ImportString(CUr.VEWarnText1,255);  //Supplier:Warning on Purchases
-     // ImportString(CUr.VEInvoiceToCode,255);  // Purchase Invoice to Code
-    //  ImportDate(CUr.BirthDate);              // Customer Birth date
-     // ImportString(CUr.PassportNr,60);        // Customer ID Number
-    //  ImportString(CUr.Title,60);        // Courtesy Title
-     // ImportString(CUr.JobDesc,60);        //  Job Title
-     // ImportString(CUr.Sorting,60);        //  Route      
+      ImportCode(CUr.SalesGroup,255);     //Sales Group
+      ImportString(CUr.Department,255);   //Contact's Department
+      ImportString(CUr.AccOperator,255);  //Bank Name
+      ImportString(CUr.BankAccount,255);  //Bank Account Nr
+      ImportCode(CUr.SortCode,255);       //Bank Branch Code
+      ImportString(CUr.Bank ,255);        //Bank Branch Name
+      ImportCode(CUr.IBANCode,255);       //Bank Account Type
+      ImportString(CUr.RegNr1,255);       //Company Registration Number
+      ImportString(CUr.RegNr2,255);       //Company Registration Number 2
+      ImportString(CUr.wwwAddr,255);      //Website Company
+      ImportVal(CUr.IntRate,M4Val);       //Interest Rate
+      ImportInt(CUr.OnHoldFlag);          //On Hold Flag
+      ImportInt(CUr.NoLetterPosting);     //No Letter Flag
+      ImportInt(CUr.AllowLogin);          //Allow Login
+      ImportInt(CUr.NoRepa);              //No Environment Tax
+      ImportInt(CUr.OnAccount);           //Is this Cash Account
+      ImportString(CUr.VEVATCode,255);    //Purchases VAT code
+      ImportString(CUr.VEPayDeal,255);    //Supplier Pay Terms (Pay Deal includes settlement discount)
+      ImportVal(CUr.VECreditLimit,M4Val); //Supplier Credit Limit
+      ImportString(CUr.VECat,255);        //Supplier Category
+      ImportString(CUr.VECurncyCode,255); //Supplier Purchase Currency
+      ImportString(CUr.TheirCode,255);    //Customer:Supplier code for us
+      ImportString(CUr.WarnText1,255);    //Customer:Warning in Sales
+      ImportString(CUr.VECustID,255);     //Supplier:Customer code for us
+      ImportString(CUr.VEWarnText1,255);  //Supplier:Warning on Purchases
+      ImportString(CUr.VEInvoiceToCode,255);  // Purchase Invoice to Code
+      ImportDate(CUr.BirthDate);              // Customer Birth date
+      ImportString(CUr.PassportNr,60);        // Customer ID Number
+      ImportString(CUr.Title,60);        // Courtesy Title
+      ImportString(CUr.JobDesc,60);        //  Job Title
+      ImportString(CUr.Sorting,60);        //  Route      
 
       if (ItemExists) then begin
         RecordUpdate(OldCUr,CUr,false);
@@ -138,7 +152,7 @@ BEGIN
 END;
 
 global
-updating procedure HALSuppIn() //Tendai 
+updating procedure SuppIn()
 BEGIN
   record CUVc CUr,OldCUr;
   string 255 inputLine;
@@ -146,7 +160,7 @@ BEGIN
   Boolean ItemExists;
   string 255 t3,Code;
   while (TestEOF==false) begin
-    if (ImportItemCode(Code)) then begin   //Strips Spaces in the Items Code
+    if (ImportCode(Code,255)) then begin   //Strips Spaces in the Supplier Code
       CUr.Code = Code;
       if (ReadFirstMain(CUr,1,true)) then begin
         ItemExists = true;
@@ -157,74 +171,78 @@ BEGIN
         CUr.Code = Code;
       end;
       ImportString(CUr.Name,255);         //Name
+      //ImportString(CUr.PLCode,255);       //Price Lists - Specific to CP-BW
+      ImportCode(CUr.VECurncyCode,255);  //Purchase Currency 
       ImportInt(CUr.VEType);              //Supplier check box
       ImportInt(CUr.CUType);              //Customer check box
+     // ImportInt(CUr.InterestFlag);        //Interest Flag
       ImportInt(CUr.blockedFlag);         //Blocked
-      ImportString(CUr.CustCat,255);      //Cust Category
-     // ImportString(CUr.Classification,255); //Cust Classifications
-     // ImportString(CUr.Objects,255);      //Cust Objects
-     // ImportCode(CUr.Person,255);         //Primary Contact
-     // ImportString(CUr.eMail,255);        //E-Mail
-     // ImportString(CUr.Phone,255);        //Telephone
-     // ImportString(CUr.Fax,255);          //Fax
-      //ImportString(CUr.Mobile,255);       //Mobile
-      //ImportString(CUr.InvAddr0,255);     //Invoice Addres 0 (Rename P.O.Box)
-    //  ImportString(CUr.InvAddr1,255);     //Invoice Addres 1 (Street)
-     // ImportString(CUr.InvAddr2,255);     //Invoice Addres 2 (Suburb)
-     // ImportString(CUr.InvAddr3,255);     //Invoice Addres 3 (Town)
-     // ImportString(CUr.InvAddr4,255);     //Invoice Addres 4 (Postcode)
-     // ImportString(CUr.DelAddr0,255);     //Delivery Addres 0 (Rename P.O.Box)
-     // ImportString(CUr.DelAddr1,255);     //Delivery Addres 1 (Street)
-     // ImportString(CUr.DelAddr2 ,255);    //Delivery Addres 2 (Suburb)
-     // ImportString(CUr.DelAddr3,255);     //Delivery Addres 3 (Town)
-     // ImportString(CUr.DelAddr4,255);     //Delivery Addres 4 (Postcode)
-     // ImportString(CUr.PayDeal,255);      //Customer (Sales) Pay Terms (Pay Deal includes settlement discount)
-    //  ImportCode(CUr.CountryCode,255);    //Country
-     // ImportCode(CUr.CountryCode,255);    //Customer Sales Currency
-    //  if (ItemExists) then begin 
-    //    ImportCode(CUr.SalesMan,255);       //Salesman
-    //  end else begin
-    //    ImportCodeElseBlank(CUr.SalesMan,255);   //JRX - 2011-06-28 : Made this change since it was placing the logged in user if it was blank
-    //  end;  
-    //  ImportVal(CUr.CreditLimit,M4Val);   //Customer Credit Limit
-    //  ImportString(CUr.ShipDeal,255);     //Sales Delivery Terms
-    //  ImportString(CUr.ShipMode,255);     //Sales Delivery mode
-    //  ImportCode(CUr.VATCode,255);        //Sales VAT code
-    //  ImportCode(CUr.SearchKey ,255);     //Short
-    //  ImportCode(CUr.InvoiceToCode,255);  //Invoice To code
-     // ImportString(CUr.VATNr,255);        //Cust VAT No
-     // ImportCode(CUr.LangCode,255);       //Language
-     // ImportCode(CUr.SalesGroup,255);     //Sales Group
-     // ImportString(CUr.Department,255);   //Contact's Department
-     // ImportString(CUr.AccOperator,255);  //Bank Name
-     // ImportString(CUr.BankAccount,255);  //Bank Account Nr
-    //  ImportCode(CUr.SortCode,255);       //Bank Branch Code
-    //  ImportString(CUr.Bank ,255);        //Bank Branch Name
-    //  ImportCode(CUr.IBANCode,255);       //Bank Account Type
-    //  ImportString(CUr.RegNr1,255);       //Company Registration Number
-    //  ImportString(CUr.RegNr2,255);       //Company Registration Number 2
-     // ImportString(CUr.wwwAddr,255);      //Website Company
-     // ImportVal(CUr.IntRate,M4Val);       //Interest Rate
-     // ImportInt(CUr.OnHoldFlag);          //On Hold Flag
-     // ImportInt(CUr.NoLetterPosting);     //No Letter Flag
-     // ImportInt(CUr.AllowLogin);          //Allow Login
-     // ImportInt(CUr.NoRepa);              //No Environment Tax
-     // ImportInt(CUr.OnAccount);           //Is this Cash Account
-    //  ImportString(CUr.VEVATCode,255);    //Purchases VAT code
-    //  ImportString(CUr.VEPayDeal,255);    //Supplier Pay Terms (Pay Deal includes settlement discount)
-     ImportVal(CUr.VECreditLimit,M4Val); //Supplier Credit Limit
-     // ImportString(CUr.VECat,255);        //Supplier Category
-    //  ImportString(CUr.VECurncyCode,255); //Supplier Purchase Currency
-    //  ImportString(CUr.TheirCode,255);    //Customer:Supplier code for us
-     // ImportString(CUr.WarnText1,255);    //Customer:Warning in Sales
-     // ImportString(CUr.VECustID,255);     //Supplier:Customer code for us
-     // ImportString(CUr.VEWarnText1,255);  //Supplier:Warning on Purchases
-     // ImportString(CUr.VEInvoiceToCode,255);  // Purchase Invoice to Code
-    //  ImportDate(CUr.BirthDate);              // Customer Birth date
-     // ImportString(CUr.PassportNr,60);        // Customer ID Number
-    //  ImportString(CUr.Title,60);        // Courtesy Title
-     // ImportString(CUr.JobDesc,60);        //  Job Title
-     // ImportString(CUr.Sorting,60);        //  Route      
+      ImportString(CUr.VECat,255);      //Supp Category 
+     // ImportCode(CUr.SearchKey,255);  //Short 
+      ImportString(CUr.Classification,255); //Cust Classifications
+      ImportString(CUr.Objects,255);      //Cust Objects
+      ImportCode(CUr.Person,255);         //Primary Contact
+      ImportString(CUr.eMail,255);        //E-Mail
+      ImportString(CUr.Phone,255);        //Telephone
+      ImportString(CUr.Fax,255);          //Fax
+      ImportString(CUr.Mobile,255);       //Mobile
+      ImportString(CUr.InvAddr0,255);     //Invoice Addres 0 (Rename P.O.Box)
+      ImportString(CUr.InvAddr1,255);     //Invoice Addres 1 (Street)
+      ImportString(CUr.InvAddr2,255);     //Invoice Addres 2 (Suburb)
+      ImportString(CUr.InvAddr3,255);     //Invoice Addres 3 (Town)
+      ImportString(CUr.InvAddr4,255);     //Invoice Addres 4 (Postcode)
+      ImportString(CUr.DelAddr0,255);     //Delivery Addres 0 (Rename P.O.Box)
+      ImportString(CUr.DelAddr1,255);     //Delivery Addres 1 (Street)
+      ImportString(CUr.DelAddr2 ,255);    //Delivery Addres 2 (Suburb)
+      ImportString(CUr.DelAddr3,255);     //Delivery Addres 3 (Town)
+      ImportString(CUr.DelAddr4,255);     //Delivery Addres 4 (Postcode)
+      ImportString(CUr.PayDeal,255);      //Customer (Sales) Pay Terms (Pay Deal includes settlement discount)
+      ImportCode(CUr.CountryCode,255);    //Country
+      ImportCode(CUr.CountryCode,255);    //Customer Sales Currency
+      if (ItemExists) then begin 
+        ImportCode(CUr.SalesMan,255);       //Salesman
+      end else begin
+        ImportCodeElseBlank(CUr.SalesMan,255);   //JRX - 2011-06-28 : Made this change since it was placing the logged in user if it was blank
+      end;  
+      ImportVal(CUr.CreditLimit,M4Val);   //Customer Credit Limit
+      ImportString(CUr.ShipDeal,255);     //Sales Delivery Terms
+      ImportString(CUr.ShipMode,255);     //Sales Delivery mode
+      ImportCode(CUr.VATCode,255);        //Sales VAT code
+     // ImportCode(CUr.SearchKey ,255);     //Short
+      ImportCode(CUr.InvoiceToCode,255);  //Invoice To code
+      ImportString(CUr.VATNr,255);        //Cust VAT No
+      ImportCode(CUr.LangCode,255);       //Language
+      ImportCode(CUr.SalesGroup,255);     //Sales Group
+      ImportString(CUr.Department,255);   //Contact's Department
+      ImportString(CUr.AccOperator,255);  //Bank Name
+      ImportString(CUr.BankAccount,255);  //Bank Account Nr
+      ImportCode(CUr.SortCode,255);       //Bank Branch Code
+      ImportString(CUr.Bank ,255);        //Bank Branch Name
+      ImportCode(CUr.IBANCode,255);       //Bank Account Type
+      ImportString(CUr.RegNr1,255);       //Company Registration Number
+      ImportString(CUr.RegNr2,255);       //Company Registration Number 2
+      ImportString(CUr.wwwAddr,255);      //Website Company
+      ImportVal(CUr.IntRate,M4Val);       //Interest Rate
+      ImportInt(CUr.OnHoldFlag);          //On Hold Flag
+      ImportInt(CUr.NoLetterPosting);     //No Letter Flag
+      ImportInt(CUr.AllowLogin);          //Allow Login
+      ImportInt(CUr.NoRepa);              //No Environment Tax
+      ImportInt(CUr.OnAccount);           //Is this Cash Account
+      ImportString(CUr.VEVATCode,255);    //Purchases VAT code
+      ImportString(CUr.VEPayDeal,255);    //Supplier Pay Terms (Pay Deal includes settlement discount)
+      ImportVal(CUr.VECreditLimit,M4Val); //Supplier Credit Limit
+      ImportString(CUr.VECat,255);        //Supplier Category
+      ImportString(CUr.VECurncyCode,255); //Supplier Purchase Currency
+      ImportString(CUr.TheirCode,255);    //Customer:Supplier code for us
+      ImportString(CUr.WarnText1,255);    //Customer:Warning in Sales
+      ImportString(CUr.VECustID,255);     //Supplier:Customer code for us
+      ImportString(CUr.VEWarnText1,255);  //Supplier:Warning on Purchases
+      ImportString(CUr.VEInvoiceToCode,255);  // Purchase Invoice to Code
+      ImportDate(CUr.BirthDate);              // Customer Birth date
+      ImportString(CUr.PassportNr,60);        // Customer ID Number
+      ImportString(CUr.Title,60);        // Courtesy Title
+      ImportString(CUr.JobDesc,60);        //  Job Title
+      ImportString(CUr.Sorting,60);        //  Route      
 
       if (ItemExists) then begin
         RecordUpdate(OldCUr,CUr,false);

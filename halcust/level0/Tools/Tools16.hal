@@ -1,0 +1,16 @@
+global
+function Integer GetVATCalcWay(record RoundBlock Roundb)
+begin
+  Integer res;
+
+  if (HasLocalization("SAU")) then begin
+    res = 1; //ddc::20240506>>hardcoded to calc per row
+    goto LGetVATCalcWay;
+  end;
+
+  res = Roundb.VATCalcWay;
+  
+LGetVATCalcWay:;
+  GetVATCalcWay = res;
+  return;
+end;

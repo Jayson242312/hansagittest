@@ -1,0 +1,175 @@
+/* Disabled-ServerOnly */
+
+external inner procedure GetItemSalesAcc(string,Integer,var string);
+external inner procedure GetItemVATCode(string,Integer,var string,Boolean);
+external inner procedure CheckFlush(var Integer,Integer);
+external inner updating procedure DeleteTransaction(LongInt,Integer);
+external inner updating function LongInt IVVcRecordCheck(record IVVc,record IVVc,LongInt,LongInt);
+external inner procedure SetInvARAcc(var record IVVc);
+external inner procedure IVSumup(var record IVVc,Boolean);
+//--
+external function string 100 GetIVBuildCode(record IVVc);
+
+SetLangMode(LangLatvian,"LAT",1);
+
+global
+updating procedure RecalcIVInfoMn(record RcVc RepSpec)
+begin
+  record IVVc IVr,oldIVr,loopIVr;
+  row IVVc IVrw;
+  record CUVc CUr;
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  string 20 SalesAcc,VATCode;
+  string 60 BuildCode;
+  longint IVCounter,ToIVSerNr,ErrCounter;
+  integer i,rw,flushcnt;
+  boolean wLoop,UpdateIV,UpdateIVRow;
+  Record INVc INr;
+
+  ErrCounter = 0;
+  IVCounter = 0;
+  ToIVSerNr = StringToLongInt(LastInRange(RepSpec.f1,20));
+  wLoop = (RepSpec.flags[0]<>0 or RepSpec.flags[1]<>0 or RepSpec.flags[3]<>0);
+  IVr.SerNr = StringToLongInt(FirstInRange(RepSpec.f1,20));
+  while LoopMain(IVr,1,wLoop) begin
+    if ToIVSerNr<>-1 and IVr.SerNr>ToIVSerNr then begin
+      wLoop = false;
+    end else begin
+      UpdateIV = false;
+      RecordCopy(oldIVr,IVr);
+      if RepSpec.flags[0]<>0 then begin
+        SalesAcc = IVr.ARAcc;
+        IVr.ARAcc = "";
+        CUr.Code = IVr.CustCode;
+        if ReadFirstMain(CUr,1,true) then begin end;
+        IVr.CustCat = CUr.CustCat;
+        SetInvARAcc(IVr);
+        if SalesAcc<>IVr.ARAcc then begin
+          UpdateIV = true;
+        end;
+        rw = MatRowCnt(IVr);
+        for(i=0;i<rw;i=i+1)begin
+          MatRowGet(IVr,i,IVrw);
+          if blank(Repspec.f2) or SetInSet(IVrw.ArtCode,RepSpec.f2) then begin
+            if nonblank(IVrw.ArtCode) then begin
+              UpdateIVRow = false;
+              INr.Code=IVrw.ArtCode;
+              if ReadFirstMain(INr,1,true) then begin
+                if IVrw.UnitCode!=INr.Unittext then begin
+                  IVrw.UnitCode=INr.Unittext;
+                  UpdateIVRow = true;
+                end;
+              end;
+              GetItemSalesAcc(IVrw.ArtCode,IVr.ExportFlag,SalesAcc);
+              if IVrw.SalesAcc<>SalesAcc then begin
+                IVrw.SalesAcc = SalesAcc;
+                UpdateIVRow = true;
+              end;
+              GetItemVATCode(IVrw.ArtCode,IVr.ExportFlag,VATCode,true);
+              if IVrw.VATCode<>VATCode then begin
+                IVrw.VATCode = VATCode;
+                UpdateIVRow = true;
+              end;
+              if UpdateIVRow then begin
+                MatRowPut(IVr,i,IVrw);
+                UpdateIV = true;
+              end;
+            end;
+          end;
+        end;
+      end;
+      if RepSpec.flags[1]<>0 then begin
+        if nonblank(IVr.Contract) then begin
+          //find build
+          BuildCode = GetIVBuildCode(IVr);
+          if IVr.BuildCode<>BuildCode and nonblank(BuildCode) then begin
+            IVr.BuildCode = BuildCode;
+            UpdateIV = true;
+          end else begin
+            if RepSpec.flags[2]<>0 then begin
+              LogText(0,"Rçíinam " & IVr.SerNr & " nevar noteikt çkas kodu");
+              ErrCounter = ErrCounter + 1;
+            end;
+          end;
+          //find flat
+          NAContractr.SerNr = IVr.Contract;
+          ReadFirstMain(NAContractr,1,true);
+          Flatsr.FlatCode = NAContractr.FlatCode;
+          ReadFirstMain(Flatsr,1,true);
+          if IVr.FlatCode<>Flatsr.FlatCode and nonblank(Flatsr.FlatCode) then begin
+            IVr.FlatCode = Flatsr.FlatCode;
+            IVr.IntFlatNo = Flatsr.IntFlatNo;
+            UpdateIV = true;
+          end else begin
+            if RepSpec.flags[2]<>0 then begin
+              LogText(0,"Rçíinam " & IVr.SerNr & " nevar noteikt telpas kodu");
+              ErrCounter = ErrCounter + 1;
+            end;
+          end;
+        end;
+      end;
+      if RepSpec.flags[3]<>0 then begin
+        IVSumUp(IVr,true);
+        UpdateIV = true;
+      end;
+      if UpdateIV then begin
+        if RepSpec.flags[5]==0 then begin
+          if IVr.OKFlag<>0 then begin
+            IVr.OKFlag = 0;
+            if RecordUpdate(oldIVr,IVr,false)==0 then begin end;
+            DeleteTransaction(IVr.SerNr,IVYc);
+            DeleteTransaction(IVr.SerNr,IntIVYc);
+            RecordCopy(oldIVr,IVr);
+            IVr.OKFlag = 1;
+          end;
+          if RecordUpdate(oldIVr,IVr,true)==0 then begin end;
+        end else begin
+          if RecordUpdate(oldIVr,IVr,false)==0 then begin end;
+        end;
+        IVCounter = IVCounter + 1;
+        CheckFlush(flushcnt,15);
+      end;
+    end;
+  end;
+  ResetLoop(loopIVr);
+  wLoop = (RepSpec.flags[4]<>0);
+  while LoopKey("BuildCode",loopIVr,1,wLoop) begin
+    if nonblank(loopIVr.BuildCode) then begin
+      wLoop = false;
+    end else begin
+      RecordCopy(IVr,loopIVr);
+      NAContractr.CustCode = IVr.CustCode;
+      if ReadFirstKey("CustCode",NAContractr,1,true) then begin
+        Flatsr.FlatCode = NAContractr.FlatCode;
+        if ReadFirstMain(Flatsr,1,true) then begin
+          RecordCopy(oldIVr,IVr);
+          IVr.Contract = NAContractr.SerNr;
+          IVr.BuildCode = Flatsr.Code;
+          IVr.FlatCode = Flatsr.FlatCode;
+          IVr.IntFlatNo = Flatsr.IntFlatNo;
+          if RepSpec.flags[5]==0 then begin
+            if IVr.OKFlag<>0 then begin
+              IVr.OKFlag = 0;
+              if RecordUpdate(oldIVr,IVr,false)==0 then begin end;
+              DeleteTransaction(IVr.SerNr,IVYc);
+              DeleteTransaction(IVr.SerNr,IntIVYc);
+              RecordCopy(oldIVr,IVr);
+              IVr.OKFlag = 1;
+            end;
+            if RecordUpdate(oldIVr,IVr,true)==0 then begin end;
+          end else begin
+            if RecordUpdate(oldIVr,IVr,false)==0 then begin end;
+          end;
+          StepBack(loopIVr);
+          IVCounter = IVCounter + 1;
+          CheckFlush(flushcnt,15);
+        end;
+      end;
+    end;
+  end;
+  if ErrCounter>0 then begin
+    MessageBox(0,"Apkalpoðanas laikâ bija " & ErrCounter & " kïûdas, skat. hansa.log");
+  end;
+  MessageBox(0,"Izmainîti " & IVCounter & " rçíini, nepiecieðams exp/imp");
+end;

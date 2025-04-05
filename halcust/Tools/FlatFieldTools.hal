@@ -1,0 +1,988 @@
+external inner function LongInt DateDiff(Date,Date);
+external inner function Boolean GetNextItem2(string,var Integer,var string);
+// external function val GetDeclaredPersFromPersonas(string,date,date,boolean);
+
+//FlatFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+global
+function val GetFlatFieldValueOnDate(string FlatCode,string FieldCode,date OnDate,record FlatFieldCodeVc FlatFieldCoder)
+begin
+  record FlatFieldVc FlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  val Value;
+  integer i,rw;
+
+  FlatFieldr.FlatCode = FlatCode;
+  FlatFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldr,2,true) then begin
+    rw = MatRowCnt(FlatFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(FlatFieldr,i,FlatFieldrw);
+      if FlatFieldrw.StartDate<=OnDate then begin
+        Value = FlatFieldrw.Value;
+        i = -1;
+      end;
+    end;
+  end;
+  if Value<FlatFieldCoder.Minimum then begin
+    Value = FlatFieldCoder.Minimum;
+  end;
+  GetFlatFieldValueOnDate = Value;
+  return;
+end;
+
+//FlatFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+function val GetFlatFieldValueInPer(string FlatCode,string FieldCode,date FromDate,date TillDate,record FlatFieldCodeVc FlatFieldCoder)
+begin
+  record FlatFieldVc FlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  date sd,ed;
+  val Value,Days,PerDays;
+  integer i,rw;
+  boolean Found;
+
+  FlatFieldr.FlatCode = FlatCode;
+  FlatFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldr,2,true) then begin
+    ed = TillDate;
+    PerDays = DateDiff(TillDate,FromDate)+1;
+    rw = MatRowCnt(FlatFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(FlatFieldr,i,FlatFieldrw);
+      if FlatFieldrw.StartDate<=TillDate then begin
+        if FlatFieldrw.StartDate<=FromDate then begin
+          sd = FromDate;
+        end else begin
+          sd = FlatFieldrw.StartDate;
+        end;
+        Days = DateDiff(ed,sd);
+        if !Found then begin
+          Days = Days + 1;
+          Found = true;
+        end;
+        Value = Value + (Days/PerDays)*FlatFieldrw.Value;
+        ed = sd;//JS: next period ends with previously calculated sd
+        if FlatFieldrw.StartDate<=FromDate then begin
+          i = -1;
+        end;
+      end;
+    end;
+  end;
+  if Value<FlatFieldCoder.Minimum then begin
+    Value = FlatFieldCoder.Minimum;
+  end;
+  GetFlatFieldValueInPer = Value;
+  return;
+end;
+
+//it is supposed that period doesn`t exceed one month
+//there is no CheckAsFieldName, because in most of cases FlatVc register is already found so use separate function GetFlatFieldValueByName
+global
+function val GetFlatFieldValue(string FlatCode,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  date FromDate,TillDate;
+  val Value;
+  // record NApsSetBlock NApsSetbl;
+  
+  // BlockLoad(NApsSetbl);
+  // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+  //   if NApsSetbl.DeclResidRegScheme==1 then begin
+  //     Value=GetDeclaredPersFromPersonas(FlatCode,pFromDate,pTillDate,true);
+  //     goto LGetFlatFieldValue;
+  //   end;
+  // end;
+
+  FlatFieldCoder.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldCoder,1,true) then begin
+    if nonblankdate(pTillDate) then begin
+      TillDate = pTillDate;
+    end else begin
+      if nonblankdate(pFromDate) then begin
+        TillDate = pFromDate;
+      end else begin
+        TillDate = CurrentDate;
+      end;
+    end;
+    if FlatFieldCoder.CalcAvg==0 then begin //one date - TillDate
+      Value = GetFlatFieldValueOnDate(FlatCode,FieldCode,TillDate,FlatFieldCoder);
+    end else begin //period - month
+      TillDate.day = DaysInMonth(TillDate.year,TillDate.month);
+      FromDate = TillDate;
+      FromDate.day = 1;
+      Value = GetFlatFieldValueInPer(FlatCode,FieldCode,FromDate,TillDate,FlatFieldCoder);
+    end;
+
+    //RP - Divide for 12 months to get monthly charge
+    if(FlatFieldCoder.CalcYearly==1)then begin
+      Value = Value/12;
+    end;
+    //
+  end;
+  
+LGetFlatFieldValue:;
+  GetFlatFieldValue = Value;
+  return;
+end;
+  
+//separate function from GetFlatFieldValue, because FlatsVc is passed and is available at most of cases
+global
+function val GetFlatFieldValueByName(record FlatsVc Flatsr,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  // record NApsSetBlock NApsSetbl;
+  val Value;
+  
+  // BlockLoad(NApsSetbl);
+  // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+  //   if NApsSetbl.DeclResidRegScheme == 1 then begin
+  //     Value = GetDeclaredPersFromPersonas(Flatsr.FlatCode,pFromDate,pTillDate,true);
+  //     goto LGetFlatFieldValueByName;
+  //   end;
+  // end;
+  
+  FlatFieldCoder.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldCoder,1,true) then begin
+    Value = GetFlatFieldValue(Flatsr.FlatCode,FieldCode,pFromDate,pTillDate);
+  end else begin
+    Value = StringToVal(GetFieldValueByName(Flatsr,FieldCode,-1),M45Val);
+  end;
+
+LGetFlatFieldValueByName:;
+  GetFlatFieldValueByName = Value;
+  return;
+end;
+
+//does basically the same as GetFlatFieldValueByName, only this function accepts list of codes
+global
+function val GetFlatFieldValueByListName(record FlatsVc Flatsr,string fieldlist,date pFromDate,date pTillDate)
+begin
+  val res;
+  string 20 code;
+  longint pos;
+  
+  while (GetNextSubstring(fieldlist,pos,",",code)) begin
+    if nonblank(code) then begin
+      res = res + GetFlatFieldValueByName(Flatsr,code,pFromDate,pTillDate);
+    end;
+  end;
+  
+  GetFlatFieldValueByListName = res;
+return;
+end;
+
+//this is remote
+global
+procedure CalcFlatFields(string FlatCode,var array string FlatFieldValueMas)
+begin
+  record FlatFieldSetBlock FlatFieldSetBlr;
+  row FlatFieldSetBlock FlatFieldSetBlrw;
+  record FlatFieldCodeVc FlatFieldCoder;
+  date CurDate;
+  integer i,rw;
+  record SysFormatBlock SFb;
+  val t;
+  
+  BlockLoad(SFb);
+  
+  CurDate = CurrentDate;
+  BlockLoad(FlatFieldSetBlr);
+  rw = MatRowCnt(FlatFieldSetBlr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(FlatFieldSetBlr,i,FlatFieldSetBlrw);
+    FlatFieldCoder.FieldCode = FlatFieldSetBlrw.FieldCode;
+    ReadFirstMain(FlatFieldCoder,1,true);
+    t = GetFlatFieldValueOnDate(FlatCode,FlatFieldSetBlrw.FieldCode,CurDate,FlatFieldCoder);
+    FlatFieldValueMas[i+1] = ValToString(t,M45Val,SFb.thousSep,SFb.decimalPt,0);
+  end;
+  FlatFieldValueMas[0] = rw;
+  return;
+end;
+
+//FlatFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+function val GetBFlatFieldValueOnDate(string BuildCode,string FieldCode,date OnDate,record FlatFieldCodeVc FlatFieldCoder)
+begin
+  record FlatFieldVc FlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  val Value,TotValue;
+  integer i,rw;
+  boolean wLoop;
+
+  wLoop = true;
+  FlatFieldr.BuildCode = BuildCode;
+  FlatFieldr.FieldCode = FieldCode;
+  while LoopKey("BuildFieldCode",FlatFieldr,2,wLoop)begin
+    if FlatFieldr.BuildCode<>BuildCode or FlatFieldr.FieldCode<>FieldCode then begin
+      wLoop = false;
+    end else begin
+      rw = MatRowCnt(FlatFieldr);
+      for(i=rw-1;i>=0;i=i-1)begin
+        MatRowGet(FlatFieldr,i,FlatFieldrw);
+        if FlatFieldrw.StartDate<=OnDate then begin
+          Value = FlatFieldrw.Value;
+          i = -1;
+        end;
+      end;
+      if Value<FlatFieldCoder.Minimum then begin
+        Value = FlatFieldCoder.Minimum;
+      end;
+      TotValue = TotValue + Value;
+      Value = 0;
+    end;
+  end;
+  if TotValue==0 and FlatFieldCoder.Minimum<>0 then begin
+    TotValue = RecordsInIndex("FlatsVc","BuildCode:" & BuildCode)*FlatFieldCoder.Minimum;
+  end;
+  GetBFlatFieldValueOnDate = TotValue;
+  return;
+end;
+
+// function val GetBFlatFieldValueDecl(string BuildCode,date pFromDate,date pTillDate)
+// begin
+//   record FlatsVc Flatsr;
+//   boolean wloop;
+//   val res;
+  
+//   Flatsr.Code = BuildCode;
+//   wloop = true;
+//   while LoopKey("Code",Flatsr,1,wloop) begin
+//     if Flatsr.Code != BuildCode then begin
+//       wloop = false;
+//     end else begin
+//       res = res + GetDeclaredPersFromPersonas(Flatsr.FlatCode,pFromDate,pTillDate,true);
+//     end;
+//   end;
+  
+//   GetBFlatFieldValueDecl = res;
+//   return;
+// end;
+
+//FlatFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+function val GetBFlatFieldValueInPer(string BuildCode,string FieldCode,date FromDate,date TillDate,record FlatFieldCodeVc FlatFieldCoder)
+begin
+  record FlatFieldVc FlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  date sd,ed;
+  val Value,TotValue,Days,PerDays;
+  integer i,rw;
+  boolean wLoop,Found;
+
+  wLoop = true;
+  FlatFieldr.BuildCode = BuildCode;
+  FlatFieldr.FieldCode = FieldCode;
+  while LoopKey("BuildFieldCode",FlatFieldr,2,wLoop)begin
+    if FlatFieldr.BuildCode<>BuildCode or FlatFieldr.FieldCode<>FieldCode then begin
+      wLoop = false;
+    end else begin
+      Found = false;
+      ed = TillDate;
+      PerDays = DateDiff(TillDate,FromDate)+1;
+      rw = MatRowCnt(FlatFieldr);
+      for(i=rw-1;i>=0;i=i-1)begin
+        MatRowGet(FlatFieldr,i,FlatFieldrw);
+        if FlatFieldrw.StartDate<=TillDate then begin
+          if FlatFieldrw.StartDate<=FromDate then begin
+            sd = FromDate;
+          end else begin
+            sd = FlatFieldrw.StartDate;
+          end;
+          Days = DateDiff(ed,sd);
+          if !Found then begin
+            Days = Days + 1;
+            Found = true;
+          end;
+          Value = Value + (Days/PerDays)*FlatFieldrw.Value;
+          ed = sd;//JS: next period ends with previously calculated sd
+          if FlatFieldrw.StartDate<=FromDate then begin
+            i = -1;
+          end;
+        end;
+      end;
+      if Value<FlatFieldCoder.Minimum then begin
+        Value = FlatFieldCoder.Minimum;
+      end;
+      TotValue = TotValue + Value;
+      Value = 0;
+    end;
+  end;
+  if TotValue==0 and FlatFieldCoder.Minimum<>0 then begin
+    TotValue = RecordsInIndex("FlatsVc","BuildCode:" & BuildCode)*FlatFieldCoder.Minimum;
+  end;
+  GetBFlatFieldValueInPer = TotValue;
+  return;
+end;
+
+//it is supposed that period doesn`t exceed one month
+global
+function val GetBFlatFieldValue(string BuildCode,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  // record NApsSetBlock NApsSetbl;
+  date FromDate,TillDate;
+  val Value;
+
+  // BlockLoad(NApsSetbl);
+  // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+  //   if NApsSetbl.DeclResidRegScheme == 1 then begin
+  //     Value = GetBFlatFieldValueDecl(BuildCode,pFromDate,pTillDate);
+  //     goto LGetBFlatFieldValue;
+  //   end;
+  // end;
+    
+  FlatFieldCoder.FieldCode = FieldCode;
+  if ReadFirstMain(FlatFieldCoder,1,true) then begin
+    if nonblankdate(pTillDate) then begin
+      TillDate = pTillDate;
+    end else begin
+      if nonblankdate(pFromDate) then begin
+        TillDate = pFromDate;
+      end else begin
+        TillDate = CurrentDate;
+      end;
+    end;
+    if FlatFieldCoder.CalcAvg==0 then begin //one date - TillDate
+      Value = GetBFlatFieldValueOnDate(BuildCode,FieldCode,TillDate,FlatFieldCoder);
+    end else begin //period - month
+      TillDate.day = DaysInMonth(TillDate.year,TillDate.month);
+      FromDate = TillDate;
+      FromDate.day = 1;
+      Value = GetBFlatFieldValueInPer(BuildCode,FieldCode,FromDate,TillDate,FlatFieldCoder);
+    end;
+    //RP - Divide for 12 months to get monthly charge
+    if(FlatFieldCoder.CalcYearly==1)then begin
+      Value = Value/12;
+    end;
+    //
+  end;
+  
+LGetBFlatFieldValue:;
+  GetBFlatFieldValue = Value;
+  return;
+end;
+
+//separate function from GetBFlatFieldValue, because BuildVc is passed and is available at most of cases
+global
+function string 60 GetBFlatFieldValueByName(record BuildVc Buildr,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  // record NApsSetBlock NApsSetbl;
+  string 60 Value;
+
+  if nonblank(FieldCode) then begin
+    // BlockLoad(NApsSetbl);
+    // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+    //   if NApsSetbl.DeclResidRegScheme == 1 then begin
+    //     Value = GetBFlatFieldValue(Buildr.Code,FieldCode,pFromDate,pTillDate);
+    //     goto LGetBFlatFieldValueByName;
+    //   end;
+    // end;
+    
+    FlatFieldCoder.FieldCode = FieldCode;
+    if ReadFirstMain(FlatFieldCoder,1,true) then begin
+      Value = GetBFlatFieldValue(Buildr.Code,FieldCode,pFromDate,pTillDate);
+    end else begin
+      Value = GetFieldValueByName(Buildr,FieldCode,-1);
+    end;
+  end;
+  
+LGetBFlatFieldValueByName:;
+  GetBFlatFieldValueByName = Value;
+  return;
+end;
+
+//iterates over array and returns foreach GetBFlatFieldValue
+//return true if at least one isn`t zero
+global
+function boolean GetBFlatFieldValueMas(string BuildCode,array string FieldCodeMas,date pFromDate,date pTillDate,array val FieldCodeValueMas)
+begin
+  integer i,rw;
+  boolean res;
+
+  rw = StringToInt(FieldCodeMas[0]);
+  for(i=1;i<=rw;i=i+1)begin
+    FieldCodeValueMas[i] = GetBFlatFieldValue(BuildCode,FieldCodeMas[i],pFromDate,pTillDate);
+    if FieldCodeValueMas[i]<>0 then begin
+      res = true;
+    end;
+  end;
+  GetBFlatFieldValueMas = res;
+  return;
+end;
+
+//this is remote
+global
+procedure CalcBFlatFields(string BuildCode,var array val FlatFieldValueMas)
+begin
+  record BFlatFieldSetBlock BFlatFieldSetBlr;
+  row BFlatFieldSetBlock BFlatFieldSetBlrw;
+  record FlatFieldCodeVc FlatFieldCoder;
+  date CurDate;
+  integer i,rw;
+
+  CurDate = CurrentDate;
+  BlockLoad(BFlatFieldSetBlr);
+  rw = MatRowCnt(BFlatFieldSetBlr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BFlatFieldSetBlr,i,BFlatFieldSetBlrw);
+    FlatFieldCoder.FieldCode = BFlatFieldSetBlrw.FieldCode;
+    ReadFirstMain(FlatFieldCoder,1,true);
+    FlatFieldValueMas[i+1] = GetBFlatFieldValueOnDate(BuildCode,BFlatFieldSetBlrw.FieldCode,CurDate,FlatFieldCoder);
+  end;
+  FlatFieldValueMas[0] = rw;
+  return;
+end;
+
+//---------------------------for reports
+function integer GetRepSpecFlagCheckBox(record RcVc RepSpec,integer i)
+begin
+  integer res;
+
+  switch(i)begin
+    case 0: res = RepSpec.flags[10];
+    case 1: res = RepSpec.flags[11];
+    case 2: res = RepSpec.flags[12];
+    case 3: res = RepSpec.flags[13];
+    case 4: res = RepSpec.flags[14];
+    case 5: res = RepSpec.flags[15];
+    case 6: res = RepSpec.flags[16];
+    case 7: res = RepSpec.flags[17];
+    case 8: res = RepSpec.flags[18];
+    case 9: res = RepSpec.flags[19];
+    case 10: res = RepSpec.flags[20];
+    case 11: res = RepSpec.flags[21];
+    case 12: res = RepSpec.flags[22];
+    case 13: res = RepSpec.flags[23];
+    case 14: res = RepSpec.flags[24];
+    case 15: res = RepSpec.flags[25];
+    case 16: res = RepSpec.flags[26];
+    case 17: res = RepSpec.flags[27];
+    case 18: res = RepSpec.flags[28];
+    case 19: res = RepSpec.flags[29];
+  end;
+  GetRepSpecFlagCheckBox = res;
+end;
+
+//for reports - based on RepSpec.flags[x]
+global
+procedure GetFlatFieldCodes(record RcVc RepSpec,var array string FieldCodeMas)
+begin
+  record FlatFieldSetBlock FlatFieldSetBlr;
+  row FlatFieldSetBlock FlatFieldSetBlrw;
+  integer i,rw,masi;
+
+  BlockLoad(FlatFieldSetBlr);
+  rw = MatRowCnt(FlatFieldSetBlr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(FlatFieldSetBlr,i,FlatFieldSetBlrw);
+    if GetRepSpecFlagCheckBox(RepSpec,i)==0 then begin
+      masi = masi + 1;
+      FieldCodeMas[masi] = FlatFieldSetBlrw.FieldCode;
+    end;
+  end;
+  FieldCodeMas[0] = masi;
+end;
+
+//for reports - based on RepSpec.flags[x]
+global
+procedure GetBFlatFieldCodes(record RcVc RepSpec,var array string FieldCodeMas)
+begin
+  record BFlatFieldSetBlock BFlatFieldSetBlr;
+  row BFlatFieldSetBlock BFlatFieldSetBlrw;
+  integer i,rw,masi;
+
+  BlockLoad(BFlatFieldSetBlr);
+  rw = MatRowCnt(BFlatFieldSetBlr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BFlatFieldSetBlr,i,BFlatFieldSetBlrw);
+    if GetRepSpecFlagCheckBox(RepSpec,i)==0 then begin
+      masi = masi + 1;
+      FieldCodeMas[masi] = BFlatFieldSetBlrw.FieldCode;
+    end;
+  end;
+  FieldCodeMas[0] = masi;
+end;
+
+global
+procedure GetFlatFieldCodesWithType(var array string FieldCodeMas,integer FieldType)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  integer masi;
+  boolean wLoop;
+
+  wLoop = true;
+  FlatFieldCoder.FieldType = FieldType;
+  while LoopKey("FieldType",FlatFieldCoder,1,wLoop)begin
+    if FlatFieldCoder.FieldType<>FieldType then begin
+      wLoop = false;
+    end else begin
+      masi = masi + 1;
+      FieldCodeMas[masi] = FlatFieldCoder.FieldCode;
+    end;
+  end;
+  FieldCodeMas[0] = masi;
+end;
+
+global
+function string 100 GetFlatFieldCodeShortName(string FieldCode,boolean LongName)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+
+  FlatFieldCoder.FieldCode = FieldCode;
+  ReadFirstMain(FlatFieldCoder,1,true);
+  if LongName or blank(FlatFieldCoder.ShortName) then begin
+    GetFlatFieldCodeShortName = FlatFieldCoder.Name;
+  end else begin
+    GetFlatFieldCodeShortName = FlatFieldCoder.ShortName;
+  end;
+  return;
+end;
+
+//---------------------------for documents
+global
+procedure PrintAllFlatFields(string formcode,string FlatCode,date FromDate,date TillDate)
+begin
+  record DocVc Docr;
+  row DocVc Docrw;
+  string 255 params,param;
+  integer i,rw,pos;
+  string 50 tstr;
+  val Value;
+
+  Docr.Code = formcode;
+  if ReadFirstMain(Docr,1,true) then begin
+    rw = MatRowCnt(Docr);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(Docr,i,Docrw);
+      if Docrw.unitType==4 and Docrw.formatNr==0 and nonblank(Docrw.unitText) then begin
+        if Left(Docrw.unitText,7)=="F_FLAT:" then begin
+          params = Right(Docrw.unitText,Len(Docrw.unitText)-7);
+          Value = 0;
+          pos = 0;
+          while GetNextItem2(params,pos,param) begin
+            Value = Value + GetFlatFieldValue(FlatCode,param,FromDate,TillDate);
+            pos = pos + 1;
+          end;
+          OutFormField(Docrw.unitText,Value);
+        end;
+        if Left(Docrw.unitText,13)=="F_FLATCUTDEC:" then begin
+          params = Right(Docrw.unitText,Len(Docrw.unitText)-13);
+          Value = 0;
+          pos = 0;
+          while GetNextItem2(params,pos,param) begin
+            Value = Value + StringToVal(ValToString(GetFlatFieldValue(FlatCode,param,FromDate,TillDate),M4UVal,"",".",1),M4UVal);
+            pos = pos + 1;
+          end;
+          OutFormField(Docrw.unitText,ValToString(Value,M4UVal,"",".",1));
+        end;
+      end;
+    end;
+  end;
+end;
+
+global updating 
+procedure ChangeFlatCodeFlatFields(string flatcode,string oldflatcode) begin
+  record FlatFieldVc FlatFieldr,oldFlatFieldr;
+  boolean wloop;
+  
+  FlatFieldr.FlatCode=oldflatcode;
+  wloop=true;
+  While LoopMain(FlatFieldr,1,wloop) begin
+    if FlatFieldr.FlatCode!=oldflatcode then begin
+      wloop=false;
+    end else begin
+      if FlatFieldr.FlatCode==oldflatcode then begin  /* safety, not really needed here */
+        RecordCopy(oldFlatFieldr,FlatFieldr);
+        FlatFieldr.FlatCode=flatcode;
+        RecordUpdate(oldFlatFieldr,FlatFieldr,true);
+        /* StepBack is needed only if new flat code is larger than previous, because otherwise index table before record has same amount of records */
+        if flatcode>oldflatcode then begin 
+          StepBack(FlatFieldr);
+        end;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global updating 
+procedure RemoveFlatFields(string flatcode) begin
+  record FlatFieldVc FlatFieldr;
+  boolean wloop;
+  
+  FlatFieldr.FlatCode=flatcode;
+  wloop=true;
+  While LoopMain(FlatFieldr,1,wloop) begin
+    if FlatFieldr.FlatCode!=flatcode then begin
+      wloop=false;
+    end else begin
+      RecordDelete(FlatFieldr);
+      StepBack(FlatFieldr);
+    end;
+  end;
+  
+return;
+end;
+
+global updating 
+procedure ChangeBCodeFlatFields(string flatcode,string newbuildcode) begin
+  record FlatFieldVc FlatFieldr,oldFlatFieldr;
+  boolean wloop;
+  
+  FlatFieldr.FlatCode=flatcode;
+  wloop=true;
+  While LoopMain(FlatFieldr,1,wloop) begin
+    if FlatFieldr.FlatCode!=flatcode then begin
+      wloop=false;
+    end else begin
+      RecordCopy(oldFlatFieldr,FlatFieldr);
+      FlatFieldr.BuildCode=newbuildcode;
+      RecordUpdate(oldFlatFieldr,FlatFieldr,true);
+    end;
+  end;
+  
+return;
+end;
+
+/*
+  Sets new flat field value
+  returns false in case new value cannot be set, and this happens if record already has
+  row with later startdate than passed ondate
+*/
+global updating
+function boolean SetFlatField(string flatcode,string buildcode,string fieldcode,val setval,date ondate,string comment) begin
+  record FlatFieldVc FlatFieldr,oldFlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  integer i,rwc;
+  boolean res;
+  
+  res=true;
+  FlatFieldr.FlatCode=flatcode;
+  FlatFieldr.BuildCode=buildcode;
+  FlatFieldr.FieldCode=fieldcode;
+  if ReadFirstMain(FlatFieldr,2,true) then begin
+    RecordCopy(oldFlatFieldr,FlatFieldr);
+    rwc=MatRowCnt(FlatFieldr);
+    if rwc>0 then begin
+      MatRowGet(FlatFieldr,rwc,FlatFieldrw);
+      if FlatFieldrw.StartDate>ondate and nonblankdate(ondate) and nonblankdate(FlatFieldrw.StartDate) then begin
+        res=false;
+      end else begin
+        FlatFieldrw.Value=setval;
+        FlatFieldrw.StartDate=ondate;
+        FlatFieldrw.Comment=Comment;
+        MatRowPut(FlatFieldr,rwc,FlatFieldrw);
+        RecordUpdate(oldFlatFieldr,FlatFieldr,true);
+      end;
+    end else begin
+      FlatFieldrw.Value=setval;
+      FlatFieldrw.StartDate=ondate;
+      FlatFieldrw.Comment=Comment;
+      MatRowPut(FlatFieldr,0,FlatFieldrw);
+      RecordUpdate(oldFlatFieldr,FlatFieldr,true);
+    end;
+  end else begin
+    RecordNew(FlatFieldr);
+    FlatFieldr.FlatCode=flatcode;
+    FlatFieldr.FieldCode=fieldcode;
+    FlatFieldr.BuildCode=buildcode;
+    FlatFieldrw.Value=setval;
+    FlatFieldrw.StartDate=ondate;
+    FlatFieldrw.Comment=Comment;
+    MatRowPut(FlatFieldr,0,FlatFieldrw);
+    RecordStore(FlatFieldr,true);
+  end;
+  
+  SetFlatField=res;
+return;
+end;
+
+//For FlatfieldsRn
+
+function boolean CheckFlatFieldItemInNAContr(string ArtCodes,longint Contract,date sd,date ed)
+begin
+  Record NAContractVc NAContractr;
+  Row NAContractVc NAContrw;
+  integer i,rwc;
+  boolean res,testf;
+  
+  res=false;
+  NAContractr.SerNr=Contract;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    rwc=MatRowCnt(NAContractr);
+    if rwc!=0 then begin
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(NAContractr,i,NAContrw);
+        if SetInSet(NAContrw.ArtCode,ArtCodes) then begin
+          testf=true;
+          if NonBlankDate(NAContrw.ServStartDate) then begin
+            if NAContrw.ServStartDate>ed then begin
+              testf=false;
+            end;
+          end;
+          if NonBlankDate(NAContrw.ServEndDate) then begin
+            if NAContrw.ServEndDate<sd then begin
+              testf=false;
+            end;  
+          end;
+          if testf then begin
+            i=rwc;
+            res=true;
+          end;
+        end;
+      end;
+    end;  
+  end;
+  
+  CheckFlatFieldItemInNAContr=res;
+  return;
+end;
+
+function boolean CheckFlatFieldDateInNAContr(string FlatCode,date sd,date ed,var longint Contract)
+begin
+  Record NAContractVc NAContractr;
+  Row NAContractVc NAContractrw;
+  boolean res,TrHs,testf;
+  
+  res=false;
+  Contract=-1;
+  ResetLoop(NAContractr);
+  TrHs=true;
+  NAContractr.FlatCode=FlatCode;
+  While LoopBackKey("FlatCode",NAContractr,1,TrHs) begin
+    If NAContractr.FlatCode!=FlatCode then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if NAContractr.StartDate>ed then begin
+        testf=false;
+      end;
+      if NonBlankDate(NAContractr.EndDate) then begin
+        if NAContractr.EndDate<sd then begin
+          testf=false;
+        end;
+        if NAContractr.EndDate<ed then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        TrHs=false;
+        Contract=NAContractr.SerNr;
+        res=true;
+      end;
+    end;
+  end;
+
+  CheckFlatFieldDateInNAContr = res;
+  return;
+end;
+
+//Similar with GetFlatFieldValueInPer
+function val GetFlatFieldRecValueInPer(record FlatFieldVc FlatFieldr,date FromDate,date TillDate,record FlatFieldCodeVc FlatFieldCoder)
+begin
+  row FlatFieldVc FlatFieldrw;
+  date sd,ed;
+  val Value,Days,PerDays;
+  integer i,rw;
+  boolean Found;
+
+  ed = TillDate;
+  PerDays = DateDiff(TillDate,FromDate)+1;
+  rw = MatRowCnt(FlatFieldr);
+  for(i=rw-1;i>=0;i=i-1)begin
+    MatRowGet(FlatFieldr,i,FlatFieldrw);
+    if FlatFieldrw.StartDate<=TillDate then begin
+      if FlatFieldrw.StartDate<=FromDate then begin
+        sd = FromDate;
+      end else begin
+        sd = FlatFieldrw.StartDate;
+      end;
+      Days = DateDiff(ed,sd);
+      if !Found then begin
+        Days = Days + 1;
+        Found = true;
+      end;
+      Value = Value + (Days/PerDays)*FlatFieldrw.Value;
+      ed = sd;
+      if FlatFieldrw.StartDate<=FromDate then begin
+        i = -1;
+      end;
+    end;
+  end;
+
+  GetFlatFieldRecValueInPer = Value;
+  return;
+end;
+
+function val GetFlatFieldValueCoef(LongInt Contract,val Value,string ArtCodes,integer ArtMode,var val Coef)
+begin
+  Record NAContractVc NAContractr;
+  Row NAContractVc NAContractrw;
+  val res,QtyCoef;
+  integer i,rwc;
+  boolean testf;
+  
+  if NonBlank(ArtCodes) then begin
+    NAContractr.SerNr=Contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      rwc=MatRowCnt(NAContractr);
+      testf=false;
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(NAContractr,i,NAContractrw);
+        if SetInSet(NAContractrw.ArtCode,ArtCodes) then begin
+          if blank(NAContractrw.QtyCoef) then begin
+            QtyCoef = 1;
+          end else begin
+            QtyCoef = NAContractrw.QtyCoef;
+          end;
+          res=Value*QtyCoef;
+          if ArtMode==1 then begin
+            Coef=QtyCoef;
+          end;
+          testf=true;
+        end;
+      end;
+      if !testf then begin
+        res=Value;
+      end;
+    end;
+  end else begin
+    res=Value;
+  end;
+  
+  GetFlatFieldValueCoef=res;
+  return;
+end;
+
+procedure GetFlatFieldRecValue(record FlatFieldVc FlatFieldr,record RcVc RepSpec,var val value,var val ValueCoef,var val Coef)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  Row FlatFieldVc FlatFieldrw;
+  Integer i,rwc;
+  Boolean testf;
+  LongInt Contract;
+  date TempDate,TillDate,FromDate;
+  
+  Coef=BlankVal;
+  rwc=MatRowCnt(FlatFieldr);
+  for (i=rwc-1;i>=0;i=i-1) begin  //Take only last value in period
+    MatRowGet(FlatFieldr,i,FlatFieldrw);
+    testf=true;
+    if NonBlankDate(FlatFieldrw.StartDate) then begin
+      if (FlatFieldrw.StartDate>RepSpec.sEndDate) then begin
+        testf=false;
+      end;
+      if testf and !CheckFlatFieldDateInNAContr(FlatFieldr.FlatCode,RepSpec.sStartDate,RepSpec.sEndDate,Contract) then begin
+        testf=false;
+      end;
+    end else begin
+      if !CheckFlatFieldDateInNAContr(FlatFieldr.FlatCode,RepSpec.sStartDate,RepSpec.sEndDate,Contract) then begin
+        testf=false;
+      end;
+    end;
+    if testf and NonBlank(RepSpec.f3) then begin  //ArtCode check in contract
+      if NonBlankDate(FlatFieldrw.StartDate) then begin
+        TempDate=FlatFieldrw.StartDate;
+      end else begin
+        TempDate=RepSpec.sStartDate;
+      end;
+      if !CheckFlatFieldItemInNAContr(RepSpec.f3,Contract,TempDate,RepSpec.sEndDate) then begin
+        testf=false;
+      end;
+    end;
+    if testf then begin
+      FlatFieldCoder.FieldCode = FlatFieldr.FieldCode;
+      if ReadFirstMain(FlatFieldCoder,1,true) then begin
+        if FlatFieldCoder.CalcAvg==0 then begin
+          Value = FlatFieldrw.Value;
+        end else begin //period - month
+          TillDate=RepSpec.sEndDate;
+          TillDate.day = DaysInMonth(TillDate.year,TillDate.month);
+          FromDate = TillDate;
+          FromDate.day = 1;
+          Value = GetFlatFieldRecValueInPer(FlatFieldr,FromDate,TillDate,FlatFieldCoder); //Similar with GetFlatFieldValueInPer
+        end;
+        //RP - Divide for 12 months to get monthly charge
+        if(FlatFieldCoder.CalcYearly==1)then begin
+          Value = Value/12;
+        end;
+        //
+        if Value<FlatFieldCoder.Minimum then begin
+          Value = FlatFieldCoder.Minimum;
+        end;
+        if RepSpec.flags[1]==1 then begin
+          ValueCoef=GetFlatFieldValueCoef(Contract,Value,RepSpec.f3,RepSpec.ArtMode,Coef);
+        end;
+      end;  
+      goto ExitGetFlatFieldRecValue;
+    end;  
+  end;
+ExitGetFlatFieldRecValue:;  
+ 
+  return;
+end;  
+
+global
+procedure GetBuildFlatFieldValue(record RcVc Repspec,string BuildCode,var val Sum,var val CoefSum,var array val arrSum,var array val arrCoefSum,
+                                 var integer size,var array string arrFlats,var array val arrCoef,integer type)
+begin
+Record FlatFieldVc FlatFieldr;
+  Row FlatFieldVc FlatFieldrw;
+  Integer i,rwc;
+  Boolean TrHs,testf,firstf;
+  Val Value,ValueCoef,Coef;
+  
+  firstf=false;
+  size=0;
+  arrFlats[size]="";
+  ResetLoop(FlatFieldr);
+  TrHs=true;
+  FlatFieldr.BuildCode=BuildCode;
+  while LoopKey("BuildFieldCode",FlatFieldr,1,TrHs) begin
+    if FlatFieldr.BuildCode!=BuildCode then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if nonblank(RepSpec.f2) then begin //FieldCode
+        if SetInSet(FlatFieldr.FieldCode,RepSpec.f2)==false then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        Value=blankval;
+        ValueCoef=blankval;
+        if type==1 then begin
+          GetFlatFieldRecValue(FlatFieldr,RepSpec,Value,ValueCoef,Coef);
+          if Value>0 then begin
+            Sum=Sum+Value;
+          end;
+          if ValueCoef>0 then begin
+            CoefSum=CoefSum+ValueCoef;
+          end;
+        end else begin
+          GetFlatFieldRecValue(FlatFieldr,RepSpec,Value,ValueCoef,Coef);
+          if arrFlats[size]==FlatFieldr.FlatCode then begin
+            arrSum[size]=arrSum[size]+Value;
+            arrCoefSum[size]=arrCoefSum[size]+ValueCoef;
+          end else begin
+            if firstf then begin
+              size=size+1;
+            end;
+            arrFlats[size]=FlatFieldr.FlatCode;
+            arrSum[size]=Value;
+            arrCoefSum[size]=ValueCoef;
+          end;
+          if RepSpec.flags[1]==1 then begin
+            arrCoef[size]=Coef;
+          end;
+          firstf=true;
+        end;
+      end;  
+    end;
+  end;
+
+  return;
+end;

@@ -1,0 +1,50 @@
+//Only runs from IVDClass special menu.
+global updating 
+procedure PDFInvRemakeRecMn(Record RcVc RepSpec) begin
+  Record IVVc IVr;
+  record RLinkVc RLr;
+  record Attach2Vc Attachr;
+  integer i;
+  string 255 fname;
+  string 50 docname;
+  
+  if RepSpec.long1!= -1 then begin
+    IVr.SerNr=RepSpec.long1;
+    if ReadFirstMain(IVr,1,true) then begin
+      //deleting previous pdf printout
+      i=1;
+      While (ReadRecordLink(IVr,i,Attachr,RLr)) begin
+        if (Right(Attachr.FileName,4)==".pdf") and (Attachr.FileName== IVr.SerNr & ".pdf") then begin
+          LogText(0,"Deleting attachment " & Attachr.FileName & " for invoice " & IVr.SerNr);
+          RecordDelete(RLr);
+          i=i-1;
+        end;
+        i=i+1;
+      end;
+        
+      //creating new pdf file and attaching it to invoice
+      fname = "tmp/" & IVr.SerNr & ".pdf";
+      SetDocumentFilename(fname);
+      SetMedia(mtPdf);
+      docname = "InvForm";
+      switch (IVr.InvType) begin
+        case 2: docname = "CashInvForm";
+        case 3: docname = "CredInvForm";
+        case 4: docname = "IIInvForm";
+      end;
+      if ((IVr.InvType==1) or (IVr.InvType==6)) then begin
+        if (nonblank(IVr.PRCode)) then begin    
+         docname = "ProjInvForm";
+        end;
+      end;
+      PrintDocument(IVr,docname,false);
+      if (FileExists(fname)) then begin
+        RecordLinkFile(fname,0,IVr,CurrentCompany);
+        SetDocumentFilename("");            
+        Delete_File(fname);
+      end;
+    end;
+  end;
+  
+  return;
+end;

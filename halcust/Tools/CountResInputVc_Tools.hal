@@ -1,0 +1,343 @@
+external inner procedure StripEndingSpaces(var string);
+external inner procedure FindUserMailboxName(string,var string,var string);
+external inner function Boolean FindStringInString(string,string);
+external inner function val StringToValue(string,Integer,string,string);
+external procedure DividerStr(string,string,var array string,var integer);
+external function string 255 GetShortDate(date,date);
+external function string 255 GetLongDate(date);
+external function boolean GetFlatCounterByFlatCode(string,string,var record FlatCountersVc);
+external function boolean GetLastCounterResData(Record FlatCountersVc,var val,var date,date,string);
+
+updating procedure CopyAttachmentLTxtVc(record MailVc Mailr,string textcode)
+begin
+  record RLinkVc RLr;
+  record LTxtVc LTxtr;
+  Boolean foundf;
+  string 255 tstr;
+  Integer i;
+  record Attach2Vc Attachr;
+  
+  LTxtr.Code=textcode;
+  if ReadFirstMain(LTxtr,1,true) then begin
+    i = 1; foundf=false;
+    while (foundf==false and ReadRecordLink(LTxtr,i,Attachr,RLr)) begin
+      i = i+1;
+      // if (Attachr.FileName==attachname) then begin
+        CreateRecordLink(Mailr,CurrentCompany,Attachr,CurrentCompany);
+        foundf = true;
+      // end;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+updating procedure CreateAndAttachCRIPdf(record MailVc Mailr,record CountResInputVc CRIr,string filename,string textcode)
+begin
+  string 255 fname,fnMask;
+  boolean foundf;
+  integer i;
+  
+  fname = "tmp/" & filename;
+  SetDocumentFilename(fname);
+  SetMedia(mtPdf);
+
+  PrintDocument(CRIr,"CountResInputForm",false);
+  
+  RecordLinkFile(fname,0,Mailr,CurrentCompany);
+  
+  SetDocumentFilename("");
+  
+  Delete_File(fname);
+  
+  if nonblank(textcode) then begin
+    CopyAttachmentLTxtVc(Mailr,textcode);
+  end;
+  
+  return;
+end;
+
+procedure PasteLTxttoMail(record MailVc Mailr,Record LTxtVc LTxtr,record CountResInputVc CRIr,Record RcVc RepSpec)
+begin
+  string 255 tstr,spstr;
+  string 1 curchr;
+  Integer pos,textsize,lstr,fln,tln,i,startfield,endfield,size;
+  boolean fixlen;
+  array string 255 aRes;
+
+  //LTxtr.Code = EPOrderDocr.LTxtCode;
+  //if (ReadFirstMain(LTxtr,1,true)) then begin
+  textsize = SizeTextCnt(LTxtr);
+  while (pos<textsize) begin
+    curchr=StringFromText(LTxtr,pos,1);
+    lstr=lstr+1;
+    if (curchr=="[") then begin
+      tstr=StringFromText(LTxtr,pos-lstr+1,lstr-1);
+      AddToText(tstr,Mailr);
+      startfield=pos;
+      lstr=0;
+      fixlen=false;
+    end;
+    if (curchr=="{") then begin
+      tstr=StringFromText(LTxtr,pos-lstr+1,lstr-1);
+      AddToText(tstr,Mailr);
+      startfield=pos;
+      lstr=0;
+      fixlen=true;
+    end;
+    if (curchr=="]") then begin
+      endfield=pos;
+    end;
+    if (curchr=="}") then begin
+      endfield=pos;
+    end;
+    if (startfield>=0) and (endfield>0) then begin
+      spstr=StringFromText(LTxtr,startfield+1,endfield-startfield-1);
+      StripEndingSpaces(spstr);
+      size=0;
+      DividerStr(spstr,".",aRes,size);
+      //tstr="";
+      if size==2 then begin
+        switch (aRes[0]) begin
+          // case "CUVc": GetFieldFromCUVc(IVr.CustCode,aRes[1],tstr);
+          case "CountResInputVc": tstr=GetFieldValueByName(CRIr,aRes[1],-1);
+          // case "CYBlock": tstr=GetFieldFromCYBlock(aRes[1]);
+        end;
+      end;
+      if size==1 then begin
+        switch (aRes[0]) begin
+          case "CurrentDate": tstr = DateToString(CurrentDate,"DD/MM/YYYY");
+          case "ShortDate": tstr = GetShortDate(RepSpec.sStartDate,RepSpec.sEndDate);
+          case "LongDateStartDate": tstr = GetLongDate(RepSpec.sStartDate);
+          case "LongDateEndDate": tstr = GetLongDate(RepSpec.sEndDate);
+          // case "DebTotal": tstr = GetDebTotal(IVr);
+        end;
+      end;
+      if (fixlen) then begin
+        fln=endfield-startfield+1;
+        tln=len(tstr);
+        if (tln<fln) then begin
+          for (i=tln;i<=fln;i=i+1) begin
+            tstr=tstr & " ";
+          end;
+        end else begin
+          tstr=left(tstr,fln);
+        end;
+      end;
+      AddToText(tstr,Mailr);
+      startfield=-1;endfield=-1;
+      lstr=0;
+    end;
+    if (lstr==100) then begin
+      tstr=StringFromText(LTxtr,pos-99,100);
+      AddToText(tstr,Mailr);
+      lstr=0;
+    end;
+    pos=pos+1;
+  end;
+  //end;
+  if (lstr>0) then begin
+    tstr=StringFromText(LTxtr,textsize-lstr,lstr);
+    AddToText(tstr,Mailr);
+  end;
+
+  return;
+end;
+
+global updating 
+function Integer CreateMailFromCRI(record CountResInputVc CRIr,var record MailVc Mailr,var string warning,string txtCode,Record RcVc RepSpec)
+begin
+  longint res;
+  record BuildVc Buildr;
+  record LTxtVc LTxtr;
+  row MailVc MArw;
+  Integer i,rwcnt;
+  string 255 mailboxnr,tstr;
+
+  res = 0;
+  if (ReadFirstMain(CRIr,0,true)) then begin end;
+  // if blank(eMail) then begin
+    FindUserMailboxName(CurrentUser,mailboxnr,tstr);
+  // end else begin
+    // tstr = eMail;
+  // end;
+  if (blank(tstr)) then begin
+    res = 2289;
+    warning = CurrentUser;
+    goto LCreateMailFromCRID;
+  end;
+  MArw.RowTyp = 1;
+  MArw.AddrCode = tstr;
+  MatRowPut(Mailr,0,MArw);
+  Buildr.Code=CRIr.BuildCode;
+  if ReadFirstMain(Buildr,1,true) then begin
+  end;
+  if blank(Buildr.CountResInpEmail) then begin
+    res = 2289;
+    warning = Buildr.Code;
+    goto LCreateMailFromCRID;
+  end;
+  MArw.RowTyp = 0;
+  MArw.AddrCode = Buildr.CountResInpEmail;
+  MatRowPut(Mailr,1,MArw);
+  
+  if nonblank(txtCode) then begin
+    LTxtr.Code = txtCode;
+    if (ReadFirstMain(LTxtr,1,true)) then begin
+      if nonblank(LTxtr.Comment) then begin
+        
+      // end else begin
+        // Mailr.Header=USetStr(1803) & " " & IVr.SerNr;
+      end;
+    end else begin
+      res=1000815;
+      goto LCreateMailFromCRID;
+    end;
+    PasteLTxttoMail(Mailr,LTxtr,CRIr,RepSpec);
+  end;
+  tstr = USetStr(1000406) & CRIr.Address & "     " & USetStr(33012) & CRIr.StartDate & "-" & CRIr.EndDate;
+  Mailr.Header=tstr;
+  
+  Mailr.TransDate = CurrentDate;
+  Mailr.SerNr = NextSerNr("MailVc",Mailr.TransDate,-1,false,"");
+  Mailr.SendFlag=1;
+  if (RecordStore(Mailr,false)) then begin
+    CreateRecordLink(Mailr,CurrentCompany,CRIr,CurrentCompany);
+    CreateRecordLink(CRIr,CurrentCompany,Mailr,CurrentCompany);
+  end;
+
+LCreateMailFromCRID:;
+  CreateMailFromCRI = res;
+  return;
+end;
+
+function val GetAmountFromString(string strval)
+begin
+  val res;
+  
+  if FindStringInString(strval,",") then begin
+    res = StringToValue(strval,M45Val,"",",");
+  end else begin
+    res = StringToValue(strval,M45Val,"",".");
+  end;
+  
+  GetAmountFromString = res;
+  return;
+end;
+
+global
+procedure CreateXlsCRI(var record CountResInputVc CRIr,record IVVc Cacher)
+begin
+  record NApsSetBlock NApsSetr;
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  record FlatCountersVc FlatCountersr;
+  row CountResInputVc CRIrw;
+  row IVVc Cacherw;
+  integer rw,i,rwc;
+  string 10 type;
+  val prevcr;
+  date prevdate;
+  
+  type="S03";
+  BlockLoad(NApsSetr);
+  RecordNew(CRIr);
+  
+  CRIr.StartDate=NApsSetr.DefaultCountResSDate;
+  CRIr.EndDate  =NApsSetr.DefaultCountResEDate;
+  CRIr.InputCTypes=type;
+  
+  rwc=MatRowCnt(Cacher);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Cacher,i,Cacherw);
+    if nonblank(Cacherw.ArtCode) then begin
+      if blank(CRIr.BuildCode) then begin
+        Flatsr.FlatCode=Cacherw.ArtCode;
+        if ReadFirstMain(Flatsr,1,true) then begin
+          CRIr.BuildCode=Flatsr.Code;
+          Buildr.Code = CRIr.BuildCode;
+          if (ReadFirstMain(Buildr,1,true)) then begin
+            CRIr.Address = Buildr.Address;
+          end;
+        end;
+      end;
+      
+      ClearRow(CRIr,CRIrw,1);
+          
+      CRIrw.FlatCode=Cacherw.ArtCode;
+      MatRowPut(CRIr,rw,CRIrw);
+      
+      RecordNew(FlatCountersr);
+      if GetFlatCounterByFlatCode(Cacherw.ArtCode,type,FlatCountersr) then begin
+        MatRowGet(CRIr,rw,CRIrw);
+        CRIrw.CounterNo=FlatCountersr.CounterNo;
+        MatRowPut(CRIr,rw,CRIrw);
+        if GetLastCounterResData(FlatCountersr,prevcr,prevdate,CRIr.StartDate,CRIrw.CountResType) then begin
+          MatRowGet(CRIr,rw,CRIrw);
+          CRIrw.PrevDate=prevdate;
+          CRIrw.PrevAmount=prevcr;
+          if nonblank(FlatCountersr.Address) then begin
+            CRIrw.RowAddress = FlatCountersr.Address & " - " & FlatCountersr.FlatNo;
+          end else begin
+            CRIrw.RowAddress = FlatCountersr.FlatNo;
+          end;
+          CRIrw.FlatCounterSerNr = FlatCountersr.SerNr;
+          CRIrw.CounterType = FlatCountersr.CounterType;
+          MatRowPut(CRIr,rw,CRIrw);
+        end;
+      end;
+      MatRowGet(CRIr,rw,CRIrw);
+      CRIrw.CurAmount = CRIrw.PrevAmount + GetAmountFromString(Cacherw.SourceTransNr);
+      CRIrw.SumAmount = CRIrw.CurAmount - CRIrw.PrevAmount;
+      MatRowPut(CRIr,rw,CRIrw);
+      rw = rw + 1;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure CalcCRITotInput(record CountResInputVc CRIr,var val totamount)
+begin
+  row CountResInputVc CRIrw;
+  integer i,rwc;
+    
+  totamount = blankval;
+  rwc=MatRowCnt(CRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CRIr,i,CRIrw);
+    totamount = totamount + CRIrw.SumAmount;
+  end;
+
+  return;
+end;
+
+global updating
+procedure DeleteCRICountRes(var record CountResInputVc CRIr)
+begin
+  record CountResVc CountResr;
+  row CountResInputVc CRIrw;
+  integer i,rwc;
+
+  rwc=MatRowCnt(CRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CRIr,i,CRIrw);
+    if CRIrw.CountResNr>0 then begin
+      CountResr.SerNr=CRIrw.CountResNr;
+      if ReadFirstMain(CountResr,1,true) then begin
+        if CRIrw.FlatCode==CountResr.FlatCode then begin
+          RecordDelete(CountResr);
+        end;
+      end;
+      CRIrw.CountResNr=-1;
+      CRIrw.Type=0;
+      MatRowPut(CRIr,i,CRIrw);
+    end;
+  end;
+
+  return;
+end;
+  
+  

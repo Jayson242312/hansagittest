@@ -1,0 +1,53 @@
+global
+procedure MassReadingsImportRn(record RcVc RepSpec)
+begin
+  record FlatCountersVc FlatCountersr;
+  record MHistoryVc MHr;
+  record BuildVc ERFMasterr;
+  record NAContractVc COr;
+
+  StartReportJob("Meter Readings (All Books)");
+
+  StartFormat(15);
+    OutString(1,0,"",false);
+  EndHeader;
+  EndFormat;
+
+  StartFormat(15);
+    OutString(0,0,"MeterID",false); 
+    OutString(40,0,"Book.No",false);
+    OutString(80,0,"Alpha No.",false);
+    OutString(120,0,"Meter No.",false);
+    OutString(200,0,"Erf.No",false);
+    OutString(240,0,"Cust.No",false);
+    OutString(280,0,"Address",false);
+    OutString(360,0,"Previous Reading",false);
+    OutString(420,0,"New Reading",false);
+    OutString(500,0,"Reading Date",false);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  // sort by book number
+  while (LoopKey("UserStr1", FlatCountersr,1,true)) begin
+    StartFormat(15);
+      OutString(0,"DblFlatCountersVc", FlatCountersr.SerNr,false);
+      OutString(40,0,FlatCountersr.UserStr1,false);
+      OutString(80,0,FlatCountersr.UserStr3,false);
+      OutString(120,0,FlatCountersr.CounterNo,false);
+      OutString(200,0,FlatCountersr.UserStr2,false);
+      // get customer data
+      COr.SerNr = FlatCountersr.Contract;
+      if(ReadFirstMain(COr,1,true)) then begin
+        OutString(240,"DblCUVc",COr.CustCode,false);
+      end;
+      OutString(280,0,FlatCountersr.Address,false);
+      MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+      if(ReadFirstMain(MHr,1,true)) then begin
+        OutString(360,0,MHr.currReading,false);
+      end;
+      OutDate(500,0,"",false);
+    EndFormat;
+  end;
+  EndJob;
+  return;
+end;

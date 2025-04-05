@@ -1,0 +1,196 @@
+external inner function Boolean PasteInvIn2IPr(var record IPVc,Integer,Date,var val,Boolean,var Boolean);
+external inner procedure IPSumup(var record IPVc);
+external inner procedure IPVc_PasteRecVal(var record IPVc,Integer);
+external inner procedure IPVc_PasteBankVal(var record IPVc,Integer);
+external inner procedure IPVc_PasteRecVal(var record IPVc,Integer);
+external inner function Boolean IPVc_PasteCustCode(var record IPVc,Integer,var LongInt);
+external procedure AddOnAccountLine(record IPVc,integer); //jh
+
+global
+function val GetCUBalance(record CUVc CUr)
+begin
+  record ARVc ARr;
+  record APVc APr;
+  val res;
+  Boolean foundf;
+
+  ARr.CustCode = CUr.Code;
+  foundf = true;
+  while (LoopKey("CustCode",ARr,1,foundf)) begin
+    if (ARr.CustCode<>CUr.Code) then begin foundf = false; end;
+    if (foundf) then begin
+      res = res + ARr.RVal;
+    end;
+  end;
+  
+  APr.VECode = CUr.Code;
+  foundf = true;
+  while (LoopKey("VECode",APr,1,foundf)) begin
+    if (APr.VECode<>CUr.Code) then begin foundf = false; end;
+    if (foundf) then begin
+      res = res - APr.RVal;
+    end;
+  end;
+
+  GetCUBalance = res;
+end;
+
+procedure distributeinvrow(var record IPVc IPr,integer rownr)
+begin
+row IPVc IPrw;
+record IVVc IVr;
+row IVVc IVrw;
+integer i,rwcnt;
+val rowsum,coef,ivrowsum,ivsum;
+
+  matrowget(IPr,rownr,IPrw);
+  matrowdelete(IPr,rownr);
+  rowsum = IPrw.RecVal;
+  IVr.SerNr = IPrw.InvoiceNr;
+  if(readfirstmain(IVr,1,true))then begin
+    coef = rowsum/IVr.Sum4;
+    rwcnt = matrowcnt(IVr);
+    for(i=rwcnt-1;i>=0;i=i-1)begin
+      matrowget(IVr,i,IVrw);
+      if(IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.Spec))then begin
+        ivsum = ivsum + IVrw.Sum;
+      end;
+    end;
+    
+    for(i=rwcnt-1;i>=0;i=i-1)begin
+      matrowget(IVr,i,IVrw);
+      if(IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.Spec))then begin
+        ivrowsum = rowsum*(IVrw.Sum/ivsum);
+        if(ivrowsum>0.01) then begin
+          IPrw.rkRecNumber = IVrw.ArtCode; // TMK:: Changed ArtCode to rkRecNumber
+          IPrw.ArtCodeName = IVrw.Spec; //TMK::  Changed Spec to ArtCodeName
+          IPrw.RecVal = ivrowsum;
+          matrowinsert(IPr,rownr,IPrw);
+          IPVc_PasteRecVal(IPr,rownr);
+        end;
+      end;
+    end;
+  end;
+  IPSumup(IPr);
+
+return;
+end;
+
+ 
+global procedure DistributeCustoimerSum_RA(var record IPVc IPr,string customer,val amount,var val change,val creditNum, boolean useCredit)
+begin
+  record ARVc ARr;
+  record IVVc IVr; //jh invoice
+  boolean TrHs;
+  row IPVc IPrw;
+  integer i,rwcnt,rownr;
+  val recamount, usedOnaccNum,rmvOnaccNum;
+  val chk,outstandingAmnt;
+  Boolean installmentf,testf;
+  LongInt pos,err;
+  boolean isDisputed;
+  boolean distributeNormal;
+
+  
+  recamount = amount;
+  
+  rwcnt = matrowcnt(IPr);
+  for(i=0;i<rwcnt;i=i+1)begin
+    matrowdelete(IPr,0);
+  end;
+  IPSumup(IPr);
+
+
+  ARr.CustCode = customer;
+  TrHs = true;
+  // get outstanding and place in row
+  while (LoopKey("CustInv",ARr,1,TrHs)) begin
+    if(ARr.CustCode!=customer)then begin TrHs = false; end;
+    if(recamount<=0)then begin TrHs = false; end;
+    if(TrHs)then begin
+      if(ARr.BookRVal>0.01)then begin
+        rownr = matrowcnt(IPr);
+        IPrw.InvoiceNr = ARr.InvoiceNr;
+        // code to check if the receipt is agreement receipt or not
+        if (IPr.RecNumber == "Agreement Receipt")  then begin isDisputed = true; end else begin isDisputed = false; end;
+        //Jh to check if an invoice is disputed meaning we use it in agreement receipt or not. We then set the distributeNormal bool 
+        IVr.SerNr = ARr.InvoiceNr;
+        if (ReadFirstMain(IVr,1,true)) then begin if IVr.DisputedFlag == 1 then begin distributeNormal = false;
+          end else begin distributeNormal = true;end;
+        end;
+
+        if (isDisputed == false and distributeNormal == true or isDisputed == true and distributeNormal==false ) then begin
+        MatRowPut(IPr,rownr,IPrw);
+        PasteInvIn2IPr(IPr,rownr,IPr.TransDate,chk,false,installmentf);
+        matrowget(IPr,rownr,IPrw);
+        if(IPrw.RecVal>recamount)then begin
+          IPrw.RecVal = recamount;
+          matrowput(IPr,rownr,IPrw);
+          IPVc_PasteRecVal(IPr,rownr);
+        end;
+        matrowget(IPr,rownr,IPrw);
+        recamount = recamount - IPrw.RecVal;
+        IPSumup(IPr);
+        distributeinvrow(IPr,rownr);
+      end;
+      end;
+    end;
+  end;
+  IPSumup(IPr);
+
+  
+  // pay from on-account
+  if(useCredit and creditNum>0.01 and IPr.CurPayVal>0.01) then begin
+    rownr = matrowcnt(IPr);
+    clearrow(IPr,IPrw,1);
+    IPrw.CustCode = customer;
+    MatRowPut(IPr,rownr,IPrw);
+    IPVc_PasteCustCode(IPr,rownr,err);
+    MatRowGet(IPr,rownr,IPrw);
+    outstandingAmnt = IPr.CurPayVal;// save outstanding
+    if(IPr.CurPayVal >= creditNum) then begin
+      IPrw.RecVal = -creditNum;
+      usedOnaccNum = creditNum;
+    end else begin
+      IPrw.RecVal = -IPr.CurPayVal;
+      usedOnaccNum = IPr.CurPayVal;
+    end;
+    IPrw.Objects = CurrentUser & "X,VINV";
+    MatRowPut(IPr,rownr,IPrw);
+    IPVc_PasteRecVal(IPr,rownr);
+    IPSumup(IPr);
+  end;
+
+  // put change on-account
+  rmvOnaccNum = (recamount + usedOnaccNum) - creditNum;
+  // subtract on-acc amount from remaining(on-acc + received) + on-acc used. if there's still change, then keep change
+  if(useCredit and rmvOnaccNum<0.01) then begin
+    recamount = 0; //
+  end else begin
+    if(IPr.KeepChange==1 and recamount>0.01)then begin
+      rownr = matrowcnt(IPr);
+      clearrow(IPr,IPrw,1);
+      IPrw.CustCode = customer;
+      MatRowPut(IPr,rownr,IPrw);
+      IPVc_PasteCustCode(IPr,rownr,err);
+      MatRowGet(IPr,rownr,IPrw);
+      IPrw.RecVal = recamount;
+      if(useCredit) then begin
+        IPrw.RecVal = (recamount + usedOnaccNum) - creditNum;
+      end;
+      recamount = 0;
+
+      IPrw.Objects = CurrentUser & "X,VINV";
+      MatRowPut(IPr,rownr,IPrw);
+      IPVc_PasteRecVal(IPr,rownr);
+      IPSumup(IPr);
+    end;
+  end;
+
+  IPr.ChangeVal = recamount;
+  change = recamount;
+  return;
+
+end;
+
+

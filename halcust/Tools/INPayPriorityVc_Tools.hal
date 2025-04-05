@@ -1,0 +1,372 @@
+external inner function val FindVAT(string,val,Integer,Integer);
+external inner function roundmode SetRoundModeD(Integer);
+external function boolean GetIPRowContract(row IPVc,date,var record NAContractVc);
+// external function boolean UpdIVItemPayedSumFromINPrePayRows(var Record IVVc);
+
+global
+function boolean FindINPayPriorityRec(longint prser,longint contract,string buildcode,string paymode,var Record INPayPriorityVc passINPayPriorityr) begin
+  boolean res;
+  Record INPayPriorityVc INPayPriorityr;
+  Record NAContractVc NAContractr;
+  Record BuildVc Buildr;
+  Record NApsSetBlock NApsSetr;
+  Record PMBlock PMr;
+  Row PMBlock PMrw;
+  integer i,rwc;
+  
+  res = false;
+  if prser!=-1 then begin
+    INPayPriorityr.SerNr = prser;
+    if ReadFirstMain(INPayPriorityr,1,true) then begin
+      res = true;
+    end;
+    GoTo LEndFindINPay;
+  end;
+  
+  if contract!=-1 then begin
+    NAContractr.SerNr = contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      if NAContractr.INPayPriority!=-1 then begin
+        INPayPriorityr.SerNr = NAContractr.INPayPriority;
+        if ReadFirstMain(INPayPriorityr,1,true) then begin
+          res = true;
+        end;
+        GoTo LEndFindINPay;
+      end;
+    end;
+  end;
+  
+  if nonblank(paymode) then begin
+    BlockLoad(PMr);
+    rwc = MatRowCnt(PMr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(PMr,i,PMrw);
+      if PMrw.Code==paymode then begin
+        if PMrw.INPayPriority!=-1 then begin
+          INPayPriorityr.SerNr = PMrw.INPayPriority;
+          if ReadFirstMain(INPayPriorityr,1,true) then begin
+            res = true;
+          end;
+          GoTo LEndFindINPay;
+        end;
+      end;
+    end;
+  end;
+  
+  BlockLoad(NApsSetr);
+  if NApsSetr.INPayPriority!=-1 then begin
+    INPayPriorityr.SerNr = NApsSetr.INPayPriority;
+    if ReadFirstMain(INPayPriorityr,1,true) then begin
+      res = true;
+    end;
+    GoTo LEndFindINPay;
+  end;
+  
+LEndFindINPay:;
+  if res then begin
+    RecordCopy(passINPayPriorityr,INPayPriorityr);
+  end;
+  
+  FindINPayPriorityRec = res;
+  return;
+end;
+
+global
+function boolean FindINPayPriorityRecFromIPVc(Record IPVc IPp,var Record INPayPriorityVc passINPayPriorityr,var longint prepaypr) begin
+  row IPVc IPrw;
+  record PMBlock PMr;
+  row PMBlock PMrw;
+  record INPayPriorityVc INPayPriorityr;
+  record NAContractVc NAContractr;
+  integer i,rwc;
+  boolean res;
+  
+  NAContractr.SerNr = -1;
+  if MatRowCnt(IPp) > 0 then begin
+    MatRowGet(IPp,0,IPrw);
+    if !GetIPRowContract(IPrw,IPp.TransDate,NAContractr) then begin
+      NAContractr.SerNr = -1;
+    end;
+  end;
+  
+  res = FindINPayPriorityRec(IPp.INPayPriority,NAContractr.SerNr,"",IPp.PayMode,passINPayPriorityr);
+  
+  if prepaypr==-1 then begin
+    BlockLoad(PMr);
+    rwc = MatRowCnt(PMr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(PMr,i,PMrw);
+      if PMrw.Code==IPp.PayMode then begin
+        if PMrw.PrePayPriority!=-1 then begin
+          INPayPriorityr.SerNr = PMrw.PrePayPriority;
+          if ReadFirstMain(INPayPriorityr,1,true) then begin
+            i = rwc;
+            prepaypr = INPayPriorityr.SerNr;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  FindINPayPriorityRecFromIPVc = res;
+return;
+end;
+
+// global
+// function boolean FindINPayPriorityRecFromCLInVc(Record CLInVc CLInp,var Record INPayPriorityVc passINPayPriorityr) begin
+//   Row IPVc IPrw;
+//   boolean res;
+  
+//   res = FindINPayPriorityRec(CLInp.INPayPriority,CLInp.CUCode,"",CLInp.PayMode,passINPayPriorityr);
+  
+//   FindINPayPriorityRecFromCLInVc = res;
+// return;
+// end;
+
+global
+function boolean FindINPayPriorityRecFromIVVc(Record IVVc IVp,var Record INPayPriorityVc passINPayPriorityr) begin
+  Row IPVc IPrw;
+  boolean res;
+  
+  res = FindINPayPriorityRec(-1,IVp.Contract,IVp.BuildCode,"",passINPayPriorityr);
+  
+  FindINPayPriorityRecFromIVVc = res;
+return;
+end;
+
+// global
+// function val GetPrepayItemAmount(var Record IVVc IVp,longint inpaypr,val maxamt,longint cupnr,integer rownr) begin
+//   Row IVVc IVrw;
+//   record ARPayHistVc ARPayHistr;
+//   Record INPayPriorityVc INPayPriorityr;
+//   Row INPayPriorityVc INPayPriorityrw;
+//   integer i,rwc,rwc2,i2;
+//   val sum;
+  
+//   //First put in unpayed amount
+//   rwc = MatRowCnt(IVp);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(IVp,i,IVrw);
+//     if IVrw.stp==1 and IVrw.Sum>0 then begin
+//        if nonblank(IVrw.ArtCode) then begin
+//         if IVp.InclVAT==0 then begin
+//           Sum = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVp.InclVAT,IVp.NoTAXonVAT),SetRoundModeD(2));
+//         end else begin
+//           Sum = IVrw.Sum;
+//         end;
+//         IVrw.UnitYval = Sum;
+//         MatRowPut(IVp,i,IVrw);
+//       end;
+//     end;
+//   end;
+  
+//   //Remove prepay that we need to distribute
+//   MatRowDelete(IVp,rownr);
+  
+//   //Next subtract all prepays that have INPayPriority
+//   UpdIVItemPayedSumFromINPrePayRows(IVp);
+  
+//   //At this point we have invoice that holds all unpayed item amounts in UnitYVal
+//   //and we have removed payed amounts from prepays that have INPayPriority
+//   sum = 0;
+//   FindINPayPriorityRec(inpaypr,"","","",INPayPriorityr);
+//   rwc = MatRowCnt(INPayPriorityr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(INPayPriorityr,i,INPayPriorityrw);
+//     if nonblank(INPayPriorityrw.ArtCode) then begin
+//       rwc2=MatRowCnt(IVp);
+//       for(i2=0;i2<rwc2;i2=i2+1)begin
+//         MatRowGet(IVp,i2,IVrw);
+//         if IVrw.ArtCode==INPayPriorityrw.ArtCode and IVrw.stp==1 and IVrw.UnitYval>0 then begin
+//           sum = sum + IVrw.UnitYval;
+//         end;
+//         if sum>=maxamt then begin
+//           sum = maxamt;
+//           i2 = rwc2;
+//           i = rwc;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+//   GetPrepayItemAmount = sum;
+// return;
+// end;
+
+// global
+// function boolean ItemInINPayPriorityRec(Record INPayPriorityVc INPayPriorityr,string item) begin
+//   Row INPayPriorityVc INPayPriorityrw;
+//   boolean res;
+//   integer i,rwc;
+  
+//   res = false;
+//   rwc = MatRowCnt(INPayPriorityr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(INPayPriorityr,i,INPayPriorityrw);
+//     if item==INPayPriorityrw.ArtCode then begin
+//       res = true;
+//       GoTo LItemInINPayPriorityRec;
+//     end;
+//   end;
+  
+// LItemInINPayPriorityRec:;
+//   ItemInINPayPriorityRec = res;
+// return;
+// end;
+
+// global
+// function boolean isINPayPriorityInInvoice(longint SerNr) begin
+//   record IVUsedPayPrVc IVUsedPayPrr;
+//   boolean res;
+  
+//   IVUsedPayPrr.INPayPriority = sernr;
+//   if ReadFirstKey("INPayPriority",IVUsedPayPrr,1,true) then begin
+//     res = true;
+//   end;
+  
+//   isINPayPriorityInInvoice = res;
+// return;
+// end;
+
+// global 
+// function boolean IsINPayPriorityUsed(longint SerNr) begin
+//   Record IPVc IPr;
+//   Record CLInVc CLINr;
+//   boolean res;
+  
+//   IPr.INPayPriority = sernr;
+//   if ReadFirstKey("INPayPriority",IPr,1,true) then begin
+//     res = true;
+//     Goto LIsINPayPriorityUsed;
+//   end;
+  
+//   IPr.PrePayPriority = sernr;
+//   if ReadFirstKey("PrePayPriority",IPr,1,true) then begin
+//     res = true;
+//     Goto LIsINPayPriorityUsed;
+//   end;
+  
+//   CLINr.INPayPriority = sernr;
+//   if ReadFirstKey("INPayPriority",CLINr,1,true) then begin
+//     res = true;
+//     Goto LIsINPayPriorityUsed;
+//   end;
+  
+// LIsINPayPriorityUsed:;
+//   IsINPayPriorityUsed = res;
+// return;
+// end;
+
+global
+procedure LoadINPayPriorityInVectors(Record INPayPriorityVc INPayPriorityr,var array string CustPriorityMas,var vector boolean vecItemPayPriorityType) begin
+  Row INPayPriorityVc INPayPriorityrw;
+  integer i,rwc,size;
+  
+  size = 0;
+  rwc = MatRowCnt(INPayPriorityr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(INPayPriorityr,i,INPayPriorityrw);
+    if nonblank(INPayPriorityrw.ArtCode) then begin
+      Switch (INPayPriorityrw.Type) begin
+        Case 0: //klienta - apm. pirmais
+                              vecItemPayPriorityType[INPayPriorityr.SerNr & "::CUST::" & INPayPriorityrw.ArtCode] = true;
+                              size = size + 1;
+                              CustPriorityMas[size] = INPayPriorityrw.ArtCode;
+        Case 1: //rēķina - apm. pirmais
+                              vecItemPayPriorityType[INPayPriorityr.SerNr & "::INV::" & INPayPriorityrw.ArtCode] = true;
+        Case 2: //neapmaksāt
+                              vecItemPayPriorityType[INPayPriorityr.SerNr & "::NOPAY::" & INPayPriorityrw.ArtCode] = true;
+        Case 3: //klienta - apm. pēdējais
+                              vecItemPayPriorityType[INPayPriorityr.SerNr & "::CUSTLAST::" & INPayPriorityrw.ArtCode] = true;
+        Case 4: //rēķina - apm. pēdējais
+                              vecItemPayPriorityType[INPayPriorityr.SerNr & "::INVLAST::" & INPayPriorityrw.ArtCode] = true;
+      end;
+    end;
+  end;
+  
+  CustPriorityMas[0] = size;
+return;
+end;
+
+// global updating
+// procedure UpdateIVUsedPayPrVc(record IVVc IVr,boolean unokf) begin
+//   row IVVc IVrw;
+//   record IVUsedPayPrVc IVUsedPayPrr;
+//   boolean wloop;
+//   integer i,rwc;
+  
+//   if unokf then begin
+//     IVUsedPayPrr.IVSerNr = IVr.SerNr;
+//     wloop = true;
+//     While LoopMain(IVUsedPayPrr,1,wloop) begin
+//       if IVUsedPayPrr.IVSerNr!=IVr.SerNr then begin
+//         wloop = false;
+//       end else begin
+//         RecordDelete(IVUsedPayPrr);
+//         StepBack(IVUsedPayPrr);
+//       end;
+//     end;
+//   end else begin  
+//     rwc = MatRowCnt(IVr);
+//     for(i=0;i<rwc;i=i+1)begin
+//       MatRowGet(IVr,i,IVrw);
+//       if IVrw.NegItemPayPr!=-1 then begin
+//         RecordNew(IVUsedPayPrr);
+//         IVUsedPayPrr.IVSerNr = IVr.SerNr;
+//         IVUsedPayPrr.IVRowNr = i;
+//         IVUsedPayPrr.INPayPriority = IVrw.NegItemPayPr;
+//         RecordStore(IVUsedPayPrr,false);
+//       end;
+//     end;
+//   end;
+  
+// return;
+// end;
+
+global 
+function val GetTotIVSum(Record IVVc IVr,record INPayPriorityVc INPayPriorityr,vector val vecUnpayedSums)
+Begin
+  val res,t;
+  integer i,rwc,ii,rwc2;
+  Row IVVc IVrw;
+  Row INPayPriorityVc INPayPriorityrw;
+  Boolean testf;
+  
+  rwc=MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    testf=true;
+    rwc2=MatRowCnt(INPayPriorityr);
+    for(ii=0;ii<rwc2;ii=ii+1)begin
+      MatRowGet(INPayPriorityr,ii,INPayPriorityrw);
+      if IVrw.ArtCode==INPayPriorityrw.ArtCode then begin
+        testf=false;
+        ii=rwc2;
+      end;
+    end;
+    if IVrw.stp!=kInvoiceRowTypeNormal then begin
+      testf = false;
+    end;
+    if IVrw.Sum<=0 then begin
+      testf = false;
+    end;
+    if testf then begin
+      t = vecUnpayedSums[i];
+      res=res+t;
+    end;
+  end;
+  
+  GetTotIVSum=res;
+return;
+end;
+
+global
+function longint GetItemNegItemPayPriority(string artcode) begin
+  Record INVc INr;
+  
+  INr.Code = artcode;
+  ReadFirstMain(INr,1,true);
+  
+  GetItemNegItemPayPriority = INr.NegItemPayPr;
+return;
+end;

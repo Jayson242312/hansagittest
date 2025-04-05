@@ -1,0 +1,144 @@
+updating
+procedure UpdateBuildGroupSuppVc(record BuildGroupVc BuildGroupr)
+begin
+  Row BuildGroupVc BuildGrouprw;
+  Record BuildGroupSuppVc BGSr;
+  integer rwc,i;
+  
+  rwc=MatRowCnt(BuildGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildGroupr,i,BuildGrouprw);
+    if nonblank(BuildGrouprw.RowCode) then begin
+      RecordNew(BGSr);
+      BGSr.HeadCode=BuildGroupr.Code;
+      BGSr.RowCode=BuildGrouprw.RowCode;
+      BGSr.Comment=BuildGroupr.Comment;
+      BGSr.StartDate=BuildGroupr.StartDate;
+      BGSr.EndDate=BuildGroupr.EndDate;
+      RecordStore(BGSr,false);
+    end;
+  end;
+  
+  return;
+end;
+
+updating 
+procedure RemoveBuildGroupSuppVc(record BuildGroupVc BuildGroupr) begin
+  Row BuildGroupVc BuildGrouprw;
+  Record BuildGroupSuppVc BGSr;
+  integer rwc,i;
+  
+  rwc=MatRowCnt(BuildGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildGroupr,i,BuildGrouprw);
+    BGSr.HeadCode=BuildGroupr.Code;
+    BGSr.RowCode=BuildGrouprw.RowCode;
+    if ReadFirstMain(BGSr,2,true) then begin
+      RecordDelete(BGSr);
+    end;
+  end;
+  
+return;
+end;
+
+global updating
+function LongInt BuildGroupVcRecordCheck(var record BuildGroupVc BuildGroupr,record BuildGroupVc BuildGroup2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Row BuildGroupVc BuildGrouprw;
+  string 50 rowcode;
+  integer i,ii,rwc;
+  
+  res=0;
+  if blank(BuildGroupr.Code) then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res=-1;
+    goto EndRecordCheck;
+  end;
+  
+  rwc=MatRowCnt(BuildGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(BuildGroupr,i,BuildGrouprw);
+    rowcode=BuildGrouprw.RowCode;
+    if blank(rowcode) then begin
+      RecordCheckError(1058,"",i,"RowCode");
+      res=-1;
+      goto EndRecordCheck;
+    end;
+    for(ii=i+1;ii<rwc;ii=ii+1)begin
+      MatRowGet(BuildGroupr,ii,BuildGrouprw);
+      if rowcode==BuildGrouprw.RowCode then begin
+        RecordCheckError(1000942,(i+1),ii,"RowCode");
+        res=-1;
+        goto EndRecordCheck;
+      end;
+    end;
+  end;
+  
+EndRecordCheck:;
+  BuildGroupVcRecordCheck=res;
+end;
+
+
+global updating function longint BuildGroupVcRecordImport(var record BuildGroupVc BuildGroupr,record BuildGroupVc BuildGroupr2,longint stat,longint b) begin
+  longint res;
+  
+  UpdateBuildGroupSuppVc(BuildGroupr);
+  
+  BuildGroupVcRecordImport=res;
+return;
+end;
+
+global
+updating function longint BuildGroupVcRecordSaveAfter(var record BuildGroupVc BuildGroupr,record BuildGroupVc BuildGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  UpdateBuildGroupSuppVc(BuildGroupr);
+  
+  BuildGroupVcRecordSaveAfter = res;
+return;
+end;
+
+global
+updating function longint BuildGroupVcRecordUpdateAfter(var record BuildGroupVc BuildGroupr,record BuildGroupVc BuildGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  RemoveBuildGroupSuppVc(BuildGroupr2);
+  UpdateBuildGroupSuppVc(BuildGroupr);
+  
+  BuildGroupVcRecordUpdateAfter = res;
+return;
+end;
+
+global
+updating function longint BuildGroupVcRecordRemove(var record BuildGroupVc BuildGroupr,record BuildGroupVc BuildGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  //UpdateBuildGroupSuppVc(BuildGroupr);
+  RemoveBuildGroupSuppVc(BuildGroupr);
+  
+  BuildGroupVcRecordRemove = res;
+return;
+end;
+
+global
+function LongInt BuildGroupVcRecordInIndex(record BuildGroupVc BuildGroupr,string indexname)
+begin
+  LongInt res;
+  
+  res = 1;
+  if indexname == "CommentWithoutSpecClass" then begin
+    if SetInSet("1",BuildGroupr.Classification) or SetInSet("2",BuildGroupr.Classification) or SetInSet("3",BuildGroupr.Classification) then begin
+      res = 0;
+    end;
+  end;
+  
+  BuildGroupVcRecordInIndex = res;
+  return;
+end;

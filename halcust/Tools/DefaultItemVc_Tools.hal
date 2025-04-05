@@ -1,0 +1,80 @@
+global
+procedure GetArtArrFromDefaultItem(string code,var array string ArrArtCodes,var array string ArrGroupNames,var integer size,var string specart)
+begin
+  Record DefaultItemVc DefaultItemr;
+  Row DefaultItemVc DefaultItemrw;
+  integer i,rwc;
+  
+  DefaultItemr.Code=code;
+  size=0;
+  if ReadFirstMain(DefaultItemr,1,true) then begin
+    rwc=MatRowCnt(DefaultItemr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(DefaultItemr,i,DefaultItemrw);
+      if Left(DefaultItemrw.UnitText,5)=="#SODS" then begin
+        specart=DefaultItemrw.ArtCode;
+      end;
+      if nonblank(DefaultItemrw.ArtCode) and (Left(DefaultItemrw.UnitText,5)!="#SODS") then begin
+        ArrArtCodes[size]=DefaultItemrw.ArtCode;
+        ArrGroupNames[Size]=DefaultItemrw.Spec;
+        size=size+1;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global
+procedure GetArtVecGroupFromDefaultItem(string code,var vector string vecArtGroup,var array string arrGroups,var string specart)
+begin
+  Record DefaultItemVc DefaultItemr;
+  Row DefaultItemVc DefaultItemrw;
+  integer i,rwc;
+  vector boolean vecUsedGroup;
+  
+  DefaultItemr.Code=code;
+  if ReadFirstMain(DefaultItemr,1,true) then begin
+    rwc=MatRowCnt(DefaultItemr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(DefaultItemr,i,DefaultItemrw);
+      if Left(DefaultItemrw.UnitText,5)=="#SODS" then begin
+        specart=DefaultItemrw.ArtCode;
+      end;
+      if nonblank(DefaultItemrw.ArtCode) and (Left(DefaultItemrw.UnitText,5)!="#SODS") then begin
+        vecArtGroup[DefaultItemrw.ArtCode]=DefaultItemrw.Spec;
+        if !vecUsedGroup[DefaultItemrw.Spec] then begin
+          arrGroups[arrGroups.length]=DefaultItemrw.Spec;
+          vecUsedGroup[DefaultItemrw.Spec]=true;
+        end;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global
+function boolean GetArtVecFromDefaultItem(string code,var vector boolean vecArtCodes) begin
+  Record DefaultItemVc DefaultItemr;
+  Row DefaultItemVc DefaultItemrw;
+  integer i,rwc;
+  boolean res;
+  
+  res = false;
+  
+  DefaultItemr.Code=code;
+  if ReadFirstMain(DefaultItemr,1,true) then begin
+    res = true;
+    rwc=MatRowCnt(DefaultItemr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(DefaultItemr,i,DefaultItemrw);
+      if nonblank(DefaultItemrw.ArtCode) then begin
+        vecArtCodes[DefaultItemrw.ArtCode] = true;
+      end;
+    end;
+  end;
+  
+  GetArtVecFromDefaultItem = res;
+return;
+end;

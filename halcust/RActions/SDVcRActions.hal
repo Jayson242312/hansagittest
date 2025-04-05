@@ -1,0 +1,48 @@
+external inner procedure GetCurUser(var record UserVc);
+
+
+// JH
+global
+function LongInt SDVcRecordDefaults(var record SDVc SDr,record SDVc SD2r,LongInt stat,LongInt long4)
+begin
+//   record AccBlock ARb;
+  record UserVc USr;
+  LongInt res;
+
+//   BlockLoad(ARb);
+  SDr.TransDate = CurrentDate;
+  SDr.OKFlag = 0;
+//   SDr.CostAcc = ARb.StockLossAcc;
+  SDr.SerNr = -1;
+  if (SingleUserMode) then begin
+    SDr.SerNr = NextSerNr("SDVc",SDr.TransDate,-1,false,"");
+  end;
+  GetCurUser(USr);
+  SDr.Location = USr.Location;
+  SDVcRecordDefaults = res;
+  RETURN;
+END;
+
+
+
+
+
+global
+updating function LongInt SDVcRecordCheck(var record SDVc SDr,record SDVc SD2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  row SDVc SDrw;
+  record StandProblemVc problemr;
+  Integer i,rwcnt;
+
+  if (Blank(SDr.Reason)) then begin
+    RecordCheckError(3100022,"",-1,"Reason");
+    res = -1;
+  end;
+
+
+  res = inner.SDVcRecordCheck(SDr,SD2r,stat,long4);
+
+SDVcRecordCheck = res;
+  RETURN;
+END;

@@ -1,0 +1,62 @@
+external inner function LongInt MonthDiff(Date,Date);
+external procedure DeleteMHistory (var record CountResVc);
+
+global updating
+procedure RemCounterResMn(record RcVc RepSpec)
+begin
+  record CountResVc CountResr;
+  boolean TrHs,testf;
+  integer cnt,ckey;
+
+  if (!UserCanAction("CustomRecordDeleteMeterReadings",false)) then begin
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteMeterReadings"));
+    goto LRemCounterResMn;
+  end else begin
+    
+		if(MonthDiff(RepSpec.sStartDate,RepSpec.sEndDate)>1) then begin    
+    end else begin
+      //
+      TrHs = true;
+      ckey=1;
+      CountResr.StartDate = RepSpec.sStartDate;
+      if nonblank(RepSpec.f1) then begin
+        CountResr.CounterNo = RepSpec.f1;
+        ckey=2;
+      end;
+      
+      While LoopKey("StartDate",CountResr,ckey,TrHs) begin
+        if CountResr.StartDate>RepSpec.sEndDate then begin
+          TrHs = false;
+        end else begin
+          testf=true;
+          if nonblank(RepSpec.f1) and CountResr.CounterNo!=RepSpec.f1 then begin
+            testf=false;
+          end;
+          if nonblank(RepSpec.f2) and CountResr.CounterType!=RepSpec.f2 then begin
+            testf=false;
+          end;
+          if nonblank(RepSpec.f3) and CountResr.BuildCode!=RepSpec.f3 then begin
+            testf=false;
+          end;
+          if RepSpec.flags[0]==1 and CountResr.VacFlag == 0 then begin
+            testf=false;
+          end;
+          if testf then begin
+            RecordDelete(CountResr);
+            DeleteMHistory(CountResr);
+            StepBack(CountResr);
+            cnt = cnt + 1;
+            if cnt>500 then begin
+              DBFlush;
+              DbHold;
+              cnt = 0;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+LRemCounterResMn:;
+  return;
+end;

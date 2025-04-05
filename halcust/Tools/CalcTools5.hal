@@ -1,0 +1,534 @@
+external inner function longint datediff(date,date);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function LongInt DateDiff(Date,Date);
+external procedure GetObjectsFromString(string,var array string,var integer);
+external function boolean CountResWithTypeForFlatExists(string,string,date,date,boolean);
+external function val BBSGetDeclPersCnt(string,date,date);
+external function boolean GetFlatCounterValidDate(LongInt,var date);
+external function val GetFlatFieldValue(string,string,date,date);
+external function integer GetFlatCounterLocType(longint);
+
+global
+procedure OBS_RemoveCharFromString(var string res,string remchar) begin
+  Integer i,l;
+  string 255 tstr,t2;
+  
+  tstr = res;
+  res = "";
+  l = len(tstr);
+  for (i=0;i<l;i=i+1) begin
+    t2 = mid(tstr,i,1);
+    if (t2!=remchar) then begin
+      res = res & t2;
+    end;
+  end;
+  
+return;
+end;
+
+global
+function val GetSUMSKTELPAS(string bcode,date sd,date ed,string varbl,integer type)
+Begin
+  // record NApsSetBlock NApsSetbl;
+  String 50 CounterType,restype,countrestype,loctype,flatcode;
+  record CountResVc CountResr;
+  boolean wloop,wloop2,testf;
+  record BuildGroupVc BuildGroupr;
+  row BuildGroupVc BuildGrouprw;
+  record FlatGroupVc FlatGroupr;
+  row FlatGroupVc FlatGrouprw;
+  val res;
+  integer i,rwc,size;
+  string 255 fieldlist;
+  date validdate;
+  array string 50 argsarr;
+  
+  // BlockLoad(NApsSetbl);
+  
+  res = 0;
+  fieldlist = varbl;
+  OBS_RemoveCharFromString(fieldlist,"\"");
+  GetObjectsFromString(fieldlist,argsarr,size);
+  CounterType = argsarr[0];
+  restype = argsarr[1];
+  if nonblank(argsarr[2]) then begin
+    for (i=2;i<=4;i=i+1) begin
+      if argsarr[i]=="." then begin
+        argsarr[i]="";
+      end;
+    end;
+  end;
+  countrestype = argsarr[2];
+  loctype = argsarr[3];
+  flatcode = argsarr[4];
+    
+  if type==1 then begin
+    wloop = true;
+    CountResr.CodeField = bcode;
+    CountResr.RecType = type;
+    CountResr.CounterType=CounterType;
+    CountResr.StartDate = sd;
+    While LoopKey("CodeIndexCTypeSD",CountResr,4,wloop) begin
+      if CountResr.CodeField!=bcode or CountResr.RecType!=type or CountResr.CounterType!=CounterType or CountResr.StartDate>ed then begin
+        wloop = false;
+      end else begin
+        testf = true;
+        if !DateInRange(CountResr.StartDate,sd,ed) or !DateInRange(CountResr.EndDate,sd,ed) then begin
+          testf = false;
+        end;
+        if blank(CountResr.FlatCode) then begin
+          testf = false;
+        end;
+        if nonblank(flatcode) and (flatcode!=CountResr.FlatCode) then begin
+          testf = false;
+        end;
+        switch restype begin
+          case "1": // tikai pozitîvas
+            if CountResr.InvAmount < 0 then begin
+              testf = false;
+            end;
+          case "2": // tikai negatîvas
+            if CountResr.InvAmount > 0 then begin
+              testf = false;
+            end;
+        end;
+        if CountResr.CountResType != countrestype then begin
+          testf = false;
+        end;
+        if testf then begin
+          if StringToInt(loctype) != GetFlatCounterLocType(CountResr.FlatCounterSerNr) then begin
+            testf = false;
+          end;
+        end;
+        if testf /*and NApsSetbl.IgnoreOldCounters==1*/ then begin
+          GetFlatCounterValidDate(CountResr.FlatCounterSerNr,validdate);
+          if nonblankdate(validdate) and AddMonth(validdate,3)<sd then begin
+            testf = false;
+          end;
+        end;
+        if testf then begin
+          res = res + CountResr.InvAmount;
+          // LogText(0,"SerNr: " & CountResr.SerNr & " Amount: " & CountResr.InvAmount);
+        end;
+      end;
+    end;
+  end else begin
+    if type==2 then begin //çku grupa
+      BuildGroupr.Code=bcode;
+      if ReadFirstmain(BuildGroupr,1,true) then begin
+        rwc=MatRowCnt(BuildGroupr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(BuildGroupr,i,BuildGrouprw);
+          ResetLoop(CountResr);
+          CountResr.CodeField = BuildGrouprw.RowCode;
+          CountResr.RecType = 1;
+          CountResr.CounterType=CounterType;
+          CountResr.StartDate = sd;
+          wloop=true;
+          While LoopKey("CodeIndexCTypeSD",CountResr,4,wloop) begin
+            if CountResr.CodeField!=BuildGrouprw.RowCode or CountResr.RecType!=1 or CountResr.CounterType!=CounterType or CountResr.StartDate>ed then begin
+              wloop = false;
+            end else begin
+              testf = true;
+              if !DateInRange(CountResr.StartDate,sd,ed) or !DateInRange(CountResr.EndDate,sd,ed) then begin
+                testf = false;
+              end;
+              if blank(CountResr.FlatCode) then begin
+                testf = false;
+              end;
+              if nonblank(flatcode) and (flatcode!=CountResr.FlatCode) then begin
+                testf = false;
+              end;
+              switch restype begin
+                case "1": // tikai pozitîvas
+                  if CountResr.InvAmount < 0 then begin
+                    testf = false;
+                  end;
+                case "2": // tikai negatîvas
+                  if CountResr.InvAmount > 0 then begin
+                    testf = false;
+                  end;
+              end;
+              if CountResr.CountResType != countrestype then begin
+                testf = false;
+              end;  
+              if testf /*and NApsSetbl.IgnoreOldCounters==1*/ then begin
+                GetFlatCounterValidDate(CountResr.FlatCounterSerNr,validdate);
+                if nonblankdate(validdate) and AddMonth(validdate,3)<sd then begin
+                  testf = false;
+                end;
+              end;
+              if testf then begin
+                res = res + CountResr.InvAmount;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    if type==3 then begin //telpu grupa
+      FlatGroupr.Code=bcode;
+      if ReadFirstMain(FlatGroupr,1,true) then begin
+        rwc=MatRowCnt(FlatGroupr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(FlatGroupr,i,FlatGrouprw);
+          ResetLoop(CountResr);
+          wloop=true;
+          CountResr.FlatCode=FlatGrouprw.RowCode;
+          CountResr.CounterType=CounterType;
+          CountResr.StartDate = sd;
+          While LoopKey("FCCTSDED",CountResr,3,wloop)begin
+            if CountResr.FlatCode!=FlatGrouprw.RowCode or CountResr.CounterType!=CounterType or CountResr.StartDate>ed then begin
+              wloop=false;
+            end else begin
+              testf = true;
+              if !DateInRange(CountResr.StartDate,sd,ed) or !DateInRange(CountResr.EndDate,sd,ed) then begin
+                testf = false;
+              end;
+              if CountResr.CountResType != countrestype then begin
+                testf = false;
+              end;
+              if blank(CountResr.FlatCode) then begin
+                testf = false;
+              end;
+              if nonblank(flatcode) and (flatcode!=CountResr.FlatCode) then begin
+                testf = false;
+              end;
+              switch restype begin
+                case "1": // tikai pozitîvas
+                  if CountResr.InvAmount < 0 then begin
+                    testf = false;
+                  end;
+                case "2": // tikai negatîvas
+                  if CountResr.InvAmount > 0 then begin
+                    testf = false;
+                  end;
+              end;
+              if testf /*and NApsSetbl.IgnoreOldCounters==1*/ then begin
+                GetFlatCounterValidDate(CountResr.FlatCounterSerNr,validdate);
+                if nonblankdate(validdate) and AddMonth(validdate,3)<sd then begin
+                  testf = false;
+                end;
+              end;
+              if testf then begin
+                res = res + CountResr.InvAmount;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  GetSUMSKTELPAS = res;
+return;
+end;
+
+function val SUMSKTELPAS2Flat(/*record NApsSetBlock NApsSetbl,*/string flatcode,date sd,date ed,string countertype,string countertype2,string restype)
+begin
+  Record CountResVc CountResr;
+  Boolean wloop,testf;
+  val res,tempres;
+  date validdate;
+
+  res = 0;
+  tempres = 0;
+  if NonBlank(countertype) then begin
+    ResetLoop(CountResr);
+    CountResr.FlatCode = flatcode;
+    CountResr.CounterType = countertype;
+    CountResr.StartDate = sd;
+    wloop = true;
+    while LoopKey("FCCTSDED",CountResr,3,wloop) begin
+      if CountResr.FlatCode != flatcode or CountResr.CounterType != countertype or CountResr.EndDate > ed then begin
+        wloop = false;
+      end else begin
+        testf = true;
+        // if NApsSetbl.IgnoreOldCounters==1 then begin
+          GetFlatCounterValidDate(CountResr.FlatCounterSerNr,validdate);
+          if nonblankdate(validdate) and AddMonth(validdate,3)<sd then begin
+            testf = false;
+          end;
+        // end;
+        if testf then begin
+          tempres = tempres + CountResr.InvAmount;
+        end;
+      end;
+    end;
+  end;
+  if NonBlank(countertype2) then begin
+    ResetLoop(CountResr);
+    CountResr.FlatCode = flatcode;
+    CountResr.CounterType = countertype2;
+    CountResr.StartDate = sd;
+    wloop = true;
+    while LoopKey("FCCTSDED",CountResr,3,wloop) begin
+      if CountResr.FlatCode != flatcode or CountResr.CounterType != countertype2 or CountResr.EndDate > ed then begin
+        wloop = false;
+      end else begin
+        testf = true;
+        // if NApsSetbl.IgnoreOldCounters==1 then begin
+          GetFlatCounterValidDate(CountResr.FlatCounterSerNr,validdate);
+          if nonblankdate(validdate) and AddMonth(validdate,3)<sd then begin
+            testf = false;
+          end;
+        // end;
+        if testf then begin
+          tempres = tempres + CountResr.InvAmount;
+        end;
+      end;
+    end;
+  end;
+  switch restype begin
+    case "":
+    case "0":
+      res = res + tempres;
+    case "1":
+      if tempres > 0 then begin
+        res = res + tempres;
+      end;
+    case "2":
+      if tempres < 0 then begin
+        res = res + tempres;
+      end;
+  end;
+
+  SUMSKTELPAS2Flat = res;
+  return;
+end;
+
+global
+function val GetSUMSKTELPAS2(string bcode,date sd,date ed,string varbl,integer type)
+Begin
+  String 50 CounterType,CounterType2,restype;
+  // record NApsSetBlock NApsSetbl;
+  record FlatsVc Flatsr;
+  Boolean wloop;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+  record BuildVc Buildr;
+  val res;
+  integer i,rwc;
+  string 255 fieldlist;
+  array string 50 argsarr;
+  integer size;
+  
+  // BlockLoad(NApsSetbl);
+  
+  res = 0;
+  fieldlist = varbl;
+  OBS_RemoveCharFromString(fieldlist,"\"");
+  GetObjectsFromString(fieldlist,argsarr,size);
+  CounterType = argsarr[0];
+  CounterType2 = argsarr[1];
+  restype = argsarr[2];
+  
+  if type == 1 then begin // konkrçtâ çka
+    Buildr.Code = bcode;
+    if ReadFirstMain(Buildr,1,true) then begin
+      ResetLoop(Flatsr);
+      Flatsr.Code = Buildr.Code;
+      wloop = true;
+      while LoopKey("Code",Flatsr,1,wloop) begin
+        if Flatsr.Code != Buildr.Code then begin
+          wloop = false;
+        end else begin
+          res = res + SUMSKTELPAS2Flat(/*NApsSetbl,*/Flatsr.Code,sd,ed,CounterType,CounterType2,restype);
+        end;
+      end;
+    end;
+  end;
+  if type == 2 then begin // konkrçtâ çku grupa
+    BuildGroupr.Code = bcode;
+    if ReadFirstmain(BuildGroupr,1,true) then begin
+      rwc = MatRowCnt(BuildGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(BuildGroupr,i,BuildGrouprw);
+        ResetLoop(Flatsr);
+        Flatsr.Code = BuildGrouprw.RowCode;
+        wloop = true;
+        while LoopKey("Code",Flatsr,1,wloop) begin
+          if Flatsr.Code != BuildGrouprw.RowCode then begin
+            wloop = false;
+          end else begin
+            res = res + SUMSKTELPAS2Flat(/*NApsSetbl,*/Flatsr.Code,sd,ed,CounterType,CounterType2,restype);
+          end;
+        end;
+      end;
+    end;
+  end;
+  if type == 3 then begin // konkrçtâ telpu grupa
+    FlatGroupr.Code = bcode;
+    if ReadFirstMain(FlatGroupr,1,true) then begin
+      rwc = MatRowCnt(FlatGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(FlatGroupr,i,FlatGrouprw);
+        res = res + SUMSKTELPAS2Flat(/*NApsSetbl,*/FlatGrouprw.RowCode,sd,ed,CounterType,CounterType2,restype);
+      end;
+    end;
+  end;
+
+  GetSUMSKTELPAS2 = res;
+  return;
+end;
+
+global
+function val GetSUMSKTELPASTG(string bcode,date sd,date ed,string varbl,integer type)
+Begin
+  String 50 CounterType,restype,fgcode;
+  Record CountResVc CountResr;
+  Boolean wloop,testf;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+  val res;
+  integer i,rwc;
+  string 255 fieldlist;
+  array string 50 argsarr;
+  integer size;
+
+  res = 0;
+  fieldlist = varbl;
+  OBS_RemoveCharFromString(fieldlist,"\"");
+  GetObjectsFromString(fieldlist,argsarr,size);
+  CounterType = argsarr[0];
+  restype = argsarr[1];
+  fgcode = argsarr[2];
+
+  FlatGroupr.Code=fgcode;
+  if ReadFirstMain(FlatGroupr,1,true) then begin
+    rwc=MatRowCnt(FlatGroupr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(FlatGroupr,i,FlatGrouprw);
+      ResetLoop(CountResr);
+      wloop=true;
+      CountResr.FlatCode=FlatGrouprw.RowCode;
+      CountResr.CounterType=CounterType;
+      CountResr.StartDate = sd;
+      While LoopKey("FCCTSDED",CountResr,3,wloop)begin
+        if CountResr.FlatCode!=FlatGrouprw.RowCode or CountResr.CounterType!=CounterType or CountResr.StartDate>ed then begin
+          wloop=false;
+        end else begin
+          testf = true;
+          if !DateInRange(CountResr.StartDate,sd,ed) or !DateInRange(CountResr.EndDate,sd,ed) then begin
+            testf = false;
+          end;
+          if blank(CountResr.FlatCode) then begin
+            testf = false;
+          end;
+          switch restype begin
+            case "1": // tikai pozitîvas
+              if CountResr.InvAmount < 0 then begin
+                testf = false;
+              end;
+            case "2": // tikai negatîvas
+              if CountResr.InvAmount > 0 then begin
+                testf = false;
+              end;
+          end;
+          if testf then begin
+            res = res + CountResr.InvAmount;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  GetSUMSKTELPASTG = res;
+  return;
+end;
+
+global
+function val GetSKRADEXIST(string bcode,date sd,date ed,string varbl,integer type) begin
+  String 50 CounterType,fieldtype;
+  record FlatsVc Flatsr;
+  Boolean wloop,ignoreavgf;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+  record BuildVc Buildr;
+  val res;
+  integer i,rwc;
+  string 255 fieldlist;
+  array string 50 argsarr;
+  integer size;
+
+  res = 0;
+  fieldlist = varbl;
+  OBS_RemoveCharFromString(fieldlist,"\"");
+  GetObjectsFromString(fieldlist,argsarr,size);
+  CounterType = argsarr[0];
+  fieldtype = argsarr[1];
+  ignoreavgf = (argsarr[2]=="0");
+  
+  if type == 1 then begin // konkrçtâ çka
+    Buildr.Code = bcode;
+    if ReadFirstMain(Buildr,1,true) then begin
+      ResetLoop(Flatsr);
+      Flatsr.Code = Buildr.Code;
+      wloop = true;
+      while LoopKey("Code",Flatsr,1,wloop) begin
+        if Flatsr.Code != Buildr.Code then begin
+          wloop = false;
+        end else begin
+          if !CountResWithTypeForFlatExists(Flatsr.FlatCode,CounterType,sd,ed,ignoreavgf) then begin
+            Switch (fieldtype) begin
+              case "DeklPers":
+                res = res + BBSGetDeclPersCnt(Flatsr.FlatCode,sd,ed);
+              otherwise
+                res = res + 1;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if type == 2 then begin // konkrçtâ çku grupa
+    BuildGroupr.Code = bcode;
+    if ReadFirstmain(BuildGroupr,1,true) then begin
+      rwc = MatRowCnt(BuildGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(BuildGroupr,i,BuildGrouprw);
+        ResetLoop(Flatsr);
+        Flatsr.Code = BuildGrouprw.RowCode;
+        wloop = true;
+        while LoopKey("Code",Flatsr,1,wloop) begin
+          if Flatsr.Code != BuildGrouprw.RowCode then begin
+            wloop = false;
+          end else begin
+            if !CountResWithTypeForFlatExists(Flatsr.FlatCode,CounterType,sd,ed,ignoreavgf) then begin
+              Switch (fieldtype) begin
+                case "DeklPers":
+                  res = res + BBSGetDeclPersCnt(Flatsr.FlatCode,sd,ed);
+                otherwise
+                  res = res + 1;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if type == 3 then begin // konkrçtâ telpu grupa
+    FlatGroupr.Code = bcode;
+    if ReadFirstMain(FlatGroupr,1,true) then begin
+      rwc = MatRowCnt(FlatGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(FlatGroupr,i,FlatGrouprw);
+        if !CountResWithTypeForFlatExists(Flatsr.FlatCode,CounterType,sd,ed,ignoreavgf) then begin
+          Switch (fieldtype) begin
+            case "DeklPers":
+              res = res + BBSGetDeclPersCnt(Flatsr.FlatCode,sd,ed);
+            otherwise
+              res = res + 1;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  GetSKRADEXIST = res;
+return;
+end;

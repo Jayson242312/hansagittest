@@ -1,0 +1,417 @@
+
+SetLangMode(LangLatvian,"LAT",2);
+  
+// window FidaIPLClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+  
+//   WindowBegin("Maksājumu ievades",FidaIPLClass,CGmlist,-);
+//     SetWRect(20,80,690,291);
+//     Sizeable(-1,-1,0,0);
+//     SpawnClass(FidaIPDClass);
+//     UseView(FidaIPVc);
+//     RecordList(4,17,-21,-39);
+//     RlColKey(4,2,"Nr.",SerNr,false,SerNr);
+//     RlColKey(70,70,"Sagatav.",OKFlag,false,OKFlag);
+//     RlColKey(120,120,"Izv.",IPMadeFlag,false,IPMadeFlag);
+//     RlColKey(150,150,"Slēgts",Closed,false,Closed);
+//     RlColKey(200,200,"Datums",TransDate,false,TransDate);
+//     RlColKey(270,270,"Sam. veids",PayMode,false,PayMode);    
+//     RlColKey(330,330,"Komentārs",Comment,false,Comment);
+//     RlCol(-70,-70,"Summa",Sum,false);
+//     SearchField("Meklēt");
+//     SpecialMenu("Ievadīt pabalstu sarakstu",'',0,"InputSOC_FidaIPlsm");
+//   EndWindow;
+  
+//   return;
+// end;
+  
+// window FidaIPDClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+//   real h,v,vs;
+
+//   WindowBegin("Maksājumu ievade",FidaIPDClass,CGview,-);
+//     SetWRect(20,80,1050,420);
+//     Sizeable(-1,-1,0,0);
+//     UseView(FidaIPVc);
+//     ActiveFieldOnNew("TransDate");  
+//     EditField(75,v=6,82,"Nr.",Normal,SerNr,false,0);
+//     EditField(75,v+=20,100, "Datums",Normal,TransDate,false,PasteCurDate);
+//     EditField(75,v+=20,40,"Sam. veids",Normal,PayMode,false,PMSClass);
+    
+//     EditField(-150,06,60,"Maks. skaits",Viewonly,RowCnt,true,0);
+//     EditField(-150,26,60,"Gram. skaits",Viewonly,RowCntTR,true,0);
+//     EditField(-150,46,60,"Neiegrāmatots",Viewonly,UnOKCnt,true,0);
+
+//     h=10; vs=20;
+//     MatrixBegin(h,v+=46,-50,-24,-,1999);
+//     Flip(0);
+//     MatCol(1,30,"Tips",0,DCType,false,SetSClass);
+//     MatCol(1,115,"Statuss",0,Type,false,SetSClass); 
+//     Flip(1);
+//     MatCol(1,195,"Līgums",0,ContractNr,false,NAContract2SClass);
+//     MatCol(1,255,"Klients",0,CustCode,false,CUSClass);
+//     MatCol(1,315,"Rēķini",0,InvoiceList,false,ARSClass);
+//     // MatCol(1,510,"Ties./Vien.",0,DebtRepAgreements,false,DebtRepAgreeSClass);
+//     MatCol(1,425,"Komentārs",0,RowComment,false,0);
+//     MatCol(1,-370,"V.",0,PayType,false,OBS_FidaTypeSClass);  //-290
+//     MatCol(1,-350,"Nosaukums",0,Name,false,0); //-270
+//     MatCol(1,-210,"Maksātāja nos.",0,PayerName,false,0);
+//     MatCol(1,-70,"Summa",0,Amount,true,0);
+//     Flip(2);
+//     MatCol(1,285,"Klients",0,CustCode,false,CUSClass);
+//     MatCol(1,360,"Nosaukums",0,Name,false,0);
+//     MatCol(1,-495,"Maksātāja nos.",0,PayerName,false,0);
+//     MatCol(1,-375,"IBAN",0,IBANCode,false,0);
+//     MatCol(1,-255,"Reģ.nr.",0,RegNr,false,0);
+//     MatCol(1,-155,"Valūta",0,Currency,false,CurncyCodeSClass);
+//     MatColTL(1,-105,"Gr.",0,M4Str,ViewOnly,1,TransMark,false,0);
+//     MatCol(1,-80,"Maksājums",0,IPNr,true,0);
+//     Flip(3);
+//     MatCol(1,285,"Konts",0,AccNumber,false,AccSClass);
+//     MatCol(1,345,"Lietas numurs",0,CaseNr,false,0);
+//     MatCol(1,425,"Izpildu dok. nr.",0,ExecuteDocNr,false,0);
+//     MatCol(1,505,"Komentārs",0,RowComment,false,0);
+//     Flip(4);
+//     MatCol(1,285,"Līgums",0,ContractNr,false,NAContract2SClass);
+//     MatCol(1,355,"Klients",0,CustCode,false,CUSClass);
+//     MatCol(1,415,"Rēķini",0,InvoiceList,false,ARSClass);
+//     MatCol(1,-350,"Summa",0,Amount,true,0);
+//     MatCol(1,-280,"Atpazītais līg.",0,ContractNr1,true,NAContract2SClass);
+//     MatCol(1,-210,"Parāds",0,DebtSum,true,0);
+//     MatCol(1,-140,"Vien. summa",0,AgreeSum,true,0);
+//     MatCol(1,-70,"Ties. summa",0,CourtSum,true,0);
+//     InsertRowTest;
+//     DeleteRowTest;
+//     RowMenuBegin(""); 
+//     RowMenuItem(0,"Sadalīt NIP maksājumu",' ',' ',0,"FidaIPExpandNIPDsm"); 
+//     RowMenuItem(0,"Atcelt maksājumu",' ',' ',0,"CancelIP_RowFidaIPDsm"); 
+//     EndRowMenu;
+//     EndMatrix;
+//     v=v+ 1; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+//     v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+//     v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+//     v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,4,"D");
+//     CheckBox(25,v=-21,0,"Sagatavots maksājumu veidošanai",OKFlag);
+//     CheckBox(h+210,v,0,"Maksājumi izveidoti",IPMadeFlag);
+//     CheckBox(h+340,v,0,"Slēgts",Closed);
+//     CheckBox(h+400,v,0,"Importēts",Imported);
+//     EditField(-150,v,70,"Kopā",Normal,Sum,false,0);
+//     vs = 22;
+//     SpecialMenu("Atcelt maksājumus",'',0,"CancelIP_FidaIPDsm");
+//     SpecialMenu("Ievietot līgumus",'',0,"InsertContracts_FidaIPDsm");
+//     SpecialMenu("Sakārtot rindas pēc summām",'',1,"SortRows_FidaIPDsm");
+//     // SpecialMenu("Veidot realizācijas maksājumus",'',2,"CreateIP_FidaIPDsm");
+//     // SpecialMenu("Veidot maksājumu uzdevumus",'',2,"CreateOP_FidaIPDsm");
+//     // SpecialMenu("Veidot grāmatojumus",'',3,"CreateTR_FidaIPDsm");
+//     SpecialMenu("Veidot maksājumus un grāmatojumus",'',3,"CreateIP_TR_FidaIPDsm");
+//     SpecialMenu("Veidot maksājumus un grāmatojumus (SERV)",'',3,"CreateIP_TR_FidaIPDsm2");
+//   EndWindow;
+  
+//   return;
+// end;
+  
+// window OBS_FidaTypeSClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+
+//   WindowBegin("Ievietot",OBS_FidaTypeSClass,CGother,HBlRecType);
+//     SetWRect(240,80,500,299);
+//     Sizeable(-1,-1,0,0);
+//     StringList(9,9,-40,-10);
+//   EndWindow;
+  
+//   return;
+// end;
+  
+// window SOCInputWClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+
+//   WindowBegin("Pabalstu ievade",SOCInputWClass,CGother,HBlRecType);
+//     SetWRect(20,80,600,400);
+//     Sizeable(0,-1,0,0);
+//     UseView(IPVc);
+//     MatrixBegin(8,26,-31,-20,-,199);
+//     MatCol(1,24,"Personas kods",0,CustCode,false,FlatFieldCodeSClass);
+//     MatCol(1,130,"Uzvārds, vārds",0,CustName,false,0);
+//     MatCol(1,350,"Adrese",0,CustAddress,false,0);
+//     MatCol(1,-70,"Summa",0,Comment,true,0);
+//     EndMatrix;
+//     HalPushButton(-210,-30,-10,-30,"CreateSOCFidaIPbtn","Veidot maksājumu ievadi");
+//   EndWindow;
+  
+//   return;
+// end;
+
+// window CreateRecFromFidaWClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+
+//   WindowBegin("Ierakstu veidošana",CreateRecFromFidaWClass,CGother,HBlRecType);
+//     SetWRect(20,80,275,125);
+//     UseView(RcVc);
+//     StaticText(20,20,"Tiek veidoti maksājumi un grāmatojumi",false);
+//   EndWindow;
+  
+//   return;
+// end;
+
+// Js Uncommented this from latvia code
+// window CreateIPFromFidaIPVClass:1 
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+//   real v; // JH added real v
+//   WindowBegin("Making payments from inputs",CreateIPFromFidaIPVClass,CGMnt,RcType); //before Maksājumu veidošana no ievadēm
+//     SetWRect(20,80,400,278);
+//     v=6 // JH this code was missing
+//     PeriodField(100,10,"Period");    
+//     CheckBox(70,30,0,"Ignore the mark prepared for payment",flags[0]); //before Neņemt vērā sagatavots maksājumu veidošanai atzīmi
+//     CheckBox(70,30,0,"Prepared for making payments",OKFlag);//before Sagatavots maksājumu veidošanai
+//     CheckBox(70,v,0,"Payments created",IPMadeFlag);//before Maksājumi izveidoti
+//     CheckBox(70,v,0,"Closed",Closed); // before Slēgts
+//   EndWindow;
+
+//   return;
+// end;
+
+// ->
+
+// window FidaIPRClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+//   real h,h2,h3,v,vs,vm;
+
+//   WindowBegin("Maksājumu ievades",FidaIPRClass,CGRcW,RcType);
+//     SetWRect(100,100,400,240);
+//     h=100; v=6;
+//     PeriodField(h,v,"Periods");
+//     EditField(h,v+=20,100,"Sam. veids",Normal,f1,false,PMSClass);
+//     // EditField(h,v+=20,100,"Telpas lauki",Normal,f2,false,FlatFieldCodeSClass);
+//     // EditField(h,v+=20,100,"Pakalpojums",Normal,f3,false,INSClass);
+//     // CheckBox(h,v+=30,0,"Ar koeficientiem",flags[1]);
+//     // ButtonFrame(h,v+=40,70,2,"Rādīt");
+//     // RadioButton(h,v,0,0,"Pārskats",ArtMode);
+//     // RadioButton(h,v+=16,1,0,"Detalizēti",ArtMode);
+//   EndWindow;
+
+//   return;
+// end;
+
+// window FidaIPMakeWaitWClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+//   real h,v;
+
+//   WindowBegin("Ierakstu veidošana",FidaIPMakeWaitWClass,CGother,RcType);
+//     DynamicWindow;
+//     SetWRect(100,120,500,240);
+//     Modality(kModalityGlobal);
+//     v=50;
+//     StaticText(30,30,"Tiek veidoti ieraksti. Lūdzu uzgaidiet.",0);
+//   EndWindow;
+  
+//   return;
+// end;
+
+SetLangMode(LangEnglish,"ENG",2);
+  
+window FidaIPLClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  
+  WindowBegin("Bank payment",FidaIPLClass,CGmlist,-);
+    SetWRect(20,80,690,291);
+    Sizeable(-1,-1,0,0);
+    SpawnClass(FidaIPDClass);
+    UseView(FidaIPVc);
+    RecordList(4,17,-21,-39);
+    RlColKey(4,2,"No.",SerNr,false,SerNr);
+    RlColKey(70,70,"OK.",OKFlag,false,OKFlag);
+    RlColKey(120,120,"Made",IPMadeFlag,false,IPMadeFlag);
+    RlColKey(150,150,"Cl",Closed,false,Closed);
+    RlColKey(200,200,"Date",TransDate,false,TransDate);
+    RlColKey(270,270,"Payment. type",PayMode,false,PayMode);    
+    RlColKey(330,330,"Comment",Comment,false,Comment);
+    RlCol(-70,-70,"Amount",Sum,false);
+    SearchField("Search");
+    SpecialMenu("Insert support list",'',0,"InputSOC_FidaIPlsm");
+  EndWindow;
+  
+  return;
+end;
+  
+window FidaIPDClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v,vs;
+
+  WindowBegin("Bank payments",FidaIPDClass,CGview,-);
+    SetWRect(20,80,1050,420);
+    Sizeable(-1,-1,0,0);
+    UseView(FidaIPVc);
+    ActiveFieldOnNew("TransDate");  
+    EditField(75,v=6,82,"No.",Normal,SerNr,false,0);
+    EditField(75,v+=20,100, "Date",Normal,TransDate,false,PasteCurDate);
+    EditField(75,v+=20,40,"Pay. type",Normal,PayMode,false,PMSClass);
+    
+    EditField(-150,06,60,"Payment count",Viewonly,RowCnt,true,0);
+    EditField(-150,26,60,"Trasn. count",Viewonly,RowCntTR,true,0);
+    EditField(-150,46,60,"Unbooked",Viewonly,UnOKCnt,true,0);
+
+    h=10; vs=20;
+    MatrixBegin(h,v+=46,-50,-24,-,1999);
+    Flip(0);
+    MatCol(1,30,"Type",0,DCType,false,SetSClass);
+    MatCol(1,115,"Status",0,Type,false,SetSClass); 
+    Flip(1);
+    MatCol(1,195,"Contract",0,ContractNr,false,NAContract2SClass);
+    MatCol(1,255,"Customer",0,CustCode,false,CUSClass);
+    MatCol(1,315,"Invoices",0,InvoiceList,false,ARSClass);
+    MatCol(1,425,"Komentārs",0,RowComment,false,0);
+    MatCol(1,-370,"T.",0,PayType,false,OBS_FidaTypeSClass);  //-290
+    MatCol(1,-350,"Name",0,Name,false,0); //-270
+    MatCol(1,-210,"Payer's name",0,PayerName,false,0);
+    MatCol(1,-70,"Amount",0,Amount,true,0);
+    Flip(2);
+    MatCol(1,285,"Customer",0,CustCode,false,CUSClass);
+    MatCol(1,360,"Name",0,Name,false,0);
+    MatCol(1,-495,"Payer's name",0,PayerName,false,0);
+    MatCol(1,-375,"IBAN",0,IBANCode,false,0);
+    MatCol(1,-255,"Reg.no.",0,RegNr,false,0);
+    MatCol(1,-155,"Currency",0,Currency,false,CurncyCodeSClass);
+    MatColTL(1,-105,"Tr.",0,M4Str,ViewOnly,1,TransMark,false,0);
+    MatCol(1,-80,"Payment",0,IPNr,true,0);
+    Flip(3);
+    MatCol(1,285,"Account",0,AccNumber,false,AccSClass);
+    MatCol(1,345,"Case no.",0,CaseNr,false,0);
+    MatCol(1,425,"Exc. doc. no.",0,ExecuteDocNr,false,0);
+    MatCol(1,505,"Comment",0,RowComment,false,0);
+    Flip(4);
+    MatCol(1,285,"Contract",0,ContractNr,false,NAContract2SClass);
+    MatCol(1,355,"Customer",0,CustCode,false,CUSClass);
+    MatCol(1,415,"Invoices",0,InvoiceList,false,ARSClass);
+    MatCol(1,-350,"Ammount",0,Amount,true,0);
+    MatCol(1,-280,"Recog. contract.",0,ContractNr1,true,NAContract2SClass);
+    MatCol(1,-210,"Debt",0,DebtSum,true,0);
+    MatCol(1,-140,"Agree. sum",0,AgreeSum,true,0);
+    MatCol(1,-70,"Court sum",0,CourtSum,true,0);
+    InsertRowTest;
+    DeleteRowTest;
+    RowMenuBegin(""); 
+    RowMenuItem(0,"Split payment",' ',' ',0,"FidaIPExpandNIPDsm"); 
+    RowMenuItem(0,"Cancel payment",' ',' ',0,"CancelIP_RowFidaIPDsm"); 
+    EndRowMenu;
+    EndMatrix;
+    v=v+ 1; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+    v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+    v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+    v=v+ vs; VTab(-35,v,-16,v+vs,ToolFlip,4,"D");
+    CheckBox(25,v=-21,0,"Prepared for making payments",OKFlag);
+    CheckBox(h+210,v,0,"Payments created",IPMadeFlag);
+    CheckBox(h+340,v,0,"Closed",Closed);
+    CheckBox(h+400,v,0,"Imported",Imported);
+    EditField(-150,v,70,"Total",Normal,Sum,false,0);
+    vs = 22;
+    SpecialMenu("Cancel payments",'',0,"CancelIP_FidaIPDsm");
+    SpecialMenu("Insert contracts",'',0,"InsertContracts_FidaIPDsm");
+    SpecialMenu("Sort rows by amount",'',1,"SortRows_FidaIPDsm");
+    SpecialMenu("Create receipts and transactions",'',3,"CreateIP_TR_FidaIPDsm");
+    SpecialMenu("Create receipts and transactions (SERV)",'',3,"CreateIP_TR_FidaIPDsm2");
+  EndWindow;
+  
+   return;
+end;
+  
+window OBS_FidaTypeSClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+
+  WindowBegin("Insert",OBS_FidaTypeSClass,CGother,HBlRecType);
+    SetWRect(240,80,500,299);
+    Sizeable(-1,-1,0,0);
+    StringList(9,9,-40,-10);
+  EndWindow;
+  
+  return;
+end;
+  
+window SOCInputWClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+
+  WindowBegin("Input of allowances",SOCInputWClass,CGother,HBlRecType);
+    SetWRect(20,80,600,400);
+    Sizeable(0,-1,0,0);
+    UseView(IPVc);
+    MatrixBegin(8,26,-31,-20,-,199);
+    MatCol(1,24,"Reg. No.",0,CustCode,false,FlatFieldCodeSClass);
+    MatCol(1,130,"Name",0,CustName,false,0);
+    MatCol(1,350,"Address",0,CustAddress,false,0);
+    MatCol(1,-70,"Amount",0,Comment,true,0);
+    EndMatrix;
+    HalPushButton(-210,-30,-10,-30,"CreateSOCFidaIPbtn","Create payment input");
+  EndWindow;
+  
+  return;
+end;
+
+window CreateRecFromFidaWClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+
+  WindowBegin("Creating records",CreateRecFromFidaWClass,CGother,HBlRecType);
+    SetWRect(20,80,275,125);
+    UseView(RcVc);
+    StaticText(20,20,"Receipts and transactions are made",false);
+  EndWindow;
+  
+  return;
+end;
+
+// window CreateIPFromFidaIPVClass:1
+//   wtag("language","LAT"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+// begin
+
+//   WindowBegin("Making payments from inputs",CreateIPFromFidaIPVClass,CGMnt,RcType);
+//     SetWRect(20,80,400,278);
+//     PeriodField(100,10,"Period");    
+//     CheckBox(70,30,0,"Ignore the mark prepared for payment",flags[0]);
+//   EndWindow;
+
+//   return;
+// end;
+
+window FidaIPRClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,h2,h3,v,vs,vm;
+
+  WindowBegin("Payment inputs",FidaIPRClass,CGRcW,RcType);
+    SetWRect(100,100,400,240);
+    h=100; v=6;
+    PeriodField(h,v,"Period");
+    EditField(h,v+=20,100,"Pay. type",Normal,f1,false,PMSClass);
+  EndWindow;
+
+  return;
+end;
+
+window FidaIPMakeWaitWClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Creating records",FidaIPMakeWaitWClass,CGother,RcType);
+    DynamicWindow;
+    SetWRect(100,120,500,240);
+    Modality(kModalityGlobal);
+    v=50;
+    StaticText(30,30,"Entries are being made. Please wait.",0);
+  EndWindow;
+  
+  return;
+end;
+
+

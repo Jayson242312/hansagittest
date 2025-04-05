@@ -1,0 +1,26 @@
+global
+updating procedure ObjectsIn(record RcVc RepSpec)
+BEGIN
+  record OBjVc Objr, orgObjr;
+  string 255 code;
+
+  while (NextImportLine(false)) begin
+    code = ImportField;
+    Objr.Code = code;
+
+    if(ReadFirstMain(Objr,1,true)) then begin
+      RecordCopy(orgObjr,Objr);
+      Objr.Comment = ImportField;
+      Objr.OTCode = "DEPT";
+      // Objr.TerminateFlag = 1; // Added
+      RecordUpdate(orgObjr,Objr,true);
+    end else begin
+      RecordNew(Objr);
+      Objr.Code = code;
+      Objr.Comment = ImportField;
+      Objr.OTCode = "DEPT";
+      RecordInsert(Objr,true);
+    end;
+  end;
+  RETURN;
+END;

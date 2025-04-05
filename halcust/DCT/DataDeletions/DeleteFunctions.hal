@@ -1,8 +1,8 @@
-//VER 6.4 120718  
+//VER 6.4 120718
 updating procedure DeleteCashIns()
 begin
   record CLInVc CLInr;
-  
+
   ResetLoop(CLInr);
   while (LoopMain(CLInr,1,true)) begin
     RecordDelete(CLInr);
@@ -14,7 +14,7 @@ end;
 updating procedure DeleteCashOuts()
 begin
   record CLOutVc CLOutr;
-  
+
   ResetLoop(CLOutr);
   while (LoopMain(CLOutr,1,true)) begin
     RecordDelete(CLOutr);
@@ -26,7 +26,7 @@ end;
 updating procedure DeleteTargetTimes()
 begin
   record TargTimeVc TargTimer;
-  
+
   ResetLoop(TargTimer);
   while (LoopMain(TargTimer,1,true)) begin
     RecordDelete(TargTimer);
@@ -38,7 +38,7 @@ end;
 updating procedure DeleteTransaction()
 begin
   record TBIVVc TBIVr;
-  
+
   ResetLoop(TBIVr);
   while (LoopMain(TBIVr,1,true)) begin
     RecordDelete(TBIVr);
@@ -50,19 +50,19 @@ end;
 updating procedure DeleteSimulations()
 begin
   record SMVc SMr;
-  
+
   ResetLoop(SMr);
   while (LoopMain(SMr,1,true)) begin
     RecordDelete(SMr);
     StepBack(SMr);
   end;
- return; 
+ return;
 end;
 
 updating procedure DeletePurchaseInvoice()
 begin
   record VIVc VIr;
-  
+
   ResetLoop(VIr);
   while (LoopMain(VIr,1,true)) begin
     RecordDelete(VIr);
@@ -74,7 +74,7 @@ end;
 updating procedure DeleteInvoices()
 begin
   record IVVc IVr;
-  
+
   ResetLoop(IVr);
   while (LoopMain(IVr,1,true)) begin
     RecordDelete(IVr);
@@ -86,7 +86,7 @@ end;
 updating procedure DeleteOrders()
 begin
   record ORVc ORr;
-  
+
   ResetLoop(ORr);
   while (LoopMain(ORr,1,true)) begin
     RecordDelete(ORr);
@@ -98,7 +98,7 @@ end;
 updating procedure DeleteReceipts()
 begin
   record IPVc IPr;
-  
+
   ResetLoop(IPr);
   while (LoopMain(IPr,1,true)) begin
     RecordDelete(IPr);
@@ -110,7 +110,7 @@ end;
 updating procedure DeleteActivities()
 begin
   record ActVc Actr;
-  
+
   ResetLoop(Actr);
   while (LoopMain(Actr,1,true)) begin
     RecordDelete(Actr);
@@ -122,7 +122,7 @@ end;
 updating procedure DeleteWeightedAvarage()
 begin
   record WeigAvVc WeigAvr;
-  
+
   ResetLoop(WeigAvr);
   while (LoopMain(WeigAvr,1,true)) begin
     RecordDelete(WeigAvr);
@@ -134,7 +134,7 @@ end;
 updating procedure DeleteStockMovements()
 begin
   record StockMovVc StockMovr;
-  
+
   ResetLoop(StockMovr);
   while (LoopMain(StockMovr,1,true)) begin
     RecordDelete(StockMovr);
@@ -146,7 +146,7 @@ end;
 updating procedure DeleteReturnedGoods()
 begin
   record RetVc Retr;
-  
+
   ResetLoop(Retr);
   while (LoopMain(Retr,1,true)) begin
     RecordDelete(Retr);
@@ -158,7 +158,7 @@ end;
 updating procedure DeleteLoggingHistory()
 begin
   record RHistVc RHistr;
-  
+
   ResetLoop(RHistr);
   while (LoopMain(RHistr,1,true)) begin
     RecordDelete(RHistr);
@@ -170,7 +170,7 @@ end;
 updating procedure DeleteReturnedGoodsSuppliers()
 begin
   record RetPUVc RetPUr;
-  
+
   ResetLoop(RetPUr);
   while (LoopMain(RetPUr,1,true)) begin
     RecordDelete(RetPUr);
@@ -182,7 +182,7 @@ end;
 updating procedure DeleteAccounts()
 begin
   record AccVc Accr;
-  
+
   ResetLoop(Accr);
   while (LoopMain(Accr,1,true)) begin
     RecordDelete(Accr);
@@ -194,7 +194,7 @@ end;
 updating procedure DeleteContacts()
 begin
   record CUVc CUr;
-  
+
   ResetLoop(CUr);
   while (LoopMain(CUr,1,true)) begin
     RecordDelete(CUr);
@@ -206,7 +206,7 @@ end;
 updating procedure DeletePrices()
 begin
   record PLVc PLr;
-  
+
   ResetLoop(PLr);
   while (LoopMain(PLr,1,true)) begin
     RecordDelete(PLr);
@@ -218,7 +218,7 @@ end;
 updating procedure DeletePurchaseOrders()
 begin
   record POVc POr;
-  
+
   ResetLoop(POr);
   while (LoopMain(POr,1,true)) begin
     RecordDelete(POr);
@@ -230,11 +230,10 @@ end;
 updating procedure DeleteItems()
 begin
   record INVc INr;
-  
+
   ResetLoop(INr);
-  while (LoopMain(INr,1,true)) begin 
+  while (LoopMain(INr,1,true)) begin
     RecordDelete(INr);
-    LogText(0,"I am executed"); 
     StepBack(INr);
   end;
   return;
@@ -243,7 +242,7 @@ end;
 updating procedure DeleteGoodsReceipts()
 begin
   record PUVc PUr;
-  
+
   ResetLoop(PUr);
   while (LoopMain(PUr,1,true)) begin
     RecordDelete(PUr);
@@ -255,7 +254,7 @@ end;
 updating procedure DeleteItemHist()
 begin
   record ItemHistVc ItemHistr;
-  
+
   ResetLoop(ItemHistr);
   while (LoopMain(ItemHistr,1,true)) begin
     RecordDelete(ItemHistr);
@@ -267,7 +266,7 @@ end;
 updating procedure DeleteDeliveries()
 begin
   record SHVc SHr;
-  
+
   ResetLoop(SHr);
   while (LoopMain(SHr,1,true)) begin
     RecordDelete(SHr);
@@ -279,7 +278,7 @@ end;
 updating procedure DeleteStockDepreciations()
 begin
   record SDVc SDr;
-  
+
   ResetLoop(SDr);
   while (LoopMain(SDr,1,true)) begin
     RecordDelete(SDr);
@@ -291,7 +290,7 @@ end;
 updating procedure DeleteItemGroups()
 begin
   record ITVc ITr;
-  
+
   ResetLoop(ITr);
   while (LoopMain(ITr,1,true)) begin
     RecordDelete(ITr);
@@ -303,7 +302,7 @@ end;
 updating procedure DeleteJobVc()
 begin
   record JobVc Jobr;
-  
+
   ResetLoop(Jobr);
   while (LoopMain(Jobr,1,true)) begin
     RecordDelete(Jobr);
@@ -315,7 +314,7 @@ end;
 updating procedure DeleteResAvVc()
 begin
   record ResAvVc ResAvr;
-  
+
   ResetLoop(ResAvr);
   while (LoopMain(ResAvr,1,true)) begin
     RecordDelete(ResAvr);
@@ -327,7 +326,7 @@ end;
 updating procedure DeletePRVc()
 begin
   record PRVc PRr;
-  
+
   ResetLoop(PRr);
   while (LoopMain(PRr,1,true)) begin
     RecordDelete(PRr);
@@ -339,7 +338,7 @@ end;
 updating procedure DeleteTBBUVc()
 begin
   record TBBUVc TBBUr;
-  
+
   ResetLoop(TBBUr);
   while (LoopMain(TBBUr,1,true)) begin
     RecordDelete(TBBUr);
@@ -351,7 +350,7 @@ end;
 updating procedure DeleteResVc()
 begin
   record ResVc ResVr;
-  
+
   ResetLoop(ResVr);
   while (LoopMain(ResVr,1,true)) begin
     RecordDelete(ResVr);
@@ -364,7 +363,7 @@ end;
 updating procedure DeleteProfileVc()
 begin
   record ProfileVc ProfileVr;
-  
+
   ResetLoop(ProfileVr);
   while (LoopMain(ProfileVr,1,true)) begin
     RecordDelete(ProfileVr);
@@ -377,7 +376,7 @@ end;
 updating procedure DeletePOSEventVc()
 begin
   record POSEventVc POSEventr;
-  
+
   ResetLoop(POSEventr);
   while (LoopMain(POSEventr,1,true)) begin
     RecordDelete(POSEventr);
@@ -390,7 +389,7 @@ end;
 updating procedure DeleteProdOrderVc()
 begin
   record ProdOrderVc ProdOrderr;
-  
+
   ResetLoop(ProdOrderr);
   while (LoopMain(ProdOrderr,1,true)) begin
     RecordDelete(ProdOrderr);
@@ -402,7 +401,7 @@ end;
 updating procedure DeletePLDefVc()
 begin
   record PLDefVc PLDefr;
-  
+
   ResetLoop(PLDefr);
   while (LoopMain(PLDefr,1,true)) begin
     RecordDelete(PLDefr);
@@ -414,7 +413,7 @@ end;
 updating procedure DeletePosBalanceVC()
 begin
   record PosBalanceVC PosBalancer;
-  
+
   ResetLoop(PosBalancer);
   while (LoopMain(PosBalancer,1,true)) begin
     RecordDelete(PosBalancer);
@@ -426,7 +425,7 @@ end;
 updating procedure Delete_UserVc()
 begin
   record UserVc Userr;
-  
+
   ResetLoop(Userr);
   while (LoopMain(Userr,1,true)) begin
     RecordDelete(Userr);
@@ -438,7 +437,7 @@ end;
 updating procedure Delete_IVCashVc()
 begin
   record IVCashVc IVCashr;
-  
+
   ResetLoop(IVCashr);
   while (LoopMain(IVCashr,1,true)) begin
     RecordDelete(IVCashr);
@@ -450,7 +449,7 @@ end;
 updating procedure Delete_OPVc()
 begin
   record OPVc OPr;
-  
+
   ResetLoop(OPr);
   while (LoopMain(OPr,1,true)) begin
     RecordDelete(OPr);
@@ -462,7 +461,7 @@ end;
 updating procedure Delete_CashVc()
 begin
   record CashVc Cashr;
-  
+
   ResetLoop(Cashr);
   while (LoopMain(Cashr,1,true)) begin
     RecordDelete(Cashr);
@@ -474,7 +473,7 @@ end;
 updating procedure Delete_RestBookingVc()
 begin
   record RestBookingVc RestBookingr;
-  
+
   ResetLoop(RestBookingr);
   while (LoopMain(RestBookingr,1,true)) begin
     RecordDelete(RestBookingr);
@@ -486,7 +485,7 @@ end;
 updating procedure Delete_RestAccVc()
 begin
   record RestAccVc RestAccr;
-  
+
   ResetLoop(RestAccr);
   while (LoopMain(RestAccr,1,true)) begin
     RecordDelete(RestAccr);
@@ -498,7 +497,7 @@ end;
 updating procedure Delete_ObjVc()
 begin
   record ObjVc Objr;
-  
+
   ResetLoop(Objr);
   while (LoopMain(Objr,1,true)) begin
     RecordDelete(Objr);
@@ -510,7 +509,7 @@ end;
 updating procedure Delete_NormPhoneNumVc()
 begin
   record NormPhoneNumVc NormPhoneNumr;
-  
+
   ResetLoop(NormPhoneNumr);
   while (LoopMain(NormPhoneNumr,1,true)) begin
     RecordDelete(NormPhoneNumr);
@@ -519,14 +518,14 @@ begin
   return;
 end;
 
-updating procedure Delete_TRVc()
+updating procedure Delete_TrVc()
 begin
-  record TRVc TRr;
+  record TrVc Trr;
 
-  ResetLoop(TRr);
-  while (LoopMain(TRr,1,true)) begin
-    RecordDelete(TRr);
-    StepBack(TRr);
+  ResetLoop(Trr);
+  while (LoopMain(Trr,1,true)) begin
+    RecordDelete(Trr);
+    StepBack(Trr);
   end;
   return;
 end;
@@ -534,7 +533,7 @@ end;
 updating procedure Delete_MinPerLOcVc()
 begin
   record MinPerLOcVc MinPerLOcr;
-  
+
   ResetLoop(MinPerLOcr);
   while (LoopMain(MinPerLOcr,1,true)) begin
     RecordDelete(MinPerLOcr);
@@ -546,7 +545,7 @@ end;
 updating procedure Delete_ConfVc()
 begin
   record ConfVc Confr;
-  
+
   ResetLoop(Confr);
   while (LoopMain(Confr,1,true)) begin
     RecordDelete(Confr);
@@ -558,7 +557,7 @@ end;
 updating procedure Delete_LocationVc()
 begin
   record LocationVc Locationr;
-  
+
   ResetLoop(Locationr);
   while (LoopMain(Locationr,1,true)) begin
     RecordDelete(Locationr);
@@ -570,7 +569,7 @@ end;
 updating procedure Delete_DiVc()
 begin
   record DiVc Dir;
-  
+
   ResetLoop(Dir);
   while (LoopMain(Dir,1,true)) begin
     RecordDelete(Dir);
@@ -582,7 +581,7 @@ end;
 updating procedure Delete_ItemStatusVc()
 begin
   record ItemStatusVc ItemStatusr;
-  
+
   ResetLoop(ItemStatusr);
   while (LoopMain(ItemStatusr,1,true)) begin
     RecordDelete(ItemStatusr);
@@ -595,7 +594,7 @@ end;
 updating procedure Delete_InTransferVc()
 begin
   record InTransferVc InTransferr;
-  
+
   ResetLoop(InTransferr);
   while (LoopMain(InTransferr,1,true)) begin
     RecordDelete(InTransferr);
@@ -607,7 +606,7 @@ end;
 updating procedure Delete_DocVc()
 begin
   record DocVc Docr;
-  
+
   ResetLoop(Docr);
   while (LoopMain(Docr,1,true)) begin
     RecordDelete(Docr);
@@ -619,7 +618,7 @@ end;
 updating procedure Delete_ERVc()
 begin
   record ERVc ERVr;
-  
+
   ResetLoop(ERVr);
   while (LoopMain(ERVr,1,true)) begin
     RecordDelete(ERVr);
@@ -631,7 +630,7 @@ end;
 updating procedure Delete_DelAddrVc()
 begin
   record DelAddrVc DelAddrr;
-  
+
   ResetLoop(DelAddrr);
   while (LoopMain(DelAddrr,1,true)) begin
     RecordDelete(DelAddrr);
@@ -643,7 +642,7 @@ end;
 updating procedure Delete_COVc()
 begin
   record COVc COVr;
-  
+
   ResetLoop(COVr);
   while (LoopMain(COVr,1,true)) begin
     RecordDelete(COVr);
@@ -655,7 +654,7 @@ end;
 updating procedure Delete_ContactRelVc()
 begin
   record ContactRelVc ContactRelr;
-  
+
   ResetLoop(ContactRelr);
   while (LoopMain(ContactRelr,1,true)) begin
     RecordDelete(ContactRelr);
@@ -667,7 +666,7 @@ end;
 updating procedure Delete_BarcodeVc()
 begin
   record BarcodeVc Barcoder;
-  
+
   ResetLoop(Barcoder);
   while (LoopMain(Barcoder,1,true)) begin
     RecordDelete(Barcoder);
@@ -679,7 +678,7 @@ end;
 updating procedure Delete_Attach2Vc()
 begin
   record Attach2Vc Attach2r;
-  
+
   ResetLoop(Attach2r);
   while (LoopMain(Attach2r,1,true)) begin
     RecordDelete(Attach2r);
@@ -691,7 +690,7 @@ end;
 updating procedure Delete_ArchiveVc()
 begin
   record ArchiveVc Archiver;
-  
+
   ResetLoop(Archiver);
   while (LoopMain(Archiver,1,true)) begin
     RecordDelete(Archiver);
@@ -703,7 +702,7 @@ end;
 updating procedure Delete_AccessVc()
 begin
   record AccessVc Accessr;
-  
+
   ResetLoop(Accessr);
   while (LoopMain(Accessr,1,true)) begin
     RecordDelete(Accessr);
@@ -715,7 +714,7 @@ end;
 updating procedure Delete_ProdVc()
 begin
   record ProdVc Prodr;
-  
+
   ResetLoop(Prodr);
   while (LoopMain(Prodr,1,true)) begin
     RecordDelete(Prodr);
@@ -727,7 +726,7 @@ end;
 updating procedure Delete_PIVc()
 begin
   record PIVc PIr;
-  
+
   ResetLoop(PIr);
   while (LoopMain(PIr,1,true)) begin
     RecordDelete(PIr);
@@ -739,7 +738,7 @@ end;
 updating procedure Delete_QTVc()
 begin
   record QTVc QTr;
-  
+
   ResetLoop(QTr);
   while (LoopMain(QTr,1,true)) begin
     RecordDelete(QTr);
@@ -751,7 +750,7 @@ end;
 updating procedure Delete_RecVc()
 begin
   record RecVc Recr;
-  
+
   ResetLoop(Recr);
   while (LoopMain(Recr,1,true)) begin
     RecordDelete(Recr);
@@ -763,7 +762,7 @@ end;
 updating procedure Delete_RLinkVc()
 begin
   record RLinkVc RLinkr;
-  
+
   ResetLoop(RLinkr);
   while (LoopMain(RLinkr,1,true)) begin
     RecordDelete(RLinkr);
@@ -775,7 +774,7 @@ end;
 updating procedure Delete_RentInVC()
 begin
   record RentInVC RentInr;
-  
+
   ResetLoop(RentInr);
   while (LoopMain(RentInr,1,true)) begin
     RecordDelete(RentInr);
@@ -787,7 +786,7 @@ end;
 updating procedure Delete_SVOSerVc()
 begin
   record SVOSerVc SVOSerr;
-  
+
   ResetLoop(SVOSerr);
   while (LoopMain(SVOSerr,1,true)) begin
     RecordDelete(SVOSerr);
@@ -799,7 +798,7 @@ end;
 updating procedure Delete_SMSVc()
 begin
   record SMSVc SMSr;
-  
+
   ResetLoop(SMSr);
   while (LoopMain(SMSr,1,true)) begin
     RecordDelete(SMSr);
@@ -811,7 +810,7 @@ end;
 updating procedure Delete_StockTakeVc()
 begin
   record StockTakeVc StockTaker;
-  
+
   ResetLoop(StockTaker);
   while (LoopMain(StockTaker,1,true)) begin
     RecordDelete(StockTaker);
@@ -823,7 +822,7 @@ end;
 updating procedure Delete_VARVc()
 begin
   record VARVc VARr;
-  
+
   ResetLoop(VARr);
   while (LoopMain(VARr,1,true)) begin
     RecordDelete(VARr);
@@ -832,23 +831,10 @@ begin
   return;
 end;
 
-updating procedure Delete_ARVc()
-begin
-  record ARVc ARr;
-
-  ResetLoop(ARr);
-  while (LoopMain(ARr,1,true)) begin
-    RecordDelete(ARr);
-    StepBack(ARr);
-  end;
-  return;
-end;
-
-
 updating procedure Delete_VARGVc()
 begin
   record VARGVc VARGr;
-  
+
   ResetLoop(VARGr);
   while (LoopMain(VARGr,1,true)) begin
     RecordDelete(VARGr);
@@ -860,7 +846,7 @@ end;
 updating procedure Delete_VARSubsetsVc()
 begin
   record VARSubsetsVc VARSubsetsr;
-  
+
   ResetLoop(VARSubsetsr);
   while (LoopMain(VARSubsetsr,1,true)) begin
     RecordDelete(VARSubsetsr);
@@ -871,7 +857,7 @@ end;
 
 updating procedure Delete_UNOK_IVVC()
 begin
-  record IVVc Cur;      
+  record IVVc Cur;
   Boolean TrHs,testf;
   LongInt afr,ato;
 
@@ -885,7 +871,7 @@ begin
         RecordDelete(Cur);
         StepBack(Cur);
     end;
-  end; 
+  end;
 
  return;
 end;
@@ -893,7 +879,7 @@ end;
 updating procedure Delete_CUServiceEnabVc()
 begin
   record CUServiceEnabVc CUServiceEnabr;
-  
+
   ResetLoop(CUServiceEnabr);
   while (LoopMain(CUServiceEnabr,1,true)) begin
     RecordDelete(CUServiceEnabr);
@@ -904,7 +890,7 @@ end;
 
 updating procedure Delete_ConvItemBlock()
 begin
-  record ConvItemBlock ConvItemBlockr;      
+  record ConvItemBlock ConvItemBlockr;
   Integer rwcnt,i;
 
   BlockLoad(ConvItemBlockr);
@@ -920,7 +906,7 @@ end;
 updating procedure Delete_Bud1Vc()
 begin
   record Bud1Vc Bud1r;
-  
+
   ResetLoop(Bud1r);
   while (LoopMain(Bud1r,1,true)) begin
     RecordDelete(Bud1r);
@@ -932,7 +918,7 @@ end;
 updating procedure Delete_UserDefRepVc()
 begin
   record UserDefRepVc UserDefRepr;
-  
+
   ResetLoop(UserDefRepr);
   while (LoopMain(UserDefRepr,1,true)) begin
     RecordDelete(UserDefRepr);
@@ -944,7 +930,7 @@ end;
 updating procedure Delete_UserDefRepLinesVc()
 begin
   record UserDefRepLinesVc UserDefRepLinesr;
-  
+
   ResetLoop(UserDefRepLinesr);
   while (LoopMain(UserDefRepLinesr,1,true)) begin
     RecordDelete(UserDefRepLinesr);
@@ -956,7 +942,7 @@ end;
 updating procedure Delete_UserDefRepColumnsVc()
 begin
   record UserDefRepColumnsVc UserDefRepColumnsr;
-  
+
   ResetLoop(UserDefRepColumnsr);
   while (LoopMain(UserDefRepColumnsr,1,true)) begin
     RecordDelete(UserDefRepColumnsr);
@@ -968,7 +954,7 @@ end;
 updating procedure Delete_CCatVc()
 begin
   record CCatVc CCatr;
-  
+
   ResetLoop(CCatr);
   while (LoopMain(CCatr,1,true)) begin
     RecordDelete(CCatr);
@@ -980,7 +966,7 @@ end;
 updating procedure Delete_VGVc()
 begin
   record VGVc VGr;
-  
+
   ResetLoop(VGr);
   while (LoopMain(VGr,1,true)) begin
     RecordDelete(VGr);
@@ -992,7 +978,7 @@ end;
 updating procedure Delete_CheckVc()
 begin
   record CheckVc CheckVcr;
-  
+
   ResetLoop(CheckVcr);
   while (LoopMain(CheckVcr,1,true)) begin
     RecordDelete(CheckVcr);
@@ -1004,7 +990,7 @@ end;
 updating procedure Delete_POSButtonsVc()
 begin
   record POSButtonsVc POSButtonsVcr;
-  
+
   ResetLoop(POSButtonsVcr);
   while (LoopMain(POSButtonsVcr,1,true)) begin
     RecordDelete(POSButtonsVcr);
@@ -1016,7 +1002,7 @@ end;
 updating procedure Delete_ResTypeSupportVc()
 begin
   record ResTypeSupportVc ResTypeSupportr;
-  
+
   ResetLoop(ResTypeSupportr);
   while (LoopMain(ResTypeSupportr,1,true)) begin
     RecordDelete(ResTypeSupportr);
@@ -1028,7 +1014,7 @@ end;
 updating procedure Delete_WRVc()
 begin
   record WRVc WRVr;
-  
+
   ResetLoop(WRVr);
   while (LoopMain(WRVr,1,true)) begin
     RecordDelete(WRVr);
@@ -1037,200 +1023,423 @@ begin
   return;
 end;
 
-// updating procedure Delete_ShopBaskVc()
-// begin
-//   record ShopBaskVc ShopBaskr;
-  
-//   ResetLoop(ShopBaskr);
-//   while (LoopMain(ShopBaskr,1,true)) begin
-//     RecordDelete(ShopBaskr);
-//     StepBack(ShopBaskr);
-//   end;
-//   return;
-// end;
-
-// updating procedure Delete_APVc()
-// begin
-//   record APVc APVr;
-  
-//   ResetLoop(APVr);
-//   while (LoopMain(APVr,1,true)) begin
-//     RecordDelete(APVr);
-//     StepBack(APVr);
-//   end;
-//   return;
-// end;
-
-updating procedure Delete_UserActionLogVc()
+updating procedure Delete_ShopBaskVc()
 begin
-  record UserActionLogVc UserActionLogr;
+  record ShopBaskVc ShopBaskr;
 
-  ResetLoop(UserActionLogr);
-  while (LoopMain(UserActionLogr,1,true)) begin
-    RecordDelete(UserActionLogr);
-    StepBack(UserActionLogr);
+  ResetLoop(ShopBaskr);
+  while (LoopMain(ShopBaskr,1,true)) begin
+    RecordDelete(ShopBaskr);
+    StepBack(ShopBaskr);
   end;
   return;
 end;
 
-updating procedure Delete_UserLoginVc()
+updating procedure Delete_APVc()
 begin
-  record UserLoginVc UserLoginr;
-  
-  ResetLoop(UserLoginr);
-  while (LoopMain(UserLoginr,1,true)) begin
-    RecordDelete(UserLoginr);
-    StepBack(UserLoginr);
+  record APVc APVr;
+
+  ResetLoop(APVr);
+  while (LoopMain(APVr,1,true)) begin
+    RecordDelete(APVr);
+    StepBack(APVr);
   end;
   return;
 end;
+
+updating procedure Delete_AT2UnitVc() //TM - Added Assets
+begin
+  record AT2UnitVc AT2Unitr;
+
+  ResetLoop(AT2Unitr);
+  while (LoopMain(AT2Unitr,1,true)) begin
+    RecordDelete(AT2Unitr);
+    StepBack(AT2Unitr);
+  end;
+  return;
+end;
+
+updating procedure Delete_AT2TransVc() //TM - Added Assets Transactions
+begin
+  record AT2TransVc AT2Transr;
+
+  ResetLoop(AT2Transr);
+  while (LoopMain(AT2Transr,1,true)) begin
+    RecordDelete(AT2Transr);
+    StepBack(AT2Transr);
+  end;
+  return;
+end;
+
+updating procedure Delete_ObjBalVc() //TM - Trial Balance
+begin
+  record ObjBalVc ObjBalr;
+
+  ResetLoop(ObjBalr);
+  while (LoopMain(ObjBalr,1,true)) begin
+    RecordDelete(ObjBalr);
+    StepBack(ObjBalr);
+  end;
+  return;
+end;
+
+updating procedure Delete_AgreementVc() //TM - Rental Agreements
+begin
+  record AgreementVc Agreementr;
+
+  ResetLoop(Agreementr);
+  while (LoopMain(Agreementr,1,true)) begin
+    RecordDelete(Agreementr);
+    StepBack(Agreementr);
+  end;
+  return;
+end;
+
+updating procedure Delete_RentResVc() //TM - Rental Reservations
+begin
+  record RentResVc RentResr;
+
+  ResetLoop(RentResr);
+  while (LoopMain(RentResr,1,true)) begin
+    RecordDelete(RentResr);
+    StepBack(RentResr);
+  end;
+  return;
+end;
+
+updating procedure Delete_RentQTVc() //TM - Rental Quotations
+begin
+  record RentQTVc RentQTr;
+
+  ResetLoop(RentQTr);
+  while (LoopMain(RentQTr,1,true)) begin
+    RecordDelete(RentQTr);
+    StepBack(RentQTr);
+  end;
+  return;
+end;
+
+// ======================================= CUSTOM =======================================
+
+// DELETE CONTRACTSs
+updating procedure Delete_NAContractVc()
+begin
+  record NAContractVc NAContractr;
+
+  ResetLoop(NAContractr);
+  while (LoopMain(NAContractr,1,true)) begin
+    RecordDelete(NAContractr);
+    StepBack(NAContractr);
+  end;
+  return;
+end;
+
+// DELETE ERFS / ERFS
+updating procedure Delete_BuildVc()
+begin
+  record BuildVc Buildr;
+
+  ResetLoop(Buildr);
+  while (LoopMain(Buildr,1,true)) begin
+    RecordDelete(Buildr);
+    StepBack(Buildr);
+  end;
+  return;
+end;
+
+// DELETE PREMISES
+updating procedure Delete_FlatsVc()
+begin
+  record FlatsVc Flatr;
+
+  ResetLoop(Flatr);
+  while (LoopMain(Flatr,1,true)) begin
+    RecordDelete(Flatr);
+    StepBack(Flatr);
+  end;
+  return;
+end;
+
+// DELETE PREMISE FIELDS
+updating procedure Delete_FlatFieldVc()
+begin
+  record FlatFieldVc FlatFieldr;
+
+  ResetLoop(FlatFieldr);
+  while (LoopMain(FlatFieldr,1,true)) begin
+    RecordDelete(FlatFieldr);
+    StepBack(FlatFieldr);
+  end;
+  return;
+end;
+
+// DELETE METERS
+updating procedure Delete_FlatCountersVc()
+begin
+  record FlatCountersVc FlatCountersr;
+
+  ResetLoop(FlatCountersr);
+  while (LoopMain(FlatCountersr,1,true)) begin
+    RecordDelete(FlatCountersr);
+    StepBack(FlatCountersr);
+  end;
+  return;
+end;
+
+// DELETE METERS-READINGS
+updating procedure Delete_CountResVc()
+begin
+  record CountResVc CountResr;
+
+  ResetLoop(CountResr);
+  while (LoopMain(CountResr,1,true)) begin
+    RecordDelete(CountResr);
+    StepBack(CountResr);
+  end;
+  return;
+end;
+
+// DELETE METERS-READINGS HISTORY
+updating procedure Delete_MHistoryVc()
+begin
+  record MHistoryVc MHr;
+
+  ResetLoop(MHr);
+  while (LoopMain(MHr,1,true)) begin
+   RecordDelete(MHr);
+   StepBack(MHr);
+  end;
+  return;
+end;
+
+// DELETE READER ROUTES ENTRY
+updating procedure Delete_ReaderEntryVc()
+begin
+  record ReaderEntryVc ReaderEntryr;
+
+  ResetLoop(ReaderEntryr);
+  while (LoopMain(ReaderEntryr,1,true)) begin
+    RecordDelete(ReaderEntryr);
+    StepBack(ReaderEntryr);
+  end;
+  return;
+end;
+
+// DELETE BANK TRANSACTIONS
+updating procedure Delete_BankTRVc()
+begin
+  record BankTRVc Bankr;
+
+  ResetLoop(Bankr);
+  while (LoopMain(Bankr,1,true)) begin
+    RecordDelete(Bankr);
+    StepBack(Bankr);
+  end;
+  return;
+end;
+
+// DELETE ALL INVOICE HISTORY DATA
+updating procedure Delete_FidaIPVc()
+begin
+  record IPrsVc IPrsr; // receipt history
+  record ARVc ARr; // open invoice
+  record STVc STr; // item sales statistics
+  record ItemHistVc ItemHistr; // item history
+  record CSVc CSr; // from -> #sales ledger# statistics (report) / found -> procedure CUGetStartBalance(record CUVc CUr,string colns,string curncy,Date sd,var val v,Boolean basecurf)
+  record ItemPayHistVc ItemPayHistr; // freom -> invoice status / found -> procedure GetIVUnPayedArtCodeUniqMasOnDate
+  record ItemPayStatVc ItemPayStatr; // Latvia's 'item payment statics' / municipaliy setting
+  record CustPSVc CustPSr; // customer status
+
+  ResetLoop(IPrsr);
+  while (LoopMain(IPrsr,1,true)) begin
+    RecordDelete(IPrsr);
+    StepBack(IPrsr);
+  end;
+  ResetLoop(ARr);                                                                     
+  while (LoopMain(ARr,1,true)) begin
+    RecordDelete(ARr);
+    StepBack(ARr);
+  end;
+  ResetLoop(STr);
+  while (LoopMain(STr,1,true)) begin
+    RecordDelete(STr);
+    StepBack(STr);
+  end;
+  ResetLoop(ItemHistr);
+  while (LoopMain(ItemHistr,1,true)) begin
+    RecordDelete(ItemHistr);
+    StepBack(ItemHistr);
+  end;
+  ResetLoop(CSr);
+  while (LoopMain(CSr,1,true)) begin
+    RecordDelete(CSr);
+    StepBack(CSr);
+  end;
+  ResetLoop(ItemPayHistr);
+  while (LoopMain(ItemPayHistr,1,true)) begin
+    RecordDelete(ItemPayHistr);
+    StepBack(ItemPayHistr);
+  end;
+  ResetLoop(ItemPayStatr);
+  while (LoopMain(ItemPayStatr,1,true)) begin
+    RecordDelete(ItemPayStatr);
+    StepBack(ItemPayStatr);
+  end;
+  ResetLoop(CustPSr);
+  while (LoopMain(CustPSr,1,true)) begin
+    RecordDelete(CustPSr);
+    StepBack(CustPSr);
+  end;
+  return; //fshjfdsjakf
+end;
+
 
 global
 updating procedure HalDelAllRecordMnDCT(record RcVc RepSpec)
 begin
-  record RegDeleteDCTBlock RDDb; 
+  record RegDeleteDCTBlock RDDb;
   Blockload(RDDb);
+
   if (RDDb.flags[1] == 1) then begin
     DeleteCashIns;
-  end; 
- if(RDDb.flags[92] == 1) then begin
-    Delete_TRVc;
   end;
- if (RDDb.flags[2] == 1) then begin
+  if (RDDb.flags[2] == 1) then begin
       DeleteCashOuts;
   end;
   if (RDDb.flags[3] == 1) then begin
       DeleteTargetTimes;
-  end; 
+  end;
   if (RDDb.flags[4] == 1) then begin
       DeleteTransaction;
-  end;  
+  end;
   if (RDDb.flags[5] == 1) then begin
       DeleteSimulations;
-  end; 
+  end;
    if (RDDb.flags[6] == 1) then begin
       DeletePurchaseInvoice;
-  end;  
+  end;
   if (RDDb.flags[7] == 1) then begin
       DeleteInvoices;
-  end;  
+  end;
   if (RDDb.flags[8] == 1) then begin
       DeleteOrders;
-  end;  
+  end;
   if (RDDb.flags[9] == 1) then begin
       DeleteReceipts;
   end;
   if (RDDb.flags[10] == 1) then begin
       DeleteActivities;
-  end;  
+  end;
   if (RDDb.flags[11] == 1) then begin
         DeleteWeightedAvarage;
-  end;  
+  end;
   if (RDDb.flags[12] == 1) then begin
         DeleteStockMovements;
-  end;  
+  end;
   if (RDDb.flags[13] == 1) then begin
         DeleteReturnedGoods;
-  end;  
+  end;
   if (RDDb.flags[14] == 1) then begin
         DeleteLoggingHistory;
-  end;       
+  end;
   if (RDDb.flags[15] == 1) then begin
         DeleteReturnedGoodsSuppliers;
-  end;  
+  end;
   if (RDDb.flags[16] == 1) then begin
         DeleteAccounts;
-  end; 
+  end;
   if (RDDb.flags[17] == 1) then begin
-        Delete_Bud1Vc;
-  end;     
+    Delete_Bud1Vc;
+  end;
   if (RDDb.flags[18] == 1) then begin
       DeleteContacts;
-  end;  
+  end;
   if (RDDb.flags[19] == 1) then begin
       DeletePrices;
   end;
   if (RDDb.flags[20] == 1) then begin
       DeletePurchaseOrders;
-  end;    
+  end;
   if (RDDb.flags[21] == 1) then begin
         DeleteItems;
-  end;  
+  end;
   if (RDDb.flags[22] == 1) then begin
         DeleteGoodsReceipts;
-  end;  
+  end;
   if (RDDb.flags[23] == 1) then begin
         DeleteItemHist;
   end;
   if (RDDb.flags[24] == 1) then begin
         DeleteDeliveries;
-  end;  
+  end;
   if (RDDb.flags[25] == 1) then begin
         DeleteStockDepreciations;
-  end;  
+  end;
   if (RDDb.flags[26] == 1) then begin
         DeleteItemGroups;
-  end;  
+  end;
   if (RDDb.flags[27] == 1) then begin
         DeletePRVc;
-  end;  
+  end;
   if (RDDb.flags[28] == 1) then begin
         DeleteTBBUVc;
-  end;  
+  end;
+
   if (RDDb.flags[30] == 1) then begin
         DeleteJobVc;
-  end;     
+  end;
   if (RDDb.flags[31] == 1) then begin
         DeleteResAvVc;
-  end;     
+  end;
   if (RDDb.flags[32] == 1) then begin
         DeleteResVc;
-  end;  
+  end;
   if (RDDb.flags[33] == 1) then begin
         DeletePOSEventVc;
-  end; 
+  end;
   if (RDDb.flags[34] == 1) then begin
         DeleteProdOrderVc;
-  end;   
+  end;
   if (RDDb.flags[35] == 1) then begin
         DeletePLDefVc;
-  end;     
+  end;
   if (RDDb.flags[36] == 1) then begin
         DeletePosBalanceVC;
-  end;  
+  end;
   if (RDDb.flags[37] == 1) then begin
         Delete_UserVc;
-  end;   
+  end;
   if (RDDb.flags[38] == 1) then begin
         Delete_IVCashVc;
-  end;     
+  end;
   if (RDDb.flags[39] == 1) then begin
         Delete_OPVc;
-  end;     
+  end;
   if (RDDb.flags[40] == 1) then begin
         Delete_CashVc;
-  end;   
+  end;
   if (RDDb.flags[41] == 1) then begin
         Delete_RestBookingVc;
-  end; 
+  end;
   if (RDDb.flags[42] == 1) then begin
         Delete_RestAccVc;
-  end;         
+  end;
+
   if (RDDb.flags[43] == 1) then begin
         Delete_ObjVc;
-  end;        
+  end;
   if (RDDb.flags[44] == 1) then begin
         Delete_NormPhoneNumVc;
-  end; 
+  end;
   if (RDDb.flags[45] == 1) then begin
         Delete_TrVc;
   end;
   if (RDDb.flags[46] == 1) then begin
         DeleteProfileVc;
-  end;  
+  end;
    if (RDDb.flags[50] == 1) then begin
         Delete_MinPerLOcVc;
-  end;   
+  end;
   if (RDDb.flags[51] == 1) then begin
         Delete_ConfVc;
   end;
@@ -1242,40 +1451,40 @@ begin
   end;
   if (RDDb.flags[54] == 1) then begin
         Delete_ItemStatusVc;
-  end;  
+  end;
   if (RDDb.flags[55] == 1) then begin
         Delete_InTransferVc;
-  end; 
+  end;
   if (RDDb.flags[56] == 1) then begin
         Delete_DocVc;
   end;
   if (RDDb.flags[57] == 1) then begin
         Delete_ERVc;
-  end; 
+  end;
   if (RDDb.flags[58] == 1) then begin
         Delete_DelAddrVc;
-  end; 
+  end;
   if (RDDb.flags[59] == 1) then begin
         Delete_COVc;
-  end;      
+  end;
   if (RDDb.flags[60] == 1) then begin
         Delete_ContactRelVc;
-  end; 
+  end;
   if (RDDb.flags[61] == 1) then begin
         Delete_BarcodeVc;
-  end; 
+  end;
   if (RDDb.flags[62] == 1) then begin
         Delete_Attach2Vc;
-  end; 
+  end;
   if (RDDb.flags[63] == 1) then begin
         Delete_ArchiveVc;
-  end; 
+  end;
   if (RDDb.flags[64] == 1) then begin
         Delete_AccessVc;
-  end; 
+  end;
   if (RDDb.flags[65] == 1) then begin
         Delete_ProdVc;
-  end; 
+  end;
   if (RDDb.flags[66] == 1) then begin
         Delete_PIVc;
   end;
@@ -1284,10 +1493,10 @@ begin
   end;
   if (RDDb.flags[68] == 1) then begin
         Delete_RecVc;
-  end;     
+  end;
   if (RDDb.flags[69] == 1) then begin
         Delete_RLinkVc;
-  end; 
+  end;
   if (RDDb.flags[70] == 1) then begin
         Delete_RentInVC;
   end;
@@ -1299,66 +1508,113 @@ begin
   end;
   if (RDDb.flags[73] == 1) then begin
         Delete_StockTakeVc;
-  end; 
+  end;
   if (RDDb.flags[74] == 1) then begin
         Delete_VARVc;
   end;
-  if (RDDb.flags[91] == 1) then begin
-        Delete_ARVc;
-  end;
   if (RDDb.flags[75] == 1) then begin
         Delete_VARGVc;
-  end;  
+  end;
   if (RDDb.flags[76] == 1) then begin
         Delete_VARSubsetsVc;
-  end; 
+  end;
   if (RDDb.flags[77] == 1) then begin
         Delete_UNOK_IVVC;
-  end;   
+  end;
   if (RDDb.flags[78] == 1) then begin
         Delete_CUServiceEnabVc;
-  end;   
+  end;
   if (RDDb.flags[79] == 1) then begin
         Delete_ConvItemBlock;
-  end;     
+  end;
   if (RDDb.flags[80] == 1) then begin
         Delete_UserDefRepVc;
   end;
   if (RDDb.flags[81] == 1) then begin
         Delete_UserDefRepLinesVc;
-  end;  
+  end;
   if (RDDb.flags[82] == 1) then begin
         Delete_UserDefRepColumnsVc;
-  end;  
+  end;
   if (RDDb.flags[83] == 1) then begin
         Delete_CCatVc;
-  end;        
+  end;
   if (RDDb.flags[84] == 1) then begin
         Delete_VGVc;
-  end;  
+  end;
   if (RDDb.flags[85] == 1) then begin
         Delete_POSButtonsVc;
-  end; 
+  end;
   if (RDDb.flags[86] == 1) then begin
         Delete_CheckVc;
-  end;   
+  end;
   if (RDDb.flags[87] == 1) then begin
         Delete_ResTypeSupportVc;
-  end;      
+  end;
   if (RDDb.flags[88] == 1) then begin
         Delete_WRVc;
-  end;    
-  // if (RDDb.flags[89] == 1) then begin
-  //       Delete_ShopBaskVc;
-  // end; 
-  // if (RDDb.flags[90] == 1) then begin
-  //       Delete_APVc;
-  // end;   
-  if (RepSpec.f1 == "UserActionLogVc") then begin
-        Delete_UserActionLogVc;
-  end; 
-  if (RepSpec.f1 == "UserLoginVc") then begin
-        Delete_UserLoginVc;
-  end;  
+  end;
+  if (RDDb.flags[89] == 1) then begin
+        Delete_ShopBaskVc;
+  end;
+  if (RDDb.flags[90] == 1) then begin
+        Delete_APVc;
+  end;
+  if (RDDb.flags[91] == 1) then begin //TM - Delete Assets
+        Delete_AT2UnitVc;
+  end;
+
+   if (RDDb.flags[92] == 1) then begin //TM - Delete Assets
+        Delete_AT2TransVc;
+  end;
+
+   if (RDDb.flags[93] == 1) then begin //TM - Delete Trial Balances
+        Delete_ObjBalVc;
+  end;
+
+   if (RDDb.flags[94] == 1) then begin //TM - Delete Rental Agreement
+        Delete_AgreementVc;
+  end;
+
+   if (RDDb.flags[95] == 1) then begin //TM - Delete RentaL Reservations
+        Delete_RentResVc;
+  end;
+   if (RDDb.flags[96] == 1) then begin //TM - Delete Rental Quotes
+        Delete_RentQTVc;
+  end;
+
+  // ======================= CUSTOM =======================
+
+  if (RDDb.flags[97] == 1) then begin // Delete Contract
+    Delete_NAContractVc;
+  end;
+  if (RDDb.flags[98] == 1) then begin // Delete Erf/Building
+    Delete_BuildVc;
+  end;
+  if (RDDb.flags[99] == 1) then begin // Delete Premises
+    Delete_FlatsVc;
+  end;
+  if (RDDb.flags[100] == 1) then begin // Delete Premise Fields
+    Delete_FlatFieldVc;
+  end;
+  if (RDDb.flags[101] == 1) then begin // Delete Meters
+    Delete_FlatCountersVc;
+  end;
+  if (RDDb.flags[102] == 1) then begin // Delete Meter Reading
+    Delete_CountResVc;
+  end;
+  if (RDDb.flags[103] == 1) then begin // Delete Meter Reading History
+    Delete_MHistoryVc;
+  end;
+  if (RDDb.flags[104] == 1) then begin // Delete Reader Route Entries
+    Delete_ReaderEntryVc;
+  end;
+  if (RDDb.flags[105] == 1) then begin // Delete Bank Transactions
+    Delete_BankTRVc;
+  end;
+  if (RDDb.flags[106] == 1) then begin // Delete All Invoice History
+    Delete_FidaIPVc; // not actual record being deleted
+  end;
+
   return;
 end;

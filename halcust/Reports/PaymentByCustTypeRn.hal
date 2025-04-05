@@ -1,0 +1,373 @@
+external inner function string 255 MonthName(Date);
+
+//
+global
+procedure PaymentByCustTypeRn(record RcVc RepSpec)
+begin
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record NAContractVc COr;
+  record BuildVc ERFMasterr;
+  record AccountTypeVc AccountTyper;
+  //
+  boolean found,testf,isValid;
+  Integer arr_size,rwcnt,i,v,j;
+  date datePeriod,periodEnd;
+  string 255 itemcode;
+
+  array String 225 arr_itemcode;
+  Date sd,ed;
+  Date sd_Over120,ed_Over120;
+  array val arr_receipt;
+  array val arr_receipt30;
+  array val arr_receipt60;
+  array val arr_receipt90;
+  array val arr_receipt120;
+  array val arr_receiptOver120;
+
+  array val arr_monthSum;
+  array val arr_itemSum;
+  
+  array val receiptCode;
+  array String 225 customerCode;
+  boolean receiptUsed;
+
+
+  // start report job
+  StartReportJob("Payments Aged By Customer-Type");
+
+  // no period
+  if(blank(RepSpec.f2)) then begin
+    RepSpec.f2 = CurrentDate; // default period
+  end;
+
+  // month over 120 days
+  datePeriod = RepSpec.f2;
+  sd_Over120 = AddMonth(datePeriod,-5);
+  ed_Over120 = sd_Over120;
+  ed_Over120.day = DaysInMonth(GetYear(sd_Over120),GetMonth(sd_Over120));
+
+
+  //
+  receiptUsed = false;
+
+  // loop receipt-history
+  while (LoopMain(IPrsr,1,true)) begin
+    isValid = false;
+
+    // get type receipt
+    if (IPrsr.TransType == 1) then begin
+        
+      //
+      for(i=0; i<receiptCode.length; i=i+1) begin
+        if(receiptCode[i] == IPrsr.TransNr AND customerCode[i] == IPrsr.CustCode) then begin
+          receiptUsed = true;
+        end;
+      end;
+
+      if(receiptUsed==false) then begin
+        
+        // find receipt record
+        IPr.SerNr = IPrsr.TransNr;
+        if(ReadFirstMain(IPr,1,true)) then begin
+          //
+          receiptCode[receiptCode.length] = IPrsr.TransNr;
+          customerCode[customerCode.length] = IPrsr.CustCode;
+          
+          itemcode = "";
+          // loop receipt row
+          rwcnt = MatRowCnt(IPr);
+          MatRowGet(IPr,0,IPrw);
+          
+          // get contract.nr from receipt matrix
+          if(nonblank(IPrw.ArtCodeName) AND nonblank(IPrw.ContractNr)) then begin
+          
+            COr.SerNr = IPrw.ContractNr;
+            if(ReadFirstMain(COr,1,true)) then begin
+
+              // if customer-type selection
+              if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != COr.AccountType)) then begin
+                goto LSkip;
+              end else begin
+
+                // find customer-type
+                itemcode = COr.AccountType;
+                isValid = true;
+                // AccountTyper.Code = COr.AccountType;
+                // if(ReadFirstMain(AccountTyper,1,true)) then begin
+                //   isValid = true;
+                //   itemcode = AccountTyper.Name;
+                // end;
+              end;
+            end;
+          end else begin
+
+            // on-account payment
+            // find contract
+            testf = true;
+            while (LoopMain(COr,1,testf)) begin
+
+              if (COr.CustCode == IPrsr.CustCode) then begin
+                
+                // if customer-type selection
+                if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != COr.AccountType)) then begin
+                  goto LSkip;
+                end else begin
+
+                  // find customer-type
+                  itemcode = COr.AccountType;
+                  testf = false;
+                  isValid = true;
+                  // AccountTyper.Code = COr.AccountType;
+                  // if(ReadFirstMain(AccountTyper,1,true)) then begin
+                  //   testf = false;
+                  //   isValid = true;
+                  //   itemcode = AccountTyper.Name;
+                  // end;
+                end;
+              end;
+            end;
+          end;
+
+
+          if(isValid) then begin
+
+            // sort receipt by date
+            j = 0;
+            While(j >= -4) begin
+              //
+              datePeriod = RepSpec.f2;
+              sd = AddMonth(datePeriod,j);
+              sd.day = 1;
+              ed = sd;
+              ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+              // is transaction within spec.date.range
+              if(DateInRange(IPr.TransDate,sd,ed)) then begin
+                
+                // -> CURRENT
+                if(j == 0) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(itemcode == arr_itemcode[i]) then begin
+                      arr_receipt[i] = arr_receipt[i] + IPr.CurPayVal; 
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_itemcode[arr_size] = itemcode;
+                    //
+                    if(itemcode == arr_itemcode[arr_size]) then begin
+                      arr_receipt[arr_size] = arr_receipt[arr_size] + IPr.CurPayVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 30 DAYS
+                if(j == -1) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(itemcode == arr_itemcode[i]) then begin
+                      arr_receipt30[i] = arr_receipt30[i] + IPr.CurPayVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_itemcode[arr_size] = itemcode;
+                    //
+                    if(itemcode == arr_itemcode[arr_size]) then begin
+                      arr_receipt30[arr_size] = arr_receipt30[arr_size] + IPr.CurPayVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 60 DAYS
+                if(j == -2) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(itemcode == arr_itemcode[i]) then begin
+                      arr_receipt60[i] = arr_receipt60[i] + IPr.CurPayVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_itemcode[arr_size] = itemcode;
+                    //
+                    if(itemcode == arr_itemcode[arr_size]) then begin
+                      arr_receipt60[arr_size] = arr_receipt60[arr_size] + IPr.CurPayVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 90 DAYS
+                if(j == -3) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(itemcode == arr_itemcode[i]) then begin
+                      arr_receipt90[i] = arr_receipt90[i] + IPr.CurPayVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_itemcode[arr_size] = itemcode;
+                    //
+                    if(itemcode == arr_itemcode[arr_size]) then begin
+                      arr_receipt90[arr_size] = arr_receipt90[arr_size] + IPr.CurPayVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 120 DAYS
+                if(j == -4)  then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(itemcode == arr_itemcode[i]) then begin
+                      arr_receipt120[i] = arr_receipt120[i] + IPr.CurPayVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_itemcode[arr_size] = itemcode;
+                    //
+                    if(itemcode == arr_itemcode[arr_size]) then begin
+                      arr_receipt120[arr_size] = arr_receipt120[arr_size] + IPr.CurPayVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+              end;
+              j = j-1;
+            end;
+
+            // is transaction after 120 spec.date.range
+            if(IPr.TransDate <= ed_Over120) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(itemcode == arr_itemcode[i]) then begin
+                  arr_receiptOver120[i] = arr_receiptOver120[i] + IPr.CurPayVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = itemcode;
+                //
+                if(itemcode == arr_itemcode[arr_size]) then begin
+                  arr_receiptOver120[arr_size] = arr_receiptOver120[arr_size] + IPr.CurPayVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+        end;
+      end;
+    
+      //
+      if(receiptUsed==true) then begin
+        receiptUsed = false;
+      end;  
+    end;
+
+  LSkip:;
+  end;
+  BreakL:;
+
+
+
+  periodEnd = RepSpec.f2;
+  periodEnd.day = DaysInMonth(GetYear(RepSpec.f2),GetMonth(RepSpec.f2));
+
+  if(nonblank(RepSpec.f1)) then begin
+    StartFormat(15);
+      OutString(1,0,"Payments Aged by Customer-Type: " &  RepSpec.f1 & ", To: " & periodEnd,true);
+    EndHeader;
+    EndFormat;
+    // AccountTyper.Code = RepSpec.f1;
+    // if(ReadFirstMain(AccountTyper,1,true)) then begin
+    //   StartFormat(15);
+    //     OutString(1,0,"Payments Aged by Customer-Type: " & AccountTyper.Name & ", To: " & periodEnd,true);
+    //   EndHeader;
+    //   EndFormat;
+    // end;
+  end else begin
+    StartFormat(15);
+      OutString(1,0,"Payments Aged by Customer-Type, To: " & periodEnd,true);
+    EndHeader;
+    EndFormat;
+  end;
+
+
+  StartFormat(15); // -> show heading
+    OutString(0,0,"",false);
+    OutString(5,0,"Customer-Type",false);
+    OutString(210,0,MonthName(RepSpec.f2),true);
+    OutString(250,0,"30 days",true);
+    OutString(290,0,"60 days",true);
+    OutString(330,0,"90 days",true);
+    OutString(380,0,"120 days",true);
+    OutString(430,0,"Over 120 days",true);
+    OutString(1,0,"Total",true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+
+  for(i=0; i<arr_size; i=i+1) begin
+  StartFormat(15); // -> show data
+    OutString(0,0,"",false);
+    OutString(5,0,arr_itemcode[i],false);
+    OutString(210,0,arr_receipt[i],true);
+    OutString(250,0,arr_receipt30[i],true);
+    OutString(290,0,arr_receipt60[i],true);
+    OutString(330,0,arr_receipt90[i],true);
+    OutString(380,0,arr_receipt120[i],true);
+    OutString(430,0,arr_receiptOver120[i],true);
+    // -> item total
+    arr_itemSum[i] = arr_receipt[i] + arr_receipt30[i] + arr_receipt60[i] + arr_receipt90[i] + arr_receipt120[i] + arr_receiptOver120[i];
+    OutString(1,0,arr_itemSum[i],true);
+
+    // -> period total
+    arr_monthSum[0] = arr_monthSum[0] + arr_receipt[i];
+    arr_monthSum[1] = arr_monthSum[1] + arr_receipt30[i];
+    arr_monthSum[2] = arr_monthSum[2] + arr_receipt60[i];
+    arr_monthSum[3] = arr_monthSum[3] + arr_receipt90[i];
+    arr_monthSum[4] = arr_monthSum[4] + arr_receipt120[i];
+    arr_monthSum[5] = arr_monthSum[5] + arr_receiptOver120[i];
+  EndFormat;
+  end;
+
+  Gray_Divider(0,1);
+
+  StartFormat(15); // show sum by period
+    OutString(0,0,"",false);
+    OutString(5,0,"",false);
+    OutString(40,0,"Total Payment:",false); 
+    OutString(210,0,arr_monthSum[0],true);
+    OutString(250,0,arr_monthSum[1],true);
+    OutString(290,0,arr_monthSum[2],true);
+    OutString(330,0,arr_monthSum[3],true);
+    OutString(380,0,arr_monthSum[4],true);
+    OutString(430,0,arr_monthSum[5],true);
+    OutString(1,0,(arr_monthSum[0] + arr_monthSum[1] + arr_monthSum[2] + arr_monthSum[3] + arr_monthSum[4] + arr_monthSum[5]),true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  
+  EndJob;
+
+end;

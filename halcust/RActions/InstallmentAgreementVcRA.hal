@@ -1,0 +1,43 @@
+// global
+// updating function LongInt InstallmentAgreementVcRecordCheck(Var Record InstallmentAgreementVc Agreementr, Record InstallmentAgreementVc Agreement2r, LongInt long3, LongInt long4)
+// begin
+//   longint res;
+//   res = 0;
+
+
+// LExitCheck:;
+//   InstallmentAgreementVcRecordCheck = res;
+// end;
+
+
+global
+function LongInt InstallmentAgreementVcRecordDefaults(Var Record InstallmentAgreementVc Agreementr, Record InstallmentAgreementVc Agreement2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  Agreementr.SerNr = NextSerNr("InstallmentAgreementVc",CurrentDate,-1,false,"");
+  Agreementr.AgreementDate = CurrentDate;
+  
+  InstallmentAgreementVcRecordDefaults = res;
+  return;
+end;
+
+
+// CustomRecordDeleteInstallmentAgreement
+// global
+// function longint InstallmentAgreementVcRecordRemoveTest(var record InstallmentAgreementVc Agreementr,record InstallmentAgreementVc Agreementr2,longint a,longint b)
+// begin
+//   longint res;
+
+//   res = 1;
+//   if (!UserCanAction("CustomRecordDeleteInstallmentAgreement",false)) then begin
+//     res = 0;
+//     MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteInstallmentAgreement"));
+//     goto LInstallmentAgreementVcRecordRemoveTest;
+//   end;
+
+// LInstallmentAgreementVcRecordRemoveTest:;
+//   InstallmentAgreementVcRecordRemoveTest = res;
+//   return;
+// end;

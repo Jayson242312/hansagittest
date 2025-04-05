@@ -1,0 +1,209 @@
+external inner function boolean SetInSet2(string, string);
+external inner procedure HT2Per(Date, Date , var string);
+external inner function Boolean FindStringInString(string,string);
+
+global function string 255 GetInvoiceMailStatus(Record IVVc IVp,string eMail) begin
+  string 255 res;
+  record RLinkVc RLr;
+  record MailVc Mailr;
+  record EMailQueVc EMailQuer;
+  integer cnt;
+  boolean mailfoundf;
+  LongInt statint;
+
+  statint=1000997;
+  res="";
+  cnt=1;
+  mailfoundf=false;
+
+  while (ReadRecordLink(IVp,cnt,Mailr,RLr)) begin
+    cnt = cnt + 1;
+    res=Mailr.Header;
+    EMailQuer.OrgSerNr=Mailr.SerNr;
+    EMailQuer.FileName="MailVc";
+    if ReadFirstKey("OrgSerNr",EMailQuer,2,true) then begin
+      Switch (EMailQuer.EMailSent) begin
+        Case 0: statint=1000999;
+        Case 1: statint=1001000;
+        Case 2: statint=1000999;
+      end;
+    end else begin
+      statint=1000998;
+    end;
+  end;
+
+  res=USetStr(statint);
+  GetInvoiceMailStatus=res;
+return;
+end;
+
+global
+procedure dblInvToEmailMn()
+begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"InvToEmailVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  RepSpec.f1 = RepSpec2.f1;
+  RepSpec.f2 = RepSpec2.f2;
+  RepSpec.repname = "InvToEmailMn";
+  if OpenWindow("InvToEmailVClass",1,0,"","",RepSpec)==0 then begin end;
+end;
+
+global procedure PDFInvToEmailRn(Record RcVc RepSpec) begin
+  Record IVVc IVr;
+  Record CUVc CUr;
+  Record BuildVc Buildr;
+  Record NAContractVc NAContractr;
+  Record PDFInvTextBlock pdfBlr;
+  Row PDFInvTextBlock pdfBlrw;
+  Boolean wloop,testf,datefound,testf2,cofoundf,wloopco;
+  string 255 ckey,tstr,mailstatus;
+  string 20 usercode,textcode;
+  integer indexcnt,i,rwc,rw;
+  Record MailSettingsBlock MailSettingsr;
+
+  usercode=CurrentUser;
+  BlockLoad(pdfBlr);
+  BlockLoad(MailSettingsr);
+
+  StartReportJob(USetStr(1000993));
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  rw=1;
+  Header(rw,tstr,1); rw=rw+1;
+  EndHeader;
+
+  SetRepCol(5,50);
+  SetRepCol(2,190);
+  SetRepCol(3,320);
+  SetRepCol(4,480);
+
+  StartFormat(15);
+  OutString(1,"dblInvToEmailMn",USetStr(1000994),1);
+  EndFormat;
+  StartFormat(15); EndFormat;
+
+  StartFormat(15);
+    OutString(0,0,USetStr(8104),0); //Klients
+    OutString(5,0,USetStr(8105),0); // Nosaukums
+    OutString(2,0,USetStr(9563),0); //adrese
+    OutString(4,0,USetStr(10601),1); //Rçí. nr.
+  EndFormat;
+  StartFormat(15);
+    OutString(5,0,USetStr(9566),0); //e-pasts
+    OutString(4,0,USetStr(23213),1); //Statuss
+  EndFormat;
+  Black_divider(1,0);
+
+  if nonblank(RepSpec.f1) then begin
+    IVr.BuildCode=RepSpec.f1;
+    IVr.InvDate=RepSpec.sStartDate;
+    ckey="BuildCode";
+    indexcnt=2;
+  end else begin
+    IVr.InvDate=RepSpec.sStartDate;
+    ckey="InvDate";
+    indexcnt=1;
+  end;
+  wloop=true;
+  While LoopKey(ckey,IVr,indexcnt,wloop) begin
+    if IVr.InvDate>RepSpec.sEndDate then begin
+      wloop=false;
+    end;
+    if nonblank(RepSpec.f1) and IVr.BuildCode!=RepSpec.f1 then begin
+      wloop=false;
+    end;
+    if wloop then begin
+      testf = true;
+      if IVr.OKFlag==0 then begin
+        testf=false;
+      end;
+      if IVr.InvType!=1 then begin
+        testf=false;
+      end;
+      if IVr.Invalid==1 then begin
+        testf=false;
+      end;
+      if IVr.Contract!=-1 then begin
+        NAContractr.SerNr=IVr.Contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          if NAContractr.InvToEmail==0 then begin
+            testf=false;
+          end;
+           if blank(NAContractr.eMail) then begin
+            testf=false;
+          end;
+        end else begin
+          testf=false;
+        end;
+      end else begin
+        CUr.Code=IVr.CustCode;
+        if ReadFirstMain(CUr,1,true) then begin
+          if CUr.BBSPDFPrint==0 then begin
+            testf=false;
+          end;
+          if blank(CUr.eMail) then begin
+            testf=false;
+          end;
+        end else begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        if NonBlank(IVr.BuildCode) then begin
+          Buildr.Code=IVr.BuildCode;
+          if ReadFirstMain(Buildr,1,true) then begin
+            if nonblank(RepSpec.f2) and testf then begin
+              if !SetInSet2(RepSpec.f2,Buildr.Classification) then begin
+                testf=false;
+              end;
+            end;
+          end;
+        end;
+      end;
+      if testf then begin
+        datefound=false; textcode="";
+        rwc=MatRowCnt(pdfBlr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(pdfBlr,i,pdfBlrw);
+          if (blankdate(pdfBlrw.StartDate) or pdfBlrw.StartDate<=IVr.InvDate) and
+             (blankdate(pdfBlrw.EndDate) or pdfBlrw.EndDate>=IVr.InvDate) then begin
+            textcode=pdfBlrw.Code;
+            datefound=true;
+            i=rwc;
+          end;
+        end;
+        if !datefound then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        if IVr.Contract!=-1 then begin
+          mailstatus=GetInvoiceMailStatus(IVr,NAContractr.eMail);
+        end else begin
+          mailstatus=GetInvoiceMailStatus(IVr,CUr.eMail);
+        end;
+        startformat(15);
+        OutString(0,"dblCUVc",IVr.CustCode,0); //Klients
+        OutString(5,0,IVr.Addr0,0); // Nosaukums
+        OutString(2,0,IVr.Addr1,0); //adrese
+        OutString(4,0,IVr.SerNr,1); //Rçí. nr.
+        endformat;
+        StartFormat(15);
+        if IVr.Contract!=-1 then begin
+          OutString(5,0,NAContractr.eMail,0); //e-pasts
+        end else begin
+          OutString(5,0,CUr.eMail,0); //e-pasts
+        end;
+        OutString(4,0,mailstatus,1); //e-pasta status
+        EndFormat;
+        Gray_divider(1,0);
+      end;
+    end;
+  end;
+
+  EndJob;
+
+return;
+end;

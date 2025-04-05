@@ -1,0 +1,133 @@
+external procedure RecalcBuildFields(integer,record BuildVc);
+
+global
+function longint BuildFieldCodeVcRecordCheck(var record BuildFieldCodeVc BuildFieldCoder,record BuildFieldCodeVc BuildFieldCode2r,longint a,longint b)
+begin
+  longint res;
+
+  res = 0;
+  if Left(BuildFieldCoder.FieldCode,1)!="E" then begin
+    RecordCheckError(1001284,"E",-1,"FieldCode");
+    res = -1;
+    goto LBuildFieldCodeVcRecordCheck;
+  end;
+
+LBuildFieldCodeVcRecordCheck:;
+  BuildFieldCodeVcRecordCheck = res;
+return;
+end;
+
+global
+function longint BuildFieldVcRecordCheck(var record BuildFieldVc BuildFieldr,record BuildFieldVc BuildFieldr2,longint a,longint b)
+begin
+  row BuildFieldVc BuildFieldrw;
+  record BuildVc Buildr;
+  record BuildFieldCodeVc BuildFieldCoder;
+  date prevStartDate;
+  integer i,rw;
+  longint res;
+
+  res = 0;
+  Buildr.Code = BuildFieldr.BuildCode;
+  if !ReadFirstMain(Buildr,1,true) then begin
+    RecordCheckError(1290,"",-1,"BuildCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  BuildFieldCoder.FieldCode = BuildFieldr.FieldCode;
+  if !ReadFirstMain(BuildFieldCoder,1,true) then begin
+    RecordCheckError(1290,"",-1,"FieldCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  
+  rw = MatRowCnt(BuildFieldr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BuildFieldr,i,BuildFieldrw);
+    if BuildFieldCoder.FieldType==1 and nonblankdate(BuildFieldrw.StartDate) and GetDay(BuildFieldrw.StartDate)<>1 then begin
+      RecordCheckError(1000513,"",i,"StartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    if BuildFieldrw.StartDate<=prevStartDate and nonblankdate(prevStartDate) then begin
+      RecordCheckError(1000428,"",i,"StartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    prevStartDate = BuildFieldrw.StartDate;
+  end;
+LExitCheck:;
+  BuildFieldVcRecordCheck = res;
+  return;
+end;
+
+global
+function LongInt BuildFieldSetBlockCheck(var record BuildFieldSetBlock BuildFieldSetr,record BuildFieldSetBlock BuildFieldSet2r,LongInt stat,LongInt long4)
+begin
+  record BuildFieldCodeVc BuildFieldCoder;
+  row BuildFieldSetBlock BuildFieldSetrw;
+  LongInt res;
+  integer i,rw;
+
+  res = 0;
+  rw = MatRowCnt(BuildFieldSetr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BuildFieldSetr,i,BuildFieldSetrw);
+    if blank(BuildFieldSetrw.Name) then begin
+      BuildFieldCoder.FieldCode = BuildFieldSetrw.FieldCode;
+      ReadFirstMain(BuildFieldCoder,1,true);
+      BuildFieldSetrw.Name = BuildFieldCoder.Name;
+      MatRowPut(BuildFieldSetr,i,BuildFieldSetrw);
+    end;
+  end;
+  BuildFieldSetBlockCheck = res;
+  return;
+end;
+
+global
+function LongInt BuildFieldVcRecordSaveClient(LongInt wn,var record BuildFieldVc BuildFieldp,record BuildFieldVc BuildField2p,LongInt stat,LongInt long4)
+begin
+  Record BuildVc Buildr;
+  LongInt res;
+  integer nwn;
+  
+  nwn = FindWindow("BuildDClass");
+  if nwn!=0 then begin
+    DeselectWindow(nwn,false);
+    GetWindowRecord(nwn,Buildr);
+    RecalcBuildFields(nwn,Buildr);
+  end;
+  
+  BuildFieldVcRecordSaveClient = res;
+  return;
+end;
+
+global
+function LongInt BuildFieldVcRecordUpdateClient(LongInt wn,var record BuildFieldVc BuildFieldp,record BuildFieldVc BuildField2p,LongInt stat,LongInt long4)
+begin
+  Record BuildVc Buildr;
+  LongInt res;
+  integer nwn;
+  
+  nwn = FindWindow("BuildDClass");
+  if nwn!=0 then begin
+    DeselectWindow(nwn,false);
+    GetWindowRecord(nwn,Buildr);
+    RecalcBuildFields(nwn,Buildr);
+  end;
+  
+  BuildFieldVcRecordUpdateClient = res;
+  return;
+end;
+
+global
+updating function longint BuildFieldVcRecordRemove(var record BuildFieldVc BuildFieldr,record BuildFieldVc BuildField2r,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  LogText(0,"User " & CurrentUser & " deleting BuildFieldVc record (" & BuildFieldr.BuildCode & " :: " & BuildFieldr.FieldCode & ")");
+  
+  BuildFieldVcRecordRemove = res;
+return;
+end;

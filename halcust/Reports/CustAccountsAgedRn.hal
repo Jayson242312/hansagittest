@@ -1,0 +1,596 @@
+external inner function string 255 MonthName(Date);
+
+//
+global
+procedure CustAccountsAgedRn(record RcVc RepSpec)
+begin
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record IVVc IVr;
+  record TRVc TRr;
+  row TRVc TRrw;
+  record AccVc Accr;
+  record CUVc CUr; String 25 CustCode,CustName,TransCust;
+  //
+  boolean wloop,testf,found;
+  Integer arr_size,count,rwcnt,i,v,j,w;
+  date datePeriod,periodEnd;
+  string 255 prevCode,accName;
+  //
+  array String 225 arr_custcode;
+  Date sd,ed;
+  Date sd_Over60,ed_Over60;
+
+  array val arr_debit; 
+  array val arr_debit30;
+  array val arr_debit60;
+  array val arr_debitOver60;
+
+  array val arr_credit;
+  array val arr_credit30;
+  array val arr_credit60;
+  array val arr_creditOver60;
+
+  array val arr_debit_monthSum; 
+  array val arr_debit_itemSum;
+  array val arr_credit_monthSum; 
+  array val arr_credit_itemSum; 
+  //
+  string 255 substr;
+  longint pos;
+  string 50 splitString; 
+
+
+  // repspec 1
+  if(blank(RepSpec.f1)) then begin
+    CustName = "";
+  end else begin
+    CustCode = RepSpec.f1;
+    CUr.Code = CustCode;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      CustName = CUr.Name;
+    end;
+  end;
+
+  // repspec 2
+  if(blank(RepSpec.f2)) then begin
+    RepSpec.f2 = CurrentDate; // default period
+  end;
+
+  // repspec 3
+  if(nonblank(RepSpec.f3)) then begin
+    Accr.AccNumber = RepSpec.f3;
+    if(ReadFirstMain(Accr,1,true)) then begin
+      accName = RepSpec.f3 & " " & Accr.Comment;
+    end;
+  end else begin
+    MessageBox(0,"Please select an account!");
+    goto BreakL;
+  end;
+
+  // set month over 60 days
+  datePeriod = RepSpec.f2;
+  sd_Over60 = AddMonth(datePeriod,-3);
+  ed_Over60 = sd_Over60;
+  ed_Over60.day = DaysInMonth(GetYear(sd_Over60),GetMonth(sd_Over60));
+
+
+  // start report job
+  StartReportJob("Credit Agreement Accounts Report");
+
+  
+  // -> by account
+  if(nonblank(RepSpec.f3)) then begin
+
+    //
+    testf = true;
+    While LoopMain(TRr,1,testf) begin
+      TransCust = "";
+      rwcnt = MatRowCnt(TRr);
+
+      // -> invoices
+      if(TRr.IntYc == 201) then begin
+        for(v=0; v<rwcnt; v=v+1) begin
+
+          MatRowGet(TRr,v,TRrw);
+          if(v==0) then begin
+            w = 0; splitString=""; pos=0;
+            while (GetNextSubstring(TRr.Comment,pos," ",splitString)) begin
+              if(w==0) then begin
+                TransCust = splitString;
+                w = w + 1;
+              end;
+            end;
+          end;
+        
+          // if cust.code no match
+          if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != TransCust)) then begin
+            goto LSkip;
+          end;
+
+          // ==========================================  ==============================================
+          if(TRrw.AccNumber == RepSpec.f3) then begin
+
+            j = 0;
+            While(j >= -2) begin
+              datePeriod = RepSpec.f2;
+              sd = AddMonth(datePeriod,j);
+              sd.day = 1;
+              ed = sd;
+              ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+              // is transaction within spec.date.range
+              if(DateInRange(TRr.TransDate,sd,ed)) then begin
+    
+                // -> CURRENT
+                if(j == 0) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit[i] = arr_credit[i] + TRrw.CredVal;
+                      arr_debit[i] = arr_debit[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit[arr_size] = arr_credit[arr_size] + TRrw.CredVal;
+                      arr_debit[arr_size] = arr_debit[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 30 DAYS
+                if(j == -1) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit30[i] = arr_credit30[i] + TRrw.CredVal;
+                      arr_debit30[i] = arr_debit30[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit30[arr_size] = arr_credit30[arr_size] + TRrw.CredVal;
+                      arr_debit30[arr_size] = arr_debit30[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 60 DAYS
+                if(j == -2) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit60[i] = arr_credit60[i] + TRrw.CredVal;
+                      arr_debit60[i] = arr_debit60[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit60[arr_size] = arr_credit60[arr_size] + TRrw.CredVal;
+                      arr_debit60[arr_size] = arr_debit60[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+              end;
+              j = j-1;
+            end;
+
+            // is transaction after 90 spec.date.range
+            if(TRr.TransDate <= ed_Over60) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(TransCust == arr_custcode[i]) then begin
+                  arr_creditOver60[i] = arr_creditOver60[i] + TRrw.CredVal;
+                  arr_debitOver60[i] = arr_debitOver60[i] + TRrw.DebVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_custcode[arr_size] = TransCust;
+                //
+                if(TransCust == arr_custcode[arr_size]) then begin
+                  arr_creditOver60[arr_size] = arr_creditOver60[arr_size] + TRrw.CredVal;
+                  arr_debitOver60[arr_size] = arr_debitOver60[arr_size] + TRrw.DebVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+          // ==========================================  ==============================================
+        end;
+      end;
+      
+
+
+      // -> receipts
+      if(TRr.IntYc == 202) then begin
+
+        for(v=0; v<rwcnt; v=v+1) begin
+          MatRowGet(TRr,v,TRrw);
+
+          if(v==0) then begin
+            IPr.SerNr = TRr.Number;
+            if(ReadFirstMain(IPr,1,true)) then begin
+              MatRowGet(IPr,0,IPrw);
+              TransCust = IPrw.CustCode;
+            end;
+          end else begin
+            TransCust = TRrw.CompCode;
+          end;
+
+          // if cust.code no match
+          if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != TransCust)) then begin
+            goto LSkip;
+          end;
+        
+          // ==========================================  ==============================================
+          if(TRrw.AccNumber == RepSpec.f3) then begin
+
+            j = 0;
+            While(j >= -2) begin
+              datePeriod = RepSpec.f2;
+              sd = AddMonth(datePeriod,j);
+              sd.day = 1;
+              ed = sd;
+              ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+              // is transaction within spec.date.range
+              if(DateInRange(TRr.TransDate,sd,ed)) then begin
+    
+                // -> CURRENT
+                if(j == 0) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit[i] = arr_credit[i] + TRrw.CredVal;
+                      arr_debit[i] = arr_debit[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit[arr_size] = arr_credit[arr_size] + TRrw.CredVal;
+                      arr_debit[arr_size] = arr_debit[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 30 DAYS
+                if(j == -1) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit30[i] = arr_credit30[i] + TRrw.CredVal;
+                      arr_debit30[i] = arr_debit30[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit30[arr_size] = arr_credit30[arr_size] + TRrw.CredVal;
+                      arr_debit30[arr_size] = arr_debit30[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 60 DAYS
+                if(j == -2) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit60[i] = arr_credit60[i] + TRrw.CredVal;
+                      arr_debit60[i] = arr_debit60[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit60[arr_size] = arr_credit60[arr_size] + TRrw.CredVal;
+                      arr_debit60[arr_size] = arr_debit60[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+              end;
+              j = j-1;
+            end;
+
+            // is transaction after 90 spec.date.range
+            if(TRr.TransDate <= ed_Over60) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(TransCust == arr_custcode[i]) then begin
+                  arr_creditOver60[i] = arr_creditOver60[i] + TRrw.CredVal;
+                  arr_debitOver60[i] = arr_debitOver60[i] + TRrw.DebVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_custcode[arr_size] = TransCust;
+                //
+                if(TransCust == arr_custcode[arr_size]) then begin
+                  arr_creditOver60[arr_size] = arr_creditOver60[arr_size] + TRrw.CredVal;
+                  arr_debitOver60[arr_size] = arr_debitOver60[arr_size] + TRrw.DebVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+          // ==========================================  ==============================================
+        end;
+      end;
+
+
+
+      // -> transferred accounts
+      if(TRr.IntYc == 155) then begin
+        for(v=0; v<rwcnt; v=v+1) begin
+          MatRowGet(TRr,v,TRrw);
+          if(v==0) then begin
+            w = 0; splitString=""; pos=0;
+            while (GetNextSubstring(TRr.RefStr,pos,".",splitString)) begin
+              w = w + 1;
+              if(w==2) then begin
+                IVr.SerNr = splitString;
+                if(ReadFirstMain(IVr,1,true)) then begin
+                  TransCust = IVr.CustCode;
+                end;
+              end;
+            end;
+          end;
+
+          // if cust.code no match
+          if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != TransCust)) then begin
+            goto LSkip;
+          end;
+
+          // ==========================================  ==============================================
+          if(TRrw.AccNumber == RepSpec.f3) then begin
+
+            j = 0;
+            While(j >= -2) begin
+              datePeriod = RepSpec.f2;
+              sd = AddMonth(datePeriod,j);
+              sd.day = 1;
+              ed = sd;
+              ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+              // is transaction within spec.date.range
+              if(DateInRange(TRr.TransDate,sd,ed)) then begin
+    
+                // -> CURRENT
+                if(j == 0) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit[i] = arr_credit[i] + TRrw.CredVal;
+                      arr_debit[i] = arr_debit[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit[arr_size] = arr_credit[arr_size] + TRrw.CredVal;
+                      arr_debit[arr_size] = arr_debit[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 30 DAYS
+                if(j == -1) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit30[i] = arr_credit30[i] + TRrw.CredVal;
+                      arr_debit30[i] = arr_debit30[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit30[arr_size] = arr_credit30[arr_size] + TRrw.CredVal;
+                      arr_debit30[arr_size] = arr_debit30[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+
+                // -> 60 DAYS
+                if(j == -2) then begin
+                  found = false;
+                  for(i=0; i<arr_size; i=i+1) begin
+                    // item in array
+                    if(TransCust == arr_custcode[i]) then begin
+                      arr_credit60[i] = arr_credit60[i] + TRrw.CredVal;
+                      arr_debit60[i] = arr_debit60[i] + TRrw.DebVal;
+                      found = true;
+                    end;
+                  end;
+                  // if item not in array
+                  if(found==false) then begin
+                    arr_custcode[arr_size] = TransCust;
+                    //
+                    if(TransCust == arr_custcode[arr_size]) then begin
+                      arr_credit60[arr_size] = arr_credit60[arr_size] + TRrw.CredVal;
+                      arr_debit60[arr_size] = arr_debit60[arr_size] + TRrw.DebVal;
+                    end;
+                    arr_size = arr_size + 1;
+                  end;
+                end;
+              end;
+              j = j-1;
+            end;
+
+            // is transaction after 90 spec.date.range
+            if(TRr.TransDate <= ed_Over60) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(TransCust == arr_custcode[i]) then begin
+                  arr_creditOver60[i] = arr_creditOver60[i] + TRrw.CredVal;
+                  arr_debitOver60[i] = arr_debitOver60[i] + TRrw.DebVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_custcode[arr_size] = TransCust;
+                //
+                if(TransCust == arr_custcode[arr_size]) then begin
+                  arr_creditOver60[arr_size] = arr_creditOver60[arr_size] + TRrw.CredVal;
+                  arr_debitOver60[arr_size] = arr_debitOver60[arr_size] + TRrw.DebVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+          // ==========================================  ==============================================
+        end;
+      end;
+
+
+    LSkip:;
+    end;
+  end;
+
+
+  periodEnd = RepSpec.f2;
+  periodEnd.day = DaysInMonth(GetYear(RepSpec.f2),GetMonth(RepSpec.f2));
+  // start report job
+  StartFormat(15);
+    OutString(1,0,"Credit Agreement Accounts Report, " & CustName & " (" & accName & ") Aged To: " & periodEnd,true);
+  EndHeader;
+  EndFormat;
+
+  StartFormat(15); // -> show heading
+    OutString(0,0,"",false);
+    OutString(5,0,"Code",false);
+    OutString(20,0,"Customer",false);
+    OutString(125,0,"Levied (" & MonthName(RepSpec.f2) & ")",true);
+    OutString(160,0,"Paid (" & MonthName(RepSpec.f2) & ")",true);
+    OutString(205,0,"Levied (" & MonthName(AddMonth(RepSpec.f2,-1)) & ")",true);
+    OutString(240,0,"Paid (" & MonthName(AddMonth(RepSpec.f2,-1)) & ")",true);
+    OutString(285,0,"Levied (" & MonthName(AddMonth(RepSpec.f2,-2)) & ")",true);
+    OutString(320,0,"Paid (" & MonthName(AddMonth(RepSpec.f2,-2)) & ")",true);
+    OutString(365,0,"Levied (Past " & MonthName(AddMonth(RepSpec.f2,-2)) & ")",true);
+    OutString(400,0,"Paid (Past " & MonthName(AddMonth(RepSpec.f2,-2)) & ")",true);
+    OutString(445,0,"Total Levied",true);
+    OutString(1,0,"Total Paid",true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+
+  for(i=0; i<arr_custcode.length; i=i+1) begin
+  StartFormat(15); // -> show data
+    OutString(0,0,"",false);
+    OutString(5,"DblCUVc",arr_custcode[i],false);
+    // -> no cust.code
+    if(blank(arr_custcode[i])) then begin
+      OutString(20,0,"",false);
+    end else begin
+      // -> item description
+      CUr.Code = arr_custcode[i];
+      if(ReadFirstMain(CUr,1,true)) then begin
+        OutString(20,0,CUr.Name,false);
+      end;
+    end;
+    OutString(125,0,arr_debit[i],true);
+    OutString(160,0,arr_credit[i],true);
+    OutString(205,0,arr_debit30[i],true);
+    OutString(240,0,arr_credit30[i],true);
+    OutString(285,0,arr_debit60[i],true);
+    OutString(320,0,arr_credit60[i],true);
+    OutString(365,0,arr_debitOver60[i],true);
+    OutString(400,0,arr_creditOver60[i],true);
+    // -> item debit total
+    arr_debit_itemSum[i] = arr_debit[i] + arr_debit30[i] + arr_debit60[i] + arr_debitOver60[i];
+    OutString(445,0,arr_debit_itemSum[i],true);
+    // -> item credit total
+    arr_credit_itemSum[i] = arr_credit[i] + arr_credit30[i] + arr_credit60[i] + arr_creditOver60[i];
+    OutString(1,0,arr_credit_itemSum[i],true);
+
+    // -> period payment total
+    arr_debit_monthSum[0] = arr_debit_monthSum[0] + arr_debit[i];
+    arr_debit_monthSum[1] = arr_debit_monthSum[1] + arr_debit30[i];
+    arr_debit_monthSum[2] = arr_debit_monthSum[2] + arr_debit60[i];
+    arr_debit_monthSum[3] = arr_debit_monthSum[3] + arr_debitOver60[i];
+
+    // -> period invoice total
+    arr_credit_monthSum[0] = arr_credit_monthSum[0] + arr_credit[i];
+    arr_credit_monthSum[1] = arr_credit_monthSum[1] + arr_credit30[i];
+    arr_credit_monthSum[2] = arr_credit_monthSum[2] + arr_credit60[i];
+    arr_credit_monthSum[3] = arr_credit_monthSum[3] + arr_creditOver60[i];
+  EndFormat;
+  end;
+
+  Gray_Divider(0,1);
+
+  StartFormat(15); // show sum by period
+    OutString(0,0,"",false);
+    OutString(5,0,"",false);
+    OutString(20,0,"Period Total:",false); 
+    OutString(125,0,arr_debit_monthSum[0],true);
+    OutString(160,0,arr_credit_monthSum[0],true);
+    OutString(205,0,arr_debit_monthSum[1],true);
+    OutString(240,0,arr_credit_monthSum[1],true);
+    OutString(285,0,arr_debit_monthSum[2],true);
+    OutString(320,0,arr_credit_monthSum[2],true);
+    OutString(365,0,arr_debit_monthSum[3],true);
+    OutString(400,0,arr_credit_monthSum[3],true);
+    OutString(445,0,(arr_debit_monthSum[0] + arr_debit_monthSum[1] + arr_debit_monthSum[2] + arr_debit_monthSum[3]),true);
+    OutString(1,0,(arr_credit_monthSum[0] + arr_credit_monthSum[1] + arr_credit_monthSum[2] + arr_credit_monthSum[3]),true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  
+  EndJob;
+
+BreakL:;
+end;

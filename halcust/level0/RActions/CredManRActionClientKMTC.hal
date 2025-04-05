@@ -1,0 +1,59 @@
+external procedure CredManVc_PasteCurncyCode(var record CredManVc);
+external function val MulWithRateToBase1(var string,Date,val,roundmode);
+external updating procedure DeleteTransaction(LongInt,Integer);
+external function Boolean TransInFiscal(Date);
+external procedure AddTransAutoTransRows(record TRVc);
+external procedure TRSumup(var record TRVc,var val);
+external procedure AddEuroCurncyTrRow(record TRVc,string,string,string,string,val,Boolean,Boolean,var val,string,val,val,val,val,val,val,val,LongInt,Boolean,string);
+external function Boolean CheckTTRPerRow(string,string,string,Boolean,var string,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external function string 255 CheckTrans(var record TRVc,Integer,Boolean);
+external updating procedure SaveTrans(record TRVc);
+external function Boolean SerNrTestCredManVc(LongInt,Date,var Boolean);
+external function Integer CashSerNumberTest(string,val,string,LongInt,var Boolean);
+external procedure AddCredManTypeMatrix(var record CredManVc,record CredManTypeVc);
+external function val GetIntRate(string,Date);
+
+
+global
+function LongInt CredManVcRecordDefaults(var record CredManVc CredManr,record CredManVc CredMan2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record CredManTypeVc CredManTyper;
+  record CredManSetBlock CredManSetb;
+  
+  BlockLoad(CredManSetb);
+  CredManr.SerNr = -1;
+  CredManr.SalesMan = CurrentUser;
+  CredManr.TransDate = CurrentDate;
+  // CredManr.startDate = CurrentDate;
+  CredManr.FirstInvDate = AddMonth(CredManr.startDate,1);
+  CredManr.FirstInvDate = AddDay(CredManr.FirstInvDate,CredManSetb.InvDay - GetDay(CredManr.FirstInvDate));
+  CredManr.Type = CredManSetb.DefaultType;
+
+//  CredManr.DepositItem = CredManSetb.DepositItem;
+  CredManTyper.Code = CredManr.Type;
+  if (ReadFirstMain(CredManTyper,1,true)) then begin
+    CredManr.DepositSum = CredManTyper.DepositSum;
+    CredManr.DepositPrc = CredManTyper.DepositPrc;
+    CredManr.Instalment = CredManTyper.Instalment;
+    CredManr.PayDeal = CredManTyper.PayDeal;
+    CredManr.InstalmentType = CredManTyper.InstalmentType;
+    CredManr.InstalmentMonths = CredManTyper.InstalmentMonths;
+    CredManr.RateType = CredManTyper.RateType;
+  end;
+  CredManr.CredManAcc = CredManSetb.CredManAcc;
+  CredManr.ARAcc = CredManSetb.ARAcc;
+//  CredManr.RateItem = CredManSetb.RateItem;
+  if (CredManr.RateType==0) then begin
+    CredManr.IntRate = GetIntRate(CredManr.Type,CredManr.TransDate);
+  end;
+  CredManVc_PasteCurncyCode(CredManr);
+  AddCredManTypeMatrix(CredManr,CredManTyper);
+  if (SingleUserMode) then begin
+    CredManr.SerNr = NextSerNr("CredManVc",CredManr.TransDate,-1,false,"");
+  end;
+  CredManVcRecordDefaults = res;
+  return;
+END;

@@ -1,0 +1,122 @@
+external inner function LongInt MonthDiff(Date,Date);
+external procedure GetCountResPeriod(var date,var date);
+
+
+function boolean ReaderEntryDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record ReaderEntryVc ReaderEntryr;
+  date sd,ed;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ReaderEntryr);
+  ReaderEntryr.PeriodEndDate = AddDay(ReaderEntryr.PeriodStartDate,-GetDay(ReaderEntryr.PeriodStartDate) + DaysInMonth(GetYear(ReaderEntryr.PeriodStartDate),GetMonth(ReaderEntryr.PeriodStartDate)));
+
+  PutWindowRecord(wn,ReaderEntryr);
+  ReaderEntryDClassStartDateEFAfter = res;
+return;
+end;
+
+
+global
+function Boolean ReaderEntryDClassBookNoEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  record ReaderEntryVc Readerr;
+  row ReaderEntryVc Readerrw;
+  record FlatCountersVc FlatCountersr;// meter
+  record MHistoryVc MHr;//meter history
+  record NAContractVc COr;
+  integer i,rwcnt;
+  Boolean wloop,testf,testh;
+
+  GetWindowRecord(wn,Readerr);
+  rwcnt = MatRowCnt(Readerr);
+  for(i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(Readerr,i,Readerrw);
+    ClearRow(Readerr,Readerrw,i);
+    MatRowPut(Readerr,i,Readerrw);
+  end;
+
+  i = 0;
+  wloop = true;
+  FlatCountersr.UserStr1 = Readerr.BookNo;
+  while (LoopKey("UserStr1", FlatCountersr,1,wloop)) begin
+
+    // stop loop if..
+    if (FlatCountersr.UserStr1 != Readerr.BookNo) then begin wloop = false; end else begin
+      Readerrw.MeterID = FlatCountersr.SerNr;
+      Readerrw.MeterNo = FlatCountersr.CounterNo;
+      Readerrw.SeqNo = FlatCountersr.UserStr2; // sequence.no.
+      Readerrw.AlphaNo = FlatCountersr.UserStr3; // alpha.no.
+      Readerrw.Address = FlatCountersr.Address;
+      // get customer data
+      COr.SerNr = FlatCountersr.Contract;
+      if(ReadFirstMain(COr,1,true)) then begin
+        Readerrw.CustCode = COr.CustCode; // cust.code
+        Readerrw.Customer = COr.CustName; // cust.name
+      end;
+      // get prev.readings data
+      MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+      if(ReadFirstMain(MHr,1,true)) then begin
+        Readerrw.PrevReading = MHr.currReading;
+        Readerrw.LatestReadingPeriod = MHr.StartDate & "-" & MHr.EndDate;
+      end;
+      
+      MatRowPut(Readerr,i,Readerrw);
+      i = i + 1;
+    end;
+  end;
+
+  PutWindowRecord(wn,Readerr);
+  ReaderEntryDClassBookNoEFAfter = true;
+  RETURN;
+END;
+
+
+// WINDOW ACTION -> AFTER-FIELD-INPUT
+global
+function Boolean ReaderEntryDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  res = true;
+
+  switch (fieldname) begin
+    case "PeriodStartDate": res = ReaderEntryDClassStartDateEFAfter(wn,fn,rownr,changed);
+    case "BookNo": res = ReaderEntryDClassBookNoEFAfter(wn,fn,rownr,changed);
+
+  end;
+  ReaderEntryDClassAfterEditField = res;
+  RETURN;
+END; 
+
+global
+function Boolean ReaderEntryDClassActiveEditField(Integer wn,string fieldname,Integer fn, Integer wnst,Integer rownr, Integer changed)
+BEGIN
+  Boolean res;
+  res = true;
+
+  switch (fieldname) begin
+    case "Consumption": res = false;
+  end;
+  ReaderEntryDClassActiveEditField = res;
+  RETURN;
+END;
+
+global
+procedure ExportMeterEntryDsm()
+begin
+  record ReaderEntryVc Readerr;
+  row ReaderEntryVc Readerrw;
+  record RcVc RepSpec;
+  Integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Readerr);
+ 
+  RepSpec.repname = "MeterEntryRn";
+  RepSpec.long1 = Readerr.SerNr;
+  RepSpec.Media = mtScreen;
+  RunReport(RepSpec,0);
+
+  return;
+end;

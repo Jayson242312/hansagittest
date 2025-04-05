@@ -1,0 +1,198 @@
+
+procedure UpdateLinkedBuildCode(var record FlatGroupVc FlatGroupr) begin
+  Record FlatsVc Flatsr;
+  Row FlatGroupVc FlatGrouprw;
+  integer rwc,i;
+  string 50 buildcode,buildaddress;
+  
+  buildcode = "";
+  FlatGroupr.LinkBuildCode = "";
+  rwc = MatRowCnt(FlatGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(FlatGroupr,i,FlatGrouprw);
+    Flatsr.FlatCode = FlatGrouprw.RowCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      if buildcode=="" then begin
+        buildcode = Flatsr.Code;
+        buildaddress = Flatsr.Address;
+      end;
+      if buildcode!=Flatsr.Code or blank(Flatsr.Code) then begin
+        buildcode = "";
+        buildaddress = "";
+        GoTo LUpdateLinkedBuildCode;
+      end;
+    end;
+  end;
+  
+LUpdateLinkedBuildCode:;
+  FlatGroupr.LinkBuildCode = buildcode;
+  FlatGroupr.Address = buildaddress;
+return;
+end;
+
+updating procedure UpdateFlatGroupSuppVc(record FlatGroupVc FlatGroupr) begin
+  Row FlatGroupVc FlatGrouprw;
+  Record FlatGroupSuppVc BGSr;
+  integer rwc,i;
+  
+  rwc=MatRowCnt(FlatGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(FlatGroupr,i,FlatGrouprw);
+    if nonblank(FlatGrouprw.RowCode) then begin
+      RecordNew(BGSr);
+      BGSr.HeadCode=FlatGroupr.Code;
+      BGSr.RowCode=FlatGrouprw.RowCode;
+      BGSr.Comment=FlatGroupr.Comment;
+      BGSr.StartDate=FlatGroupr.StartDate;
+      BGSr.EndDate=FlatGroupr.EndDate;
+      RecordStore(BGSr,false);
+    end;
+  end;
+  
+return;
+end;
+
+updating 
+procedure RemoveFlatGroupSuppVc(record FlatGroupVc FlatGroupr) begin
+  Row FlatGroupVc FlatGrouprw;
+  Record FlatGroupSuppVc BGSr;
+  integer rwc,i;
+  
+  rwc=MatRowCnt(FlatGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(FlatGroupr,i,FlatGrouprw);
+    BGSr.HeadCode=FlatGroupr.Code;
+    BGSr.RowCode=FlatGrouprw.RowCode;
+    if ReadFirstMain(BGSr,2,true) then begin
+      RecordDelete(BGSr);
+    end;
+  end;
+  
+return;
+end;
+
+global
+function LongInt FlatGroupVcRecordCheck(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroup2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Row FlatGroupVc FlatGrouprw;
+  string 50 rowcode;
+  integer i,ii,rwc;
+  
+  res=0;
+  if blank(FlatGroupr.Code) then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res=-1;
+    goto EndRecordCheck;
+  end;
+  
+  rwc=MatRowCnt(FlatGroupr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(FlatGroupr,i,FlatGrouprw);
+    rowcode=FlatGrouprw.RowCode;
+    if blank(rowcode) then begin
+      RecordCheckError(1058,"",i,"RowCode");
+      res=-1;
+      goto EndRecordCheck;
+    end;
+    for(ii=i+1;ii<rwc;ii=ii+1)begin
+      MatRowGet(FlatGroupr,ii,FlatGrouprw);
+      if rowcode==FlatGrouprw.RowCode then begin
+        RecordCheckError(1000942,(i+1),ii,"RowCode");
+        res=-1;
+        goto EndRecordCheck;
+      end;
+    end;
+  end;
+  
+EndRecordCheck:;
+  FlatGroupVcRecordCheck=res;
+end;
+
+global updating function longint FlatGroupVcRecordImport(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b) begin
+  longint res;
+  
+  UpdateFlatGroupSuppVc(FlatGroupr);
+  UpdateLinkedBuildCode(FlatGroupr);
+  
+  FlatGroupVcRecordImport=res;
+return;
+end;
+
+global
+updating function longint FlatGroupVcRecordSave(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  UpdateLinkedBuildCode(FlatGroupr);
+  
+  FlatGroupVcRecordSave = res;
+return;
+end;
+
+global
+updating function longint FlatGroupVcRecordUpdate(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  UpdateLinkedBuildCode(FlatGroupr);
+  
+  FlatGroupVcRecordUpdate = res;
+return;
+end;
+
+global
+updating function longint FlatGroupVcRecordSaveAfter(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  UpdateFlatGroupSuppVc(FlatGroupr);
+  
+  FlatGroupVcRecordSaveAfter = res;
+return;
+end;
+
+global
+updating function longint FlatGroupVcRecordUpdateAfter(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  RemoveFlatGroupSuppVc(FlatGroupr2);
+  UpdateFlatGroupSuppVc(FlatGroupr);
+  
+  FlatGroupVcRecordUpdateAfter = res;
+return;
+end;
+
+global
+updating function longint FlatGroupVcRecordRemove(var record FlatGroupVc FlatGroupr,record FlatGroupVc FlatGroupr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  //UpdateFlatGroupSuppVc(FlatGroupr);
+  RemoveFlatGroupSuppVc(FlatGroupr);
+  
+  FlatGroupVcRecordRemove = res;
+return;
+end;
+
+global
+function LongInt FlatGroupVcRecordInIndex(record FlatGroupVc FlatGroupr,string indexname)
+begin
+  LongInt res;
+  
+  res = 1;
+  if indexname == "CommentWithoutSpecClass" then begin
+    if SetInSet("1",FlatGroupr.Classification) or SetInSet("2",FlatGroupr.Classification) or SetInSet("3",FlatGroupr.Classification) then begin
+      res = 0;
+    end;
+  end;
+  
+  FlatGroupVcRecordInIndex = res;
+  return;
+end;

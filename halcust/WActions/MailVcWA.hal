@@ -1,0 +1,76 @@
+
+// global
+// procedure OBS_GotoAnswDateMaildsm() begin
+  // Integer wn,nwn;
+  // Record MailVc Mailr;
+
+  // wn = CurWindow;
+  // GetWindowRecord(wn,Mailr);
+  // WindowFieldGoto(wn,Mailr,-1,"AnswDate",true);
+
+// return;
+// end;
+
+// global
+// procedure OpenBBSDocSetFromMaildsm() begin
+  // Record BBSDocSetVc DocSetr,newDocSetr;
+  // record BBSDocSettingBlock BBSDocSettingBl;
+  // Record MailVc Mailr;
+  // Record UserVc Userr;
+  // Integer wn,nwn;
+
+  // wn=CurWindow;
+
+  // if windowstate(wn)==0 then begin
+    // GetWindowRecord(wn,Mailr);
+    // DocSetr.MailSerNr=Mailr.SerNr;
+    // if ReadFirstMain(DocSetr,1,true) then begin
+      // nwn=OpenWindow("BBSDocSetDClass",1,0,"","",DocSetr);
+    // end else begin
+      // BlockLoad(BBSDocSettingBl);
+      // RecordNew(newDocSetr);
+      // newDocSetr.MailSerNr=Mailr.SerNr;
+      // Userr.Code=CurrentUser;
+      // ReadFirstMain(Userr,1,true);
+      // newDocSetr.User=CurrentUser;
+      // newDocSetr.UserName=Userr.Name;
+      // newDocSetr.ResolutionDate = CurrentDate;
+      // newDocSetr.ResUserCode = BBSDocSettingBl.ResUserCode;
+      // newDocSetr.ResUserName = BBSDocSettingBl.ResUserName;
+      // nwn=OpenWindow("BBSDocSetDClass",1,0,"","",newDocSetr);
+    // end;
+  // end else begin
+    // beep;
+  // end;
+
+  // return;
+// end;
+
+global
+function Boolean MailDClassLockedFlagButtonAction(Integer wn,Integer value)
+begin
+  Boolean res;
+  record MailVc Mailr;
+
+  res = true;
+  switch (WindowState(wn)) begin
+    case Rs_update:
+      GetPrevWindowRecord(wn,Mailr);
+      if (Mailr.LockedFlag!=0) then begin
+        if !USerCanAction("BBSAllowUncheckMailClosed",false) then begin //OBS
+          MessageBox(22011,"");
+          res = false;
+        end;
+      end;
+    case Rs_normal:
+      GetWindowRecord(wn,Mailr);
+      if (Mailr.LockedFlag!=0) then begin
+        if !USerCanAction("BBSAllowUncheckMailClosed",false) then begin //OBS
+          MessageBox(22011,"");
+          res = false;
+        end;
+      end;
+  end;
+  MailDClassLockedFlagButtonAction = res;
+  return;
+end;

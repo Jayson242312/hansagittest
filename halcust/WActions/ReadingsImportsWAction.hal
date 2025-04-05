@@ -1,0 +1,39 @@
+function boolean ReadingsIClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)  // Readings impord
+begin
+  record RcVc rcr;
+  date sd,ed,d;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,rcr);
+  d = rcr.d1;
+  d.day = 1;
+  rcr.d1 = d;
+  rcr.d2 = AddDay(rcr.d1,-GetDay(rcr.d1) + DaysInMonth(GetYear(rcr.d1),GetMonth(rcr.d1)));
+
+  PutWindowRecord(wn,rcr);
+  ReadingsIClassStartDateEFAfter = res;
+return;
+end;
+
+
+
+// WINDOW ACTION -> AFTER-FIELD-INPUT
+global
+function Boolean ReadingsIClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  res = true;
+
+  switch (fieldname) begin
+    case "d1": res = ReadingsIClassStartDateEFAfter(wn,fn,rownr,changed);
+    case "d2": res = false;
+
+  end;
+  ReadingsIClassAfterEditField = res;
+  RETURN;
+END; 
+
+
+
+

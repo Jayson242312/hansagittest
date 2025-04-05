@@ -1,0 +1,48 @@
+begin
+  
+    BlockBegin(PMBlock,-,"");
+  NewAutosyncHBlock(kSyncDirectionToClient);
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(Code,M4Code,2,0);
+  ArrayField(AccNr,M4Code,10,AccVc);
+  ArrayField(BankNr,M4Str,60,0);
+  ArrayField(Comment,M4Str,60,0);
+  ArrayField(BankName,M4Str,60,0);
+  ArrayField(Objects,M4UStr,60,ObjVc);
+  ArrayField(DocName,M4UStr,20,0);
+  ArrayField(PrelAccIn,M4Code,10,AccVc);
+  ArrayField(PrelAccOut,M4Code,10,AccVc);
+  ArrayField(TSerStartIn,M4Long,0,0);
+  ArrayField(TSerEndIn,M4Long,0,0);
+  ArrayField(TSerStartOut,M4Long,0,0);
+  ArrayField(TSerEndOut,M4Long,0,0);
+  ArrayField(DonotGenTrans,M4Set,32,0);  
+  ArrayField(CheckType,M4Set,36,0);  
+  ArrayField(CalcForm,M4Code,20,0);  
+  ArrayField(TAX,M4Val,0,0);
+  ArrayField(TAXAccIn,M4Code,10,AccVc);
+  ArrayField(TAXAccOut,M4Code,10,AccVc);
+  ArrayField(SortCode,M4Str,10,0);
+  ArrayField(ForceBankVals,M4Set,65,0);
+  ArrayField(BackOfficeAcc,M4Code,10,AccVc);
+  ArrayField(DiffrenceAcc,M4Code,10,AccVc);
+  ArrayField(BankCode,M4Code,12,BankVc);
+  ArrayField(ChangeAcc,M4Code,10,AccVc);
+  ArrayField(PubAdmCode,M4Code,5,0);
+  ArrayField(YodleeaccountId,M4Str,60,0);
+  ArrayField(SplitVATAcc,M4Code,10,AccVc);
+  ArrayField(YapilyStatus,M4Set,746,0);
+  ArrayField(YapilyValidUntilDate,M4Date,0,0);
+  ArrayField(EBAuthCode,M4Str,60,0);
+  ArrayField(EBSessionId,M4Str,60,0);
+  ArrayField(EBValidUntilTime,M4Time,0,0);
+  ArrayField(EBAccountUId,M4Str,60,0);
+  ArrayField(EBTime,M4Time,0,0);
+  ArrayField(INPayPriority,M4Long,0,0); //OBS
+  ArrayField(PrePayPriority,M4Long,0,0); //OBS
+  EndArray;
+  EndBlock;
+  
+  return;
+end;

@@ -1,0 +1,144 @@
+external procedure GetCountResPeriod(var date,var date);
+global
+updating procedure MetersIn()
+begin
+  record FlatCountersVc FlatCountersr; // Meters
+  record INVc INr; // items
+  record NAContractVc COr; // contract
+  row NAContractVc COrw; // contract row
+  string 255 MeterNo,AlphaNo,AccountNo,BookNo,SeqNo,PremCode,BuildCode;
+  integer j,i,rwcnt;
+  
+  j = 0;
+  // loops through txt fileff
+  while (NextImportLine(true)) begin
+    MeterNo = ImportField;
+    AlphaNo = ImportField;
+    AccountNo = ImportField;
+    BookNo = ImportField;
+    SeqNo = ImportField;//dsfsf
+    
+    // contract information
+    COr.SerNr = AccountNo;
+    if(ReadFirstMain(COr,1,true)) then begin
+      //
+      RecordNew(FlatCountersr);
+      FlatCountersr.SerNr  = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+      FlatCountersr.Contract = AccountNo;
+      FlatCountersr.CounterNo = MeterNo;
+      FlatCountersr.UserStr1 = BookNo; //book.no
+      FlatCountersr.UserStr2 = SeqNo;//seq.no
+      FlatCountersr.UserStr3 = AlphaNo;//Alpha.no
+      //
+      PremCode = COr.FlatCode; // premise code
+      BuildCode = COr.BuildCode; // Erf code
+      FlatCountersr.FlatCode = COr.FlatCode;
+      FlatCountersr.Code = COr.BuildCode;
+      FlatCountersr.Address = COr.FlatAddress; // address
+
+      // add item to meter
+      i = 0; rwcnt = 0;
+      rwcnt = MatRowCnt(COr);
+      while (i<rwcnt) begin
+        MatRowGet(COr,i,COrw);
+        // find item
+        INr.Code = COrw.ArtCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          // check if item -> Water Unit Charges
+          if(INr.ServQuantInCalc == 2) then begin
+            FlatCountersr.CounterType = INr.Code; // set item to meter type
+            goto LineBreak;
+          end;
+        end;
+        i = i + 1;
+      end;
+      LineBreak:;
+      RecordImportStore(FlatCountersr,false);
+    end;
+    j = j + 1;
+  end;
+
+  MessageBox(0,"No. of Meters Imported:s " & j);
+  return;
+end;
+
+//     // store record
+//     RecordNew(FlatCountersr);
+//     FlatCountersr.SerNr  = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+//     FlatCountersr.CounterNo = MeterNumber;
+//     FlatCountersr.Address = StreetAddress;
+//     FlatCountersr.Contract = AccountNo;
+//     FlatCountersr.UserStr1 = BookNo;
+//     FlatCountersr.UserStr2 = SeqNo;
+//     FlatCountersr.UserStr3 = Alpha;
+
+//     // find contract
+//     COr.SerNr = FlatCountersr.Contract;
+//     if(ReadFirstMain(COr,1,true)) then begin
+//       PremCode = COr.FlatCode; // premise code
+//       BuildCode = COr.BuildCode; // Erf code
+//       FlatCountersr.FlatCode = COr.FlatCode;
+//       FlatCountersr.Code = COr.BuildCode;
+//       FlatCountersr.Address = COr.FlatAddress; // address
+
+//       // add item to meter
+//       i = 0; rwcnt = 0;
+//       rwcnt = MatRowCnt(COr);
+//       while (i<rwcnt) begin
+//         MatRowGet(COr,i,COrw);
+//         // find item
+//         INr.Code = COrw.ArtCode;
+//         if(ReadFirstMain(INr,1,true)) then begin
+//           // check if item -> Water Unit Charges
+//           if(INr.AlternativeCode == "Water Unit Charges") then begin
+//             FlatCountersr.CounterType = INr.Code; // set item to meter type
+//             goto LineBreak;
+//           end;
+//         end;
+//         i = i + 1;
+//       end;
+//     LineBreak:;
+//     end;
+    
+//     // store readings
+//     RecordNew(CountResr);
+//       CountResr.SerNr = FlatCountersr.SerNr;
+//       CountResr.FlatCounterSerNr =  FlatCountersr.SerNr ;
+//       CountResr.FlatCode = COr.FlatCode;
+//       CountResr.CounterAddr = FlatCountersr.Address;
+//       CountResr.BuildCode = COr.BuildCode;
+//       CountResr.RegDate = StringToDate("01/07/2024");
+//       CountResr.StartDate = StringToDate("01/07/2024");
+//       CountResr.EndDate = StringToDate("31/07/2024");
+//       CountResr.StartVal = StringToInt(PrevReading);
+//       CountResr.EndVal = StringToInt(CurrReading);
+//       CountResr.CounterType = FlatCountersr.CounterType;
+//       CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+//       CountResr.CounterNo = FlatCountersr.CounterNo;
+//       CountResr.ContractNr = FlatCountersr.Contract;
+//       CountResr.Itype = 0;
+//       CountResr.InvAmount = CountResr.EndVal - CountResr.StartVal; //adjusted quantity
+//       FlatCountersr.InitAmount = StringToInt(CountResr.EndVal); // when we import meters this will be the init reading amount
+//     RecordImportStore(CountResr,false);
+//     RecordImportStore(FlatCountersr,false);
+
+
+//     // store readings history
+//     RecordNew(MHr);
+//       MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+//       MHr.MeterNo = MeterNumber;
+//       MHr.FlatCode =  COr.FlatCode;
+//       MHr.BuildCode = COr.BuildCode;
+//       MHr.StartDate =  CountResr.StartDate;
+//       MHr.EndDate = CountResr.EndDate;
+//       MHr.currReading = CountResr.EndVal;
+//       MHr.currConsumption = CountResr.Amount;
+//       MHr.ContractNr = FlatCountersr.Contract;
+//     RecordImportStore(MHr,false);
+
+//     j=j+1;
+//   end;
+//   LogText(0,"No. of Meters: " & j );
+
+//   return;
+// end;

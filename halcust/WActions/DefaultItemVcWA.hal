@@ -1,0 +1,42 @@
+/*
+
+Nokluseto artikulu window actioni
+
+*/
+
+function boolean DefaultItemDClassArtCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record INVc INr;
+  record DefaultItemVc DefaultItemr;
+  row DefaultItemVc DefaultItemrw;
+  boolean res;
+
+  res = true;
+  getwindowrecord(wn,DefaultItemr);
+  if (rownr > -1) then begin
+    matrowget(DefaultItemr,rownr,DefaultItemrw);
+    INr.Code = DefaultItemrw.ArtCode;
+    if (readfirstmain(INr,1,true)) then begin
+      DefaultItemrw.UnitText = INr.UserStr1;
+      DefaultItemrw.Spec = INr.Name;
+      matrowput(DefaultItemr,rownr,DefaultItemrw);
+      putwindowrecord(wn,DefaultItemr);
+    end;
+  end;
+  DefaultItemDClassArtCodeEFAfter  = res;
+return;
+end;
+
+global
+function boolean DefaultItemDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "ArtCode": res = DefaultItemDClassArtCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  DefaultItemDClassAfterEditField = res;
+return;
+end;

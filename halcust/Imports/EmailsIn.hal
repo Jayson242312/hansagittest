@@ -1,0 +1,19 @@
+global updating
+procedure EmailsIn()
+begin
+  record CUVc CUr, oldCUr;
+  String 255 AccNum, Email;
+
+  // loop through txt file
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    Email = ImportField;
+
+    CUr.Code = AccNum;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      RecordCopy(oldCUr,CUr);
+      CUr.eMail = Email;
+      RecordUpdate(oldCUr,CUr,false);
+    end;
+  end;
+end;

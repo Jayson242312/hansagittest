@@ -1,0 +1,78 @@
+// AUTOMATICALLY POPULATE -> ContractNr
+function boolean AccountTransferDClassContractEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record AccountTransferVc AccountTransferr;
+  record ClearanceCertVc ClearanceCertr;
+  record NAContractVc COr;
+  record FlatCountersVc FlatCountersr; // Meters
+  boolean testf, res;
+  res = true;
+
+  GetWindowRecord(wn,AccountTransferr);
+
+  testf = true;
+  COr.SerNr = AccountTransferr.ContractNr;
+  if (ReadFirstMain(COr,1,true)) then begin
+    AccountTransferr.BuildCode = COr.BuildCode; // erf.code
+    AccountTransferr.FlatCode = COr.FlatCode; // prem.name
+    AccountTransferr.CustCodeFrom = COr.CustCode; // cust.code
+    AccountTransferr.CustNameFrom = COr.CustName; // cust.name
+
+      AccountTransferr.MeterID = blankval;
+      while (LoopMain(FlatCountersr,1,testf)) begin
+        if(FlatCountersr.Contract == AccountTransferr.ContractNr) then begin
+          AccountTransferr.MeterID = FlatCountersr.SerNr;
+          testf = false;
+        end;
+      end;
+    PutWindowRecord(wn,AccountTransferr);
+  end;
+  AccountTransferDClassContractEFAfter = res;
+return;
+end;
+
+
+// AUTOMATICALLY POPULATE -> CustCodeTo
+function boolean AccountTransferDClassCustCodeToEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record AccountTransferVc AccountTransferr;
+  record CUVc CUr;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,AccountTransferr);
+
+  CUr.Code = AccountTransferr.CustCodeTo;
+  if (ReadFirstMain(CUr,1,true)) then begin
+    AccountTransferr.CustNameTo = CUr.Name;
+    PutWindowRecord(wn,AccountTransferr);
+  end;
+  
+  AccountTransferDClassCustCodeToEFAfter = res;
+return;
+end;
+
+
+// CHECKBOX -> PREVENT ON-OKAY
+global
+function Boolean AccountTransferDClassOKFlagButtonAction(Integer wn, Boolean changedf)
+begin
+  AccountTransferDClassOKFlagButtonAction = false;
+  return;
+end;
+
+
+global
+function boolean AccountTransferDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin 
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "ContractNr": res = AccountTransferDClassContractEFAfter(wn,fn,rownr,changed);
+      case "CustCodeTo": res = AccountTransferDClassCustCodeToEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  AccountTransferDClassAfterEditField = res;
+return;
+end;

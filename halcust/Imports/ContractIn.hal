@@ -1,0 +1,196 @@
+global
+updating procedure ContractIn()
+begin
+  record NAContractVc COr;
+  row NAContractVc COrw;
+  record INVc INr;
+  String 255 AccNum, Name, ExtNumber,LotNumber,DivisionNumber,UnitNumber, Street, AccType, AccStatusCode,
+  DateOpend, DateClosed, PropCatCode, Unassigned, LandCode, LandDesc, ImpCode, ImpDesc,MeterCode, MeterDesc;
+  Integer i;
+  i = 0;
+
+  // loop through txt file
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    Name = ImportField;
+    ExtNumber = ImportField;
+    LotNumber = ImportField;
+    DivisionNumber = ImportField;
+    UnitNumber = ImportField;
+    Street = ImportField;
+    AccType = ImportField;
+    AccStatusCode = ImportField;
+    DateOpend = ImportField;
+    DateClosed = ImportField;
+    PropCatCode = ImportField;
+    Unassigned = ImportField;
+    LandCode = ImportField;
+    LandDesc = ImportField;
+    Unassigned = ImportField;
+    ImpCode = ImportField;
+    ImpDesc = ImportField;
+    Unassigned = ImportField;
+    MeterCode = ImportField;
+    MeterDesc = ImportField;
+
+    if(nonblank(AccNum) AND nonblank(Name)) then begin
+      RecordNew(COr);
+      COr.SerNr = AccNum;
+      COr.ContractNr = COr.SerNr;
+      COr.CustCode = AccNum;
+      COr.CustName = Name;
+      COr.FlatAddress = Street;
+      COr.FlatCode = "P" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      COr.BuildCode = "E" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      COr.INPayPriority = "1"; // priority
+      COr.CODate =  StringToDate("01/01/2001");
+      COr.StartDate = StringToDate("01/01/2001");
+      if (nonblank(DateOpend)) then begin
+        COr.CODate =  StringToDate(DateOpend);
+        COr.StartDate = StringToDate(DateOpend);
+      end;
+      COr.EndDate =  DateClosed;  
+      COr.AccountType = AccType;
+      COr.AccStatus = AccStatusCode;
+      COr.ZoningCode = PropCatCode;
+      i = 0;
+
+      // -> land levy
+      if(nonblank(LandCode)) then begin
+        // find item
+        INr.Code = LandCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          COrw.ArtCode = INr.Code;
+          COrw.Spec = INr.Name;
+          COrw.Price = 1;
+          COrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+          MatRowPut(COr,i,COrw);
+          i = i + 1;
+        end;
+      end;
+
+      // -> improvement levy
+      if(nonblank(ImpCode)) then begin
+        // find item
+        INr.Code = ImpCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          COrw.ArtCode = INr.Code;
+          COrw.Spec = INr.Name;
+          COrw.Price = 1;
+          COrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+          MatRowPut(COr,i,COrw);
+          i = i + 1;
+        end;
+      end;
+
+      // -> water meter
+      if(nonblank(MeterCode)) then begin
+        // find item
+        INr.Code = MeterCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          COrw.ArtCode = INr.Code;
+          COrw.Spec = INr.Name;
+          COrw.Price = INr.UPrice1;
+          COrw.QtyCoef = blankval;
+          MatRowPut(COr,i,COrw);
+        end;
+      end;
+
+      RecordImportStore(COr,false);
+    end;
+  end;
+
+  return;
+end;
+
+
+// global
+// updating procedure ContractIn()
+// begin
+//   record NAContractVc COr;
+//   String 255 AccNum,
+//   ExtensionNo, LotNo, DivisionNo, UnitNo,
+//   Street, Surname, Name, Address1, Address2, Address3, PostCode,
+//   CellNum, IdNum, Email, MaritalStatusCode, AccStatusCode, AccType, OwnerTypeCode,
+//   NextKin, NextKinNum, NextKinRel,
+//   Notes1, IsConsolidated, Notes2, SuburbCode, Suburb,
+//   PropCatCode, MarketValue, Outstanding, LandArea, Unassigned, DateOpened, DateClosed;
+
+//   // loop through txt file
+//   while (NextImportLine(false)) begin
+//     AccNum = ImportField;
+//     ExtensionNo = ImportField;
+//     LotNo = ImportField;
+//     DivisionNo = ImportField;
+//     UnitNo = ImportField;
+//     Street = ImportField;
+//     Surname = ImportField;
+//     Name = ImportField;
+//     Address1 = ImportField; // po.box
+//     Address2 = ImportField; // suburb
+//     Address3 = ImportField; // town
+//     PostCode = ImportField;
+//     CellNum = ImportField;
+//     IdNum = ImportField;
+//     Email = ImportField;
+//     MaritalStatusCode = ImportField;
+//     AccStatusCode = ImportField;
+//     AccType = ImportField;
+//     OwnerTypeCode = ImportField;
+//     NextKin = ImportField;
+//     NextKinNum = ImportField;
+//     NextKinRel = ImportField;
+//     Notes1 = ImportField;
+//     IsConsolidated = ImportField;
+//     Notes2 = ImportField;
+//     SuburbCode = ImportField;
+//     Suburb = ImportField;
+//     PropCatCode = ImportField; // zoning
+//     MarketValue = ImportField;
+//     Outstanding = ImportField;
+//     LandArea = ImportField;
+//     Unassigned = ImportField;
+//     Unassigned = ImportField;
+//     DateOpened = ImportField;
+//     DateClosed = ImportField;
+
+//     // if((Notes1 != "(DELETED)") and (IsConsolidated != "CONSOLIDATED")) then begin
+//     // if(Notes1 != "(DELETED)") then begin
+//       RecordNew(COr);
+
+//       COr.SerNr = AccNum;
+//       COr.ContractNr = COr.SerNr;
+//       COr.CustCode = AccNum;
+//       COr.CustName = Name &" "& Surname;
+//       COr.FlatCode = "P" & ExtensionNo & LotNo;
+//       COr.FlatAddress = Street;
+//       COr.BuildCode = "E" & ExtensionNo & LotNo;
+
+//       COr.INPayPriority = "1"; // priority
+
+//       COr.CODate =  StringToDate("01/01/2001");
+//       COr.StartDate = StringToDate("01/01/2001");
+//       if (nonblank(DateOpened)) then begin
+//         COr.CODate =  StringToDate(DateOpened);
+//         COr.StartDate = StringToDate(DateOpened);
+//       end;
+//       if (nonblank(DateClosed)) then begin
+//         COr.EndDate =  StringToDate(DateClosed);
+//       end;
+      
+//       COr.AccountType = AccType;
+//       COr.OwnerType = OwnerTypeCode;
+//       COr.ZoningCode = PropCatCode;
+    
+//       switch (AccStatusCode) begin
+//         case "": COr.AccStatus = 1;
+//         case "0": COr.AccStatus = 1; // active
+//         case "9": COr.AccStatus = 2; // inactive
+//       end;
+
+//       RecordImportStore(COr,false);
+//     // end;
+//   end;
+
+//   return;
+// end;

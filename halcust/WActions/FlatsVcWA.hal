@@ -1,0 +1,342 @@
+remote function boolean PasteBuildInFlatsVc(var record FlatsVc,integer,boolean);
+external procedure RecalcFlatFields(integer,record FlatsVc);
+external inner function val FindVAT(string,val,Integer,Integer);
+remote function boolean GetActualFlatNAContract(var record NAContractVc,string);
+remote function boolean GetActualFlatCO(string,date,var record NAContractVc);
+
+
+//jh
+global
+procedure CreateContractDsm() begin
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  record BuildVc ERFMasterr;
+  integer wn,nwn;
+  longint nr;
+  date sd,ed;
+  wn = curwindow;
+  if (WindowState(wn) == Rs_normal) then begin
+    GetWindowRecord(wn,Flatsr);
+    recordNew(NAContractr);
+    NAContractr.SerNr = NextSerNr("NAContractVc",CurrentDate,-1,false,"");
+    NAContractr.FlatCode = Flatsr.FlatCode;
+    NAContractr.FlatAddress = Flatsr.Address;
+    NAContractr.BuildCode = Flatsr.Code;
+    NAContractr.AccStatus = 1; //1 meaning active
+    NAContractr.CODate = CurrentDate;
+    NAContractr.StartDate = CurrentDate;
+
+    ERFMasterr.Code = NAContractr.BuildCode;
+    // if (ReadFirstMain(ERFMasterr,1,true)) then begin  // zonings have to be created in contract
+    //   NAContractr.ZoningCode = ERFMasterr.ZoningCode;                                      
+    // end;
+
+    nwn = OpenWindow("NAcontractDClass",1,0,"","",NAContractr);
+    end else begin
+    beep;
+    MessageBox(1000763,"");
+  end;
+return;
+end;
+
+
+global
+procedure FlatsStatusRnSm()
+begin
+  record FlatsVc Flatsr;
+  record RcVc RepSpec;
+  integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Flatsr);
+  if nonblank(Flatsr.FlatCode) then begin
+    RepSpec.Media = mtScreen;
+    RepSpec.f1=Flatsr.FlatCode;
+    RepSpec.repname="FlatsStatusRn";
+    RunReport(RepSpec,0);
+  end;
+  
+  return;
+end;
+
+global
+procedure CreateFlatCountersVcFlatDSm() begin
+  integer wn,nwn;
+  record FlatsVc Flatsr;
+  Record FlatCountersVc FlatCountersr;
+  
+  wn = CurWindow();
+  if WindowState(wn) == 0 then begin
+    GetWindowRecord(wn,Flatsr);
+    RecordNew(FlatCountersr);
+    FlatCountersr.FlatCode = Flatsr.FlatCode;
+    FlatCountersr.Address = Flatsr.Address;
+    FlatCountersr.Code = Flatsr.Code;
+    FlatCountersr.FlatNo = Flatsr.FlatNo;
+    nwn = OpenWindow("FlatCountersDClass",0,0,"","",FlatCountersr);
+  end else begin
+    MessageBox(22902,"");
+  end;
+  
+return;
+end;
+
+global 
+procedure OpenMSFlatContractsm() 
+begin
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  integer wn;
+
+  wn = Curwindow;
+  getwindowrecord(wn,Flatsr);
+  if GetActualFlatNAContract(NAContractr,Flatsr.FlatCode) then begin
+    wn = openwindow("NAContractDClass",1,0,"","",NAContractr);
+  end;
+  return;
+end;
+
+global
+procedure ChangeCUSm()
+begin
+  Record FlatsVc Flatsr;
+  Record RcVc RepSpec;
+  integer wn,nwn;
+  date td;
+
+
+  wn=CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  if WindowState(wn)==0 then begin
+    td=currentdate;
+    td.day=1;
+    RepSpec.d1=td;
+    RepSpec.f2=Flatsr.FlatCode;
+    RepSpec.flags[0]=wn;
+    nwn=OpenWindow("ChangeCUinFlatVClass",1,0,"","",RepSpec);
+  end;
+
+  return;
+end;
+
+
+global 
+procedure ARRnSm() 
+Begin
+  integer wn;
+  Record FlatsVc Flatsr;
+  Record RcVc RepSpec;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  if nonblank(Flatsr.CustCode) then begin
+    ReportDefaults(RepSpec,"ARRClass");
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="ARRn";
+    RepSpec.f1=Flatsr.CustCode;
+    RunReport(RepSpec,0);
+  end else begin
+    beep;
+  end;
+
+
+  return;
+end;
+
+global 
+procedure OpenLastIVSm()
+Begin
+  integer wn,nwn;
+  Record FlatsVc Flatsr;
+  record NAContractVc NAContractr;
+  Record IVVc IVr;
+  string 20 tstr;
+
+  wn=CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  if GetActualFlatCO(Flatsr.FlatCode,CurrentDate,NAContractr) then begin
+    IVr.Contract=NAContractr.SerNr;
+    IVr.InvDate=CurrentDate;
+    if ReadLastKey("Contract",IVr,2,false) then begin
+      if IVr.Contract==NAContractr.SerNr then begin
+        nwn=OpenWindow("IVDClass",1,0,"","",IVr);
+      end;
+    end;
+  end else begin
+    beep;
+  end;
+
+  return;
+end;
+
+global 
+procedure CuPerRnSm() 
+Begin
+  integer wn;
+  Record RcVc RepSpec;
+  Record FlatsVc Flatsr;
+  string 30 tstr;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  if nonblank(Flatsr.CustCode) then begin
+    ReportDefaults(RepSpec,"CuPer2RClass");
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="CuPerRn";
+    RepSpec.f1=Flatsr.CustCode;
+    RepSpec.ArtMode=1;
+    RepSpec.flags[2]=1;
+    //tstr="01/01/2008:" & DateToString(CurrentDate,"DD/MM/YYYY");
+    RepSpec.sStartDate="01.01.2008";
+    RepSpec.sEndDate=CurrentDate;
+    RunReport(RepSpec,0);
+  end else begin
+    beep;
+  end;
+
+  return;
+end;
+
+global procedure MSChangeCount2MnSm() Begin
+  integer wn;
+  Record FlatsVc Flatsr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  RepSpec.Media=mtScreen;
+  RepSpec.repname="MSChangeCountRn";
+  RepSpec.f1=Flatsr.FlatCode;
+  RunReport(RepSpec,0);
+
+return;
+end;
+
+global procedure CounterResRnsm() Begin
+  integer wn;
+  Record FlatsVc Flatsr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  GetWindowRecord(wn,Flatsr);
+
+  RepSpec.Media=mtScreen;
+  RepSpec.repname="CounterResRn";
+  RepSpec.f1=Flatsr.FlatCode;
+
+  RunReport(RepSpec,0);
+
+return;
+end;
+
+function boolean FlatsDClassCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed) begin
+  record FlatsVc Flatsr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,Flatsr);
+  if PasteBuildInFlatsVc(Flatsr,WindowState(wn),true) then begin
+    PutWindowRecord(wn,Flatsr);
+  end else begin
+    beep;
+  end;
+  FlatsDClassCodeEFAfter  = res;
+return;
+end;
+
+function boolean FlatsDClassFlatNoEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed) begin
+  record FlatsVc Flatsr;
+  integer rw,rwc;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,Flatsr);
+  Flatsr.IntFlatNo=StringToInt(StripNonDigits(Flatsr.FlatNo));
+  PutWindowRecord(wn,Flatsr);
+
+  FlatsDClassFlatNoEFAfter  = res;
+return;
+end;
+
+global
+function boolean FlatsDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Code": res = FlatsDClassCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatNo": res = FlatsDClassFlatNoEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  FlatsDClassAfterEditField = res;
+  return;
+end;
+
+global 
+function boolean FlatsDClassOnOpenWindow(integer wn) begin
+  record FlatsVc Flatsr;
+  boolean res;
+
+  GetWindowRecord(wn,Flatsr);
+  RecalcFlatFields(wn,Flatsr);
+  SetWindowSubset(wn,Flatsr.FlatCode);
+
+  FlatsDClassOnOpenWindow = res;
+  return;
+end;
+
+global
+procedure FlatsDClassOnWindowRecordChange(Integer wn)
+begin
+  Record FlatsVc Flatsr;
+
+  GetWindowRecord(wn,Flatsr);
+  RecalcFlatFields(wn,Flatsr);
+  SetWindowSubset(wn,Flatsr.FlatCode);
+    
+  return;
+end;
+
+global 
+procedure SearchFlatVcLsm() begin
+  integer nwn;
+  Record RcVc RepSpec;
+    
+  nwn = OpenWindow("SearchFlat2RClass",0,0,"","",RepSpec);
+  DeselectWindow(nwn,false);
+  ReportDefaults(RepSpec,"SearchFlat2RClass");
+  RepSpec.UsedOnly = 0;
+  RepSpec.repname = "SearchFlatsVcRn";
+  RepSpec.critname = "SearchFlat2RClass";
+  RepSpec.Media = mtScreen;
+  PutWindowRecord(nwn,RepSpec);  
+  WindowFieldGoto(nwn,RepSpec,-1,"f1",true);
+  
+return;
+end;
+
+global
+procedure OpenOwnersSm() 
+begin
+  Record FlatsVc Flatsr;
+  Record OwnersVc Ownersr;
+  integer wn,nwn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,Flatsr);
+  Ownersr.Code=Flatsr.FlatCode;
+  if !ReadFirstMain(Ownersr,1,True) then begin
+    Ownersr.Code=Flatsr.FlatCode;
+  end;
+  OpenWindow("OwnersDClass",1,0,"","",Ownersr);
+
+  return;
+end;
+  

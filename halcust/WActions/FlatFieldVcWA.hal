@@ -1,0 +1,121 @@
+remote procedure CalcFlatFields(string,var array string);
+remote procedure CalcBFlatFields(string,var array val);
+
+procedure FlatFieldDClassFlatCodeEFAfter(integer wn,integer rownr)
+begin
+  record FlatFieldVc FlatFieldr;
+  record FlatsVc Flatsr;
+
+  GetWindowRecord(wn,FlatFieldr);
+  Flatsr.FlatCode = FlatFieldr.FlatCode;
+  ReadFirstMain(Flatsr,1,true);
+  FlatFieldr.BuildCode = Flatsr.Code;
+  PutWindowRecord(wn,FlatFieldr);
+  return;
+end;
+
+global
+function boolean FlatFieldDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed<>0) then begin
+    switch (fieldname) begin
+      case "FlatCode": FlatFieldDClassFlatCodeEFAfter(wn,rownr);
+    end;
+  end;
+  FlatFieldDClassAfterEditField = res;
+  return;
+end;
+
+global
+procedure RecalcFlatFields(integer wn,record FlatsVc Flatsr)
+begin
+  array string 20 FlatFieldValueMas;
+  integer i,rw;
+
+  CalcFlatFields(Flatsr.FlatCode,FlatFieldValueMas);
+  rw = StringToInt(FlatFieldValueMas[0]);
+  for(i=1;i<=rw;i=i+1)begin
+    PutWindowString(wn,"FF_" & i,FlatFieldValueMas[i]);
+  end;
+  
+  return;
+end;
+
+global
+procedure RecalcBFlatFields(integer wn,record BuildVc Buildr)
+begin
+  array val FlatFieldValueMas;
+  integer i,rw;
+
+  if Buildr.Code<>GetWindowSubset(wn) then begin
+    CalcBFlatFields(Buildr.Code,FlatFieldValueMas);
+    rw = FlatFieldValueMas[0];
+    for(i=1;i<=rw;i=i+1)begin
+      PutWindowString(wn,"FF_B" & i,FlatFieldValueMas[i]);
+    end;
+  end;
+end;
+
+procedure OpenFlatFieldCode(string FlatCode,string FieldCode,string BuildCode)
+begin
+  record FlatFieldVc FlatFieldr;
+
+  FlatFieldr.FlatCode = FlatCode;
+  FlatFieldr.FieldCode = FieldCode;
+  if !ReadFirstMain(FlatFieldr,2,true) then begin
+    RecordNew(FlatFieldr);
+    FlatFieldr.FlatCode = FlatCode;
+    FlatFieldr.FieldCode = FieldCode;
+    FlatFieldr.BuildCode = BuildCode;
+  end;
+  OpenWindow("FlatFieldDClass",1,0,"","",FlatFieldr);
+end;
+
+global
+procedure OpenChFlatFieldSm()
+begin
+  record FlatsVc Flatsr;
+  record FlatFieldSetBlock FlatFieldSetBlr;
+  row FlatFieldSetBlock FlatFieldSetBlrw;
+  record RcVc RepSpec;
+  string 20 FieldName;
+  integer wn,nwn,rownr;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Flatsr);
+  FieldName = WindowActiveField(wn);
+  if Left(FieldName,3)<>"FF_" then begin
+    RepSpec.f1 = Flatsr.FlatCode;
+    RepSpec.f3 = Flatsr.Code;
+    nwn = OpenWindow("ChFlatFieldWClass",1,0,"","",RepSpec);
+  end else begin
+    BlockLoad(FlatFieldSetBlr);
+    rownr = StringToInt(Right(FieldName,Len(FieldName)-3));
+    if MatRowCnt(FlatFieldSetBlr)>=rownr then begin
+      MatRowGet(FlatFieldSetBlr,rownr-1,FlatFieldSetBlrw);
+      OpenFlatFieldCode(Flatsr.FlatCode,FlatFieldSetBlrw.FieldCode,Flatsr.Code);
+    end;
+  end;
+LOpenChFlatFieldSm:;  
+  return;
+end;
+
+global
+procedure OpenFlatField()
+begin
+  record RcVc RepSpec;
+  integer wn,nwn;
+
+  wn = CurWindow;
+  DeselectWindow(wn,true);
+  GetWindowRecord(wn,RepSpec);
+  if nonblank(RepSpec.f2) then begin
+    OpenFlatFieldCode(RepSpec.f1,RepSpec.f2,RepSpec.f3);
+    CloseWindow(wn);
+  end else begin
+    MessageBox(1001117,"");
+  end;
+  return;
+end;

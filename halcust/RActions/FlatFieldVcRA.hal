@@ -1,0 +1,161 @@
+external procedure RecalcFlatFields(integer,record FlatsVc);
+
+global
+function longint FlatFieldCodeVcRecordCheck(var record FlatFieldCodeVc FlatFieldCoder,record FlatFieldCodeVc FlatFieldCode2r,longint a,longint b)
+begin
+  longint res;
+
+  res = 0;
+  if Left(FlatFieldCoder.FieldCode,1)!="T" then begin
+    RecordCheckError(1001284,"T",-1,"FieldCode");
+    res = -1;
+    goto LFlatFieldCodeVcRecordCheck;
+  end;
+
+LFlatFieldCodeVcRecordCheck:;
+  FlatFieldCodeVcRecordCheck = res;
+return;
+end;
+
+global
+function longint FlatFieldVcRecordCheck(var record FlatFieldVc FlatFieldr,record FlatFieldVc FlatFieldr2,longint a,longint b)
+begin
+  row FlatFieldVc FlatFieldrw;
+  record FlatsVc Flatsr;
+  record FlatFieldCodeVc FlatFieldCoder;
+  date prevStartDate;
+  integer i,rw;
+  longint res;
+
+  res = 0;
+  Flatsr.FlatCode = FlatFieldr.FlatCode;
+  if !ReadFirstMain(Flatsr,1,true) then begin
+    RecordCheckError(1290,"",-1,"FlatCode");
+    res = -1;
+    goto LExitCheck;
+  end else begin
+    if Flatsr.Code<>FlatFieldr.BuildCode then begin
+      RecordCheckError(1000513,"",-1,"BuildCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  FlatFieldCoder.FieldCode = FlatFieldr.FieldCode;
+  if !ReadFirstMain(FlatFieldCoder,1,true) then begin
+    RecordCheckError(1290,"",-1,"FieldCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  rw = MatRowCnt(FlatFieldr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(FlatFieldr,i,FlatFieldrw);
+    if FlatFieldCoder.FieldType==1 and nonblankdate(FlatFieldrw.StartDate) and GetDay(FlatFieldrw.StartDate)<>1 then begin
+      RecordCheckError(1000513,"",i,"StartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    if FlatFieldrw.StartDate<=prevStartDate and nonblankdate(prevStartDate) then begin
+      RecordCheckError(1000428,"",i,"StartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    prevStartDate = FlatFieldrw.StartDate;
+  end;
+LExitCheck:;
+  FlatFieldVcRecordCheck = res;
+  return;
+end;
+
+global
+function LongInt FlatFieldSetBlockCheck(var record FlatFieldSetBlock FlatFieldSetr,record FlatFieldSetBlock FlatFieldSet2r,LongInt stat,LongInt long4)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  row FlatFieldSetBlock FlatFieldSetrw;
+  LongInt res;
+  integer i,rw;
+
+  res = 0;
+  rw = MatRowCnt(FlatFieldSetr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(FlatFieldSetr,i,FlatFieldSetrw);
+    if blank(FlatFieldSetrw.Name) then begin
+      FlatFieldCoder.FieldCode = FlatFieldSetrw.FieldCode;
+      ReadFirstMain(FlatFieldCoder,1,true);
+      FlatFieldSetrw.Name = FlatFieldCoder.Name;
+      MatRowPut(FlatFieldSetr,i,FlatFieldSetrw);
+    end;
+  end;
+  FlatFieldSetBlockCheck = res;
+  return;
+end;
+
+global
+function LongInt BFlatFieldSetBlockCheck(var record BFlatFieldSetBlock BFlatFieldSetr,record BFlatFieldSetBlock BFlatFieldSet2r,LongInt stat,LongInt long4)
+begin
+  record FlatFieldCodeVc FlatFieldCoder;
+  row BFlatFieldSetBlock BFlatFieldSetrw;
+  LongInt res;
+  integer i,rw;
+
+  res = 0;
+  rw = MatRowCnt(BFlatFieldSetr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BFlatFieldSetr,i,BFlatFieldSetrw);
+    if blank(BFlatFieldSetrw.Name) then begin
+      FlatFieldCoder.FieldCode = BFlatFieldSetrw.FieldCode;
+      ReadFirstMain(FlatFieldCoder,1,true);
+      BFlatFieldSetrw.Name = FlatFieldCoder.Name;
+      MatRowPut(BFlatFieldSetr,i,BFlatFieldSetrw);
+    end;
+  end;
+  BFlatFieldSetBlockCheck = res;
+  return;
+end;
+
+global
+function LongInt FlatFieldVcRecordSaveClient(LongInt wn,var record FlatFieldVc FlatFieldp,record FlatFieldVc FlatField2p,LongInt stat,LongInt long4)
+begin
+  Record FlatsVc Flatsr;
+  LongInt res;
+  integer nwn;
+  
+  nwn = FindWindow("FlatsDClass");
+  if nwn!=0 then begin
+    DeselectWindow(nwn,false);
+    GetWindowRecord(nwn,Flatsr);
+    RecalcFlatFields(nwn,Flatsr);
+  end;
+  
+  FlatFieldVcRecordSaveClient = res;
+  return;
+end;
+
+global
+function LongInt FlatFieldVcRecordUpdateClient(LongInt wn,var record FlatFieldVc FlatFieldp,record FlatFieldVc FlatField2p,LongInt stat,LongInt long4)
+begin
+  Record FlatsVc Flatsr;
+  LongInt res;
+  integer nwn;
+  
+  nwn = FindWindow("FlatsDClass");
+  if nwn!=0 then begin
+    DeselectWindow(nwn,false);
+    GetWindowRecord(nwn,Flatsr);
+    RecalcFlatFields(nwn,Flatsr);
+  end;
+  
+  FlatFieldVcRecordUpdateClient = res;
+  return;
+end;
+
+global
+updating function longint FlatFieldVcRecordRemove(var record FlatFieldVc FlatFieldr,record FlatFieldVc FlatField2r,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  LogText(0,"User " & CurrentUser & " deleting FlatFieldVc record (" & FlatFieldr.FlatCode & " :: " & FlatFieldr.FieldCode & ")");
+  
+  FlatFieldVcRecordRemove = res;
+return;
+end;

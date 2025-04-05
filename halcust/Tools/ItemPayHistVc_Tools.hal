@@ -1,0 +1,1387 @@
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner function val FindVAT(string,val,Integer,Integer);
+external inner procedure GetBaseCurncy(Integer,var string);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean IVVc_PasteSum(var record IVVc,Integer,var Boolean,Integer);
+external function boolean FindINPayPriorityRecFromIVVc(Record IVVc,var Record INPayPriorityVc);
+external function val GetTotIVSum(Record IVVc,record INPayPriorityVc,vector val);
+external function boolean FindINPayPriorityRec(longint,longint,string,string,var Record INPayPriorityVc);
+external function longint GetItemNegItemPayPriority(string);
+
+updating
+procedure UpdateItemStatusVcRecord(Record ItemPayHistVc ItemPayHistr,boolean unokf) begin
+  Record ItemPayStatVc ItemPayStatr,oldItemPayStatr;
+  date ltd;
+  boolean wloop,existsf,testf;
+
+  if unokf then begin
+    ItemPayHistr.AmtValBaseCur = -ItemPayHistr.AmtValBaseCur;
+  end;
+
+  existsf = false;
+  ltd=ItemPayHistr.TransDate; ltd.day = 1; ltd = AddMonth(ltd,1);
+
+  ItemPayStatr.ContrSerNr = ItemPayHistr.ContrSerNr;
+  ItemPayStatr.ArtCode = ItemPayHistr.ArtCode;
+  ItemPayStatr.TransDate = ltd;
+  wloop = true;
+  While LoopMain(ItemPayStatr,3,wloop) begin
+    if ItemPayStatr.ContrSerNr != ItemPayHistr.ContrSerNr or ItemPayStatr.ArtCode!=ItemPayHistr.ArtCode or ItemPayStatr.TransDate<ltd then begin
+      wloop = false;
+    end else begin
+      existsf = true;
+      RecordCopy(oldItemPayStatr,ItemPayStatr);
+      Switch (ItemPayHistr.FileName) begin
+        Case 1:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal + ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.InvVal = ItemPayStatr.InvVal + ItemPayHistr.AmtValBaseCur;
+        Case 2:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.CredVal = ItemPayStatr.CredVal + ItemPayHistr.AmtValBaseCur;
+        Case 3:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.PayVal = ItemPayStatr.PayVal + ItemPayHistr.AmtValBaseCur;
+        Case 4:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.CashInVal = ItemPayStatr.CashInVal + ItemPayHistr.AmtValBaseCur;
+        Case 5:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.PrePayVal = ItemPayStatr.PrePayVal + ItemPayHistr.AmtValBaseCur;
+        Case 6:
+          ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+          ItemPayStatr.NegItemVal = ItemPayStatr.NegItemVal + ItemPayHistr.AmtValBaseCur;
+      end;
+      RecordUpdate(oldItemPayStatr,ItemPayStatr,true);
+    end;
+  end;
+
+  if !existsf and !unokf then begin
+    RecordNew(ItemPayStatr);
+    ItemPayStatr.ContrSerNr = ItemPayHistr.ContrSerNr;
+    ItemPayStatr.ArtCode = ItemPayHistr.ArtCode;
+    ItemPayStatr.TransDate = ltd;
+    ItemPayStatr.CustCode = ItemPayHistr.CustCode;
+    ItemPayStatr.BuildCode = ItemPayHistr.BuildCode;
+    ItemPayStatr.FlatCode = ItemPayHistr.FlatCode;
+
+
+    //Get last ItemPayStatVc
+    oldItemPayStatr.ContrSerNr = ItemPayHistr.ContrSerNr;
+    oldItemPayStatr.ArtCode = ItemPayHistr.ArtCode;
+    oldItemPayStatr.TransDate = ltd;
+    if ReadLastMain(oldItemPayStatr,3,false) then begin
+      testf = true;
+      if oldItemPayStatr.ContrSerNr != ItemPayHistr.ContrSerNr or oldItemPayStatr.ArtCode != ItemPayHistr.ArtCode then begin
+        testf = false;
+      end;
+      if oldItemPayStatr.TransDate >= ltd then begin
+        testf = false;
+      end;
+      if testf then begin
+        ItemPayStatr.DebtVal = oldItemPayStatr.DebtVal;
+        ItemPayStatr.InvVal = oldItemPayStatr.InvVal;
+        ItemPayStatr.CredVal = oldItemPayStatr.CredVal;
+        ItemPayStatr.PayVal = oldItemPayStatr.PayVal;
+        ItemPayStatr.PrePayVal = oldItemPayStatr.PrePayVal;
+        ItemPayStatr.CashInVal = oldItemPayStatr.CashInVal;
+        ItemPayStatr.NegItemVal = oldItemPayStatr.NegItemVal;
+      end;
+    end;
+
+    Switch (ItemPayHistr.FileName) begin
+      Case 1:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal + ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.InvVal = ItemPayStatr.InvVal + ItemPayHistr.AmtValBaseCur;
+      Case 2:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.CredVal = ItemPayStatr.CredVal + ItemPayHistr.AmtValBaseCur;
+      Case 3:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.PayVal = ItemPayStatr.PayVal + ItemPayHistr.AmtValBaseCur;
+      Case 4:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.CashInVal = ItemPayStatr.CashInVal + ItemPayHistr.AmtValBaseCur;
+      Case 5:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.PrePayVal = ItemPayStatr.PrePayVal + ItemPayHistr.AmtValBaseCur;
+      Case 6:
+        ItemPayStatr.DebtVal = ItemPayStatr.DebtVal - ItemPayHistr.AmtValBaseCur;
+        ItemPayStatr.NegItemVal = ItemPayStatr.NegItemVal + ItemPayHistr.AmtValBaseCur;
+    end;
+    RecordStore(ItemPayStatr,false);
+  end;
+
+return;
+end;
+
+global updating
+procedure CreateItemPayHistVcRecord(longint transnr,integer filename,longint ivnr,date td,
+                                    string item,string custcode,longint contrnr,string curcode,string buildcode,
+                                    string flatcode,val amtval,val amtvalb1,integer rownr,boolean negitembal) begin
+  Record ItemPayHistVc ItemPayHistr,oldItemPayHistr;
+  Record ItemPayStatVc ItemPayStatr,oldItemPayStatr;
+  Record FlatsVc Flatsr;
+  Record NAContractVc NAContractr,NAContract2r;
+  Record IVVc IVr;
+  string 50 lBuild,lFlatcode,lCustCode;
+  longint lContr;
+  date ltd;
+  boolean wloop,existsf,testf;
+
+  if !negitembal and amtvalb1<0 and filename==1 then begin
+    //Negat�vi artikuli no r��iniem apmaks� citus artikulus un neietekm� pa�a artikula bilanci
+    GoTo LCreateItemPayHistVcRecord;
+  end;
+
+  //get contract from invoice or customer
+  lContr = contrnr;
+  if lContr==-1 and ivnr!=-1 then begin
+    IVr.SerNr = ivnr;
+    if ReadFirstMain(IVr,1,true) then begin
+      if IVr.MergedInvFlag==0 then begin
+        lContr = IVr.Contract;
+      end;
+    end;
+  end;
+
+  if lContr==-1 and nonblank(lCustCode) then begin
+    NAContractr.CustCode = lCustCode;
+    if ReadFirstKey("CustCode",NAContractr,1,true) then begin
+      NAContract2r.CustCode = lCustCode;
+      if ReadLastKey("CustCode",NAContract2r,1,true) then begin
+        if NAContractr.SerNr == NAContract2r.SerNr then begin
+          lContr = NAContract2r.SerNr;
+        end;
+      end;
+    end;
+  end;
+
+  ItemPayHistr.ArtCode = item;
+  ItemPayHistr.TransNr = transnr;
+  ItemPayHistr.TransDate = td;
+  ItemPayHistr.FileName = filename;
+  ItemPayHistr.RowNr = rownr;
+  wloop = true;
+  While LoopKey("ArtCode",ItemPayHistr,5,wloop) begin
+    if ItemPayHistr.ArtCode != item then begin
+      wloop = false;
+    end;
+    if ItemPayHistr.TransNr != transnr then begin
+      wloop = false;
+    end;
+    if ItemPayHistr.TransDate != td then begin
+      wloop = false;
+    end;
+    if ItemPayHistr.FileName != filename then begin
+      wloop = false;
+    end;
+    if ItemPayHistr.RowNr != rownr then begin
+      wloop = false;
+    end;
+    if wloop then begin
+      if ItemPayHistr.IVNr == ivnr and ItempayHistr.ContrSerNr==lContr then begin
+        //Update existing Record
+        RecordCopy(oldItemPayHistr,ItemPayHistr);
+        ItemPayHistr.AmtVal = ItemPayHistr.AmtVal + amtval;
+        ItemPayHistr.AmtValBaseCur = ItemPayHistr.AmtValBaseCur + amtvalb1;
+        RecordUpdate(oldItemPayHistr,ItemPayHistr,true);
+        GoTo LCreateItemPayHistVcRecord;
+      end;
+    end;
+  end;
+
+  RecordNew(ItemPayHistr);
+  ItemPayHistr.FileName = filename;
+  ItemPayHistr.TransNr = transnr;
+  ItemPayHistr.IVNr = ivnr;
+  ItemPayHistr.TransDate = td;
+  ItemPayHistr.ArtCode = item;
+  ItemPayHistr.RowNr = rownr;
+
+  lCustCode = custcode;
+  if blank(lCustCode) and lContr!=-1 then begin
+    NAContractr.SerNr = lContr;
+    if ReadFirstmain(NAContractr,1,true) then begin
+      lCustCode = NAContractr.CustCode;
+    end;
+  end;
+
+  ItemPayHistr.CustCode = lCustCode;
+  ItemPayHistr.ContrSerNr = lContr;
+  ItemPayHistr.AmtVal = amtval;
+  ItemPayHistr.CurCode = curcode;
+  ItemPayHistr.AmtValBaseCur = amtvalb1;
+
+  lBuild = buildcode;
+  if blank(lBuild) then begin
+    if nonblank(flatcode) then begin
+      Flatsr.FlatCode = flatcode;
+      if ReadFirstmain(Flatsr,1,true) then begin
+        lBuild = Flatsr.Code;
+      end;
+    end;
+    if blank(lBuild) and lContr!=-1 then begin
+      NAContractr.SerNr = lContr;
+      if ReadFirstmain(NAContractr,1,true) then begin
+        lBuild = NAContractr.BuildCode;
+      end;
+    end;
+  end;
+  ItemPayHistr.BuildCode = lBuild;
+
+  lFlatcode = flatcode;
+  if blank(lFlatcode) and lContr!=-1 then begin
+    NAContractr.SerNr = lContr;
+    if ReadFirstmain(NAContractr,1,true) then begin
+      lFlatcode = NAContractr.FlatCode;
+    end;
+  end;
+  ItemPayHistr.FlatCode = lFlatcode;
+  ItemPayHistr.SerNr = NextSerNr("ItemPayHistVc",td,-1,false,"");
+  RecordStore(ItemPayHistr,false);
+
+  //Update ItemPayStatusVc
+  UpdateItemStatusVcRecord(ItemPayHistr,false);
+
+LCreateItemPayHistVcRecord:;
+return;
+end;
+
+global updating
+procedure RemoveItemPayHistVc(longint transnr,integer filename) begin
+  Record ItemPayHistVc ItemPayHistr;
+  boolean wloop;
+
+  wloop = true;
+  ItemPayHistr.TransNr = transnr;
+  ItemPayHistr.FileName = filename;
+  While LoopKey("TransNrFN",ItemPayHistr,2,wloop) begin
+    if ItemPayHistr.TransNr != transnr or ItemPayHistr.FileName != filename then begin
+      wloop = false;
+    end else begin
+      //Update ItemStatusVc Record
+      UpdateItemStatusVcRecord(ItemPayHistr,true);
+
+      //delete record
+      RecordDelete(ItemPayHistr);
+      StepBack(ItemPayHistr);
+    end;
+  end;
+
+  return;
+end;
+
+updating
+procedure AddPayedSumToIVItem(var record IVVc IVr,string ItemCode,val PayedSum,var val LeftPayedSum,var vector val vecUnpayedSums,integer srcrow,integer type)
+begin
+  row IVVc IVrw;
+  val Sum,rowsumbase;
+  integer i,rw,updrownr;
+  array val payedsums;
+
+  LeftPayedSum = PayedSum;
+  if PayedSum<>0 then begin
+    updrownr = -1;
+    rw = MatRowCnt(IVr);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(IVr,i,IVrw);
+      if IVrw.ArtCode==ItemCode then begin
+        if IVr.InclVAT==0 then begin
+          Sum = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+        end else begin
+          Sum = IVrw.Sum;
+        end;
+        if (vecUnpayedSums[i]-LeftPayedSum)>=0 and (vecUnpayedSums[i]-LeftPayedSum)<=Sum then begin //fully added
+          payedsums[i] = payedsums[i] + LeftPayedSum;
+          vecUnpayedSums[i] = vecUnpayedSums[i] - LeftPayedSum;
+          LeftPayedSum = 0;
+        end else begin
+          if (vecUnpayedSums[i]-LeftPayedSum)<0 then begin //artcode is payed
+            payedsums[i] = payedsums[i] + vecUnpayedSums[i];
+            LeftPayedSum = LeftPayedSum - vecUnpayedSums[i];
+            vecUnpayedSums[i] = 0;
+          end else begin //artcode is unpayed
+            payedsums[i] = payedsums[i] - (Sum-vecUnpayedSums[i]);
+            LeftPayedSum = LeftPayedSum + (Sum-vecUnpayedSums[i]);
+            vecUnpayedSums[i] = Sum;
+          end;
+        end;
+      end;
+      if LeftPayedSum==0 then begin
+        i = rw;
+      end;
+    end;
+
+    rw = MatRowCnt(IVr);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(IVr,i,IVrw);
+      // LogText(0,"i=" & i & "  payedsums[i]=" &  payedsums[i] & " contr=" & IVrw.ContractNr);
+      if payedsums[i]<>0 then begin
+        rowsumbase=MulRateToBase1(IVr.CurncyCode,payedsums[i],IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+        if IVr.MergedInvFlag==0 then begin
+          CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+                                    IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,payedsums[i],rowsumbase,srcrow,false);
+        end;
+        if IVr.MergedInvFlag==1 then begin
+          CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                    IVr.CurncyCode,"","",payedsums[i],rowsumbase,srcrow,false);
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+updating
+procedure AddLeftSumToIV(var Record IVVc IVp,var val leftsum,record INPayPriorityVc INPayPriorityr,var vector val vecUnpayedSums,integer srcrow,integer type,boolean lastitemf)
+Begin
+  Row IVVc IVrw;
+  Row INPayPriorityVc INPayPriorityrw;
+  Integer i,rw,sign,rwc,ii;
+  Boolean testf;
+  val rowsumbase;
+
+  if leftsum<0 then begin
+    sign=-1;
+  end else begin
+    sign=1;
+  end;
+
+  rw=MatRowCnt(IVp);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVp,i,IVrw);
+    testf=true;
+    if ((IVp.OKFlag==1) and (vecUnpayedSums[i]==0) and (leftsum<=0)) then begin                       //Nav j�sadala summa, ja ir sadal�ts pa maz un artikuls jau ir piln�b� apmaks�ts
+      testf=false;
+    end;
+    if ((IVp.OKFlag==1) and (vecUnpayedSums[i]==IVrw.Sum) and (leftsum>=0)) then begin                //Nav j�sadala summa, ja ir sadal�ts pa daudz un artikuls nav maks�ts
+      testf=false;
+    end;
+    if ((IVp.OKFlag==1) and (IVrw.Sum<0)) then begin                                                  //Nav j�sadala summa negat�viem artiuliem, tiem p�c gr�mato�anas j�b�t pa null�m
+      testf=false;
+    end;
+    if IVp.OKFlag!=1 then begin //Kapec visp�r �eit b�tu j�apskata atgr�mato�ana?
+      testf=false;
+    end;
+    if IVrw.stp!=kInvoiceRowTypeNormal then begin
+      testf=false;
+    end;
+    if testf then begin
+      rwc=MatRowCnt(INPayPriorityr);
+      for(ii=0;ii<rwc;ii=ii+1)begin
+        MatRowGet(INPayPriorityr,ii,INPayPriorityrw);
+        if IVrw.ArtCode==INPayPriorityrw.ArtCode and (INPayPriorityrw.Type==0 or INPayPriorityrw.Type==1 or INPayPriorityrw.Type==2) then begin
+          testf=false;
+          ii=rwc;
+        end;
+        if !lastitemf then begin
+          if IVrw.ArtCode==INPayPriorityrw.ArtCode and (INPayPriorityrw.Type==3 or INPayPriorityrw.Type==4) then begin
+            testf=false;
+            ii=rwc;
+          end;
+        end;
+        if lastitemf then begin //tikai tos ko apmaks� p�d�jos
+          testf = false;
+          if IVrw.ArtCode==INPayPriorityrw.ArtCode and (INPayPriorityrw.Type==3 or INPayPriorityrw.Type==4) then begin
+            testf=true;
+            ii=rwc;
+          end;
+        end;
+      end;
+    end;
+    if testf then begin
+      if leftsum<0 then begin
+        if (-1)*leftsum<=vecUnpayedSums[i] then begin
+          vecUnpayedSums[i]=vecUnpayedSums[i]+leftsum;
+          i=rw;
+          rowsumbase=MulRateToBase1(IVp.CurncyCode,leftsum,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);
+          if IVp.MergedInvFlag==0 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVp.Contract,
+                                      IVp.CurncyCode,IVp.BuildCode,IVp.FlatCode,leftsum,rowsumbase,srcrow,false);
+          end;
+          if IVp.MergedInvFlag==1 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVrw.ContractNr,
+                                      IVp.CurncyCode,"","",leftsum,rowsumbase,srcrow,false);
+          end;
+        end else begin
+          leftsum=leftsum+vecUnpayedSums[i];
+          rowsumbase=MulRateToBase1(IVp.CurncyCode,vecUnpayedSums[i],IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);
+          if IVp.MergedInvFlag==0 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVp.Contract,
+                                      IVp.CurncyCode,IVp.BuildCode,IVp.FlatCode,vecUnpayedSums[i],rowsumbase,srcrow,false);
+          end;
+          if IVp.MergedInvFlag==1 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVrw.ContractNr,
+                                      IVp.CurncyCode,"","",vecUnpayedSums[i],rowsumbase,srcrow,false);
+          end;
+          vecUnpayedSums[i]=0;
+        end;
+      end;
+      if leftsum>0 then begin
+        if leftsum<=(IVrw.Sum-vecUnpayedSums[i]) then begin
+          vecUnpayedSums[i]=vecUnpayedSums[i]+leftsum;
+          i=rw;
+
+          rowsumbase=MulRateToBase1(IVp.CurncyCode,leftsum,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);
+          if IVp.MergedInvFlag==0 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVp.Contract,
+                                      IVp.CurncyCode,IVp.BuildCode,IVp.FlatCode,leftsum,rowsumbase,srcrow,false);
+          end;
+          if IVp.MergedInvFlag==1 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVrw.ContractNr,
+                                      IVp.CurncyCode,"","",leftsum,rowsumbase,srcrow,false);
+          end;
+        end else begin
+          leftsum=leftsum+(vecUnpayedSums[i]-IVrw.Sum);
+          rowsumbase=MulRateToBase1(IVp.CurncyCode,vecUnpayedSums[i]-IVrw.Sum,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);
+          if IVp.MergedInvFlag==0 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVp.Contract,
+                                      IVp.CurncyCode,IVp.BuildCode,IVp.FlatCode,vecUnpayedSums[i]-IVrw.Sum,rowsumbase,srcrow,false);
+          end;
+          if IVp.MergedInvFlag==1 then begin
+            CreateItemPayHistVcRecord(IVp.SerNr,type,IVp.SerNr,IVp.InvDate,IVrw.ArtCode,IVp.CustCode,IVrw.ContractNr,
+                                      IVp.CurncyCode,"","",vecUnpayedSums[i]-IVrw.Sum,rowsumbase,srcrow,false);
+          end;
+          vecUnpayedSums[i]=IVrw.Sum;
+        end;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+updating
+procedure DistPayedAmount(var Record IVVc IVr,record INPayPriorityVc INPayPriorityr,var val sum,var vector val vecUnpayedSums,integer srcrow,integer type) begin
+  Row INPayPriorityVc INPayPriorityrw;
+  Row IVVc IVrw;
+  integer rw,i;
+  val LeftPayedSum,totsum,totdistr,t,t2,rowsumbase;
+  val paysum;
+  boolean testf;
+  vector boolean vecNotPayItems,vecLastPayItems,vecFirstPayItems;
+
+  rw = MatRowCnt(INPayPriorityr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(INPayPriorityr,i,INPayPriorityrw);
+    testf = true;
+    if INPayPriorityrw.Type==2 then begin
+      vecNotPayItems[INPayPriorityrw.ArtCode] = true;
+      testf = false;
+    end;
+    if INPayPriorityrw.Type==3 or INPayPriorityrw.Type==4 then begin
+      vecLastPayItems[INPayPriorityrw.ArtCode] = true;
+      testf = false;
+    end;
+    if testf then begin
+      vecFirstPayItems[INPayPriorityrw.ArtCode] = true;
+      AddPayedSumToIVItem(IVr,INPayPriorityrw.ArtCode,Sum,LeftPayedSum,vecUnpayedSums,srcrow,type);
+      Sum = LeftPayedSum;
+      if sum==0 then begin
+        GoTo LDistPayedAmount;
+      end;
+    end;
+  end;
+  
+  //add leftsum to leftartcodes
+  rw = MatRowCnt(IVr); totsum=0; totdistr=0;
+  if INPayPriorityr.INPayType==1 then begin
+    totsum=GetTotIVSum(IVr,INPayPriorityr,vecUnpayedSums);
+    paysum = sum;
+    if totsum<paysum then begin
+      paysum = totsum;
+    end;
+    sum = sum - paysum;
+  end;
+  
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    testf = true;
+    if IVrw.stp!=kInvoiceRowTypeNormal then begin
+      testf = false;
+    end;
+    if IVrw.Sum<=0 then begin
+      testf = false;
+    end;
+    if vecNotPayItems[IVrw.ArtCode]==true then begin
+      testf = false;
+    end;
+    if vecLastPayItems[IVrw.ArtCode]==true then begin
+      testf = false;
+    end;
+    if vecFirstPayItems[IVrw.ArtCode]==true then begin
+      testf = false;
+    end;
+    if testf then begin
+      if INPayPriorityr.INPayType==1 then begin
+        //proporcion�li
+        t=vecUnpayedSums[i];
+        t2=vecUnpayedSums[i]/totsum;
+        vecUnpayedSums[i]=Round(vecUnpayedSums[i]-t2*paysum,SetRoundModeD(2));
+        if vecUnpayedSums[i]<0 then begin
+          vecUnpayedSums[i]=0;
+        end;
+        t=t-vecUnpayedSums[i];
+        totdistr=totdistr+t;
+
+        // LogText(0,"art=" & IVrw.ArtCode & " pay=" & t & " paysum=" & paysum);
+        if t!=0 then begin
+          rowsumbase=MulRateToBase1(IVr.CurncyCode,t,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+          if IVr.MergedInvFlag==0 then begin
+            CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+                                      IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,t,rowsumbase,srcrow,false);
+          end;
+          if IVr.MergedInvFlag==1 then begin
+            CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                      IVr.CurncyCode,"","",t,rowsumbase,srcrow,false);
+          end;
+        end;
+      end else begin
+        //P�c priorit�tes
+        // LogText(0,"SerNr=" & IVr.SerNr & " art=" & IVrw.ArtCode & " Sum=" & Sum & " type=" & type);
+        AddPayedSumToIVItem(IVr,IVrw.ArtCode,Sum,LeftPayedSum,vecUnpayedSums,srcrow,type);
+        Sum = LeftPayedSum;
+        if sum==0 then begin
+          GoTo LDistPayedAmount;
+        end;
+      end;
+    end;
+  end;
+  
+  if INPayPriorityr.INPayType==1 then begin
+    //dalot proporcion�li var uz noapa�o�anas r��ina kaut kas pazust, tas tiek apstr�d�ts �eit
+    if totdistr!=paysum then begin
+      totdistr=totdistr-paysum;
+      AddLeftSumToIV(IVr,totdistr,INPayPriorityr,vecUnpayedSums,srcrow,type,false);
+    end;
+  end;
+  
+  //Apmaks� artikulus ar tipu p�d�jie
+  if sum>0 then begin
+    rw = MatRowCnt(INPayPriorityr);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(INPayPriorityr,i,INPayPriorityrw);
+      if INPayPriorityrw.Type==3 or INPayPriorityrw.Type==4 then begin
+        AddPayedSumToIVItem(IVr,INPayPriorityrw.ArtCode,Sum,LeftPayedSum,vecUnpayedSums,srcrow,type);
+        Sum = LeftPayedSum;
+        if sum==0 then begin
+          GoTo LDistPayedAmount;
+        end;
+      end;
+    end;
+  end;
+
+  //if overpay then add sum;
+  if sum>0 then begin
+    MatRowGet(IVr,srcrow,IVrw)
+    rowsumbase=MulRateToBase1(IVr.CurncyCode,sum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+    if IVr.MergedInvFlag==0 then begin
+      CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+                                IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,sum,rowsumbase,srcrow,false);
+    end;
+    if IVr.MergedInvFlag==1 then begin
+      CreateItemPayHistVcRecord(IVr.SerNr,type,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                IVr.CurncyCode,"","",sum,rowsumbase,srcrow,false);
+    end;
+    sum=0;
+  end;
+
+LDistPayedAmount:;
+  if sum!=0 then begin
+    LogText(0,"DistPayedAmount ERROR :: Could not distribute full amount for invoice " & IVr.SerNr);
+  end;
+
+return;
+end;
+
+updating
+function boolean UpdIVItemPayedSumFromNegativeRows(var record IVVc IVr,var vector val vecUnpayedSums)
+begin
+  record INPayPriorityVc INPayPriorityr;
+  row IVVc IVrw;
+  row INPayPriorityVc INPayPriorityrw;
+  val Sum,LeftPayedSum,totsum,totdistr,t,t2;
+  integer i,rw;
+  boolean res,inpayf;
+  longint paypr;
+
+  rw = MatRowCnt(IVr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeNormal and IVrw.Sum<0 then begin
+
+      paypr = GetItemNegItemPayPriority(IVrw.ArtCode);
+      if FindINPayPriorityRec(paypr,-1,"","",INPayPriorityr) then begin
+        inpayf = true;
+      end;
+
+      sum = -IVrw.Sum;
+      
+      if IVr.InclVAT==0 then begin
+        sum = sum + Round(FindVAT(IVrw.VATCode,sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end;
+      
+      if !inpayf then begin
+        if !FindINPayPriorityRecFromIVVc(IVr,INPayPriorityr) begin
+          LogText(0,"UpdIVItemPayedSumFromNegativeRows cannot find INPayPriorityVc for Invoice " & IVr.SerNr);
+        end;
+        inpayf = true;
+      end;
+      
+      DistPayedAmount(IVr,INPayPriorityr,Sum,vecUnpayedSums,i,6);
+      if sum!=0 then begin
+        LogText(0,"UpdIVItemPayedSumFromNegativeRows ERROR :: Cannot distribute full negative amount for invoice " & IVr.SerNr);
+      end;
+    end;
+  end;
+
+  UpdIVItemPayedSumFromNegativeRows = res;
+  return;
+end;
+
+updating
+function boolean UpdIVItemPayedSumFromPrepaymentRows(var record IVVc IVr,var vector val vecUnpayedSums)
+begin
+  record INPayPriorityVc INPayPriorityr;
+  record ARPayHistVc ARPayHistr;
+  row IVVc IVrw;
+  row INPayPriorityVc INPayPriorityrw;
+  val Sum,LeftPayedSum,totsum,totdistr,t,t2;
+  integer i,rw;
+  boolean res,inpayf;
+  // record NApsSetBlock NApsSetr;
+
+  rw = MatRowCnt(IVr);
+  for(i=0;i<rw;i=i+1)begin //get prepay total sum
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypePrepayment then begin
+      // ARPayHistr.CUPNr = IVrw.CUPNr;
+      // if ReadFirstMain(ARPayHistr,1,true) then begin
+      //   if ARPayHistr.INPayPriority==-1 then begin
+      //     Sum = Sum + IVrw.Sum;
+      //   end;
+      // end;
+
+      Sum = IVrw.Sum;
+      if !inpayf then begin
+        if !FindINPayPriorityRecFromIVVc(IVr,INPayPriorityr) begin
+          LogText(0,"UpdIVItemPayedSumFromPrepaymentRows cannot find INPayPriorityVc for Invoice " & IVr.SerNr);
+        end;
+        inpayf = true;
+      end;
+      DistPayedAmount(IVr,INPayPriorityr,Sum,vecUnpayedSums,i,5);
+      if sum!=0 then begin
+        LogText(0,"UpdIVItemPayedSumFromPrepaymentRows ERROR :: Cannot distribute full prepay amount for invoice " & IVr.SerNr);
+      end;
+    end;
+  end;
+
+  UpdIVItemPayedSumFromPrepaymentRows = res;
+  return;
+end;
+
+procedure FillUnpayedVec(var vector val vecUnpayedSums,record IVVc IVr)
+begin
+  integer i,rwc;
+  row IVVc IVrw;
+  val sum;
+
+  rwc = MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if nonblank(IVrw.ArtCode) and IVrw.Sum>0 then begin
+      if IVr.InclVAT==0 then begin
+        Sum = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end else begin
+        Sum = IVrw.Sum;
+      end;
+      vecUnpayedSums[i] = vecUnpayedSums[i] + sum;
+    end;
+  end;
+
+return;
+end;
+
+updating
+procedure DistributePrepaysAndNegItems(Record IVVc IVr,boolean NegItemsPayOther) begin
+  vector val vecUnpayedSums;
+
+  FillUnpayedVec(vecUnpayedSums,IVr);
+  // if UpdIVItemPayedSumFromINPrePayRows(IVr) then begin end;
+  if UpdIVItemPayedSumFromNegativeRows(IVr,vecUnpayedSums) then begin end;
+  if UpdIVItemPayedSumFromPrepaymentRows(IVr,vecUnpayedSums) then begin end;
+
+return;
+end;
+
+//Jh mini function that returns interest item code
+global
+function string 255 getInterestItemCode()
+begin
+  record IIBlock IIBl;
+  string 255 res
+  
+  BlockLoad(IIBl);
+
+  res = IIBL.ArtCode ;
+  getInterestItemCode = res;
+  return;
+end;
+
+global updating
+procedure UpdateItemPayHistVcFromIVVc(Record IVVc IVr,boolean unokf)
+begin
+  Record NApsSetBlock NApsSetr;
+  Row IVVc IVrw;
+  Record IVVc oldIVr,IV2r;
+  integer i,rwc,type;
+  val rowsum,vatsum,rowsumbase,vatsumbase,undivpay,LeftPayedSum;
+  val sum,vatamount,rowwithvat,sumwithvat; //jh
+  
+  val interestTotal; //JH
+  string 255 interestCode; //JH
+  if unokf then begin
+    Switch (IVr.InvType) begin
+      Case kInvoiceTypeNormal: //normal
+        RemoveItemPayHistVc(IVr.SerNr,1); //Invoice normal items
+        RemoveItemPayHistVc(IVr.SerNr,5); //Prepays attached to invoice
+        RemoveItemPayHistVc(IVr.SerNr,6); //Negative items in invoice
+      Case kInvoiceTypeCredit: //creditinvoice
+        //Second delete support register records
+        RemoveItemPayHistVc(IVr.SerNr,2); //Credit invoice
+//Jh added interest
+      Case kInvoiceTypeInterest: //creditinvoice
+        //Second delete support register records
+        RemoveItemPayHistVc(IVr.SerNr,1); //interest invoice
+    end;
+  end else begin
+    // BlockLoad(NApsSetr);
+    Switch (IVr.InvType) begin
+      // JH Cust begin ::28.09.2024 ( this is the code to display interest)
+      Case kInvoiceTypeInterest:
+       begin
+        rowsum = 0;
+          rwc = MatRowCnt(IVr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(IVr,i,IVrw);
+            interestCode = getInterestItemCode();  // te
+            if IVrw.stp==kInvoiceRowTypeInterest and nonblank(IVrw.ArtCode) and IVrw.Sum!=0 then begin
+              //Individual rows
+              rowsum = IVrw.Sum;//jh
+              if IVr.InclVAT==0 then begin
+                rowsum = rowsum + Round(FindVAT(IVrw.VATCode,rowsum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(3));
+              end;
+
+              rowsumbase=MulRateToBase1(IVr.CurncyCode,rowsum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              type = 1;
+              LogText(0,"art=" & IVrw.ArtCode & " rowsum=" & rowsum & " rowsumbase=" & rowsumbase);
+
+
+              switch (IVrw.VATCode) begin
+                case 1: vatamount = 0.15;
+                otherwise vatamount = 0;
+              end;
+
+              rowwithvat = IVrw.Sum * vatamount;
+              sumwithvat =  IVrw.Sum + rowwithvat;
+              
+              if IVr.MergedInvFlag==0 then begin
+                CreateItemPayHistVcRecord(IVr.SerNr,1,IVr.SerNr,IVr.InvDate,interestCode,IVr.CustCode,IVr.Contract,
+                                          IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,sumwithvat,sumwithvat,1,false); //
+                                          // StopAlert(rowsum);
+              end;
+              if IVr.MergedInvFlag==1 then begin
+                CreateItemPayHistVcRecord(IVr.SerNr,1,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                          IVr.CurncyCode,"","",rowsum,sumwithvat,1,false);
+              end;
+            end;
+          end;
+          DistributePrepaysAndNegItems(IVr,true);       end;
+
+// Cust end
+      Case kInvoiceTypeNormal: //normal
+        Begin
+          rwc = MatRowCnt(IVr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(IVr,i,IVrw);
+            if IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.ArtCode) and IVrw.Sum!=0 then begin
+              //Individual rows
+              rowsum = IVrw.Sum;
+              if IVr.InclVAT==0 then begin
+                rowsum = rowsum + Round(FindVAT(IVrw.VATCode,rowsum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+              end;
+
+              rowsumbase=MulRateToBase1(IVr.CurncyCode,rowsum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              type = 1;
+              // LogText(0,"art=" & IVrw.ArtCode & " rowsum=" & rowsum & " rowsumbase=" & rowsumbase);
+              if IVr.MergedInvFlag==0 then begin
+                CreateItemPayHistVcRecord(IVr.SerNr,1,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+                                          IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,rowsum,rowsumbase,i,false);
+              end;
+              if IVr.MergedInvFlag==1 then begin
+                CreateItemPayHistVcRecord(IVr.SerNr,1,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                          IVr.CurncyCode,"","",rowsum,rowsumbase,i,false);
+              end;
+            end;
+          end;
+          DistributePrepaysAndNegItems(IVr,true);
+        end;
+      Case kInvoiceTypeCredit: //credit invoice
+        Begin
+          IV2r.SerNr = IVr.CredInv;
+          if ReadFirstMain(IV2r,1,true) then begin
+            rwc = MatRowCnt(IVr);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(IVr,i,IVrw);
+              if IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.ArtCode) and IVrw.Sum!=0 then begin
+                if IVr.InclVAT==0 then begin
+                  Sum = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+                end else begin
+                  Sum = IVrw.Sum;
+                end;
+                if sum>0 then begin
+                  rowsum = Sum;
+                  rowsumbase=MulRateToBase1(IVr.CurncyCode,rowsum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+                  if IV2r.MergedInvFlag==0 then begin
+                    CreateItemPayHistVcRecord(IVr.SerNr,2,IV2r.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IV2r.Contract,
+                                          IVr.CurncyCode,IV2r.BuildCode,IV2r.FlatCode,rowsum,rowsumbase,i,false);
+                  end;
+                  if IV2r.MergedInvFlag==1 then begin
+                    CreateItemPayHistVcRecord(IVr.SerNr,2,IV2r.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                          IVr.CurncyCode,"","",rowsum,rowsumbase,i,false);
+                  end;
+                end else begin
+                  LogText(0,"UpdateItemPayHistVcFromIVVc ERROR Credit invoice with negative rows " & IVr.SerNr);
+                end;
+              end;
+            end;
+          end else begin
+            rwc = MatRowCnt(IVr);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(IVr,i,IVrw);
+              if IVrw.stp==kInvoiceRowTypeNormal and nonblank(IVrw.ArtCode) and IVrw.Sum!=0 then begin
+                if IVr.InclVAT==0 then begin
+                  Sum = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+                end else begin
+                  Sum = IVrw.Sum;
+                end;
+                if sum>0 then begin
+                  rowsum = Sum;
+                  rowsumbase=MulRateToBase1(IVr.CurncyCode,rowsum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+
+                  // if IVr.MergedInvFlag==0 then begin
+                    CreateItemPayHistVcRecord(IVr.SerNr,2,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+                                          IVr.CurncyCode,IVr.BuildCode,IVr.FlatCode,rowsum,rowsumbase,i,false);
+                  // end;
+                  // if IVr.MergedInvFlag==1 then begin
+                    // CreateItemPayHistVcRecord(IVr.SerNr,2,IVr.SerNr,IVr.InvDate,IVrw.ArtCode,IVr.CustCode,IVrw.ContractNr,
+                                          // IVr.CurncyCode,"","",rowsum,rowsumbase,i,false);
+                  // end;
+                end else begin
+                  LogText(0,"UpdateItemPayHistVcFromIVVc ERROR Credit invoice with negative rows " & IVr.SerNr);
+                end;
+              end;
+            end;
+          
+          end;
+        end;
+    end;
+  end;
+
+return;
+end;
+
+function string 2 GetVATCodeFromIVVc(Record IVVc IVr,string item) begin
+  Row IVVc IVrw;
+  string 2 res;
+  integer i,rwc;
+
+  res = "";
+  rwc = MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ArtCode == item then begin
+      res = IVrw.VATCode;
+    end;
+  end;
+
+  GetVATCodeFromIVVc = res;
+return;
+end;
+
+global updating
+procedure UpdateItemPayHistVcFromIPVc(Record IPVc IPr,boolean unokf,string custcode)
+begin
+  Row IPVc IPrw;
+  Record IVVc IVr;
+  integer i,rwc;
+  val rowsum,vatsum,rowsumbase,vatsumbase;
+  val fr,to1,to2,br1,br2;
+  string 10 basecur,vatcode;
+  boolean testf;
+  
+  if unokf then begin
+    RemoveItemPayHistVc(IPr.SerNr,3);
+  end else begin
+    GetBaseCurncy(1,basecur);
+    rwc = MatRowCnt(IPr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(IPr,i,IPrw);
+      testf=true;
+      if nonblank(custcode) and custcode!=IPrw.CustCode then begin
+        testf=false;
+      end;
+      if IPrw.InvoiceNr!=-1 and nonblank(IPrw.rkRecNumber) and IPrw.RecVal!=0 and testf then begin
+        IVr.SerNr = IPrw.InvoiceNr;
+        if !ReadFirstMain(IVr,1,true) then begin
+          Logtext(0,"UpdateItemPayHistVcFromIPVc ERROR cannot find invoice " & IPrw.InvoiceNr & " payment " & IPr.SerNr);
+        end;
+        rowsum = IPrw.RecVal;
+        if IPrw.VATVal!=0 then begin
+          //if VAT val is specified in receipt then use it
+          vatsum = IPrw.VATVal;
+        end else begin
+          //if VAT val is not specified in receipt find vat code from invoice and calculate it
+          vatcode = GetVATCodeFromIVVc(IVr,IPrw.rkRecNumber);
+          if nonblank(vatcode) then begin
+            vatsum = Round(FindVAT(vatcode,rowsum,1,0),SetRoundModeD(2));
+          end else begin
+            vatsum = 0;
+          end;
+        end;
+        if basecur != IPrw.RecCurncy then begin
+          GetFullCurncyRate(IPrw.RecCurncy,IPrw.PayDate,fr,to1,to2,br1,br2);
+          rowsumbase = MulRateToBase1(IPrw.RecCurncy,rowsum,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+          vatsumbase = MulRateToBase1(IPrw.RecCurncy,vatsum,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+        end else begin
+          rowsumbase = rowsum;
+          vatsumbase = vatsum;
+        end;
+        CreateItemPayHistVcRecord(IPr.SerNr,3,IPrw.InvoiceNr,IPrw.PayDate,IPrw.rkRecNumber,IPrw.CustCode,IPrw.ContractNr,
+                                  IPrw.RecCurncy,"","",rowsum,rowsumbase,i,false);
+      end;
+    end;
+  end;
+
+return;
+end;
+
+// global updating
+// procedure UpdateItemPayHistVcFromCLInVc(Record CLInVc CLInr) begin
+//   Record CLInPayDistVc CLInPayDistr;
+//   Record IVVc IVr;
+//   Row IVVc IVrw;
+//   integer rwc,i;
+//   val rowsum,rowsumbase;
+//   boolean wloop;
+
+//   wloop = true;
+//   CLInPayDistr.CLInSerNr = CLInr.SerNr;
+//   While LoopKey("CLInSerNr",CLInPayDistr,1,wloop) begin
+//     if CLInPayDistr.CLInSerNr != CLInr.SerNr then begin
+//       wloop = false;
+//     end else begin
+//       IVr.SerNr = CLInPayDistr.IVSerNr;
+//       if ReadFirstMain(IVr,1,true) then begin
+//         rwc = MatRowCnt(IVr);
+//         if CLInPayDistr.Rownr<=rwc then begin
+//           MatRowGet(IVr,CLInPayDistr.Rownr,IVrw);
+//           rowsum = CLInPayDistr.Amt;
+//           rowsumbase = CLInPayDistr.AmtB1;
+//           CreateItemPayHistVcRecord(CLInr.SerNr,4,IVr.SerNr,CLInr.TransDate,IVrw.ArtCode,IVr.CustCode,IVr.Contract,
+//                                       CLInr.CurncyCode,IVr.BuildCode,IVr.FlatCode,rowsum,rowsumbase,CLInPayDistr.Rownr,false);
+//         end;
+//       end;
+//     end;
+//   end;
+
+// return;
+// end;
+
+global
+procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc IVr,date OnDate,boolean OnlyPrevMonthArtCodes,var array string ArtCodeMas,var array val UnPayedSumMas,var array longint arrContractNrs)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  Row IVVc IVrw;
+  integer i,rw,masi,masrw,prevTransType;
+  boolean wloop,foundf;
+
+  if IVr.InvType!=kInvoiceTypeCredit and IVr.InvType!=kInvoiceTypeCash then begin
+    masrw = StringToInt(ArtCodeMas[0]);
+    ItemPayHistr.IVNr = IVr.SerNr;
+    ItemPayHistr.TransDate = OnDate;
+    wloop = true;
+    While LoopBackKey("IVNr",ItemPayHistr,2,wloop) begin
+      if ItemPayHistr.IVNr != IVr.SerNr then begin
+        wloop = false;
+      end else begin
+        foundf = false;
+        for(masi=1;masi<=masrw;masi=masi+1)begin
+          if ArtCodeMas[masi]==ItemPayHistr.ArtCode and arrContractNrs[masi]==ItemPayHistr.ContrSerNr then begin
+            foundf = true;
+            if ItemPayHistr.FileName==1 then begin
+              UnPayedSumMas[masi] = UnPayedSumMas[masi] + ItemPayHistr.AmtValBaseCur;
+            end else begin
+              UnPayedSumMas[masi] = UnPayedSumMas[masi] - ItemPayHistr.AmtValBaseCur;
+            end;
+          end;
+        end;
+        if !foundf then begin
+          masrw = masrw + 1;
+          ArtCodeMas[masrw]     = ItemPayHistr.ArtCode;
+          arrContractNrs[masrw] = ItemPayHistr.ContrSerNr;
+          if ItemPayHistr.FileName==1 then begin
+            UnPayedSumMas[masrw] = ItemPayHistr.AmtValBaseCur;
+          end else begin
+            UnPayedSumMas[masrw] = -ItemPayHistr.AmtValBaseCur;
+          end;
+        end;
+      end;
+    end;
+
+    ArtCodeMas[0] = masrw;
+  end;
+
+return;
+end;
+
+global
+procedure GetCOItemCalcInPeriod(longint conr,string artcode,date sd,date ed,var val bal,boolean InclCredInCalc) begin
+  Record ItemPayHistVc ItemPayHistr;
+  boolean wloop;
+
+  bal = 0;
+  ItemPayHistr.TransDate=sd;
+  ItemPayHistr.ContrSerNr=conr;
+  ItemPayHistr.ArtCode=artcode;
+  wloop = true;
+  While LoopKey("ContrSerNr",ItemPayHistr,3,wloop) begin
+    if ItemPayHistr.ContrSerNr!=conr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate>ed then begin
+      wloop = false;
+    end else begin
+      Switch (ItemPayHistr.FileName) begin
+        Case 1:
+          bal = bal + ItemPayHistr.AmtValBaseCur;
+        Case 2:
+          if InclCredInCalc then begin
+            bal = bal - ItemPayHistr.AmtValBaseCur;
+          end;
+      end;
+    end;
+  end;
+
+return;
+end;
+
+global
+procedure GetCOItemBalanceOnDate(longint conr,string artcode,date ondate,var val bal,boolean inclnegcalc) begin
+  Record ItemPayHistVc ItemPayHistr;
+  Record ItemPayStatVc ItemPayStatr;
+  boolean wloop;
+  date td,sd;
+
+  if ondate.day == DaysInMonth(GetYear(ondate),GetMonth(ondate)) then begin
+    //find balance on last day of month, so look for next month balance on 1st date (thats how it is stored in supp reg)
+    td = AddDay(ondate,1);
+  end else begin
+    td = ondate;
+  end;
+
+  bal = 0;
+  ItemPayStatr.ContrSerNr = conr;
+  ItemPayStatr.ArtCode = artcode;
+  ItemPayStatr.TransDate = td;
+  if ReadFirstMain(ItemPayStatr,3,true) begin
+    bal = ItemPayStatr.DebtVal;
+    GoTo LGetCOItemBalance;
+  end;
+
+  sd.day=1; sd.month=1; sd.year=1980;
+  ItemPayStatr.ContrSerNr = conr;
+  ItemPayStatr.ArtCode = artcode;
+  ItemPayStatr.TransDate = td;
+  if ReadLastMain(ItemPayStatr,3,false) then begin
+    if ItemPayStatr.ContrSerNr == conr and ItemPayStatr.ArtCode == artcode and ItemPayStatr.TransDate < td then begin
+      bal = ItemPayStatr.DebtVal;
+      sd = ItemPayStatr.TransDate;
+    end;
+  end;
+
+  ItemPayHistr.TransDate=sd;
+  ItemPayHistr.ContrSerNr=conr;
+  ItemPayHistr.ArtCode=artcode;
+  wloop = true;
+  While LoopKey("ContrSerNr",ItemPayHistr,3,wloop) begin
+    if ItemPayHistr.ContrSerNr!=conr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate>ondate then begin
+      wloop = false;
+    end else begin
+      Switch (ItemPayHistr.FileName) begin
+        Case 1:
+          if inclnegcalc or ItemPayHistr.AmtValBaseCur>0 then begin
+            bal = bal + ItemPayHistr.AmtValBaseCur;
+          end;
+        Case 2:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 3:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 4:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 5:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 6:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+      end;
+    end;
+  end;
+
+LGetCOItemBalance:;
+return;
+end;
+
+global
+function val GetInvoiceSelfPayedSum(record IVVc IVr,string artcode)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  boolean wloop,testf;
+  val res;
+
+  ItemPayHistr.FileName = 5;
+  ItemPayHistr.TransNr = IVr.SerNr;
+  ItemPayHistr.ArtCode = ArtCode;
+  ItemPayHistr.TransDate = IVr.TransDate;
+  wloop = true;
+  While LoopKey("ArtCode",ItemPayHistr,4,wloop) begin
+    if ItemPayHistr.FileName!=5 or ItemPayHistr.TransNr!=IVr.SerNr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate!=IVr.TransDate then begin
+      wloop = false;
+    end else begin
+      res = res + ItemPayHistr.AmtVal;
+    end;
+  end;
+
+  ItemPayHistr.FileName = 6;
+  ItemPayHistr.TransNr = IVr.SerNr;
+  ItemPayHistr.ArtCode = ArtCode;
+  ItemPayHistr.TransDate = IVr.TransDate;
+  ResetLoop(ItemPayHistr);
+  wloop = true;
+  While LoopKey("ArtCode",ItemPayHistr,4,wloop) begin
+    if ItemPayHistr.FileName!=6 or ItemPayHistr.TransNr!=IVr.SerNr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate!=IVr.TransDate then begin
+      wloop = false;
+    end else begin
+      res = res + ItemPayHistr.AmtVal;
+    end;
+  end;
+
+  GetInvoiceSelfPayedSum = res;
+  return;
+end;
+
+global
+function boolean CreditInvItemPayHistCheck(Record IVVc IVr,var longint rw)
+begin
+  row IVVc IVrw;
+  Record ItemPayHistVc ItemPayHistr;
+  integer i,rwc;
+  boolean TrHs,res;
+  val ArtSum;
+  string 20 index;
+  longint sernr;
+  
+  rw=0;
+  
+  rwc=MatRowCnt(IVr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==kInvoiceRowTypeCredit then begin
+      sernr=IVrw.OrdRow;
+      i=rwc;
+    end;
+  end;
+  
+  if sernr!=-1 then begin
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(IVr,i,IVrw);
+      if IVrw.stp!=kInvoiceRowTypeCredit and IVrw.ArtCode!="" then begin
+        ResetLoop(ItemPayHistr);
+        ItemPayHistr.TransNr=sernr;
+        TrHs=true;
+        While LoopKey("TransNrFN",ItemPayHistr,1,TrHs) begin
+          if ItemPayHistr.TransNr!=sernr then begin
+            TrHs=false;
+          end else begin
+            if (ItemPayHistr.TransNr!=IVr.SerNr) and (IVrw.ArtCode==ItemPayHistr.ArtCode) then begin
+              if ItemPayHistr.FileName==1 then begin
+                ArtSum = ArtSum + ItemPayHistr.AmtValBaseCur;
+              end else begin
+                ArtSum = ArtSum - ItemPayHistr.AmtValBaseCur;
+              end;
+            end;
+          end;
+        end;
+        if ArtSum-IVrw.Sum>=0 then begin
+          res=true;
+        end;
+        if !res then begin
+          rw=i;
+          i=rwc;
+        end;
+      end;
+    end;
+  end;
+  
+  CreditInvItemPayHistCheck=res;
+  return;
+end;
+
+global
+procedure AddUnPayedArtCodeCreditIV(var record IVVc CredIVr,longint sernr)
+begin
+  Record IVVc IVr;
+  row IVVc IVrw;
+  integer size,i,j,rownr,rwc;
+  Array val UnPayedSumMas;
+  Array String 20 ArtCodeMas;
+  array longint arrContractNrs;
+  boolean chsum;
+  
+  if sernr!=-1 then begin
+    IVr.SerNr = sernr;
+    if ReadFirstMain(IVr,1,true) then begin
+      ArtCodeMas[0]=0;
+      GetIVUnPayedArtCodeUniqMasOnDate(IVr,AddYear(CurrentDate,5),false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+      size=StringToInt(ArtCodeMas[0]);
+      rwc=MatRowCnt(CredIVr);
+      for (j=0;j<rwc;j=j+1) begin
+        MatRowGet(CredIVr,j,IVrw);
+        for(i=1;i<=size;i=i+1)begin
+          if ArtCodeMas[i]==IVrw.ArtCode then begin
+            IVrw.Sum=UnPayedSumMas[i];
+            if IVrw.Sum>0 then begin
+              IVrw.Sum=IVrw.Sum-Round(FindVAT(IVrw.VATCode,IVrw.Sum,1,0),SetRoundModeD(2));
+            end;
+            MatRowPut(CredIVr,j,IVrw);
+            if IVVc_PasteSum(CredIVr,j,chsum,1) then begin end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  return;
+end;
+
+global
+function boolean InvArtCodeOverPayExsist(longint IVSerNr,string artcode,longint conrtact,val recval)
+begin
+  record ItemPayHistVc ItemPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf,res,credf;
+  val unpayedsum;
+  
+  ResetLoop(ItemPayHistr);
+  TrHs=true;
+  ItemPayHistr.IVNr=IVSerNr;
+  While LoopKey("IVNr",ItemPayHistr,1,TrHs) begin
+    if ItemPayHistr.IVNr!=IVSerNr then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if ItemPayHistr.ContrSerNr!=conrtact then begin
+        testf=false;
+      end;
+      if ItemPayHistr.ArtCode!=artcode then begin
+        testf=false;
+      end;
+      if testf then begin
+        if ItemPayHistr.FileName==1 then begin
+          unpayedsum = unpayedsum + ItemPayHistr.AmtValBaseCur;
+        end else begin
+          if (ItemPayHistr.FileName==3) and (ItemPayHistr.AmtValBaseCur<0) then begin
+            unpayedsum = unpayedsum + ItemPayHistr.AmtValBaseCur;
+          end else begin
+            unpayedsum = unpayedsum - ItemPayHistr.AmtValBaseCur;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if recval<0 then begin
+    IVr.SerNr=IVSerNr;
+    if ReadFirstMain(IVr,1,true) then begin
+      if IVr.InvType==kInvoiceTypeCredit then begin
+        credf=true;
+      end;
+    end;
+  end;
+
+  if credf then begin
+    if unpayedsum>recval then begin
+      res=true;
+    end;
+  end else begin  
+    if unpayedsum<recval then begin
+      res=true;
+    end;
+  end;
+  
+  InvArtCodeOverPayExsist=res;
+  return;
+end;
+
+global
+procedure GetItemPayHistSum(longint SerNr,var val sum,var val intsum,string intperccodes,integer type)
+begin
+  record ItemPayHistVc ItemPayHistr;
+  boolean TrHs,testf;
+  val t;
+  
+  sum=0;
+  intsum=0;
+  
+  if type==0 then begin
+    TrHs=true;
+    ItemPayHistr.IVNr=SerNr;
+    While LoopKey("IVNr",ItemPayHistr,1,TrHs) begin
+      if ItemPayHistr.IVNr!=SerNr then begin
+        TrHs=false;
+      end else begin
+        if ItemPayHistr.TransNr==SerNr then begin
+          if type==0 then begin
+            if ItemPayHistr.FileName==1 then begin
+              t = ItemPayHistr.AmtValBaseCur;
+            end else begin
+              t = -ItemPayHistr.AmtValBaseCur;
+            end;
+          end;
+          if SetInSet(ItemPayHistr.ArtCode,intperccodes) then begin
+            intsum = intsum + t;
+          end else begin
+            sum = sum + t;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  if type==1 then begin
+    TrHs=true;
+    ItemPayHistr.TransNr=SerNr;
+    ItemPayHistr.FileName=3;
+    While LoopKey("TransNrFN",ItemPayHistr,2,TrHs) begin
+      if ItemPayHistr.TransNr!=SerNr or ItemPayHistr.FileName!=3 then begin
+        TrHs=false;
+      end else begin
+        t = ItemPayHistr.AmtValBaseCur;
+        if SetInSet(ItemPayHistr.ArtCode,intperccodes) then begin
+          intsum = intsum + t;
+        end else begin
+          sum = sum + t;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;

@@ -1,0 +1,55 @@
+global
+updating procedure SuppContactIn()
+begin
+  record CUVc CUr, CU2r;
+  string 255 Seq, CreditorCode, CreditorName, lastDateOfQuote, Contact, Tel, Fax, Cell,Email,PostalAddress,Terms,SupplierCat,TermsHardCoded,ID,
+  CompanyReg,VatReg,CountryCode,PayMethod,Payee,PayType,BranchCode,AccountNumber,AccountHolder,AccountType,CreditorType,Category,Active,CountryCode2,SalesCurrency,SupplierChBx,CustomerChBx,BlockedChBx,
+  HoldOpr,HoldReason;
+  
+  SupplierCat = "SUPP";
+  SupplierChBx = "1";
+  CustomerChBx = "0";
+  TermsHardCoded = "30";
+  SalesCurrency = "NAD";
+  CountryCode2 = "NA";
+
+  while (NextImportLine(false)) begin
+    CreditorCode = ImportField;
+    CreditorName = ImportField;
+    Tel = ImportField;
+    Fax = ImportField;
+    Cell = ImportField; 
+    Email = ImportField; // limited emails
+    PostalAddress = ImportField; 
+    Terms = ImportField;
+    VatReg = ImportField;
+    AccountNumber = ImportField;
+    ID = ImportField;
+
+    RecordNew(CUr);
+    CUr.Code = "S" & CreditorCode;
+    CUr.Name = CreditorName;
+    CUr.Phone = Tel;
+    CUr.Fax = Fax;
+    CUr.eMail = Email; // limited emails
+    CUr.PayDeal = blankval;
+    CUr.VEPayDeal = TermsHardCoded;
+    CUr.VATNr = VatReg;
+    CUr.CountryCode = CountryCode2;
+    CUr.VECurncyCode = SalesCurrency;
+    CUr.InvAddr0 = PostalAddress;
+    CUr.VECat = SupplierCat;
+    CUr.VEType = 1; // supplier
+    CUr.CUType = 0;// customer
+    CUr.DateCreated = CurrentDate;
+    CUr.CreditLimit = blankval;
+    CUr.CreditLimitDays = blankval;
+    CUr.BankAccount = AccountNumber;
+    CUr.IDNr = ID;
+    CUr.CustCat = blankval;
+
+    RecordImportStore(CUr,false);
+  end;
+
+  return;
+end;

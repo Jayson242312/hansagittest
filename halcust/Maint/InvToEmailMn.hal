@@ -1,0 +1,800 @@
+/* Disabled-ServerOnly */
+
+external inner procedure FindUserMailboxName(string,var string,var string);
+external inner function Boolean FindCustomerRelation(string,string,var record CUVc);
+// external inner procedure GetPayDealText(string,string,var string);
+external inner procedure StripEndingSpaces(var string);
+external inner function string 255 MonthName(Date);
+external procedure DividerStr(string,string,var array string,var integer);
+external updating procedure OBS_CreateAndAttachPdf(Record MailVc,Record IVVc,string,string,integer,string);
+external inner updating function Boolean RecordAction_raEMailQue(var record MailVc,Boolean);
+external function integer GetSleepTime(integer);
+external procedure PrintPrepayAmount(Record IVVc,var val); //level0
+// external inner procedure DateToString2(Date,var string,string,string,string);
+external inner function boolean SetInSet2(string, string);
+//external procedure FindUserFromMailboxName(string,var string);
+external function val GetCustIPrsSumTillDate(string,date,longint,var val,longint);
+external procedure SetInvToEmailTask(string);
+
+global
+function Boolean InvToEmailVClassOnOKWindow(integer wn) begin
+  Record RcVc RepSpec;
+  Boolean res;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  res = true;
+  // if blank(RepSpec.f1) and blank(RepSpec.f2) then begin
+    // MessageBox(1000808,"");
+    // res=false;
+  // end;
+  
+  InvToEmailVClassOnOKWindow=res;
+  return;
+end;
+
+global
+function Boolean InvToEmailTaskVClassOnOKWindow(integer wn) begin
+  Record RcVc RepSpec;
+  Boolean res;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  res = true;
+  // if blank(RepSpec.f1) and blank(RepSpec.f2) then begin
+    // MessageBox(1000808,"");
+    // res=false;
+  // end;
+  
+  InvToEmailTaskVClassOnOKWindow=res;
+  return;
+end;
+
+global updating
+procedure SetServInvSendFlag(var record IVVc IVr)
+begin
+  record IVVc oldIVr;
+  
+  if (IVr.ServInvSendf==0) and (IVr.ServInvf==1) then begin
+    RecordCopy(oldIVr,IVr);
+    IVr.ServInvSendf=1;
+    if RecordUpdate(oldIVr,IVr,false)!=0 then begin
+      LogText(0,"SetServInvSendFlag ERROR :: Cant set ServInvSendFlag " & IVr.SerNr);
+    end;
+  end;
+  
+  return;
+end;
+  
+procedure PutOneEmailRow(var Record MailVc mailr,string email,var integer rownr) begin
+  row MailVc MArw;
+  
+  if nonblank(email) then begin
+    MArw.RowTyp = 0;
+    MArw.AddrCode = email;
+    MatRowPut(mailr,rownr,MArw);
+    rownr = rownr + 1;
+  end;
+  
+return;
+end;
+
+procedure PutAdditionalEmails(var Record MailVc Mailr,integer startrow,Record NAContractVc NAContractr,record CUVc CUr,boolean custf) begin
+  integer rownr;
+  
+  rownr = startrow;
+  if custf then begin
+    PutOneEmailRow(Mailr,CUr.OBS_eMail1,rownr);
+    PutOneEmailRow(Mailr,CUr.OBS_eMail2,rownr);
+    PutOneEmailRow(Mailr,CUr.OBS_eMail3,rownr);
+    PutOneEmailRow(Mailr,CUr.OBS_eMail4,rownr);
+    PutOneEmailRow(Mailr,CUr.OBS_eMail5,rownr);
+  end else begin
+    PutOneEmailRow(Mailr,NAContractr.OBS_eMail1,rownr);
+    PutOneEmailRow(Mailr,NAContractr.OBS_eMail2,rownr);
+    PutOneEmailRow(Mailr,NAContractr.OBS_eMail3,rownr);
+    PutOneEmailRow(Mailr,NAContractr.OBS_eMail4,rownr);
+    PutOneEmailRow(Mailr,NAContractr.OBS_eMail5,rownr);
+  end;
+  
+return;
+end;
+
+global
+function string 255 GetShortDate(date sd,date ed) begin
+
+  GetShortDate=DateToString(sd,"DD/MM/YYYY") & ":" & DateToString(ed,"DD/MM/YYYY");;
+end;
+
+global 
+function string 255 GetLongDate(date td) begin
+  string 255 res;
+  string 2 tstr;
+
+  tstr = GetDay(td);
+  if len(tstr)==1 then begin
+    tstr="0" & tstr;
+  end;
+
+  res=GetYear(td) & "." & USetStr(1000816) & " " & tstr & ". " & MonthName(td);
+
+  GetLongDate=res;
+end;
+
+global
+procedure GetFieldFromCUVc(string custcode,string fieldname,var string res) begin
+  Record CUVc CUr;
+
+  res="";
+  CUr.Code=custcode;
+  if ReadFirstMain(Cur,1,true) then begin
+    res=GetFieldValueByName(CUr,fieldname,-1);
+  end;
+
+return;
+end;
+
+global
+function string 255 GetFieldFromCYBlock(string fieldname) begin
+  Record CYBlock CYr;
+  string 255 res;
+
+  res="";
+  BlockLoad(CYr);
+  Switch (fieldname) begin
+    Case "CompName": res=CYr.CompName;
+    Case "Addr0": res=CYr.Addr0;
+    Case "Addr1": res=CYr.Addr1;
+    Case "Addr2": res=CYr.Addr2;
+    Case "Addr3": res=CYr.Addr3;
+    Case "Addr4": res=CYr.Addr4;
+    Case "Phone": res=CYr.Phone;
+    Case "Fax": res=CYr.Fax;
+    Case "OrgNr": res=CYr.OrgNr;
+    Case "Bank1": res=CYr.Bank1;
+    Case "VATNr": res=CYr.VATNr;
+    Case "Bank2": res=CYr.Bank2;
+    Case "BankCode": res=CYr.BankCode;
+    Case "BankName": res=CYr.BankName;
+    Case "OrgNr2": res=CYr.OrgNr2;
+    Case "CountryCode": res=CYr.CountryCode;
+    Case "HomeCommunity": res=CYr.HomeCommunity;
+    Case "ANACode": res=CYr.ANACode;
+    Case "emailAddr": res=CYr.emailAddr;
+    Case "wwwAddr": res=CYr.wwwAddr;
+    Case "Manager": res=CYr.Manager;
+    Case "ChiefAccountant": res=CYr.ChiefAccountant;
+  end;
+
+  GetFieldFromCYBlock=res;
+end;
+
+function string 255 GetDebTotal(Record IVVc IVr) begin
+  val onaccsum,debtot;
+  record SysFormatBlock SysFormatRec;
+
+  BlockLoad(SysFormatRec);
+
+  PrintPrepayAmount(IVr,onaccsum);
+
+  debtot = debtot + IVr.Sum4-onaccsum;
+  if debtot<0 then begin
+    debtot = 0;
+  end;
+
+  GetDebTotal=ValToString(debtot,M4Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+  return;
+end;
+
+function string 255 GetDEBTOTSUMONDATE(Record IVVc IVr)
+begin
+  val onaccsum,debtot2,latesum,res,t;
+  record SysFormatBlock SysFormatRec;
+ 
+  BlockLoad(SysFormatRec);
+  
+  debtot2 = GetCustIPrsSumTillDate(IVr.CustCode,IVr.InvDate,IVr.SerNr,latesum,IVr.Contract);
+  PrintPrepayAmount(IVr,onaccsum);
+
+  t=debtot2 + IVr.Sum4-onaccsum;  //realIvr
+  
+  if t<0 then begin
+    res = 0.00;
+  end else begin
+    res = t;
+  end;
+    
+  GetDEBTOTSUMONDATE=ValToString(res,M4Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+  return;
+end;
+
+procedure PasteLTxttoMail(record MailVc Mailr,Record LTxtVc LTxtr,Record IVVc IVr,Record RcVc RepSpec) begin
+  string 255 tstr,spstr;
+  string 1 curchr;
+  Integer pos,textsize,lstr,fln,tln,i,startfield,endfield,size;
+  boolean fixlen,skipf;
+  array string 255 aRes;
+  
+  if RepSpec.f2=="MERGEDPDF" then begin
+    skipf=true;
+  end;
+  
+  //LTxtr.Code = EPOrderDocr.LTxtCode;
+  //if (ReadFirstMain(LTxtr,1,true)) then begin
+  textsize = SizeTextCnt(LTxtr);
+  while (pos<textsize) begin
+    curchr=StringFromText(LTxtr,pos,1);
+    lstr=lstr+1;
+    if (curchr=="[") then begin
+      tstr=StringFromText(LTxtr,pos-lstr+1,lstr-1);
+      AddToText(tstr,Mailr);
+      startfield=pos;
+      lstr=0;
+      fixlen=false;
+    end;
+    if (curchr=="{") then begin
+      tstr=StringFromText(LTxtr,pos-lstr+1,lstr-1);
+      AddToText(tstr,Mailr);
+      startfield=pos;
+      lstr=0;
+      fixlen=true;
+    end;
+    if (curchr=="]") then begin
+      endfield=pos;
+    end;
+    if (curchr=="}") then begin
+      endfield=pos;
+    end;
+    if (startfield>=0) and (endfield>0) then begin
+      spstr=StringFromText(LTxtr,startfield+1,endfield-startfield-1);
+      StripEndingSpaces(spstr);
+      size=0;
+      DividerStr(spstr,".",aRes,size);
+      if skipf then begin
+        tstr="";
+      end else begin
+        if size==2 then begin
+          switch (aRes[0]) begin
+            case "CUVc": GetFieldFromCUVc(IVr.CustCode,aRes[1],tstr);
+            case "IVVc": tstr=GetFieldValueByName(IVr,aRes[1],-1);
+            case "CYBlock": tstr=GetFieldFromCYBlock(aRes[1]);
+          end;
+        end;
+        if size==1 then begin
+          switch (aRes[0]) begin
+            case "CurrentDate": tstr = DateToString(CurrentDate,"DD/MM/YYYY");
+            case "ShortDate": tstr = GetShortDate(RepSpec.sStartDate,RepSpec.sEndDate);
+            case "LongDateStartDate": tstr = GetLongDate(RepSpec.sStartDate);
+            case "LongDateEndDate": tstr = GetLongDate(RepSpec.sEndDate);
+            case "DebTotal": tstr = GetDebTotal(IVr);
+            case "DEBTOTSUMONDATE": tstr = GetDEBTOTSUMONDATE(IVr);
+          end;
+        end;
+        if (fixlen) and !skipf then begin
+          fln=endfield-startfield+1;
+          tln=len(tstr);
+          if (tln<fln) then begin
+            for (i=tln;i<=fln;i=i+1) begin
+              tstr=tstr & " ";
+            end;
+          end else begin
+            tstr=left(tstr,fln);
+          end;
+        end;
+      end;
+      AddToText(tstr,Mailr);
+      startfield=-1;endfield=-1;
+      lstr=0;
+    end;
+    if (lstr==100) then begin
+      tstr=StringFromText(LTxtr,pos-99,100);
+      AddToText(tstr,Mailr);
+      lstr=0;
+    end;
+    pos=pos+1;
+  end;
+  //end;
+  if (lstr>0) then begin
+    tstr=StringFromText(LTxtr,textsize-lstr,lstr);
+    AddToText(tstr,Mailr);
+  end;
+
+  return;
+end;
+
+global updating function Integer BBS_CreateMailFromIV(record IVVc IVr,var record MailVc Mailr,var string warning,Boolean additemstobodyf,string txtCode,Record RcVc RepSpec,string usercode,string eMail)
+begin
+  longint res;
+  record LTxtVc LTxtr;
+  record CUVc CUr;
+  record CUVc ContactCUr;
+  record NAContractVc NAContractr;
+  row IVVc IVrw;
+  row MailVc MArw;
+  Integer i,rwcnt;
+  string 255 mailboxnr,tstr,custcode;
+  string 1 TAB;
+  boolean MERGEDPDFf;
+  
+  if IVr.BuildCode=="MERGEDPDF" then begin
+    custcode=IVr.CustCode;
+    RepSpec.f2="MERGEDPDF";
+    MERGEDPDFf=true;
+  end;  
+    
+  res = 0;
+
+  if (ReadFirstMain(IVr,0,true)) then begin end;
+  TAB = chr(9);
+  if blank(eMail) then begin
+    FindUserMailboxName(usercode,mailboxnr,tstr);
+  end else begin
+    tstr = eMail;
+  end;
+  if (blank(tstr)) then begin
+    res = 2289;
+    warning = usercode;
+    goto LCreateMailFromIVD;
+  end;
+  MArw.RowTyp = 1;
+  MArw.AddrCode = tstr;
+  MatRowPut(Mailr,0,MArw);
+  if MERGEDPDFf then begin
+    CUr.Code = CustCode;
+    if (ReadFirstMain(CUr,1,true)) then begin end;
+    MArw.RowTyp = 0;
+    MArw.AddrCode = CUr.eMail;
+  end else begin
+    if IVr.Contract!=-1 then begin
+      NAContractr.SerNr = IVr.Contract;
+      if ReadFirstMain(NAContractr,1,true) then begin end;
+      MArw.RowTyp = 0;
+      MArw.AddrCode = NAContractr.eMail;
+    end else begin
+      CUr.Code = IVr.CustCode;
+      if (ReadFirstMain(CUr,1,true)) then begin end;
+      MArw.RowTyp = 0;
+      MArw.AddrCode = CUr.eMail;
+      if (nonblank(IVr.ClientContact)) then begin
+        if (FindCustomerRelation(CUr.Code,IVr.ClientContact,ContactCUr)) then begin
+          if (nonblank(ContactCUr.eMail)) then begin
+            MArw.AddrCode = ContactCUr.eMail;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if (blank(MArw.AddrCode)) then begin
+    res = 2289;
+    warning = IVr.CustCode;
+    goto LCreateMailFromIVD;
+  end;
+  MatRowPut(Mailr,1,MArw);
+  
+  if !MERGEDPDFf then begin
+    If IVr.Contract!=-1 then begin
+      PutAdditionalEmails(Mailr,2,NAContractr,CUr,false);
+    end else begin
+      PutAdditionalEmails(Mailr,2,NAContractr,CUr,true);
+    end;
+  end;
+  
+  LTxtr.Code = txtCode;
+  if (ReadFirstMain(LTxtr,1,true)) then begin
+    if nonblank(LTxtr.Comment) then begin
+      Mailr.Header=LTxtr.Comment;
+    end else begin
+      Mailr.Header=USetStr(1803) & " " & IVr.SerNr;
+    end;
+  end else begin
+    res=1000815;
+    goto LCreateMailFromIVD;
+  end;
+  //tstr="This is a test!!!";
+  //LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  PasteLTxttoMail(Mailr,LTxtr,IVr,RepSpec);
+
+  Mailr.TransDate = CurrentDate;
+  Mailr.SerNr = NextSerNr("MailVc",Mailr.TransDate,-1,false,"");
+  Mailr.SendFlag=1;
+  if (RecordStore(Mailr,false)) then begin
+    CreateRecordLink(Mailr,CurrentCompany,IVr,CurrentCompany);
+    CreateRecordLink(IVr,CurrentCompany,Mailr,CurrentCompany);
+  end;
+
+LCreateMailFromIVD:;
+  BBS_CreateMailFromIV = res;
+  return;
+end;
+
+global
+function boolean UserHasEmail(string usercode) begin
+  Record UserVc Userr;
+  boolean res;
+
+  res=false;
+  Userr.Code=usercode;
+  if ReadFirstMain(Userr,1,true) then begin
+    if nonblank(Userr.emailAddr) then begin
+      res=true;
+    end;
+  end;
+
+  UserHasEmail=res;
+return;
+end;
+
+// global
+// function longint GetNAPSUserCodeOrEMail(record MailSettingsBlock MailSettingsr,record IVVc IVr,integer Type,var string usercode,var string eMail)
+// begin
+  // record BuildVc Buildr;
+  // longint errcode;
+
+  // usercode = "";
+  // eMail = "";
+  // switch(Type)begin
+    // case 0:
+      //eMail = EmailBlr.UserIP;
+      // eMail = MailSettingsr.FromSystem;
+    // case 1:
+      // Buildr.Code = IVr.pdComment;
+      // ReadFirstMain(Buildr,1,true);
+      // if blank(Buildr.BuildOverseer) then begin
+        // eMail = MailSettingsr.FromSystem;
+      // end else begin
+        // usercode = Buildr.BuildOverseer;
+        // if !UserHasEmail(usercode) then begin
+          // eMail = MailSettingsr.FromSystem;
+        // end;
+      // end;
+    // case 2:
+      // usercode = CurrentUser;
+      // if !UserHasEmail(usercode) then begin
+        // errcode = 1001020;
+      // end;
+  // end;
+  // GetNAPSUserCodeOrEMail = errcode;
+  // return;
+// end;
+
+
+global updating
+function boolean OBS_CreateInvEmail(var record IVVc IVr,var record MailVc Mailr,var longint errcode)
+begin
+  string 255 usercode,textcode,eMail,docname,tstr;
+  Record PDFInvTextBlock pdfBlr;
+  Row PDFInvTextBlock pdfBlrw;
+  Record RcVc RepSpec;
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  integer i,rwc,err;
+  boolean res,testf;
+  record MailSettingsBlock MSb;
+  
+  BlockLoad(pdfBlr);
+  rwc=MatRowCnt(pdfBlr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(pdfBlr,i,pdfBlrw);
+    if (blankdate(pdfBlrw.StartDate) or pdfBlrw.StartDate<=IVr.InvDate) and
+      (blankdate(pdfBlrw.EndDate) or pdfBlrw.EndDate>=IVr.InvDate) then begin
+      textcode=pdfBlrw.Code;
+      i=rwc;
+    end;
+  end;
+  if blank(textcode) then begin
+    errcode=1001006;
+    goto LOBS_CreateInvEmail;
+  end;
+    // BlockLoad(NApsr);
+  BlockLoad(MSb);
+  eMail = MSb.FromSystem;
+  // errcode = GetNAPSUserCodeOrEMail(MSb,IVr,NApsr.SendInvEmailFromBuildUser,usercode,eMail);
+  // if errcode<>-1 then begin
+    // goto LOBS_CreateInvEmail;
+  // end;
+  testf=true;
+  if IVr.Contract!=-1 then begin
+    NAContractr.SerNr=IVr.Contract;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      if NAContractr.InvToEmail==0 then begin
+        testf=false;
+      end;
+    end else begin
+      testf=false;
+    end;
+  end else begin
+    CUr.Code=IVr.CustCode;
+    if ReadFirstMain(CUr,1,true) then begin
+      if CUr.BBSPDFPrint==0 then begin
+        testf=false;
+      end;
+    end else begin
+      testf=false;
+    end;
+  end;
+  if testf then begin
+    RecordNew(Mailr);
+    RepSpec.sStartDate=IVr.InvDate;
+    RepSpec.sEndDate=IVr.InvDate;
+    err = BBS_CreateMailFromIV(IVr,Mailr,tstr,true,textcode,RepSpec,usercode,eMail);
+    if err==0 then begin
+      SetServInvSendFlag(IVr);
+      docname = "InvForm";
+      OBS_CreateAndAttachPdf(Mailr,IVr,docname,IVr.SerNr & ".pdf",0,textcode);
+      // if NApsr.DoNotSendMail==0 then begin
+        // if !RecordAction_raEMailQue(Mailr,false) then begin
+          // errcode=1001008;
+        // end;
+      // end;
+      res = true;
+    end else begin
+      errcode=err;
+    end;
+  end else begin
+    errcode = 1001380;
+  end;
+LOBS_CreateInvEmail:;  
+OBS_CreateInvEmail = res;
+  return;
+end;
+
+global updating
+function boolean DoInvToEmailMn(Record RcVc RepSpec,boolean singlerec,var LongInt looppos,var longint errc,var LongInt temp,var longint cnt,boolean RecCntf)
+begin
+  Record IVVc IVr;
+  Record BuildVc Buildr;
+  Record NAContractVc NAContractr;
+  // record NApsSetBlock NApsSetr;
+  Record PDFInvTextBlock pdfBlr;
+  Row PDFInvTextBlock pdfBlrw;
+  Record CUVc CUr;
+  string 255 ckey,textcode,docname,tstr,usercode,eMail,CustCat;
+  integer indexcnt,i,rwc,err;
+  Boolean wloopIV,testf,res,datefound;
+  Record MailVc Mailr;
+  record MailSettingsBlock MailSettingsr;
+  longint errcode;
+
+  res=false;
+  
+  cnt=0;
+  errcode=-1;
+  BlockLoad(pdfBlr);
+  // BlockLoad(NApsSetr);
+  //BlockLoad(MailSettingsr);
+
+  SetLoopPosition(IVr,looppos);
+
+  usercode=CurrentUser;
+
+  if RepSpec.flags[5]==0 then begin
+    //FindUserFromMailboxName(MailSettingsr.FromSystem,usercode);
+    //if blank(usercode) then begin
+    //  testf=false;
+    //  errcode=1001020;
+    //end else begin
+    //  if !UserHasEmail(usercode) then begin
+    //    errcode=1001020;
+    //  end;
+    //end;
+    BlockLoad(MailSettingsr);
+    eMail = MailSettingsr.FromSystem;
+  end;
+  if RepSpec.flags[5]==1 then begin
+    usercode=CurrentUser;
+    if !UserHasEmail(usercode) then begin
+      errcode=1001020;
+    end;
+  end;
+
+  if errcode!=-1 then begin
+    GoTo EndDoInvToEmailMn;
+  end;
+
+  if nonblank(RepSpec.f1) then begin
+    IVr.BuildCode=RepSpec.f1;
+    IVr.InvDate=RepSpec.sStartDate;
+    ckey="BuildCode";
+    indexcnt=2;
+  end else begin
+    IVr.InvDate=RepSpec.sStartDate;
+    ckey="InvDate";
+    indexcnt=1;
+  end;
+  
+  wloopIV=true;
+  While LoopKey(ckey,IVr,indexcnt,wloopIV) begin
+    if IVr.InvDate>RepSpec.sEndDate or (nonblank(RepSpec.f1) and RepSpec.f1!=IVr.BuildCode) then begin
+      wloopIV=false;
+    end else begin
+      testf=true;
+      if IVr.OKFlag==0 then begin
+        testf=false;
+      end;
+      if IVr.InvType!=1 then begin
+        testf=false;
+      end;
+      if IVr.Invalid==1 then begin
+        testf=false;
+      end;
+      if RepSpec.flags[6]==0 and IVr.ServInvSendf==1 then begin
+        testf=false;
+      end;
+      Buildr.Code=IVr.BuildCode;
+      if ReadFirstMain(Buildr,1,true) then begin end;
+      if nonblank(RepSpec.f2) and testf then begin
+        if !SetInSet2(RepSpec.f2,Buildr.Classification) then begin
+          testf=false;
+        end;
+      end;
+/*      if RepSpec.flags[5]==1 then begin
+        usercode="";
+        if blank(Buildr.BuildOverseer) then begin
+          //FindUserFromMailboxName(MailSettingsr.FromSystem,usercode);
+          BlockLoad(MailSettingsr);
+          eMail = MailSettingsr.FromSystem;
+        end else begin
+          usercode=Buildr.BuildOverseer;
+          if !UserHasEmail(usercode) then begin
+            //FindUserFromMailboxName(MailSettingsr.FromSystem,usercode);
+            BlockLoad(MailSettingsr);
+            eMail = MailSettingsr.FromSystem;
+          end;
+        end;
+        if !UserHasEmail(usercode) and blank(eMail) then begin
+          LogText(0,"DoInvToEmailMn: Cant find e-mail address for build " & Buildr.Code);
+        end;
+      end;*/
+      if testf and nonblank(RepSpec.f3) then begin
+        CustCat="";
+        CUr.Code=IVr.CustCode;
+        if ReadFirstMain(CUr,1,true) then begin
+          CustCat=CUr.CustCat;
+        end;
+        if blank(CustCat) then begin
+          testf=false;
+        end else begin
+          if !SetInSet(CustCat,RepSpec.f3) then begin
+            testf=false;
+          end;
+        end;
+      end;
+      if testf then begin
+        if IVr.Contract!=-1 then begin
+          NAContractr.SerNr=IVr.Contract;
+          if ReadFirstMain(NAContractr,1,true) then begin
+            if NAContractr.InvToEmail==0 then begin
+              testf=false;
+            end;
+          end else begin
+            testf=false;
+          end;
+        end else begin
+          CUr.Code=IVr.CustCode;
+          if ReadFirstMain(CUr,1,true) then begin
+            if CUr.BBSPDFPrint==0 then begin
+              testf=false;
+            end;
+          end else begin
+            testf=false;
+          end;
+        end;
+      end;
+      if testf then begin
+        datefound=false; textcode="";
+        rwc=MatRowCnt(pdfBlr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(pdfBlr,i,pdfBlrw);
+          if (blankdate(pdfBlrw.StartDate) or pdfBlrw.StartDate<=IVr.InvDate) and
+             (blankdate(pdfBlrw.EndDate) or pdfBlrw.EndDate>=IVr.InvDate) then begin
+            textcode=pdfBlrw.Code;
+            datefound=true;
+            i=rwc;
+          end;
+        end;
+        if !datefound then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        if RecCntf then begin //iegūst kopējo skaitu priekš task
+          cnt = cnt + 1;
+        end else begin
+          LogText(0,"Creating PDF printout and mail for invoice=" & IVr.SerNr);
+          RecordNew(Mailr);
+          if nonblank(usercode) or nonblank(eMail) then begin
+            err = BBS_CreateMailFromIV(IVr,Mailr,tstr,true,textcode,RepSpec,usercode,eMail);
+            if err==0 then begin
+              SetServInvSendFlag(IVr);
+              docname = "InvForm";
+              OBS_CreateAndAttachPdf(Mailr,IVr,docname,IVr.SerNr & ".pdf",0,textcode);  //NApsSetr.UseAddAttachToEmail
+              if !RecordAction_raEMailQue(Mailr,false) then begin
+                //Needs some kind of error reporting
+              end;
+            end else begin
+              LogText(0,"DoInvToEmailMn: " & USetStr(err));
+            end;
+          end else begin
+            LogText(0,"DoInvToEmailMn: Cant find user");
+          end;
+          if singlerec then begin
+            looppos=GetLoopPosition(IVr);
+            GoTo EndDoInvToEmailMn;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+EndDoInvToEmailMn:;
+  errc=errcode;
+  res=wloopIV;
+  DoInvToEmailMn=res;
+end;
+
+global updating procedure InvToEmailMn(Record RcVc RepSpec) begin
+  Boolean res;
+  LongInt looppos,temp,errcode,cnt;
+
+  res = DoInvToEmailMn(RepSpec,false,looppos,errcode,temp,cnt,false);
+
+  if errcode>0 then begin
+    MessageBox(errcode,"");
+  end;
+
+end;
+
+global procedure InvToEmailNSMn(Record RcVc RepSpec) begin
+  Boolean res;
+  LongInt looppos,temp,errcode,cnt;
+  integer sltime;
+
+  errcode=-1;
+  sltime=GetSleepTime(2);
+  looppos=-1;
+  while qupdating.DoInvToEmailMn(RepSpec,true,looppos,errcode,temp,cnt,false) and errcode<=0 begin
+    if sltime>0 then begin
+      Sleep(sltime);
+    end;
+  end;
+  if errcode>0 then begin
+    MessageBox(errcode,"");
+  end;
+end;
+
+global updating
+procedure InvToEmailTaskMn(record RcVc RepSpec)
+begin
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  integer sltime;
+  LongInt looppos,temp,errcode,totcnt;
+  boolean res;
+  string 255 tstr;
+  date blnkdate;
+  
+  res = DoInvToEmailMn(RepSpec,false,looppos,errcode,temp,totcnt,true);
+  
+  if totcnt>0 then begin
+    sltime=GetSleepTime(2);
+    BlockLoad(InvToEmailTaskBl);
+    InvToEmailTaskBl.RunFlag=1;
+    InvToEmailTaskBl.Interval=sltime;
+    InvToEmailTaskBl.Looppos=-1;
+    InvToEmailTaskBl.Send=0;
+    InvToEmailTaskBl.Total=totcnt;
+    InvToEmailTaskBl.OnDate=blnkdate;
+    tstr = DateToString(RepSpec.sStartDate,"DD.MM.YYYY") & ":" & DateToString(RepSpec.sEndDate,"DD.MM.YYYY") & ":";
+    tstr = tstr & RepSpec.f1 & ":" & RepSpec.f2 & ":" & RepSpec.flags[5] & ":" & RepSpec.flags[6] & ":" & RepSpec.f3;
+    InvToEmailTaskBl.Parameters = tstr;
+    BlockStore(InvToEmailTaskBl);
+    SetInvToEmailTask("2");
+  end else begin
+    if errcode>0 then begin
+      MessageBox(errcode,"");
+    end else begin
+      MessageBox(1001667,"");
+    end;
+  end;
+  
+  return;
+end;

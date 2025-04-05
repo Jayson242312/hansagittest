@@ -1,0 +1,102 @@
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+procedure PrintCountResInput(record CountResInputVc CountResInputr)
+begin
+  row CountResInputVc CountResInputrw;
+  integer rwc,i;
+  
+  OutFormField("FF_CRI_STARTDATE",CountResInputr.StartDate);
+  OutFormField("FF_CRI_ENDDATE",CountResInputr.EndDate);
+  OutFormField("FF_CRI_ADDRESS",CountResInputr.Address);
+  OutFormField("FF_CRI_BUILDCODE",CountResInputr.BuildCode);
+ 
+  rwc=MatRowCnt(CountResInputr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(CountResInputr,i,CountResInputrw);
+    OutFormField("FF_CRI_ROWNR",i+1);
+    OutFormField("FF_CRI_COUNTERNO",CountResInputrw.CounterNo);
+    OutFormField("FF_CRI_FLAT",CountResInputrw.FlatCode);
+    OutFormField("FF_CRI_ROWADDRESS",CountResInputrw.RowAddress);
+    OutFormField("FF_CRI_PREVDATE",CountResInputrw.PrevDate);
+    OutFormField("FF_CRI_PREVAMOUNT",CountResInputrw.PrevAmount);
+    OutFormField("FF_CRI_CURAMOUNT",CountResInputrw.CurAmount);
+    OutFormField("FF_CRI_SUMAMOUNT",CountResInputrw.SumAmount);
+    OutFormField("FF_CRI_ROWLINE","_____________________");
+    EndFormRow;
+  end;
+ 
+  return;
+end;
+
+global
+procedure DoCountResInputForm(record RcVc RepSpec,record CountResInputVc CountResInputr)
+begin
+  Integer i,rwcnt;
+  Boolean printf,testf;
+  Integer intdocnr;
+  string 30 formcode,langcode;
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+  
+  testf = true;
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    testf = false;
+  end;
+  if testf then begin
+    langcode = "";
+    intdocnr = 1;
+    printf = true;
+    rwcnt = MatRowCnt(FDr);
+    while (printf) begin
+      formcode = "";
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(FDr,i,FDrw);
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,-1,FDrw.PrintGroupCode,
+                          langcode,intdocnr,"",formcode)) then
+          begin
+          goto LBREAKPrint;
+        end;
+      end;
+  LBREAKPrint:;
+      
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          PrintCountResInput(CountResInputr);
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);  // Dokuments nav atrasts
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));  // Dokumentam nav piesaistīta forma Pārbaudiet formas definīciju
+        end;
+      end;
+      intdocnr = intdocnr + 1;
+    end;
+  end;
+  
+  return;
+end;
+
+global 
+procedure CountResInputForm(record RcVc RepSpec) 
+begin
+  record CountResInputVc CountResInputr;
+  
+  if (blank(RepSpec.f1)) then begin
+    goto LCountResInputForm;
+  end;
+  
+  CountResInputr.SerNr = StringToLongInt(RepSpec.f1);
+  if (ReadFirstMain(CountResInputr,1,true)) then begin
+    PrintDocument(CountResInputr,"CountResInputForm",false);
+  end;
+  
+LCountResInputForm:;
+  return;
+end;

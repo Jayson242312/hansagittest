@@ -1,0 +1,530 @@
+/*
+
+apkalpoäanas "Veidot pakalpojumu ierakstus" pal´g procedðras
+
+GetMSPrice - iegðt cenu - cenas tiek Àemtas no vair‚k‚m viet‚m. Hierarhija ir sekojoäa:
+ 1. Lîguma cena
+ 2. Tarifa cena çkai
+ 3. Tarifa cena telpu grupai
+ 4. Tarifa cena çku grupai
+ 5. Globâlâ tarifa cena
+ 6. Artikula kartiÀas cena
+
+AddServRec - izveidot pakalpojuma ierakstu no dotajiem parametrim
+
+
+	Mainîts lai paòemtu arî cenas no lîgumiem ja tâs ir negatîvas (Line 54)
+	BBS VG 2008/01/06
+  Mainîts lai funkcija GetMSPrice papildus atgrieþ atlaidi (kas nav vienâda ar 0 tikai tad ja ir ievadîta lîgumâ un cena tiek òemta no lîguma)
+*/
+
+external function val GetFlatFieldValue(string,string,date,date);
+external function val GetBuildFieldValue(string,string,date,date);
+
+global
+function val GetMSPrice(record INVc INr,string servcode,date td,string bcode,string fcode,longint contract,integer mistype,var val Rebate)
+begin
+  record ServicePlanVc ServicePlanr;
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  record INVc RentalINr;
+  row ServicePlanVc ServicePlanrw;
+  row NAContractVc NAContractrw;
+  val res;
+  integer rw,rwc;
+  boolean Trhs,testf,trhs2;
+  boolean foundf;
+  Record FlatGroupSuppVc FlatGroupSuppr;
+  Record BuildGroupSuppVc BuildGroupSuppr;
+
+  res = 0;
+  Rebate = 0;
+  if mistype==0 then begin
+    //check if rental, then find real, below should be used RentalINr
+    if blank(INr.RentalItem) then begin
+      //copy only used fields
+      RentalINr.Code = INr.Code;
+      RentalINr.UPrice1 = INr.UPrice1;
+    end else begin
+      RentalINr.Code = INr.RentalItem;
+      if ReadFirstMain(RentalINr,1,true) then begin end;
+    end;
+
+    foundf = false;
+    NAContractr.SerNr = contract;
+    if (ReadFirstMain(NAContractr,1,true)) then begin
+      rwc = MatRowCnt(NAContractr);
+      for (rw=0;rw<rwc;rw=rw+1) begin
+        MatRowGet(NAContractr,rw,NAContractrw);
+        if NAContractrw.ArtCode==RentalINr.Code then begin
+          Rebate = NAContractrw.vRebate;
+          if NAContractrw.vRebate == blankval then begin
+            Rebate = 0;
+          end;
+        end;
+        if (NAContractrw.ArtCode==RentalINr.Code and NAContractrw.Price != blankval) then begin
+          res = NAContractrw.Price;
+          foundf = true;
+        end;
+      end;
+    end;
+    if(res<=0) then begin
+      //foundf=false;
+      if !foundf and nonblank(fcode) then begin //tarifs telpu grupai
+        FlatGroupSuppr.RowCode=fcode;
+        Trhs = true;
+        While LoopKey("RowCode",FlatGroupSuppr,1,TrHs) begin
+          if FlatGroupSuppr.RowCode!=fcode then begin
+            TrHs=false;
+          end else begin
+            testf=true;
+            if nonblankdate(FlatGroupSuppr.StartDate) and FlatGroupSuppr.StartDate>td and nonblankdate(td) then begin
+              testf=false;
+            end;
+            if nonblankdate(FlatGroupSuppr.EndDate) and FlatGroupSuppr.EndDate<td and nonblankdate(td) then begin
+              testf=false;
+            end;
+            if testf then begin
+              ResetLoop(ServicePlanr);
+              ServicePlanr.FlatGroupCode=FlatGroupSuppr.HeadCode;
+              ServicePlanr.ServType=servcode;
+              TrHs2=true;
+              While LoopKey("FlatGroupServType",ServicePlanr,2,TrHs2) begin
+                if ServicePlanr.FlatGroupCode!=FlatGroupSuppr.HeadCode or ServicePlanr.ServType!=servcode then begin
+                  TrHs2=false;
+                end else begin
+                  testf=true;
+                  if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+                    testf = false;
+                  end;
+                  if (testf) then begin
+                    rwc = MatRowCnt(ServicePlanr);
+                    for (rw = 0; rw<rwc; rw = rw +1) begin
+                      MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                      if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                        if (ServicePlanrw.PlanPrice>0) then begin
+                          res = ServicePlanrw.PlanPrice;
+                        end else begin
+                          res = ServicePlanrw.RealPrice;
+                        end;
+                        foundf = true;
+                        Trhs2 = false;
+                        Trhs = false;
+                        rw = rwc;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+      if !foundf then begin
+        ResetLoop(ServicePlanr);
+        Trhs = true;
+        ServicePlanr.BuildCode = bcode;
+        ServicePlanr.ServType=servcode;
+        while LoopKey("BuildServType",ServicePlanr,2,TrHs) begin //tarifs çkai
+          if (ServicePlanr.BuildCode<>bcode) or (ServicePlanr.ServType!=servcode) then begin
+            Trhs = false;
+          end else begin
+            testf = true;
+            if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+              testf = false;
+            end;
+            if (testf) then begin
+              rwc = MatRowCnt(ServicePlanr);
+              for (rw = 0; rw<rwc; rw = rw +1) begin
+                MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                  if (ServicePlanrw.PlanPrice>0) then begin
+                    res = ServicePlanrw.PlanPrice;
+                  end else begin
+                    res = ServicePlanrw.RealPrice;
+                  end;
+                  foundf = true;
+                  Trhs = false;
+                  rw = rwc;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+      //stopalert("foundf=" & foundf & " serv=" & servcode & " res=" & res & " bcode=" & bcode);
+      if !foundf then begin //tarifs çku grupai
+        BuildGroupSuppr.RowCode=bcode;
+        Trhs = true;
+        While LoopKey("RowCode",BuildGroupSuppr,1,TrHs) begin
+          if BuildGroupSuppr.RowCode!=bcode then begin
+            TrHs=false;
+          end else begin
+            testf=true;
+            if nonblankdate(BuildGroupSuppr.StartDate) and BuildGroupSuppr.StartDate>td and nonblankdate(td) then begin
+              testf=false;
+            end;
+            if nonblankdate(BuildGroupSuppr.EndDate) and BuildGroupSuppr.EndDate<td and nonblankdate(td) then begin
+              testf=false;
+            end;
+            if testf then begin
+              ResetLoop(ServicePlanr);
+              ServicePlanr.BuildGroupCode=BuildGroupSuppr.HeadCode;
+              ServicePlanr.ServType=servcode;
+              TrHs2=true;
+              While LoopKey("BuildGroupServType",ServicePlanr,2,TrHs2) begin
+                if ServicePlanr.BuildGroupCode!=BuildGroupSuppr.HeadCode or ServicePlanr.ServType!=servcode then begin
+                  TrHs2=false;
+                end else begin
+                  testf=true;
+                  if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+                    testf = false;
+                  end;
+                  if (testf) then begin
+                    rwc = MatRowCnt(ServicePlanr);
+                    for (rw = 0; rw<rwc; rw = rw +1) begin
+                      MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                      if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                        if (ServicePlanrw.PlanPrice>0) then begin
+                          res = ServicePlanrw.PlanPrice;
+                        end else begin
+                          res = ServicePlanrw.RealPrice;
+                        end;
+                        foundf = true;
+                        Trhs2 = false;
+                        Trhs = false;
+                        rw = rwc;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+      if !foundf then begin //globâlais tarifs priekð pakalpojuma
+        ResetLoop(ServicePlanr);
+        ServicePlanr.ServType=servcode;
+        Trhs=true;
+        While LoopKey("ServTypeGlobal",ServicePlanr,1,TrHs) begin
+          if ServicePlanr.ServType!=servcode then begin
+            TrHs=false;
+          end else begin
+            testf=true;
+            if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+              testf = false;
+            end;
+            if (testf) then begin
+              rwc = MatRowCnt(ServicePlanr);
+              for (rw = 0; rw<rwc; rw = rw +1) begin
+                MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                  if (ServicePlanrw.PlanPrice>0) then begin
+                    res = ServicePlanrw.PlanPrice;
+                  end else begin
+                    res = ServicePlanrw.RealPrice;
+                  end;
+                  foundf = true;
+                  Trhs = false;
+                  rw = rwc;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    if (foundf == false) then begin
+      res = RentalINr.UPrice1;
+      //Rebate = 0;
+    end;
+  end;
+  GetMSPrice = res;
+return;
+end;
+
+procedure GetFlatValue(record NAContractVc NAContractr,integer rownr,string FieldCode,var val qty,date sd,date ed)
+begin
+  row NAContractVc NAContractrw;
+
+  if blank(FieldCode) then begin
+    if (rownr>-1) then begin
+      MatRowGet(NAContractr,rownr,NAContractrw);
+      qty = NAContractrw.Quant;
+      if (blank(NAContractrw.Quant)) then begin
+        qty = 1;
+      end;
+    end;
+  end else begin
+    if blank(NAContractr.FlatCode) then begin
+      qty = GetBuildFieldValue(NAContractr.BuildCode,FieldCode,sd,ed);
+    end else begin
+      qty = GetFlatFieldValue(NAContractr.FlatCode,FieldCode,sd,ed);
+    end;
+  end;
+  return;
+end;
+
+global
+procedure GetFlatQtyValue(record NAContractVc NAContractr,integer rownr,var val qty,date sd,date ed)
+begin
+  record INVc Inr;
+  row NAContractVc NAContractrw;
+  integer rw,rwc;
+  string 20 qtyfield;
+  val tqty,coef,coef2,t;
+
+  qty = 0;
+  if (rownr >-1) then begin
+    MatRowGet(NAContractr,rownr,NAContractrw);
+    INr.Code = NAContractrw.ArtCode;
+    if (ReadFirstMain(INr,1,true)) then begin
+      qtyfield = NAContractrw.FieldCode;
+      if blank(qtyfield) then begin
+        if blank(NAContractr.FlatCode) then begin
+          qtyfield = INr.BuildFieldCode;
+        end else begin
+          qtyfield = INr.FlatFieldCode;
+        end;
+      end;
+      
+      GetFlatValue(NAContractr,rownr,qtyfield,qty,sd,ed);
+    end;
+  end;
+  
+LGetFlatQtyValue:;
+ return;
+end;
+
+// global
+// function val GetMSCorrPrice(string servcode,date td,string bcode,string fcode)
+// begin
+//   val res;
+//   record ServicePlanVc ServicePlanr;
+//   row ServicePlanVc ServicePlanrw;
+//   boolean Trhs,testf;
+//   integer rw,rwc;
+
+//   ServicePlanr.BuildCode = bcode;
+//   Trhs = true;
+//   res = 0;
+//   while LoopKey("BuildCode",ServicePlanr,1,TrHs) begin
+//     if (ServicePlanr.BuildCode <> bcode) then begin
+//       Trhs = false;
+//     end else begin
+//       testf = true;
+//       if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+//         testf = false;
+//       end;
+//       if (servcode <> ServicePlanr.ServType) then begin
+//         testf = false;
+//       end;
+//       if (testf) then begin
+//         rwc = MatRowCnt(ServicePlanr);
+//         for (rw = 0; rw<rwc; rw = rw +1) begin
+//           MatRowGet(ServicePlanr,rw,ServicePlanrw);
+//           if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+//           //if (GetYear(td)==ServicePlanrw.YearNr and ServicePlanrw.MonthNr == GetMonth(td)) then begin
+//             res = ServicePlanrw.Correction;
+//             Trhs = false;
+//             rw = rwc;
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+//   GetMSCorrPrice = res;
+// return;
+// end;
+
+global
+function boolean GetMSPriceJurChg(string servcode,date td,string bcode,string fcode,longint contract,var val Rebate,var val Price)
+begin
+  record ServicePlanVc ServicePlanr;
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  row ServicePlanVc ServicePlanrw;
+  row NAContractVc NAContractrw;
+  boolean res;
+  integer rw,rwc;
+  boolean Trhs,testf,trhs2;
+  boolean foundf;
+  Record FlatGroupSuppVc FlatGroupSuppr;
+  Record BuildGroupSuppVc BuildGroupSuppr;
+
+  Rebate = 0;
+  Price = 0;
+  //foundf=false;
+  if !foundf and nonblank(fcode) then begin //tarifs telpu grupai
+    FlatGroupSuppr.RowCode=fcode;
+    Trhs = true;
+    While LoopKey("RowCode",FlatGroupSuppr,1,TrHs) begin
+      if FlatGroupSuppr.RowCode!=fcode then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if nonblankdate(FlatGroupSuppr.StartDate) and FlatGroupSuppr.StartDate>td and nonblankdate(td) then begin
+          testf=false;
+        end;
+        if nonblankdate(FlatGroupSuppr.EndDate) and FlatGroupSuppr.EndDate<td and nonblankdate(td) then begin
+          testf=false;
+        end;
+        if testf then begin
+          ResetLoop(ServicePlanr);
+          ServicePlanr.FlatGroupCode=FlatGroupSuppr.HeadCode;
+          ServicePlanr.ServType=servcode;
+          TrHs2=true;
+          While LoopKey("FlatGroupServType",ServicePlanr,2,TrHs2) begin
+            if ServicePlanr.FlatGroupCode!=FlatGroupSuppr.HeadCode or ServicePlanr.ServType!=servcode then begin
+              TrHs2=false;
+            end else begin
+              testf=true;
+              if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+                testf = false;
+              end;
+              if (testf) then begin
+                rwc = MatRowCnt(ServicePlanr);
+                for (rw = 0; rw<rwc; rw = rw +1) begin
+                  MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                  if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                    if (ServicePlanrw.PlanPrice>0) then begin
+                      Price = ServicePlanrw.PlanPrice;
+                    end else begin
+                      Price = ServicePlanrw.RealPrice;
+                    end;
+                    foundf = true;
+                    Trhs2 = false;
+                    Trhs = false;
+                    rw = rwc;
+                    res = true;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if !foundf then begin
+    ResetLoop(ServicePlanr);
+    Trhs = true;
+    ServicePlanr.BuildCode = bcode;
+    ServicePlanr.ServType=servcode;
+    while LoopKey("BuildServType",ServicePlanr,2,TrHs) begin //tarifs çkai
+      if (ServicePlanr.BuildCode<>bcode) or (ServicePlanr.ServType!=servcode) then begin
+        Trhs = false;
+      end else begin
+        testf = true;
+        if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+          testf = false;
+        end;
+        if (testf) then begin
+          rwc = MatRowCnt(ServicePlanr);
+          for (rw = 0; rw<rwc; rw = rw +1) begin
+            MatRowGet(ServicePlanr,rw,ServicePlanrw);
+            if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+              if (ServicePlanrw.PlanPrice>0) then begin
+                Price = ServicePlanrw.PlanPrice;
+              end else begin
+                Price = ServicePlanrw.RealPrice;
+              end;
+              foundf = true;
+              Trhs = false;
+              rw = rwc;
+              res = true;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  //stopalert("foundf=" & foundf & " serv=" & servcode & " res=" & res & " bcode=" & bcode);
+  if !foundf then begin //tarifs çku grupai
+    BuildGroupSuppr.RowCode=bcode;
+    Trhs = true;
+    While LoopKey("RowCode",BuildGroupSuppr,1,TrHs) begin
+      if BuildGroupSuppr.RowCode!=bcode then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if nonblankdate(BuildGroupSuppr.StartDate) and BuildGroupSuppr.StartDate>td and nonblankdate(td) then begin
+          testf=false;
+        end;
+        if nonblankdate(BuildGroupSuppr.EndDate) and BuildGroupSuppr.EndDate<td and nonblankdate(td) then begin
+          testf=false;
+        end;
+        if testf then begin
+          ResetLoop(ServicePlanr);
+          ServicePlanr.BuildGroupCode=BuildGroupSuppr.HeadCode;
+          ServicePlanr.ServType=servcode;
+          TrHs2=true;
+          While LoopKey("BuildGroupServType",ServicePlanr,2,TrHs2) begin
+            if ServicePlanr.BuildGroupCode!=BuildGroupSuppr.HeadCode or ServicePlanr.ServType!=servcode then begin
+              TrHs2=false;
+            end else begin
+              testf=true;
+              if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+                testf = false;
+              end;
+              if (testf) then begin
+                rwc = MatRowCnt(ServicePlanr);
+                for (rw = 0; rw<rwc; rw = rw +1) begin
+                  MatRowGet(ServicePlanr,rw,ServicePlanrw);
+                  if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+                    if (ServicePlanrw.PlanPrice>0) then begin
+                      Price = ServicePlanrw.PlanPrice;
+                    end else begin
+                      Price = ServicePlanrw.RealPrice;
+                    end;
+                    foundf = true;
+                    Trhs2 = false;
+                    Trhs = false;
+                    rw = rwc;
+                    res = true;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if !foundf then begin //globâlais tarifs priekð pakalpojuma
+    ResetLoop(ServicePlanr);
+    ServicePlanr.ServType=servcode;
+    Trhs=true;
+    While LoopKey("ServTypeGlobal",ServicePlanr,1,TrHs) begin
+      if ServicePlanr.ServType!=servcode then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if (DateInRange(td,ServicePlanr.StartDate,ServicePlanr.EndDate)==false) then begin
+          testf = false;
+        end;
+        if (testf) then begin
+          rwc = MatRowCnt(ServicePlanr);
+          for (rw = 0; rw<rwc; rw = rw +1) begin
+            MatRowGet(ServicePlanr,rw,ServicePlanrw);
+            if (td >= ServicePlanrw.StartDate and (td <= ServicePlanrw.EndDate or blank(ServicePlanrw.EndDate))) then begin
+              if (ServicePlanrw.PlanPrice>0) then begin
+                Price = ServicePlanrw.PlanPrice;
+              end else begin
+                Price = ServicePlanrw.RealPrice;
+              end;
+              foundf = true;
+              Trhs = false;
+              rw = rwc;
+              res = true;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  GetMSPriceJurChg = res;
+  return;
+end;

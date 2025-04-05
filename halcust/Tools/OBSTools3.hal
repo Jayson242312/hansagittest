@@ -1,0 +1,972 @@
+// external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+// external inner procedure ExtractObj(string,var Integer,var string);
+// external inner procedure VEGetStartBalance(record CUVc,string,string,Date,var val);
+// external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+// external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+// external inner function roundmode SetRoundModeD(integer);
+// external inner function string 255 ReplaceCharByString(string,string,string);
+// external inner function string 60 AddObjectToObjectList(string,string);
+// external inner function Integer GetIntYc(Date);
+external function boolean OBSPerFullyInPer(date,date,date,date);
+// external function string 255 BBSNormalizeString(string,string);
+// external function boolean FindINPayPriorityRecFromCLInVc(Record CLInVc,var Record INPayPriorityVc);
+// external function boolean CharInString(string,string);
+// external function boolean AnyObjectInObjects(string,string);
+// external function boolean GetActualCustCO(string,date,var record NAContractVc,boolean,boolean);
+external function boolean GetActualFlatCO(string,date,var record NAContractVc);
+external inner function string 50 TimeToString(time,string,boolean);
+
+// global
+// function string 255 OBS_GenerateRandomHex(integer length)
+// begin
+//   string 100 ast;
+//   LongInt pos;
+//   LongInt i;
+//   string 255 res,tstr;
+  
+//   res = "";
+//   Randomize;
+//   ast = "0F3481ADE786F29523AAADECCBB123456FF987C2A3B4D6DD7EE8F922F33E5"; // 61 characters
+//   for (i=0;i<length;i=i+1) begin
+//     pos = Random(0,60);
+//     tstr = Mid(ast,pos,1);
+//     res = res & tstr;    
+//   end;
+
+//   OBS_GenerateRandomHex = res;
+//   return;
+// end;
+
+// // OBS procedure
+// // Order: -2, 0, 1, 2, -1
+// procedure AddToCacher(var record IVVc Cacher,row IVVc IVrw,longint SeqOrderNr)
+// begin
+//   row IVVc Cacherw;
+//   integer i,rw;
+//   boolean found;
+
+//   IVrw.TAX2Prc = SeqOrderNr;
+//   rw = MatRowCnt(Cacher);
+//   if SeqOrderNr<>-1 then begin
+//     for(i=0;i<rw;i=i+1)begin
+//       MatRowGet(Cacher,i,Cacherw);
+//       if IVrw.TAX2Prc<Cacherw.TAX2Prc or Cacherw.TAX2Prc==-1 then begin
+//         MatRowInsert(Cacher,i,IVrw);
+//         found = true;
+//         i = rw;
+//       end;
+//     end;
+//   end;
+//   if !found then begin
+//     MatRowPut(Cacher,rw,IVrw);
+//   end;
+//   return;
+// end;
+
+// global
+// procedure OBS_SortIVItems(var record IVVc IVr,record IVVc IV2r,longint stat)
+// begin
+//   record INVc INr;
+//   record IVVc oldIVr;
+//   row IVVc IVrw;
+//   integer i,rw;
+//   boolean SortItems;
+
+//   if stat==2 then begin
+//     if IV2r.OKFlag==0 then begin
+//       SortItems = true;
+//     end;
+//   end else begin
+//     SortItems = true;
+//   end;
+//   if SortItems then begin
+//     SortItems = false;
+//     RecordCopy(oldIVr,IVr);
+//     rw = MatRowCnt(oldIVr);
+//     for(i=0;i<rw;i=i+1)begin
+//       MatRowDelete(oldIVr,0);
+//     end;
+//     rw = MatRowCnt(IVr);
+//     for(i=0;i<rw;i=i+1)begin
+//       MatRowGet(IVr,i,IVrw);
+//       if IVrw.stp<>1 then begin
+//         AddToCacher(oldIVr,IVrw,-2);
+//       end else begin
+//         if nonblank(IVrw.ArtCode) then begin
+//           INr.Code = IVrw.ArtCode;
+//           ReadFirstMain(INr,1,true);
+//           if INr.SeqOrderNr<>-1 then begin
+//             SortItems = true;
+//           end;
+//         end;
+//         AddToCacher(oldIVr,IVrw,INr.SeqOrderNr);
+//       end;
+//     end;
+//   end;
+//   if SortItems then begin
+//     rw = MatRowCnt(oldIVr);
+//     for(i=0;i<rw;i=i+1)begin
+//       MatRowGet(oldIVr,i,IVrw);
+//       IVrw.TAX2Prc = blankval;
+//       MatRowPut(oldIVr,i,IVrw);
+//     end;
+//     RecordCopy(IVr,oldIVr);
+//   end;
+// end;
+
+// global
+// procedure CorrectElecAmountsVcLeftAmt(var Record ElecAmountsVc ElecAmountsr)
+// begin
+//   Row ElecAmountsVc ElecAmountsrw;
+//   integer i,rwc;
+//   val t;
+  
+//   t = ElecAmountsr.TotalAmt;
+//   rwc = MatRowCnt(ElecAmountsr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(ElecAmountsr,i,ElecAmountsrw);
+//     if ElecAmountsrw.InvoiceNr>-1 then begin
+//       ElecAmountsrw.LeftAmt = t - ElecAmountsrw.UsedAmt;
+//       t = t - ElecAmountsrw.UsedAmt;
+//     end;
+//     MatRowPut(ElecAmountsr,i,ElecAmountsrw);
+//   end;
+//   ElecAmountsr.TotalLeftAmt = t;
+  
+//   return;
+// end;
+
+// global
+// function val GetUsedStartTariffFromInvoice(string FlatCode,string ArtCode,date sd,date ed) begin
+//   Record ElecAmountsVc ElecAmountsr;
+//   Row ElecAmountsVc ElecAmountsrw;
+//   Record IVVc IVr;
+//   Row IVVc IVrw;
+//   boolean wloop,testf;
+//   val res,t;
+//   integer i,rwc,ii,rwc2;
+  
+//   res = 0;
+//   IVr.FlatCode = flatcode;
+//   IVr.InvDate = sd;
+//   wloop = true;
+//   While LoopKey("FlatCode",IVr,2,wloop) begin
+//     if IVr.FlatCode != flatcode or IVr.InvDate>ed then begin
+//       wloop = false;
+//     end else begin
+//       testf = true;
+//       if IVr.OKFlag==0 then begin
+//         testf = false;
+//       end;
+//       if IVr.InvType!=1 then begin
+//         testf = false;
+//       end;
+//       if testf then begin
+//         rwc = MatRowCnt(IVr);
+//         for(i=0;i<rwc;i=i+1)begin
+//           MatRowGet(IVr,i,IVrw);
+//           if IVrw.ArtCode == ArtCode then begin
+//             res = res + IVrw.Quant;
+//             ResetLoop(ElecAmountsr);
+//             While LoopKey("InvoiceNr:" & IVr.SerNr,ElecAmountsr,1,true) begin
+//               if ElecAmountsr.Type==0 then begin
+//                 rwc2 = MatRowCnt(ElecAmountsr);
+//                 for(ii=0;ii<rwc2;ii=ii+1)begin
+//                   MatRowGet(ElecAmountsr,ii,ElecAmountsrw);
+//                   if ElecAmountsrw.InvoiceNr==IVr.SerNr and ElecAmountsrw.InvRowNr == i then begin
+//                     res = res - ElecAmountsrw.UsedAmt;
+//                   end;
+//                 end;
+//               end;
+//             end;
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+//   //LogText(0,"FlatCode=" & flatcode & " artcode=" & artcode & " sd=" & sd & " ed=" & ed & " res=" & res);
+//   GetUsedStartTariffFromInvoice = res;
+// return;
+// end;
+
+// updating
+// procedure UpdateUsedAmount(longint elecsernr,longint SerNr,integer rownr,date InvDate,date sd,date ed,var val usedqty) begin
+//   Record ElecAmountsVc ElecAmountsr,oldElecAmountsr;
+//   Row ElecAmountsVc ElecAmountsrw,tempElecAmountsrw;
+//   boolean insertedf;
+//   integer rwc,i;
+//   val t;
+  
+  
+//   ElecAmountsr.SerNr = elecsernr;
+//   if ReadFirstMain(ElecAmountsr,1,true) then begin
+//     RecordCopy(oldElecAmountsr,ElecAmountsr);
+//     ElecAmountsrw.InvoiceNr = sernr;
+//     ElecAmountsrw.InvDate = invdate;
+//     ElecAmountsrw.PeriodStartDate = sd;
+//     ElecAmountsrw.PeriodEndDate = ed;
+//     if usedqty<=ElecAmountsr.TotalLeftAmt then begin
+//       ElecAmountsrw.UsedAmt = usedqty;
+//       usedqty = 0;
+//     end else begin
+//       ElecAmountsrw.UsedAmt = ElecAmountsr.TotalLeftAmt;
+//       usedqty = usedqty - ElecAmountsrw.UsedAmt;
+//     end;
+//     ElecAmountsrw.LeftAmt = ElecAmountsr.TotalLeftAmt - ElecAmountsrw.UsedAmt;
+//     ElecAmountsrw.InvRowNr = rownr;
+
+//     rwc = MatRowCnt(ElecAmountsr);
+//     for (i=0;i<rwc;i=i+1) begin
+//       MatRowGet(ElecAmountsr,i,tempElecAmountsrw);
+//       if ((tempElecAmountsrw.InvoiceNr>-1) and (ElecAmountsrw.InvDate < tempElecAmountsrw.InvDate)) then begin
+//         MatRowInsert(ElecAmountsr,i,ElecAmountsrw);
+//         i = rwc;
+//         insertedf = true;
+//       end;
+//     end;
+//     if (!insertedf) then begin
+//       MatRowPut(ElecAmountsr,MatRowCnt(ElecAmountsr),ElecAmountsrw);
+//     end;
+//     CorrectElecAmountsVcLeftAmt(ElecAmountsr);
+
+//     if RecordUpdate(oldElecAmountsr,ElecAmountsr,true)!=0 then begin
+//       LogText(0,"ERROR updating ElecAmountsVc (" & elecsernr & ") from invoice " & sernr);
+//     end;
+//   end;
+
+//   return;
+// end;
+
+// global
+// updating procedure UpdateElecAmountsVcFromIV(Record IVVc IVp,boolean unokf)
+// begin
+//   Record ElecAmountsVc ElecAmountsr,oldElecAmountsr;
+//   Record NApsSetBlock NApsSetr;
+//   Row ElecAmountsVc ElecAmountsrw;
+//   Row IVVc IVrw;
+//   val leftqty;
+//   integer i,rwc,pos;
+//   string 255 tstr;
+//   date sd,ed;
+  
+//   if unokf then begin
+//     While LoopKey("InvoiceNr:" & IVp.SerNr,ElecAmountsr,1,true) begin
+//       RecordCopy(oldElecAmountsr,ElecAmountsr);
+//       rwc = MatRowCnt(ElecAmountsr);
+//       for(i=(rwc-1);i>=0;i=i-1)begin
+//         MatRowGet(ElecAmountsr,i,ElecAmountsrw);
+//         if ElecAmountsrw.InvoiceNr == IVp.SerNr then begin
+//           MatRowDelete(ElecAmountsr,i);
+//         end;
+//       end;
+//       CorrectElecAmountsVcLeftAmt(ElecAmountsr);
+      
+//       if RecordUpdate(oldElecAmountsr,ElecAmountsr,true)!=0 then begin
+//         LogText(0,"ERROR while updating ElecAmountsVc record " & ElecAmountsr.SerNr);
+//       end else begin
+//         StepBack(ElecAmountsr);
+//       end;
+//     end;
+//   end else begin
+//     sd = IVp.InvDate; sd.day = 1;
+//     ed = IVp.InvDate; ed.day = DaysInMonth(getyear(ed),getmonth(ed));
+//     BlockLoad(NApsSetr);
+//     rwc = MatRowCnt(IVp);
+//     for(i=0;i<rwc;i=i+1)begin
+//       MatRowGet(IVp,i,IVrw);
+//       if nonblank(IVrw.ArtCode) and IVrw.stp==1 and IVrw.ovst!=1 then begin
+//         //pârbauda vai artikuls ir dâvanu karte
+//         if nonblank(IVrw.GiftCardNr) then begin
+//           leftqty = IVrw.Quant;
+//           pos = 0;
+//           ExtractObj(IVrw.GiftCardNr,pos,tstr);
+//           While nonblank(tstr) begin
+//             UpdateUsedAmount(StringToLongInt(tstr),IVp.SerNr,i,IVp.InvDate,sd,ed,leftqty);
+//             ExtractObj(IVrw.GiftCardNr,pos,tstr);
+//           end;
+//         end;
+//         //pârbauda vai artikuls ir papildus starta tarifs
+//         if nonblank(IVrw.AddStartTariffNr) then begin
+//           leftqty = IVrw.Quant;
+//           pos = 0;
+//           ExtractObj(IVrw.AddStartTariffNr,pos,tstr);
+//           While nonblank(tstr) begin
+//             UpdateUsedAmount(StringToLongInt(tstr),IVp.SerNr,i,IVp.InvDate,sd,ed,leftqty);
+//             ExtractObj(IVrw.AddStartTariffNr,pos,tstr);
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+
+//   return;
+// end;
+
+// global
+// function boolean GetMSConstValueOnDate(string constcode,date ondate,var val t,var date persd,var date pered) begin
+//   Record MSConstBlock MSConstr;
+//   Row MSConstBlock MSConstrw;
+//   integer i,rwc;
+//   boolean res,testf;
+  
+//   BlockLoad(MSConstr);
+//   rwc = MatRowCnt(MSConstr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(MSConstr,i,MSConstrw);
+//     testf = true;
+//     if MSConstrw.Code != constcode then begin
+//       testf = false;
+//     end;
+//     if MSConstrw.SDate > ondate and nonblankdate(MSConstrw.SDate) then begin
+//       testf = false;
+//     end;
+//     if MSConstrw.EDate < ondate and nonblankdate(MSConstrw.EDate) then begin
+//       testf = false;
+//     end;
+//     if testf then begin
+//       persd = MSConstrw.SDate;
+//       if blankdate(persd) then begin
+//         persd = AddYear(CurrentDate,20);
+//       end;
+//       pered = MSConstrw.EDate;
+//       if blankdate(pered) then begin
+//         pered = AddYear(CurrentDate,-20);
+//       end;
+//       t = MSConstrw.Sum;
+//       res = true;
+//       i = rwc;
+//     end;
+//   end;
+  
+//   GetMSConstValueOnDate = res;
+// return;
+// end;
+
+// function val GetTotIVUnPayedSum(Record IVVc IVr,record INPayPriorityVc INPayPriorityr)
+// Begin
+//   val res,t;
+//   integer i,rwc,ii,rwc2;
+//   Row IVVc IVrw;
+//   Row INPayPriorityVc INPayPriorityrw;
+//   Boolean testf;
+  
+//   rwc=MatRowCnt(IVr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(IVr,i,IVrw);
+//     testf=false;
+//     rwc2=MatRowCnt(INPayPriorityr);
+//     for(ii=0;ii<rwc2;ii=ii+1)begin
+//       MatRowGet(INPayPriorityr,ii,INPayPriorityrw);
+//       if IVrw.ArtCode==INPayPriorityrw.ArtCode then begin
+//         testf=true;
+//         ii=rwc2;
+//       end;
+//     end;
+//     if IVrw.stp!=1 then begin
+//       testf = false;
+//     end;
+//     if IVrw.Sum<=0 then begin
+//       testf = false;
+//     end;
+//     if testf then begin
+//       t = IVrw.UnitYval;
+//       res=res+t;
+//     end;
+//   end;
+  
+//   GetTotIVUnPayedSum=res;
+// return;
+// end;
+
+// global
+// function boolean OBSIsBillLandscaped(string billsernr)
+// begin
+//   boolean res;
+//   record BillsVc Billsr;
+//   record BillsTypesBlock BillsTypesbl;
+//   row BillsTypesBlock BillsTypesblrw;
+//   integer i,rwcnt;
+
+//   if Blank(billsernr) then begin
+//     goto LOBSPrintBillLandscape;
+//   end;
+//   Billsr.BillSerNr = billsernr;
+//   if ReadFirstMain(Billsr,1,true) then begin
+//     if Blank(Billsr.BillTypeCode) then begin
+//       goto LOBSPrintBillLandscape;
+//     end;
+//     BlockLoad(BillsTypesbl);
+//     rwcnt = MatRowCnt(BillsTypesbl);
+//     for (i=0;i<rwcnt;i=i+1) begin
+//       MatRowGet(BillsTypesbl,i,BillsTypesblrw);
+//       if BillsTypesblrw.BillTypeCode == Billsr.BillTypeCode then begin
+//         i = rwcnt;
+//         if BillsTypesblrw.BillOrientation == 1 then begin
+//           res = true;
+//         end;
+//       end;
+//     end;
+//   end;
+
+// LOBSPrintBillLandscape:;
+//   OBSIsBillLandscaped = res;
+//   return;
+// end;
+
+global
+function boolean OBSFlatCountInFlatPer(longint sernr,date persd,date pered)
+begin
+  boolean res;
+  record NAContractVc NAContractr;
+  row NAContractVc NAContractrw;
+  record FlatCountersVc FlatCountersr;
+  integer i,rwcnt;
+  date servsd,served;
+  
+  FlatCountersr.SerNr = sernr;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    if BlankDate(FlatCountersr.RemoveDate) or pered <= FlatCountersr.RemoveDate then begin
+      if GetActualFlatCO(FlatCountersr.FlatCode,persd,NAContractr) then begin
+        rwcnt = MatRowCnt(NAContractr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(NAContractr,i,NAContractrw);
+          if NAContractrw.ArtCode == FlatCountersr.CounterType then begin
+            if OBSPerFullyInPer(persd,pered,NAContractrw.ServStartDate,NAContractrw.ServEndDate) then begin
+              res = true;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  OBSFlatCountInFlatPer = res;
+  return;
+end;
+
+// global
+// procedure OBSImportFieldArray(var array string values,integer i)
+// begin
+  
+//   values[i] = ImportField;
+//   values[i] = Trim(values[i]);
+//   values[i] = BBSNormalizeString(values[i],"\""); //"
+//   values[i] = BBSNormalizeString(values[i],"'");
+
+//   return;
+// end;
+
+// global
+// function val OBSVEOPtoVIPayValObj(Row OPVc OPrw,string object,string rowobjects)
+// begin
+//   val res,viprop;
+//   integer i,rwcnt;
+//   record VIVc VIr;
+//   row VIVc VIrw;
+  
+//   if OPrw.VISerNr!=-1 then begin
+//     VIr.SerNr = OPrw.VISerNr;
+//     if ReadFirstMain(VIr,1,true) then begin
+//       viprop = 0;
+//       rwcnt = MatRowCnt(VIr);
+//       for (i=0;i<rwcnt;i=i+1) begin
+//         MatRowGet(VIr,i,VIrw);
+//         if nonblank(object) then begin
+//           if VIrw.ovst == 0 and VIrw.stp == 1 and SetInSet(object,VIrw.Objects) then begin
+//             viprop = viprop + VIrw.Sum + VIrw.VATVal;
+//           end;
+//         end else begin
+//           if VIrw.ovst == 0 and VIrw.stp == 1 and AnyObjectInObjects(rowobjects,VIrw.Objects) then begin
+//             viprop = viprop + VIrw.Sum + VIrw.VATVal;
+//           end;
+//         end;
+//       end;
+//       viprop = viprop / VIr.PayVal;
+//       res = OPrw.PInvVal * viprop;
+//     end;
+//   end;
+//   if OPrw.PrepayNr!=-1 then begin
+//     if AnyObjectInObjects(rowobjects,OPrw.Objects) then begin
+//       res = OPrw.PInvVal;
+//     end;
+//   end;
+  
+//   OBSVEOPtoVIPayValObj = res;
+//   return;
+// end;
+
+// global
+// procedure OBS_CheckCLInVcPayPriorities(Record CLInVc CLINp,var longint res) begin
+//   Row CLInVc CLInrw;
+//   Record IVVc IVr;
+//   Record INPayPriorityVc INPayPriorityr;
+//   boolean testf;
+//   integer i,rwc;
+//   val resval,t;
+  
+//   if !FindINPayPriorityRecFromCLInVc(CLInp,INPayPriorityr) then begin
+//     LogText(0,"OBS_CheckCLInVcPayPriorities cannot find INPayPriorityVc for CLInVc record " & CLInp.SerNr);
+//   end;
+  
+//   if INPayPriorityr.INPayType!=2 then begin
+//     GoTo LEndCheckCLInVcPayPr;
+//   end;
+  
+//   //For each row in CLInVc than pays for invoice we need to check weather payment amount is not larger than
+//   //sum of those items that need to be payed according to INPayPriorityVc
+//   rwc = MatRowCnt(CLInp);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(CLInp,i,CLInrw);
+//     if CLInrw.Type==1 then begin
+//       IVr.SerNr = CLInrw.TransNr;
+//       if ReadFirstmain(IVr,1,true) then begin
+//         CurValToOtherCur(CLInp.TransDate,CLInp.CurncyCode,CLInrw.Sum,IVr.CurncyCode,resval,DefaultCurRoundOff);
+//         t = GetTotIVUnPayedSum(IVr,INPayPriorityr);
+//         if (resval-0.01)>t then begin
+//           res = -1;
+//           GoTo LEndCheckCLInVcPayPr;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+// LEndCheckCLInVcPayPr:;
+//   return;
+// end;
+
+// global
+// function Boolean ShowMailStatus() begin
+//   Record NApsSetBlock NApsSetbl;
+  
+//   BlockLoad(NApsSetbl);
+  
+//   ShowMailStatus = (NApsSetbl.ShowMailStatusColumn==1);
+// return;
+// end;
+
+// global 
+// function boolean CheckTRTypeAndNumberMatch(string lstr,Record TRVc TRr) begin
+//   longint pos;
+//   string 40 onestr,type,full_number;
+//   boolean res;
+  
+//   type = StrTRCode(TRr.IntYc);
+//   full_number = type & "." & TRr.Number;
+  
+//   while (GetNextSubstring(lstr,pos,",",onestr)) begin
+//     if CharInString(".",onestr) then begin
+//       //ja atlasç ir ".", tad tas nozîmç jâmeklç ieraksts
+//       if full_number==onestr then begin
+//         res = true;
+//         GoTo LCheckTRTypeAndNumberMatch;
+//       end;
+//     end else begin
+//       //ja atlasç nav ".", tad tas nozîmç jâmeklç tips
+//       if type==onestr then begin
+//         res = true;
+//         GoTo LCheckTRTypeAndNumberMatch;
+//       end;
+//     end;
+//   end;
+  
+// LCheckTRTypeAndNumberMatch:;
+//   CheckTRTypeAndNumberMatch = res;
+// return;
+// end;
+
+// global
+// procedure OBS_GetCategoryNLAccount(Integer Model,string AT2Class,var string assetacc)
+// BEGIN
+//   record AC2Block ACRec;
+//   row AC2Block ACrw;
+//   Integer i,rwcnt;
+  
+//   assetacc = "";
+//   BlockLoad(ACRec);
+//   rwcnt = MatRowCnt(ACRec);
+//   for (i=0;i<rwcnt;i=i+1) begin
+//     MatRowGet(ACRec,i,ACrw);
+//     if (ACrw.Code==AT2Class) then begin
+//       switch (Model) begin
+//         case 0:
+//           assetacc = ACrw.Asset1Acc;
+//         case 1:
+//           assetacc = ACrw.Asset2Acc;
+//       end;
+//       i = rwcnt;
+//     end;
+//   end;
+//   RETURN;
+// END;
+
+// global
+// procedure GetAT2NLAccountArray(integer model,var array string NLAccounts,var integer size) begin
+//   record AC2Block ACRec;
+//   row AC2Block ACrw;
+//   Integer i,rwcnt,i2;
+//   string 10 nlacc;
+//   boolean foundf;
+  
+//   BlockLoad(ACRec);
+//   rwcnt = MatRowCnt(ACRec);
+//   for (i=0;i<rwcnt;i=i+1) begin
+//     MatRowGet(ACRec,i,ACrw);
+//     if model==0 then begin
+//       nlacc = ACrw.Asset1Acc;
+//     end else begin
+//       nlacc = ACrw.Asset2Acc;
+//     end;
+//     foundf = false;
+//     for(i2=0;i2<size;i2=i2+1)begin
+//       if NLAccounts[i2] == nlacc then begin
+//         foundf = true;
+//         i2 = size;
+//       end;
+//     end;
+//     if !foundf then begin
+//       NLAccounts[size] = nlacc;
+//       size = size + 1;
+//     end;
+//   end;
+  
+//   SortStringArray(NLAccounts);
+  
+// return;
+// end;
+
+// global
+// procedure OBS_VEGetBalanceVals(Record RcVc RepSpec,Record CUVc VEr,var val APSStartBal,var val APSEndBal,var val APSDebet,var val APSCredit) begin
+//   val StartBal,v,EndBal,t1,t2,t3,t4;
+//   val fr,to1,to2,br1,br2;
+//   record VSVc VSr;
+//   boolean stfound;
+  
+//   StartBal = blankval;
+//   EndBal = blankval;
+  
+//   VSr.VECode = VEr.Code;
+//   stfound = ReadFirstMain(VSr,1,true);
+//   if (stfound==true) then begin
+//     if (RepSpec.flags[4]==1) and (nonblank(VEr.VECurncyCode)) then begin
+//       VEGetStartBalance(VEr,"vesalesinclvat","",RepSpec.sStartDate,StartBal);
+//       VEGetStartBalance(VEr,"vepaidvalue","",RepSpec.sStartDate,v);
+//       StartBal = StartBal + v;
+      
+//       EndBal = GetBalance(VEr,"vesalesinclvat",RepSpec.sEndDate);
+//       v = GetBalance(VEr,"vepaidvalue",RepSpec.sEndDate);
+//       EndBal = EndBal + v;
+      
+      
+//       VEGetStartBalance(VEr,"vepaidvalue","",RepSpec.sStartDate,t1); //Debets sâkumâ
+//       VEGetStartBalance(VEr,"vesalesinclvat","",RepSpec.sStartDate,t2);  //Kredîts sâkumâ
+//       t3 = GetBalance(VEr,"vepaidvalue",RepSpec.sEndDate);  //Debets beigâs
+//       t4 = GetBalance(VEr,"vesalesinclvat",RepSpec.sEndDate); //Kredîts beigâs
+      
+//       APSDebet = t1-t3;
+//       APSCredit = t4-t2;
+//     end else begin
+//       VEGetStartBalance(VEr,"vebalance","",RepSpec.sStartDate,StartBal);
+//       EndBal = GetBalance(VEr,"vebalance",RepSpec.sEndDate);
+    
+//       VEGetStartBalance(VEr,"vepaidvalue","",RepSpec.sStartDate,t1); //Debets sâkumâ
+//       t3 = GetBalance(VEr,"vepaidvalue",RepSpec.sEndDate);  //Debets beigâs
+//       APSDebet = t1-t3;
+//       GetFullCurncyRate(VEr.VECurncyCode,CurrentDate,fr,to1,to2,br1,br2);
+//       APSDebet = MULRATETOBASE1(VEr.CurncyCode,APSDebet,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+      
+//       APSCredit = EndBal - StartBal + APSDebet;
+//     end;
+//   end else begin
+//     StartBal = 0;
+//     EndBal = 0;
+//     APSDebet = 0;
+//     APSCredit = 0;
+//     //DiffBal = 0;
+//   end;
+  
+//   APSStartBal = StartBal;
+//   APSEndBal = EndBal;
+  
+// return;
+// end;
+
+// global 
+// function boolean CheckRunBalDiff(Record TRVc TRr,val runbal) begin
+//   boolean res;
+//   Record AccBlock AccBl;
+//   Row TRVc TRrw;
+//   integer i,rwc;
+  
+//   if runbal>0.01 or runbal<-0.01 then begin
+//     GoTo LCheckRunBalDiff;
+//   end;
+  
+//   BlockLoad(AccBl);
+//   rwc = MatRowCnt(TRr);
+//   for(i=(rwc-1);i>=0;i=i-1)begin
+//     MatRowGet(TRr,i,TRrw);
+//     if TRrw.stp==1 and (TRrw.AccNumber==AccBl.RndAcc or TRrw.AccNumber==AccBl.RndLossAcc) then begin
+//       res = true;
+//       GoTo LCheckRunBalDiff;
+//     end;
+//   end;
+  
+// LCheckRunBalDiff:;
+//   CheckRunBalDiff = res;
+// return;
+// end;
+
+// global
+// function string 255 GetValueStringWithDecimals(val srcval,boolean roundf,integer decplaces,string decchar) begin
+//   val t;
+//   string 255 res,tstr;
+//   integer i,l,cnt;
+//   boolean decfoundf;
+  
+//   if roundf then begin
+//     t = Round(srcval,SetRoundModeD(decplaces));
+//   end else begin
+//     t = srcval;
+//   end;
+  
+//   tstr = ValToString(t,M45Val,"",",",0);
+//   l = len(tstr);
+//   for(i=0;i<l;i=i+1)begin
+//     if mid(tstr,i,1)=="," then begin
+//       if decplaces>0 then begin
+//         res = res & mid(tstr,i,decplaces+1);
+//       end;
+//       GoTo LGetValueStringWithDecimals;
+//     end else begin
+//       res = res & mid(tstr,i,1);
+//     end;
+//   end;
+  
+// LGetValueStringWithDecimals:;
+//   GetValueStringWithDecimals = ReplaceCharByString(res,",",decchar);
+// return;
+// end;
+
+// global
+// function integer GetFlatPrivStatus(string flatcode,string custcode,date ondate) begin
+//   Record FlatsVc Flatsr;
+//   record NAContractVc NAContractr;
+//   integer res;
+  
+//   res = -1;
+//   if nonblank(flatcode) then begin
+//     Flatsr.FlatCode = flatcode;
+//     if ReadFirstMain(Flatsr,1,true) then begin
+//       res = Flatsr.PrivStat;
+//       LGetFlatPrivStatus:;
+//     end;
+//   end;
+  
+//   if nonblank(custcode) then begin
+//     if (GetActualCustCO(custcode,ondate,NAContractr,true,false)) then begin
+//       Flatsr.FlatCode = NAContractr.FlatCode;
+//       if ReadFirstMain(Flatsr,1,true) then begin
+//         res = Flatsr.PrivStat;
+//         LGetFlatPrivStatus:;
+//       end;
+//     end;
+//   end;
+  
+// LGetFlatPrivStatus:;
+//   GetFlatPrivStatus = res;
+// return;
+// end;
+
+// global
+// procedure AddNegItemObjectToIVVc(var Record IVVc IVr) begin
+//   Record NApsSetBlock NApsSetr;
+//   Row IVVc IVrw;
+//   integer i,rwc;
+  
+//   BlockLoad(NApsSetr);
+//   if blank(NApsSetr.NegItemObject) then begin
+//     GoTo LAddNegItemObjectToIVVc;
+//   end;
+  
+//   rwc = MatRowCnt(IVr);
+//   for(i=0;i<rwc;i=i+1)begin
+//     MatRowGet(IVr,i,IVrw);
+//     if IVrw.Sum<0 and IVrw.stp==kInvoiceRowTypeNormal then begin
+//       IVrw.Objects = AddObjectToObjectList(IVrw.Objects,NApsSetr.NegItemObject);
+//       MatRowPut(IVr,i,IVrw);
+//     end;
+//   end;
+  
+// LAddNegItemObjectToIVVc:;
+// return;
+// end;
+
+// global 
+// procedure GetCustCourtOrderInvList(string custcode,date ondate,longint courtOrderNr,boolean fulllistf,var vector boolean invlist) begin
+//   record NAContractVc NAContractr;
+//   record CourtOrderVc CourtOrderr;
+//   row CourtOrderVc CourtOrderrw;
+//   integer i,rwc;
+  
+//   if !fulllistf then begin
+//     CourtOrderr.SerNr = courtOrderNr;
+//     if ReadFirstMain(CourtOrderr,1,true) then begin
+//       rwc = MatRowCnt(CourtOrderr);
+//       for(i=0;i<rwc;i=i+1)begin
+//         MatRowGet(CourtOrderr,i,CourtOrderrw);
+//         if CourtOrderrw.IVSerNr!=-1 then begin
+//           invlist[CourtOrderrw.IVSerNr] = true;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+//   if fulllistf then begin
+//     if GetActualCustCO(CustCode,ondate,NAContractr,true,true) then begin
+//       CourtOrderr.SerNr=-1;
+//       While LoopKey("ContractNrSerNr:" & NAContractr.SerNr,CourtOrderr,1,true) begin
+//         if CourtOrderr.ContractNr==NAContractr.SerNr then begin
+//           rwc = MatRowCnt(CourtOrderr);
+//           for(i=0;i<rwc;i=i+1)begin
+//             MatRowGet(CourtOrderr,i,CourtOrderrw);
+//             if CourtOrderrw.IVSerNr!=-1 then begin
+//               invlist[CourtOrderrw.IVSerNr] = true;
+//             end;
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+// return;
+// end;
+
+// global 
+// procedure GetCustBailiffInvList(string custcode,date ondate,var vector boolean invlist) begin
+//   record NAContractVc NAContractr;
+//   record CourtOrderVc CourtOrderr;
+//   row CourtOrderVc CourtOrderrw;
+//   Record IVSerCOVc IVSerCOr;
+//   Row IVSerCOVc IVSerCOrw;
+//   integer i,rwc;
+  
+//   if GetActualCustCO(CustCode,ondate,NAContractr,true,true) then begin
+//     // CourtOrderr.SerNr=-1;
+//     // While LoopKey("ContractNrSerNr:" & NAContractr.SerNr,CourtOrderr,1,true) begin
+//       // if CourtOrderr.ContractNr==NAContractr.SerNr then begin
+//         // rwc = MatRowCnt(CourtOrderr);
+//         // for(i=0;i<rwc;i=i+1)begin
+//           // MatRowGet(CourtOrderr,i,CourtOrderrw);
+//           // if CourtOrderrw.IVSerNr!=-1 and CourtOrderrw.Type==1 then begin
+//             // invlist[CourtOrderrw.IVSerNr] = true;
+//           // end;
+//         // end;
+//       // end;
+//     // end;
+    
+//     IVSerCOr.COSer=NAContractr.SerNr;
+//     if ReadFirstMain(IVSerCOr,1,true) then begin
+//       rwc=MatRowCnt(IVSerCOr);
+//       for(i=0;i<rwc;i=i+1)begin
+//         MatRowGet(IVSerCOr,i,IVSerCOrw);
+//         if IVSerCOrw.Type==1 and IVSerCOrw.IVSer!=-1 then begin
+//           invlist[IVSerCOrw.IVSer]=true;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+// return;
+// end;
+
+// global
+// updating function boolean UpdateATTransRecCheckType2(record AT2UnitVc AT2Unitr,var record AT2TransVc AT2Transr)
+// begin
+//   boolean testf,res;
+//   string 30 InventoryNr;
+//   longint TransNr;
+//   integer IntYc;
+//   date trdate;
+
+//   res = false;
+
+//   InventoryNr = At2Unitr.InventoryNr;
+//   TransNr = StringToLongInt(At2Unitr.InventoryNr);
+//   if (nonblankdate(AT2Unitr.PurchaseDate)) then begin
+//     trdate = AT2Unitr.PurchaseDate;
+//   end else begin
+//     trdate = CurrentDate;
+//   end;
+//   trdate = AddMonth(trdate,1);
+//   trdate.day = 1;
+//   IntYc = GetIntYc(trdate);
+  
+//   AT2Transr.InventoryNr = InventoryNr;
+//   AT2Transr.TransNr = TransNr;
+//   AT2Transr.IntYc = IntYc;
+//   if (!ReadFirstMain(AT2Transr,3,true)) then begin
+//     RecordNew(AT2Transr);
+//     AT2Transr.InventoryNr = InventoryNr;
+//     AT2Transr.Name = AT2Unitr.Description;
+//     AT2Transr.TransNr = TransNr;
+//     AT2Transr.TransDate = trdate;
+//     //AT2Transr.Sum = 0;
+//     AT2Transr.Type = 2;
+//     AT2Transr.IntYc = IntYc;
+//     //AT2Transr.Sum2 = 0;
+//     if (RecordInsert(AT2Transr,false)) then begin
+//       res = true;
+//     end else begin
+//       res = false;
+//     end;
+//   end;
+
+//   UpdateATTransRecCheckType2 = res;
+//   return;
+// end;
+
+global updating 
+procedure CreateServRecPlanPDF(longint sernr,date sd,date ed)
+begin
+  record ServRecPlanVc ServRecPlanr;
+  record RcVc RepSpec;
+  string 255 fname;
+  date td;
+  time tt;
+  
+  RecordNew(RepSpec);
+  ServRecPlanr.SerNr = sernr;
+  if ReadFirstMain(ServRecPlanr,1,true) then begin
+    SetFileOnServer(true);
+    td=CurrentDate;
+    tt=CurrentTime;
+    fname = "tmp/" & ServRecPlanr.SerNr & "_" & DateToString(td,"DDMMYY") & "_" & TimeToString(tt,"HHMMSS",false) & ".pdf";
+    if FileExists(fname) then begin
+      Delete_File(fname);
+    end;
+    
+    SetDocumentFilename(fname);
+    RepSpec.Media = mtPdf;
+    RepSpec.PdfOrientf = 1;
+    RepSpec.f1 = ServRecPlanr.CalcServPlan;
+    RepSpec.f2 = ServRecPlanr.BuildCode;
+    RepSpec.f4 = ServRecPlanr.BuildGroupCode;
+    RepSpec.f3 = ServRecPlanr.FlatGroupCode;
+    RepSpec.LSRunOnServer = 1;
+    RepSpec.sStartDate = sd;
+    RepSpec.sEndDate = ed;
+    RepSpec.Period2Str=sd & ":" & ed;
+    RepSpec.repname = "tmpCheckRn";
+    RunReport(RepSpec,0);
+    
+    if (FileExists(fname)) then begin
+      RecordLinkFile(fname,0,ServRecPlanr,CurrentCompany);
+    end;
+    SetDocumentFilename("");
+    Delete_File(fname);
+    SetFileOnServer(false);
+  end;
+  
+  return;
+end;

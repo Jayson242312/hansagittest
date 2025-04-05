@@ -1,0 +1,19 @@
+
+global updating
+procedure OKOPVcMn(record RcVc RepSpec)
+begin
+
+record OPVc OPr,oldOPr;
+boolean testf;
+
+testf = true;
+
+while (LoopMain(OPr, 1, testf)) begin
+  if (testf) then begin
+    RecordCopy(oldOPr,OPr);
+    OPr.OrderedFlag = 1 ;
+    OPr.DoneFlag = 1;
+    RecordUpdate(oldOPr,OPr,true);
+  end;
+end;
+end; //jhfdsfafsdk

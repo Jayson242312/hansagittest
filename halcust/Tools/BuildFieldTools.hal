@@ -1,0 +1,236 @@
+external inner function LongInt DateDiff(Date,Date);
+external inner function Boolean GetNextItem2(string,var Integer,var string);
+// external function val GetDeclaredPersFromPersonas(string,date,date,boolean);
+
+//FlatFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+global
+function val GetBuildFieldValueOnDate(string BuildCode,string FieldCode,date OnDate,record BuildFieldCodeVc BuildFieldCoder)
+begin
+  record BuildFieldVc BuildFieldr;
+  row BuildFieldVc BuildFieldrw;
+  val Value;
+  integer i,rw;
+
+  BuildFieldr.BuildCode = BuildCode;
+  BuildFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(BuildFieldr,2,true) then begin
+    rw = MatRowCnt(BuildFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(BuildFieldr,i,BuildFieldrw);
+      if BuildFieldrw.StartDate<=OnDate then begin
+        Value = BuildFieldrw.Value;
+        i = -1;
+      end;
+    end;
+  end;
+  if Value<BuildFieldCoder.Minimum then begin
+    Value = BuildFieldCoder.Minimum;
+  end;
+  GetBuildFieldValueOnDate = Value;
+  return;
+end;
+
+//BuildFieldCodeVc used for minimum
+//before calling be sure that dates are not empty
+function val GetBuildFieldValueInPer(string BuildCode,string FieldCode,date FromDate,date TillDate,record BuildFieldCodeVc BuildFieldCoder)
+begin
+  record BuildFieldVc BuildFieldr;
+  row BuildFieldVc BuildFieldrw;
+  date sd,ed;
+  val Value,Days,PerDays;
+  integer i,rw;
+  boolean Found;
+
+  BuildFieldr.BuildCode = BuildCode;
+  BuildFieldr.FieldCode = FieldCode;
+  if ReadFirstMain(BuildFieldr,2,true) then begin
+    ed = TillDate;
+    PerDays = DateDiff(TillDate,FromDate)+1;
+    rw = MatRowCnt(BuildFieldr);
+    for(i=rw-1;i>=0;i=i-1)begin
+      MatRowGet(BuildFieldr,i,BuildFieldrw);
+      if BuildFieldrw.StartDate<=TillDate then begin
+        if BuildFieldrw.StartDate<=FromDate then begin
+          sd = FromDate;
+        end else begin
+          sd = BuildFieldrw.StartDate;
+        end;
+        Days = DateDiff(ed,sd);
+        if !Found then begin
+          Days = Days + 1;
+          Found = true;
+        end;
+        Value = Value + (Days/PerDays)*BuildFieldrw.Value;
+        ed = sd;//JS: next period ends with previously calculated sd
+        if BuildFieldrw.StartDate<=FromDate then begin
+          i = -1;
+        end;
+      end;
+    end;
+  end;
+  if Value<BuildFieldCoder.Minimum then begin
+    Value = BuildFieldCoder.Minimum;
+  end;
+  GetBuildFieldValueInPer = Value;
+  return;
+end;
+
+//it is supposed that period doesn`t exceed one month
+//there is no CheckAsFieldName, because in most of cases BuildVc register is already found so use separate function GetBuildFieldValueByName
+global
+function val GetBuildFieldValue(string BuildCode,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record BuildFieldCodeVc BuildFieldCoder;
+  date FromDate,TillDate;
+  val Value;
+  // record NApsSetBlock NApsSetbl;
+  
+  // BlockLoad(NApsSetbl);
+  // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+  //   if NApsSetbl.DeclResidRegScheme==1 then begin
+  //     Value=GetDeclaredPersFromPersonas(FlatCode,pFromDate,pTillDate,true);
+  //     goto LGetFlatFieldValue;
+  //   end;
+  // end;
+
+  BuildFieldCoder.FieldCode = FieldCode;
+  if ReadFirstMain(BuildFieldCoder,1,true) then begin
+    if nonblankdate(pTillDate) then begin
+      TillDate = pTillDate;
+    end else begin
+      if nonblankdate(pFromDate) then begin
+        TillDate = pFromDate;
+      end else begin
+        TillDate = CurrentDate;
+      end;
+    end;
+    if BuildFieldCoder.CalcAvg==0 then begin //one date - TillDate
+      Value = GetBuildFieldValueOnDate(BuildCode,FieldCode,TillDate,BuildFieldCoder);
+    end else begin //period - month
+      TillDate.day = DaysInMonth(TillDate.year,TillDate.month);
+      FromDate = TillDate;
+      FromDate.day = 1;
+      Value = GetBuildFieldValueInPer(BuildCode,FieldCode,FromDate,TillDate,BuildFieldCoder);
+    end;
+  end;
+  
+LGetBuildFieldValue:;
+  GetBuildFieldValue = Value;
+  return;
+end;
+
+//separate function from GetBuildFieldValue, because BuildsVc is passed and is available at most of cases
+global
+function val GetBuildFieldValueByName(record BuildVc Buildr,string FieldCode,date pFromDate,date pTillDate)
+begin
+  record BuildFieldCodeVc BuildFieldCoder;
+  // record NApsSetBlock NApsSetbl;
+  val Value;
+  
+  // BlockLoad(NApsSetbl);
+  // if NonBlank(NApsSetbl.DeclPersFlatField) and FieldCode == NApsSetbl.DeclPersFlatField then begin
+  //   if NApsSetbl.DeclResidRegScheme == 1 then begin
+  //     Value = GetDeclaredPersFromPersonas(Flatsr.FlatCode,pFromDate,pTillDate,true);
+  //     goto LGetFlatFieldValueByName;
+  //   end;
+  // end;
+  
+  BuildFieldCoder.FieldCode = FieldCode;
+  if ReadFirstMain(BuildFieldCoder,1,true) then begin
+    Value = GetBuildFieldValue(Buildr.Code,FieldCode,pFromDate,pTillDate);
+  end else begin
+    Value = StringToVal(GetFieldValueByName(Buildr,FieldCode,-1),M45Val);
+  end;
+
+LGetBuildFieldValueByName:;
+  GetBuildFieldValueByName = Value;
+  return;
+end;
+
+//does basically the same as GetBuildFieldValueByName, only this function accepts list of codes
+global
+function val GetBuildFieldValueByListName(record BuildVc Buildr,string fieldlist,date pFromDate,date pTillDate)
+begin
+  val res;
+  string 20 code;
+  longint pos;
+  
+  while (GetNextSubstring(fieldlist,pos,",",code)) begin
+    if nonblank(code) then begin
+      res = res + GetBuildFieldValueByName(Buildr,code,pFromDate,pTillDate);
+    end;
+  end;
+  
+  GetBuildFieldValueByListName = res;
+return;
+end;
+
+//this is remote
+global
+procedure CalcBuildFields(string BuildCode,var array val BuildFieldValueMas)
+begin
+  record BuildFieldSetBlock BuildFieldSetBlr;
+  row BuildFieldSetBlock BuildFieldSetBlrw;
+  record BuildFieldCodeVc BuildFieldCoder;
+  date CurDate;
+  integer i,rw;
+
+  CurDate = CurrentDate;
+  BlockLoad(BuildFieldSetBlr);
+  rw = MatRowCnt(BuildFieldSetBlr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(BuildFieldSetBlr,i,BuildFieldSetBlrw);
+    BuildFieldCoder.FieldCode = BuildFieldSetBlrw.FieldCode;
+    ReadFirstMain(BuildFieldCoder,1,true);
+    BuildFieldValueMas[i+1] = GetBuildFieldValueOnDate(BuildCode,BuildFieldSetBlrw.FieldCode,CurDate,BuildFieldCoder);
+  end;
+  BuildFieldValueMas[0] = rw;
+  return;
+end;
+
+global updating 
+procedure ChangeBuildCodeBuildFields(string Buildcode,string oldBuildcode) begin
+  record BuildFieldVc BuildFieldr,oldBuildFieldr;
+  boolean wloop;
+  
+  BuildFieldr.BuildCode=oldBuildcode;
+  wloop=true;
+  While LoopMain(BuildFieldr,1,wloop) begin
+    if BuildFieldr.BuildCode!=oldBuildcode then begin
+      wloop=false;
+    end else begin
+      if BuildFieldr.BuildCode==oldBuildcode then begin  /* safety, not really needed here */
+        RecordCopy(oldBuildFieldr,BuildFieldr);
+        BuildFieldr.BuildCode=Buildcode;
+        RecordUpdate(oldBuildFieldr,BuildFieldr,true);
+        /* StepBack is needed only if new flat code is larger than previous, because otherwise index table before record has same amount of records */
+        if Buildcode>oldBuildcode then begin 
+          StepBack(BuildFieldr);
+        end;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global updating 
+procedure RemoveBuildFields(string Buildcode)
+begin
+  record BuildFieldVc BuildFieldr;
+  boolean wloop;
+  
+  BuildFieldr.BuildCode=Buildcode;
+  wloop=true;
+  While LoopMain(BuildFieldr,1,wloop) begin
+    if BuildFieldr.BuildCode!=Buildcode then begin
+      wloop=false;
+    end else begin
+      RecordDelete(BuildFieldr);
+      StepBack(BuildFieldr);
+    end;
+  end;
+  
+  return;
+end;

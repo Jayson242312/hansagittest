@@ -1,0 +1,72 @@
+
+SOURCEFILE("halcust\\OBS_BankImport",3);
+
+begin
+  
+  //== Maksājumu ievades
+  RecordBegin(FidaIPVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(TransDate,M4Date,0,0);
+    RecordField(PayMode,M4Code,2,0);
+    RecordField(Sum,M4Val,0,0);
+    RecordField(OKFlag,M4Mark,0,0);
+    RecordField(Closed,M4Mark,0,0);
+    RecordField(Comment,M4Str,200,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(IPMadeFlag,M4Mark,0,0);
+    RecordField(FileName,M4Str,255,0);
+    RecordField(RowCnt,M4Long,0,0);
+    RecordField(UnOKCnt,M4Long,0,0);
+    RecordField(Imported,M4Int,0,0);
+    RecordField(RowCntTR,M4Long,0,0);
+    
+    ArrayBegin(Math,-,1);
+    ArrayField(Type,M4Set,5000,0);
+    ArrayField(CustCode,M4Code,20,CUVc);
+    ArrayField(InvoiceList,M4UStr,60,0);
+    ArrayField(Amount,M4Val,0,0);
+    ArrayField(Name,M4Str,100,0);
+    ArrayField(IBANCode,M4Str,64,0);
+    ArrayField(RegNr,M4Code,20,0);
+    ArrayField(Currency,M4Code,5,0);
+    ArrayField(IPNr,M4Long,0,0);
+    ArrayField(RowComment,M4Str,255,0);
+    ArrayField(PayType,M4Set,5001,0);
+    ArrayField(DCType,M4Set,5002,0);
+    ArrayField(AccNumber,M4Code,10,AccVc);
+    ArrayField(ContractNr,M4Long,0,NAContractVc);
+    ArrayField(DebtRepAgreements,M4UStr,60,0);
+    ArrayField(CaseNr,M4UStr,60,0);
+    ArrayField(ExecuteDocNr,M4UStr,60,0);
+    ArrayField(FidaRowID,M4Str,30,0);
+    ArrayField(ContractNr1,M4Long,0,0);
+    ArrayField(DebtSum,M4Val,0,0);
+    ArrayField(AgreeSum,M4Val,0,0);
+    ArrayField(CourtSum,M4Val,0,0);
+    ArrayField(PayerName,M4Str,200,0);
+    ArrayField(TransMark,M4Str,1,0);
+    EndArray;
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(OKFlag);
+    KeySegment(OKFlag);
+    KeySegment(SerNr);
+    KeyBegin(Closed);
+    KeySegment(Closed);
+    KeySegment(SerNr);
+    KeyBegin(PayMode);
+    KeySegment(PayMode);
+    KeySegment(SerNr);
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(SerNr);
+    KeyBegin(IPMadeFlag);
+    KeySegment(IPMadeFlag);
+    KeySegment(SerNr);
+  EndRecord;
+
+return;
+end;

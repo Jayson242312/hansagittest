@@ -1,0 +1,437 @@
+external inner procedure HT2Per(Date,Date,var string);
+external inner procedure FindAccSD(Date,var Date,var Boolean);
+external inner procedure TransAccTurnover(string,string,Date,Date,Integer,Integer,Integer,string,string,var val,var val);
+external procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+external inner procedure FindNLAccBal(string,string,string,Integer,Date,Date,Integer,Integer,Boolean,string,Integer,string,string,var val);
+external inner function string 60 RemoveObjectFromObjectList(string,string);
+external inner procedure MulM4OneRate(val,val,var val,roundmode,Boolean);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner procedure GetFullCurncyPLConsolidationRate(var string,Date,var val,var val,var val,var val,var val);
+external inner procedure GetFullCurncyBalConsolidationRate(var string,Date,var val,var val,var val,var val,var val);
+external inner function Integer TypeOfCurncy(var string,var Integer);
+external inner procedure SplitEclass(string,var Array string);
+external inner function val DivWithRateToBase1(string,Date,val,roundmode);
+external inner function val MulWithRateToBase1(var string,Date,val,roundmode);
+external inner function Integer CountObjects(string);
+external inner procedure ExtractObj(string,var Integer,var string);
+// external inner procedure GetAccDaughtersDCBalance2(string,string,Date,Integer,Integer,Integer,string,var val,var val,boolean);
+external inner function Boolean  EobjInEobj(string,string);
+external inner function val FindAccBalance(string,string,date,record ObjBalVc,Integer,Integer,Integer,string,Integer);
+
+function val GetUnUsedPrepaymentSum(string custcode,longint contract,date sd,date ed)
+begin
+  Record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf;
+  integer keycnt;
+  val res;
+  
+  res=0;
+  TrHs=true;
+  ResetLoop(ARPayHistr);
+  if nonblankdate(sd) then begin
+    keycnt=2;
+    ARPayHistr.TransDate=sd;
+  end else begin
+    keycnt=1;
+  end;
+  ARPayHistr.CustCode=custcode;
+  While LoopKey("CustCode",ARPayHistr,keycnt,TrHs) begin
+    if ARPayHistr.CustCode!=custcode or (nonblankdate(ed) and (ed<ARPayHistr.TransDate)) then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if ARPayHistr.ContractNr!=-1 then begin
+        if ARPayHistr.ContractNr!=Contract then begin
+          testf=false;
+        end;
+      end;
+      if testf then begin
+        switch ARPayHistr.FileName begin
+          case "IPVc": res = res + ARPayHistr.Val;
+          case "CLInVc": res = res + ARPayHistr.Val;
+          case "IVVc": res = res - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  
+  GetUnUsedPrepaymentSum=res;
+  return;
+end;
+function boolean ObjInVec(vector boolean vecObj,string Objects,var string obj)
+begin
+  boolean res;
+  longint pos;
+  string 255 tstr;
+  
+  if nonblank(Objects) then begin
+    while GetNextSubstring(Objects,pos,",",tstr) begin
+      if nonblank(tstr) then begin
+        if vecObj[tstr] then begin
+          res=true;
+          obj=tstr;
+          GoTo LObjInVec; 
+        end;
+      end;
+    end;
+  end;
+LObjInVec:;
+  ObjInVec = res;
+  return;
+end;
+  
+procedure FillVectors(record RcVc RepSpec,array string arrAccs,var vector val vecCred,var vector val vecDebt)
+begin
+  record NAContractVc NAContractr;
+  record MainVc mainr;
+  record TRVc TRr;
+  row TRVc TRrw;
+  Boolean TrHs,testf;
+  Integer i,rwcnt,k;
+  string 255 objstr,accstr,obj;
+  vector boolean vecObj;
+  
+  TrHs=true;
+  NAContractr.SerNr=RepSpec.long1;
+  While LoopMain(NAContractr,1,TrHs) begin
+    if (RepSpec.long1!=-1) and (NAContractr.SerNr!=RepSpec.long1) then begin
+      TrHs=false;
+    end else begin
+      if nonblank(NAContractr.Objects) then begin
+        vecObj[NAContractr.Objects]=true;
+      end;
+    end;
+  end;
+  
+  for (k=0;k<arrAccs.length;k=k+1) begin
+    ResetLoop(mainr);
+    accstr = arrAccs[k];
+    mainr.AccNumber = accstr;
+    mainr.TransDate = RepSpec.sStartDate;
+    TrHs = true;
+    while (LoopMain(mainr,2,TrHs)) begin
+      if (mainr.TransDate>RepSpec.sEndDate) or (mainr.AccNumber<>accstr) then begin
+        TrHs = false;
+      end else begin
+        if (mainr.FileName=="TRVc") then begin
+          TRr.Number = mainr.TransNr;
+          TRr.IntYc = mainr.IntYc;
+          if ReadFirstMain(TRr,2,true) then begin
+            if (mainr.TransDate==TRr.TransDate) then begin
+              rwcnt = MatRowCnt(TRr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(TRr,i,TRrw);
+                if (TRrw.stp==1) and (TRrw.ovst==0) and (TRrw.AccNumber==accstr) and nonblank(TRrw.Objects) then begin
+                  testf=true;
+                  if ObjInVec(vecObj,TRrw.Objects,obj)==false then begin
+                    testf=false;
+                  end;
+                  if testf then begin
+                    // LogText(0,"TRr.Number: " & TRr.Number & " i: " & i+1 & " va: " & TRrw.DebVal);
+                    // Switch (TRr.IntYc) begin
+                        // case IVYc: 
+                            // vecDebt[obj]=vecDebt[obj]+TRrw.DebVal;
+                        // otherwise
+                    vecCred[obj]=vecCred[obj]+TRrw.CredVal;
+                    vecDebt[obj]=vecDebt[obj]+TRrw.DebVal;
+                    // end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure GetPeriodSLSums(string custcode,longint contract,date sd,date ed,var val calcbal,var val paybal)
+begin
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record IVVc IVr;
+  row IVVc IVrw;
+  boolean TrHs,wloop,testf;
+  integer i,rwc;
+  val rval,tval,fr,to1,to2,br1,br2;
+  vector boolean vecUsedIP;
+  
+  calcbal=0;
+  // calcintbal=0;
+  paybal=0;
+  // payintbal=0;
+
+  wloop=true;
+  IPrsr.TransDate=sd;
+  IPrsr.CustCode=custcode;
+  While LoopKey("CustTransKey",IPrsr,2,wloop) begin
+    if IPrsr.CustCode!=custcode or IPrsr.TransDate>ed then begin
+      wloop=false;
+    end else begin
+      Switch (IPrsr.TransType) begin
+        Case 0: //IVVc
+            if IPrsr.TransDate<=ed then begin
+              IVr.SerNr = IPrsr.TransNr;
+              if ReadFirstMain(IVr,1,true) then begin
+                testf = true;
+                if (IVr.OKFlag==0) then begin testf=false; end;
+                if (IVr.Invalid!=0) then begin testf = false; end;
+                if (IVr.InvType==2) then begin testf = false; end;
+                if (IVr.InvType==6) then begin testf = false; end;
+                // if (IVr.InvType==3) then begin
+                  // if (IVr.CredInv!=-1) then begin testf = false; end;
+                // end;
+                if (IVr.Contract!=Contract) then begin testf = false; end;
+                if (testf) then begin
+                  // GetFullCurncyRate(IVr.CurncyCode,IVr.InvDate,fr,to1,to2,br1,br2);
+                  // rval = MulRateToBase1(IVr.CurncyCode,rval,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+                  if IVr.InvType==3 then begin
+                    calcbal = calcbal - IVr.Sum4;
+                  end else begin
+                    calcbal = calcbal + IVr.Sum4;
+                  end;
+                  // rwc=MatRowCnt(IVr);
+                  // for (i=0;i<rwc;i=i+1) begin
+                    // MatRowGet(IVr,i,IVrw);
+                    // testf=true;
+                    // if IVrw.stp==1 and nonblank(IVrw.ArtCode) then begin
+                      // if SetInSet(IVrw.ArtCode,IntPercArtCodes) then begin
+                        // tval=IVrw.Sum+FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT);
+                        // calcbal = calcbal - tval;
+                        // calcintbal = calcintbal + tval;
+                      // end;
+                    // end;
+                  // end;
+                end;
+              end;
+            end;
+        Case 1: //IPVc
+            if IPrsr.TransDate<=ed then begin
+              if !vecUsedIP[IPrsr.TransNr] then begin
+                vecUsedIP[IPrsr.TransNr]=true;
+                IPr.SerNr = IPrsr.TransNr;
+                if ReadFirstMain(IPr,1,true) then begin
+                  testf = true;
+                  if (IPr.OKFlag==0) then begin testf=false; end;
+                  if (IPr.Invalid!=0) then begin testf=false; end;
+                  if testf then begin
+                    rwc=MatRowCnt(IPr);
+                    for (i=0;i<rwc;i=i+1) begin
+                      MatRowGet(IPr,i,IPrw);
+                      testf=true;
+                      if IPrw.ContractNr!=contract then begin
+                        testf=false;
+                      end;
+                      // if IPrw.InvoiceNr==-1 then begin
+                        // testf=false;
+                      // end;
+                      if testf then begin
+                        // if nonblank(IPrw.rkRecNumber) and SetInSet(IPrw.rkRecNumber,IntPercArtCodes) then begin
+                          // payintbal = payintbal + IPrw.RecVal;
+                        // end else begin
+                          paybal = paybal + IPrw.RecVal;
+                        // end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+        Case 2: //CLInVc
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure OutContract(record RcVc RepSpec,record NAContractVc NAContractr,date AccumStartDate,boolean resUseAccum,array string arrAccs,
+                      array integer colx,var array val arrTotSums,vector val vecCred,vector val vecDebt,boolean useVecf)
+begin
+  record IPrsVc IPrsr;
+  record IVVc IVr;
+  record IPVc IPr;
+  record AccVc Accr;
+  integer i;
+  val accBal,debval,dv,cv,vp,calcbal,paybal;
+  val startbal,latebal,exclsum,lateexclsum;
+  array val arrSums;
+  boolean testf;
+  date blakdate;
+  
+  if nonblank(NAContractr.Objects) then begin
+    for (i=0;i<arrAccs.length;i=i+1) begin
+      Accr.AccNumber=arrAccs[i];
+      if ReadFirstMain(Accr,1,true) then begin
+        accBal=0;
+        FindNLAccBal(Accr.AccNumber,NAContractr.Objects,"",Accr.AccType,AccumStartDate,RepSpec.sStartDate,0,0,resUseAccum,"",0,"","",accBal);
+        arrSums[0] = arrSums[0] + accBal;
+        arrSums[3] = arrSums[3] + accBal;
+        if !useVecf then begin
+          // dv=vecDebt[NAContractr.Objects];
+          // cv=vecCred[NAContractr.Objects];
+        // end else begin
+          TransAccTurnover(Accr.AccNumber,NAContractr.Objects,RepSpec.sStartDate,RepSpec.sEndDate,0,0,0,"","",dv,cv);
+          arrSums[1] = arrSums[1] + dv;
+          arrSums[2] = arrSums[2] + cv;
+          arrSums[3] = arrSums[3] + (dv - cv);
+        end;
+      end;
+    end;
+  end;
+  
+  if useVecf then begin
+    dv=vecDebt[NAContractr.Objects];
+    cv=vecCred[NAContractr.Objects];
+    arrSums[1] = arrSums[1] + dv;
+    arrSums[2] = arrSums[2] + cv;
+    arrSums[3] = arrSums[3] + (dv - cv);
+  end;
+  
+  COGetBalance(NAContractr.SerNr,AddDay(RepSpec.sStartDate,-1),startbal,latebal,exclsum,lateexclsum,"");
+  
+  startbal = startbal - GetUnUsedPrepaymentSum(NAContractr.CustCode,NAContractr.SerNr,blakdate,AddDay(RepSpec.sStartDate,-1));
+  
+  // COGetBalance(NAContractr.SerNr,RepSpec.sStartDate,startbal,latebal,exclsum,lateexclsum,"");
+  arrSums[4] = arrSums[4] + startbal;
+  arrSums[7] = arrSums[7] + startbal;
+  GetPeriodSLSums(NAContractr.CustCode,NAContractr.SerNr,RepSpec.sStartDate,RepSpec.sEndDate,calcbal,paybal);
+  arrSums[5] = arrSums[5] + calcbal;
+  arrSums[6] = arrSums[6] + paybal;
+  arrSums[7] = arrSums[7] + (calcbal-paybal);
+  
+  testf=true;
+  if RepSpec.flags[0]==1 then begin
+    if arrSums[3]==arrSums[7] then begin
+      testf=false;
+    end;
+  end;
+  if testf then begin
+    StartFormat(15);
+    OutString(colx[0],"DblNAContractVc",NAContractr.SerNr,false);
+    OutString(colx[1],0,NAContractr.CustName,false);
+    OutVal(colx[2],0,arrSums[0],M4Val,true);
+    OutVal(colx[3],0,arrSums[1],M4Val,true);
+    OutVal(colx[4],0,arrSums[2],M4Val,true);
+    OutVal(colx[5],0,arrSums[3],M4Val,true);
+    OutVal(colx[6],0,arrSums[4],M4Val,true);
+    OutVal(colx[7],0,arrSums[5],M4Val,true);
+    OutVal(colx[8],0,arrSums[6],M4Val,true);
+    OutVal(colx[9],0,arrSums[7],M4Val,true);
+    EndFormat;
+    
+    for (i=0;i<8;i=i+1) begin
+      arrTotSums[i]=arrTotSums[i]+arrSums[i];
+    end;
+  end;
+  
+  return;
+end;
+  
+global
+procedure MainSLCompRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  integer rw,i,rwc;
+  string 255 tstr;
+  boolean TrHs;
+  Date AccumStartDate;
+  record TaxRepVc TaxRepr;
+  row TaxRepVc TaxReprw;
+  Boolean resUseAccum;
+  array val arrTotSums;
+  array integer colx;
+  array string 20 arrAccs;
+  vector val vecCred,vecDebt;
+  
+  StartReportJob(USetStr(1001805));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw, tstr, 1);
+  rw = rw + 1;
+  if RepSpec.long1!=-1 then begin
+    Header(rw,USetStr(1000122) & ": " & RepSpec.long1,1);
+    rw= rw + 1;
+  end;
+  
+  EndHeader;
+  
+  TaxRepr.Code=RepSpec.f1;
+  if ReadFirstMain(TaxRepr,1,true) then begin
+    rwc=MatRowCnt(TaxRepr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(TaxRepr,i,TaxReprw);
+      if nonblank(TaxReprw.Formula) then begin
+        arrAccs[arrAccs.length]=TaxReprw.Formula;
+      end;
+    end;
+  end;
+
+  colx[0]=0;
+  colx[1]=40;
+  colx[2]=200;
+  colx[3]=240;
+  colx[4]=280;
+  colx[5]=320;
+  colx[6]=360;
+  colx[7]=400;
+  colx[8]=440;
+  colx[9]=1;
+  
+  StartFormat(15);
+  OutString(colx[0],0,USetStr(1000122),false);
+  OutString(colx[1],0,USetStr(1000183),false);
+  OutString(colx[2],0,USetStr(1000484),true);
+  OutString(colx[3],0,USetStr(9542),true);
+  OutString(colx[4],0,USetStr(8589),true);
+  OutString(colx[5],0,USetStr(1000487),true);
+  OutString(colx[6],0,USetStr(1000484),true);
+  OutString(colx[7],0,USetStr(1000485),true);
+  OutString(colx[8],0,USetStr(1000486),true);
+  OutString(colx[9],0,USetStr(1000487),true);
+  EndFormat;
+  Black_Divider(0,1);
+  FindAccSD(RepSpec.sStartDate,AccumStartDate,resUseAccum);
+  
+  // if RepSpec.long1!=-1 then begin
+    // NAContractr.SerNr=RepSpec.long1;
+    // if ReadFirstMain(NAContractr,1,true) then begin
+      // OutContract(RepSpec,NAContractr,AccumStartDate,resUseAccum,arrAccs,colx,arrTotSums,vecCred,vecDebt,false);
+    // end;
+  // end else begin
+    FillVectors(RepSpec,arrAccs,vecCred,vecDebt);
+    TrHs=true;
+    NAContractr.SerNr=RepSpec.long1;
+    While LoopMain(NAContractr,1,TrHs) begin
+      if RepSpec.long1!=-1 and NAContractr.SerNr!=RepSpec.long1 then begin
+        TrHs=false;
+      end else begin
+        OutContract(RepSpec,NAContractr,AccumStartDate,resUseAccum,arrAccs,colx,arrTotSums,vecCred,vecDebt,true);
+      end;
+    end;
+  // end;
+  
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(colx[0],0,USetStr(1000129),false);
+  OutString(colx[1],0,"",false);
+  OutVal(colx[2],0,arrTotSums[0],M4Val,true);
+  OutVal(colx[3],0,arrTotSums[1],M4Val,true);
+  OutVal(colx[4],0,arrTotSums[2],M4Val,true);
+  OutVal(colx[5],0,arrTotSums[3],M4Val,true);
+  OutVal(colx[6],0,arrTotSums[4],M4Val,true);
+  OutVal(colx[7],0,arrTotSums[5],M4Val,true);
+  OutVal(colx[8],0,arrTotSums[6],M4Val,true);
+  OutVal(colx[9],0,arrTotSums[7],M4Val,true);
+  EndFormat;
+  
+  EndJob;
+
+
+  return;
+end;

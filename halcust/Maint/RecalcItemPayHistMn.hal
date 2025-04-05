@@ -1,0 +1,158 @@
+external updating procedure UpdateItemPayHistVcFromIVVc(Record IVVc,boolean);
+external updating procedure UpdateItemPayHistVcFromIPVc(Record IPVc,boolean,string);
+// external updating procedure UpdateItemPayHistVcFromCLInVc(Record CLInVc);
+
+
+updating 
+procedure ProceedOneIPrsRec(record IPrsVc IPrsr,var longint oldtransnr,var integer oldtranstype,var integer cnt,string custcode)
+begin
+  Record IPVc IPr;
+  Record IVVc IVr;
+  // Record CLInVc CLInr;
+  
+  if oldtransnr!=IPrsr.TransNr or oldtranstype!=IPrsr.TransType then begin
+    Switch (IPrsr.TransType) begin
+      case 0: //IVVc            
+        IVr.SerNr = IPrsr.TransNr;
+        if ReadFirstMain(IVr,1,true) then begin
+          UpdateItemPayHistVcFromIVVc(IVr,false);
+          oldtransnr = IPrsr.TransNr; oldtranstype = 0;
+        end;
+      case 1: //IPVc
+        IPr.SerNr = IPrsr.TransNr;
+        if ReadFirstMain(IPr,1,true) then begin
+          UpdateItemPayHistVcFromIPVc(IPr,false,custcode);
+          oldtransnr = IPrsr.TransNr; oldtranstype = 1;
+        end else begin
+          LogText(0,"ERROR cannot find IPVc with number " & IPrsr.TransNr);
+        end;
+      // case 3: //CLInVc
+        // CLInr.SerNr = IPrsr.TransNr;
+        // if ReadFirstMain(CLInr,1,true) then begin
+        //   oldtransnr = IPrsr.TransNr; oldtranstype = 3;
+        //   UpdateItemPayHistVcFromCLInVc(CLInr);
+        // end;
+      otherwise
+        LogText(0,"RecalcItemPayHistMn ERROR :: Not supported type in IPrsVc register");
+      
+    end;
+    cnt = cnt + 1;
+    if cnt>200 then begin
+      DBFlush;
+      DbHold;
+      cnt = 0;
+    end;
+    
+  end;
+
+  return;
+end;
+
+global updating
+procedure RecalcItemPayHistMn(Record RcVc RepSpec)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  Record ItemPayStatVc ItemPayStatr;
+  Record IPrsVc IPrsr;
+  longint errcode,oldtransnr;
+  boolean wloop,testf;
+  string 255 tstr,prevcust;
+  integer oldtranstype,cnt;
+  date td;
+  // LogText(0,"RecalcItemPayHistMn :: Cust: " & RepSpec.f1);
+
+  if RepSpec.f1=="" then begin
+    //First delete all existing records
+    ItemPayHistr.SerNr = -1;
+    wloop = true;
+    While LoopMain(ItemPayHistr,1,wloop) begin
+      RecordDelete(ItemPayHistr);
+      StepBack(ItemPayHistr);
+      cnt = cnt + 1;
+      if cnt>500 then begin
+        DBFlush;
+        DbHold;
+        cnt = 0;
+      end;
+    end;
+    
+    ItemPayStatr.ContrSerNr = -1;
+    wloop = true;
+    While LoopMain(ItemPayStatr,1,wloop) begin
+      RecordDelete(ItemPayStatr);
+      StepBack(ItemPayStatr);
+      cnt = cnt + 1;
+      if cnt>500 then begin
+        DBFlush;
+        DbHold;
+        cnt = 0;
+      end;
+    end;
+  end else begin
+    ItemPayHistr.CustCode = RepSpec.f1;
+    wloop = true;
+    While LoopKey("CustCode",ItemPayHistr,1,wloop) begin
+      if ItemPayHistr.CustCode!=RepSpec.f1 then begin
+        wloop=false;
+      end else begin
+        RecordDelete(ItemPayHistr);
+        StepBack(ItemPayHistr);
+        cnt = cnt + 1;
+        if cnt>500 then begin
+          DBFlush;
+          DbHold;
+          cnt = 0;
+        end;
+      end;
+    end;
+    
+    ItemPayStatr.CustCode = RepSpec.f1;
+    wloop = true;
+    While LoopKey("CustCode",ItemPayStatr,1,wloop) begin
+      if ItemPayStatr.CustCode!=RepSpec.f1 then begin
+        wloop=false;
+      end else begin  
+        RecordDelete(ItemPayStatr);
+        StepBack(ItemPayStatr);
+        cnt = cnt + 1;
+        if cnt>500 then begin
+          DBFlush;
+          DbHold;
+          cnt = 0;
+        end;
+      end;
+    end;
+  end;
+  
+  //Now add all kinds of transactions (IVVc, CredIVVc, IPVc, CLInVc)
+  oldtransnr = -1; oldtranstype = -1;
+  if nonblank(RepSpec.f1) then begin
+    IPrsr.CustCode = RepSpec.f1;
+    td.year = 1980;
+    td.month = 1;
+    td.day = 1;
+    IPrsr.TransDate=td;
+    wloop = true;
+    While LoopKey("CustTransKey",IPrsr,1,wloop) begin
+      if RepSpec.f1!="" and IPrsr.CustCode!=RepSpec.f1 then begin
+        wloop=false;
+      end;
+      if wloop then begin
+        ProceedOneIPrsRec(IPrsr,oldtransnr,oldtranstype,cnt,RepSpec.f1);
+      end;
+    end;
+  end else begin
+    wloop=true;
+    td.year = 1980;
+    td.month = 1;
+    td.day = 1;
+    IPrsr.TransDate=td;
+    While LoopKey("TransDate",IPrsr,1,wloop) begin
+      ProceedOneIPrsRec(IPrsr,oldtransnr,oldtranstype,cnt,"");
+    end;
+  end;
+  
+LRecalcItemPayHistMn:;
+
+return;
+end;

@@ -1,0 +1,49 @@
+//
+global
+procedure ERFTypeRn(record RcVc RepSpec)
+begin
+  record BuildVc ERFMasterr;
+  Integer i;
+  i = 0;
+
+  // get erf.type
+  if(nonblank(RepSpec.f1)) then begin
+        
+    // start report job
+    StartReportJob("ERF Type Report");      
+    
+    StartFormat(15);
+      OutString(1,0,"ERF Type: " & RepSpec.f1,true);
+    EndHeader;
+    EndFormat;
+
+    StartFormat(15); // -> show heading
+      OutString(0,0,"",false);
+      OutString(5,0,"No.",false);
+      OutString(30,0,"Erf Code",false);
+      OutString(120,0,"Erf No.",false);
+      OutString(230,0,"Address",false);
+      OutString(360,0,"Suburb",false);
+      // OutString(450,0,"Zone",false);
+    EndFormat;
+
+    Gray_Divider(0,1);
+
+    // loop erfs
+    while (LoopMain(ERFMasterr,1,true)) begin
+      if(ERFMasterr.HouseType == RepSpec.f1) then begin
+        i = i + 1;
+        StartFormat(15); // -> show heading
+          OutString(0,0,"",false);
+          OutString(5,0,i & ". ",false);
+          OutString(30,0,ERFMasterr.Code,false);
+          OutString(120,0,ERFMasterr.Erf,false);
+          OutString(230,0,ERFMasterr.Address,false);
+          OutString(360,0,ERFMasterr.RuralTer,false);
+          // OutString(450,0,ERFMasterr.ZoningCode,false);
+        EndFormat;
+      end;
+    end;
+    EndJob;
+  end;
+end;

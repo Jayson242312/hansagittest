@@ -1,0 +1,554 @@
+external procedure RecalcBFlatFields(integer,record BuildVc);
+external procedure RecalcBuildFields(integer,record BuildVc);
+remote function val GetBFlatFieldValue(string,string,date,date);
+remote function boolean PasteBuildInFlatsVc(var record FlatsVc,integer,boolean);
+
+
+//jh -- open window premise
+global
+procedure CreatePremiseDsm() begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  integer wn,nwn;
+  longint nr;
+  date sd,ed;
+  wn = curwindow;
+  if (WindowState(wn) == Rs_normal) then begin
+    GetWindowRecord(wn,Buildr);
+    // recordNew(Flatsr);
+    // Flatsr.Code = Buildr.Code;
+    // Flatsr.Address = Buildr.Address;
+    Flatsr.FlatCode = "P" & Buildr.ExtensionNo & Buildr.LotNo & StringToInt(StripNonDigits(Buildr.DivisionNo)) & StringToInt(StripNonDigits(Buildr.UnitNo)); // key;
+    if ReadFirstMain(Flatsr,1,true) then begin
+        nwn = OpenWindow("FlatsDClass",1,0,"","",Flatsr);
+    end;
+    // if PasteBuildInFlatsVc(Flatsr,Rs_insert,true) then begin end;
+      // PutWindowRecord(nwn,Flatsr)
+    end else begin
+      beep;
+      MessageBox(1000763,"");
+    end;
+return;
+end;
+
+
+//ea  -- open window erf
+global
+procedure CreateErfDsm() begin
+  record BuildVc Buildr;
+  integer wn,nwn;
+  
+  nwn = OpenWindow("BuildDClass",1,0,"","",Buildr);
+  Buildr.Classification = "ERF";
+  PutWindowRecord(nwn,Buildr);
+
+return;
+end;
+
+
+global
+procedure BuildStatusRnSm()
+begin
+  record BuildVc Buildr;
+  record RcVc RepSpec;
+  integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Buildr);
+  if nonblank(Buildr.Code) then begin
+    RepSpec.Media = mtScreen;
+    RepSpec.f1=Buildr.Code;
+    RepSpec.repname="BuildStatusRn";
+    RunReport(RepSpec,0);
+  end;
+  
+  return;
+end;
+
+
+
+
+global 
+function string 255 BuildLClassTotArea(Record BuildVc Buildr) begin
+  string 255 res;
+  boolean wloop;
+  record SysFormatBlock SysFormatRec;
+  val t;
+  
+  BlockLoad(SysFormatRec);
+  t=GetBFlatFieldValue(Buildr.Code,"TOTAREA",CurrentDate,CurrentDate);
+  res=ValToString(t,M4UVal,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+  
+  BuildLClassTotArea=res;
+return;
+end;
+
+// global 
+// procedure OpenBuildStatusBtn() begin
+//   Record BuildVc Buildr;
+//   Record BuildStatusVc BuildStatusr;
+//   integer wn,nwn;
+
+//   wn=CurWindow;
+//   if windowstate(wn)!=1 then begin
+//     GetWindowRecord(wn,Buildr);
+//     BuildStatusr.BuildCode=Buildr.Code;
+//     if ReadFirstMain(BuildStatusr,1,true) then begin
+//       nwn=OpenWindow("BuildStatusDClass",1,0,"","",BuildStatusr);
+//     end else begin
+//       RecordNew(BuildStatusr);
+//       BuildStatusr.BuildCode=Buildr.Code;
+//       BuildStatusr.Comment=Buildr.Address;
+//       nwn=OpenWindow("BuildStatusDClass",1,0,"","",BuildStatusr);
+//     end;
+//   end else begin
+//     MessageBox(22902,"");
+//   end;
+
+// return;
+// end;
+
+// global 
+// procedure BuildDocFromBuilddsm() begin
+//   integer wn,nwn;
+//   Record BuildVc Buildr;
+//   Record RcVc RepSpec;
+
+//   wn=CurWindow;
+//   if GetWindowClass(wn) == "BuildDClass" then begin
+//     GetWindowRecord(wn,Buildr);
+//   end;
+//   if GetWindowClass(wn) == "BuildLClass" then begin
+//     if ReadMarkedRecord(wn,Buildr) then begin end;
+//   end;
+//   if nonblank(Buildr.Code) then begin
+//     ReportDefaults(RepSpec,"BuildDocRClass");
+//     RepSpec.Media=mtScreen;
+//     RepSpec.repname="BuildDocRn";
+//     RepSpec.f1=Buildr.Code;
+//     RepSpec.flags[1]=1;
+//     RepSpec.flags[2]=1;
+//     RepSpec.ArtMode=3;
+//     nwn=OpenWindow("BuildDocRClass",1,0,"","",RepSpec);
+//   end;
+
+// return;
+// end;
+
+// global 
+// procedure OpenBuildConstBtn() begin
+//   Record BuildVc Buildr;
+//   Record BuildConstVc BuildConstr;
+//   integer wn,nwn;
+
+//   wn=CurWindow;
+//   if windowstate(wn)!=1 then begin
+//     GetWindowRecord(wn,Buildr);
+//     BuildConstr.BuildCode=Buildr.Code;
+//     if ReadFirstMain(BuildConstr,1,true) then begin
+//       nwn=OpenWindow("BuildConstDClass",1,0,"","",BuildConstr);
+//     end else begin
+//       RecordNew(BuildConstr);
+//       BuildConstr.BuildCode=Buildr.Code;
+//       BuildConstr.Address=Buildr.Address;
+//       nwn=OpenWindow("BuildConstDClass",1,0,"","",BuildConstr);
+//     end;
+//   end else begin
+//     MessageBox(22902,"");
+//   end;
+
+// return;
+// end;
+
+// global 
+// procedure BuildVILinksm() begin
+//   integer wn,nwn;
+//   Record BuildVc Buildr;
+//   Record BuildVILinkVc BuildViLinkr;
+
+//   wn=CurWindow;
+//   if GetWindowClass(wn) == "BuildDClass" then begin
+//     if windowstate(wn)!=1 then begin
+//       GetWindowRecord(wn,Buildr);
+//     end;
+//   end;
+//   if GetWindowClass(wn) == "BuildLClass" then begin
+//     if ReadMarkedRecord(wn,Buildr) then begin end;
+//   end;
+//   if nonblank(Buildr.Code) then begin
+//     BuildViLinkr.BuildCode=Buildr.Code;
+//     if ReadFirstMain(BuildViLinkr,1,true) then begin
+//       nwn = OpenWindow("BuildVILinkDClass",1,0,"","",BuildViLinkr);
+//     end else begin
+//       recordnew(BuildViLinkr);
+//       BuildVILinkr.BuildCode=Buildr.Code;
+//       BuildVILinkr.Address=Buildr.Address;
+//       nwn = OpenWindow("BuildVILinkDClass",1,0,"","",BuildViLinkr);
+//     end;
+//   end;
+
+// return;
+// end;
+
+// global 
+// procedure BuildSuppContrRepsm() begin
+//   integer wn;
+//   Record RcVc RepSpec;
+//   Record BuildVc Buildr;
+
+//   wn=CurWindow;
+//   if GetWindowClass(wn) == "BuildDClass" then begin
+//     GetWindowRecord(wn,Buildr);
+//   end;
+//   if GetWindowClass(wn) == "BuildLClass" then begin
+//     if ReadMarkedRecord(wn,Buildr) then begin end;
+//   end;
+//   if nonblank(Buildr.Code) then begin
+//     RepSpec.repname = "SuppContractRn";
+//     ReportDefaults(RepSpec,"MSCountListRClass");
+//     RepSpec.Media = mtScreen;
+//     RepSpec.f1 = Buildr.Code;
+//     RunReport(RepSpec,0);
+//   end;
+
+// return;
+// end;
+
+global 
+procedure BuildStatsm() begin
+  integer wn;
+  Record BuildVc Buildr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  if GetWindowClass(wn) == "BuildDClass" then begin
+    GetWindowRecord(wn,Buildr);
+  end;
+  if GetWindowClass(wn) == "BuildLClass" then begin
+    if ReadMarkedRecord(wn,Buildr) then begin end;
+  end;
+  if nonblank(Buildr.Code) then begin
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="BuildStatRn";
+    RepSpec.f1=Buildr.Code;
+    RunReport(RepSpec,0);
+  end;
+return;
+end;
+
+global 
+procedure ChangeBuildCountersm() begin
+  integer wn;
+  Record BuildVc Buildr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  if GetWindowClass(wn) == "BuildDClass" then begin
+    GetWindowRecord(wn,Buildr);
+  end;
+  if GetWindowClass(wn) == "BuildLClass" then begin
+    if ReadMarkedRecord(wn,Buildr) then begin end;
+  end;
+  if nonblank(Buildr.Code) then begin
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="MSChangeMainCountRn";
+    RepSpec.f1=Buildr.Code;
+    RunReport(RepSpec,0);
+  end;
+
+  return;
+end;
+
+global 
+procedure BuildCounterRessm() begin
+  integer wn;
+  Record BuildVc Buildr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  if GetWindowClass(wn) == "BuildDClass" then begin
+    GetWindowRecord(wn,Buildr);
+  end;
+  if GetWindowClass(wn) == "BuildLClass" then begin
+    if ReadMarkedRecord(wn,Buildr) then begin end;
+  end;
+  
+  if nonblank(Buildr.Code) then begin
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="MainCounterResRn";
+    RepSpec.f1=Buildr.Code;
+    RepSpec.flags[0]=1;
+    RunReport(RepSpec,0);
+  end;
+
+  return;
+end;
+
+global
+function boolean BuildDClassOnOpenWindow(integer wn)
+begin
+  record BuildVc Buildr;
+  boolean res;
+
+  GetWindowRecord(wn,Buildr);
+  RecalcBFlatFields(wn,Buildr);
+  RecalcBuildFields(wn,Buildr);
+  SetWindowSubset(wn,Buildr.Code);
+  
+  BuildDClassOnOpenWindow = res;
+  return;
+end;
+
+global
+procedure BuildDClassOnWindowRecordChange(integer wn)
+begin
+  Record BuildVc Buildr;
+  
+  GetWindowRecord(wn,Buildr);
+  RecalcBFlatFields(wn,Buildr);
+  RecalcBuildFields(wn,Buildr);
+  SetWindowSubset(wn,Buildr.Code);
+  
+  return;
+end;
+
+// global
+// procedure OpenGarantRecBtn()
+// begin
+//   record BuildVc Buildr;
+//   record GarantVc Garantr;
+//   integer wn, mwn;
+
+//   wn = CurWindow;
+//   GetWindowRecord(wn, Buildr);
+//   if (ReadMarkedRecord(wn, Garantr)) then begin
+//     mwn = OpenWindow("GarantDClass",1,0,"","",Garantr);
+//   end;
+//   return;
+// end;
+
+// global
+// procedure CreateGarantRecBtn()
+// begin
+//   record BuildVc Buildr;
+//   record GarantVc Garantr;
+//   integer wn, mwn;
+
+//   wn = CurWindow;
+//   GetWindowRecord(wn, Buildr);
+//   RecordNew(Garantr);
+//   Garantr.BuildCode = Buildr.Code;
+//   mwn = OpenWindow("GarantDClass",1,0,"","",Garantr);
+//   return;
+// end;
+
+// function boolean BuildDClassStaircaseAreaAE(integer wn) begin
+  // Record BuildVc Buildr;
+  // Boolean res;
+
+  // GetWindowRecord(wn,Buildr);
+  // Buildr.CommonArea=Buildr.StaircaseArea + Buildr.BaseArea + Buildr.TopFloorArea;
+  // PutWindowRecord(wn,Buildr);
+
+  // BuildDClassStaircaseAreaAE=res;
+// end;
+
+function boolean BuildDClassBaseAreaAE(integer wn) begin
+  Record BuildVc Buildr;
+  Boolean res;
+
+  GetWindowRecord(wn,Buildr);
+  // Buildr.CommonArea=Buildr.StaircaseArea + Buildr.BaseArea + Buildr.TopFloorArea;
+  Buildr.CommonArea=Buildr.BaseArea;
+  PutWindowRecord(wn,Buildr);
+
+  BuildDClassBaseAreaAE=res;
+end;
+
+// function boolean BuildDClassTopFloorAreaAE(integer wn) begin
+  // Record BuildVc Buildr;
+  // Boolean res;
+
+  // GetWindowRecord(wn,Buildr);
+  // Buildr.CommonArea=Buildr.StaircaseArea + Buildr.BaseArea + Buildr.TopFloorArea;
+  // PutWindowRecord(wn,Buildr);
+
+  // BuildDClassTopFloorAreaAE=res;
+// end;
+
+/* function boolean BuildDClassBuildContactAE(integer wn) begin
+  Record BuildVc Buildr;
+  Record CUVc CUr;
+
+  GetWindowRecord(wn,Buildr);
+  if nonblank(Buildr.BuildContact) then begin
+    CUr.Code=Buildr.BuildContact;
+    if ReadFirstMain(CUr,1,true) then begin
+      Buildr.BuildContactName=CUr.Name;
+      PutWindowRecord(wn,Buildr);
+    end else begin
+      beep;
+    end;
+  end;
+
+  BuildDClassBuildContactAE=false;
+end; */
+
+/* function boolean BuildDClassBuildOverseerAE(integer wn) begin
+  Record BuildVc Buildr;
+  //Record CUVc CUr;
+  Record UserVc Userr;
+
+  GetWindowRecord(wn,Buildr);
+  if nonblank(Buildr.BuildOverseer) then begin
+    Userr.Code=Buildr.BuildOverseer;
+    if ReadFirstMain(Userr,1,true) then begin
+      Buildr.BuildOverseerName=Userr.Name;
+      PutWindowRecord(wn,Buildr);
+    end else begin
+      beep;
+    end;
+  end;
+
+  BuildDClassBuildOverseerAE=false;
+end; */
+
+// global
+// function boolean BuildDClassAfterEditField(integer wn,string fieldname,integer fn,integer rownr,integer changed)
+// begin
+//   boolean res;
+
+//   res = true;
+
+//   if changed!=0 then begin
+//     Switch (fieldname) begin
+//       // case "StaircaseArea": res = BuildDClassStaircaseAreaAE(wn);
+//       case "BaseArea": res = BuildDClassBaseAreaAE(wn);
+//       // case "TopFloorArea": res = BuildDClassTopFloorAreaAE(wn);
+//       // case "BuildContact": res = BuildDClassBuildContactAE(wn);
+//       // case "BuildOverseer": res = BuildDClassBuildOverseerAE(wn);
+//     end;
+//   end;
+
+//   BuildDClassAfterEditField = res;
+// end;
+
+
+global 
+procedure SearchBuildVcLsm() begin
+  integer nwn;
+  Record RcVc RepSpec;
+  
+  nwn = OpenWindow("SearchBuildRClass",0,0,"","",RepSpec);
+  DeselectWindow(nwn,false);
+  ReportDefaults(RepSpec,"SearchBuildRClass");
+  RepSpec.UsedOnly = 0;
+  RepSpec.repname = "SearchBuildVcRn";
+  RepSpec.critname = "SearchBuildRClass";
+  RepSpec.Media = mtScreen;
+  PutWindowRecord(nwn,RepSpec);  
+  WindowFieldGoto(nwn,RepSpec,-1,"f1",true);
+  
+return;
+end;
+
+global
+procedure OpenBuildOwnersSm() 
+begin
+  Record BuildVc Buildr;
+  Record OwnersVc Ownersr;
+  integer wn,nwn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,Buildr);
+  Ownersr.Code=Buildr.Code;
+  if !ReadFirstMain(Ownersr,1,True) then begin
+    Ownersr.Code=Buildr.Code;
+  end;
+  OpenWindow("OwnersDClass",1,0,"","",Ownersr);
+
+return;
+end;
+
+
+// -> AUTO POPULATE ERF
+global
+function Boolean BuildDClassEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record BuildVc Buildr;
+
+  if changedf then begin
+    GetWindowRecord(wn,Buildr);
+
+      if(blank(buildr.DivisionNo)) then begin
+        buildr.DivisionNo = "0000";
+      end;
+      if(blank(buildr.UnitNo)) then begin
+        buildr.UnitNo = "0000";
+      end;
+      if(Buildr.DivisionNo == "0") then begin
+        buildr.DivisionNo = "0000";
+      end;
+      if(Buildr.UnitNo == "0") then begin
+        buildr.UnitNo = "0000";
+      end;
+    Buildr.Erf = Buildr.ExtensionNo & "-" & Buildr.LotNo & "-" & Buildr.DivisionNo & "-" & Buildr.UnitNo;
+    Buildr.Code = "E" & Buildr.ExtensionNo & Buildr.LotNo  & StringToInt(StripNonDigits(Buildr.DivisionNo)) & StringToInt(StripNonDigits(Buildr.UnitNo)); 
+    Buildr.BuildNr = Buildr.LotNo;
+    PutWindowRecord(wn, Buildr);
+  end;
+
+  BuildDClassEFAfter = res;
+  RETURN;
+END;
+// WINDOW ACTION -> AFTER-FIELD-INPUT
+global
+function Boolean BuildDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  switch (fieldname) begin
+    case "BaseArea": res = BuildDClassBaseAreaAE(wn);
+    case "ExtensionNo": res = BuildDClassEFAfter(wn,fn,rownr,changed);
+    case "LotNo": res = BuildDClassEFAfter(wn,fn,rownr,changed);
+    case "DivisionNo": res = BuildDClassEFAfter(wn,fn,rownr,changed);
+    case "UnitNo": res = BuildDClassEFAfter(wn,fn,rownr,changed);
+  end;
+  BuildDClassAfterEditField = res;
+  RETURN;
+END;
+
+
+// PREVENT USER UPDATING ERF
+global
+function Boolean ERFMasterClassErfEFActive(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN 
+  Boolean res;
+  res = true;
+
+  if (WindowState(wn)==2) then begin //Rs_update
+    res = false;
+    MessageBox(0,"Erf cannot be updated!");
+  end;
+
+  ERFMasterClassErfEFActive = res;
+  RETURN;
+END;
+// WINDOW ACTION -> PREVENT ERF INPUT
+global
+function Boolean BuildDClassActiveEditField(Integer wn, String fieldname, Integer fn, Integer wnst, Integer rownr, Integer changed)
+begin
+  Boolean res;
+  res = true;
+
+  switch(fieldname) begin
+    case "ExtensionNo": res = ERFMasterClassErfEFActive(wn,fn,rownr,changed);
+    case "LotNo": res = ERFMasterClassErfEFActive(wn,fn,rownr,changed);
+    case "DivisionNo": res = ERFMasterClassErfEFActive(wn,fn,rownr,changed);
+    case "UnitNo": res = ERFMasterClassErfEFActive(wn,fn,rownr,changed);
+  end;
+
+  BuildDClassActiveEditField = res;
+  return; 
+end;

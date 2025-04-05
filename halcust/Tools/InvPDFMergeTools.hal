@@ -1,0 +1,264 @@
+external inner function Boolean FindFormcode(Integer,Integer);
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+external inner procedure RemoveCharactersFromString(var string,string);
+external inner procedure PrintInvoice(record RcVc,record IVVc,string,string);
+external inner function string 255 FormGetDocumentFileNameForEmail(string,string,string);
+external inner function string 60 AddStringToStringList(string,string);
+external inner updating procedure FormSetDocumentFilename(string);
+external procedure GetInvMergeArray(string,date,date,var array longint);
+external function boolean GetPDFLangCode(record RcVc,var string,var string,record FormDefVc,var integer,boolean); //OBS
+external updating function Integer BBS_CreateMailFromIV(record IVVc,var record MailVc,var string,Boolean,string,Record RcVc,string,string);
+external updating procedure OBS_CreateAndAttachMergedPdf(record MailVc,record IVVc,record RcVc,string,string,integer,string);
+external updating procedure SetServInvSendFlag(var record IVVc);
+
+global updating
+function boolean CreateMergedInvMail(record RcVc RepSpec,var record MailVc Mailr,longint invsernr)
+begin
+  integer i,rwc;
+  record IVVc IVr,RealIVr;
+  Integer err;
+  string 255 tstr,docname;
+  record MailSettingsBlock MSb;
+  Boolean testf,res;
+  string 255 usercode,textcode,eMail;
+  Record PDFInvTextBlock pdfBlr;
+  Row PDFInvTextBlock pdfBlrw;
+  Longint errcode;
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  
+  BlockLoad(pdfBlr);
+  rwc=MatRowCnt(pdfBlr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(pdfBlr,i,pdfBlrw);
+    if (blankdate(pdfBlrw.StartDate) or pdfBlrw.StartDate<=RepSpec.sEndDate) and
+       (blankdate(pdfBlrw.EndDate) or pdfBlrw.EndDate>=RepSpec.sEndDate) then begin
+      textcode=pdfBlrw.Code;
+      i=rwc;
+    end;
+  end;
+  if blank(textcode) then begin
+    LogText(0,"CreateMergedInvMail ERROR :: " & USetStr(1001006));
+    errcode=1001006;
+    goto LCreateMergedInvMail;
+  end;
+  BlockLoad(MSb);
+  eMail = MSb.FromSystem;
+  testf=true;
+  
+  // if IVr.Contract!=-1 then begin
+    // NAContractr.SerNr=IVr.Contract;
+    // if ReadFirstMain(NAContractr,1,true) then begin
+      // if NAContractr.InvToEmail==0 then begin
+        // testf=false;
+      // end;
+    // end else begin
+      // testf=false;
+    // end;
+  // end else begin
+    // CUr.Code=IVr.CustCode;
+    // if ReadFirstMain(CUr,1,true) then begin
+      // if CUr.BBSPDFPrint==0 then begin
+        // testf=false;
+      // end;
+    // end else begin
+      // testf=false;
+    // end;
+  // end;
+  if testf then begin
+    RecordNew(Mailr);
+    RealIVr.SerNr=invsernr;
+    if ReadFirstMain(RealIVr,1,true) then begin
+    end;
+    RecordCopy(IVr,RealIVr);
+    IVr.CustCode=RepSpec.f1;
+    IVr.BuildCode="MERGEDPDF";  //for skiping readfirstmain;
+    err = BBS_CreateMailFromIV(IVr,Mailr,tstr,true,textcode,RepSpec,usercode,eMail);
+    if err==0 then begin
+      SetServInvSendFlag(RealIVr);
+      docname = "InvForm";
+      OBS_CreateAndAttachMergedPdf(Mailr,IVr,RepSpec,docname,invsernr & ".pdf",0,textcode);
+      res = true;
+    end else begin
+      LogText(0,"CreateMergedInvMail ERROR :: " & USetStr(err));
+    end;
+  end;
+LCreateMergedInvMail:;
+  CreateMergedInvMail = res;
+  return;
+end;
+
+function Boolean PrintInvoiceWatermarks(record IVVc IVr,Boolean testprintoutf,LongInt onpage)
+BEGIN
+  record ModuleBlock MBr;
+  Boolean res;
+
+  res = true;
+  BlockLoad(MBr);
+  if (MBr.NoTestprintEnabler==0) then begin
+    if ((IVr.OKFlag==0) and (testprintoutf)) then begin
+      FormWaterMark(1117,onpage);
+    end;
+    if ((IVr.OKFlag!=0) and (IVr.Invalid==0)) then begin
+      if (IVr.Prntdf!=0) then begin
+        FormWaterMark(1118,onpage);
+      end;
+    end;
+  end;
+  if (IVr.Invalid!=0) then begin
+    FormWaterMark(1400,onpage);
+    res = false;
+  end;
+  PrintInvoiceWatermarks = res;
+  RETURN;
+END;
+
+procedure GetParamArray(string strParam,string delim,var array string param_array)
+begin
+  longint pos;
+  string 60 one_param;
+  integer size;
+  
+  size = 0;
+  
+  while (GetNextSubstring(strParam,pos,delim,one_param)) begin
+    if nonblank(one_param) then begin 
+      RemoveCharactersFromString(one_param,chr(34)); //Noņem pēdiņas
+    end;
+    
+    param_array[size] = one_param;
+    size = size + 1;
+  end;
+  
+return;
+end;
+
+procedure PrintOneInvoice(record RcVc RepSpec,record IVVc IVr)
+begin
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+  Boolean printf,langf,GetPDFLangf,gentestf,usePdfLangf;
+  Integer intdocnr;
+  string 30 formcode,langcode,langcod2,fname,PdfFormCode,tstr,custcode;
+  Integer i,rwcnt,j;
+  record IVVc realIVr;
+  date sd,ed;
+  transaction Boolean gPDFEmailf;
+  transaction string 255 gaPDFEmailFiles;
+  
+  langcode = IVr.LangCode;
+  langcod2 = IVr.ShipMode;
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    goto LDoInvForm;
+  end;
+  rwcnt = MatRowCnt(FDr);
+  for (i=rwcnt-1;i>=0;i=i-1) begin
+    MatRowGet(FDr,i,FDrw);
+    if (FDrw.LangCode==langcode) then begin
+      i = -1;
+      langf = true;
+    end;
+  end;
+  if (langf==false) then begin langcode = ""; end;  
+  intdocnr = 1;
+  printf = true;
+  // if (IVr.Prntdf!=0) then begin
+    // if (UserCanAction("DisallowPrintCopy",false)) then begin
+      // MessageBox(1274,StringFromStringSet(3,"DisallowPrintCopy"));
+      // printf = false;
+    // end;
+  // end;
+  
+  if IVr.Fax=="USEPDFFORM" then begin //Generate mark
+    usePdfLangf = true;
+    // gentestf=true;
+    IVr.Fax="";
+  end;
+  
+  while (printf) begin  
+LFINDFORMCOCEInv:;
+    formcode = "";
+    for (i=rwcnt-1;i>=0;i=i-1) begin
+      MatRowGet(FDr,i,FDrw);
+      if (FindFormcode(IVr.OKFlag,FDrw.Typ)) then begin
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,IVr.SerNr,FDrw.PrintGroupCode,
+                        langcode,intdocnr,"IVVc",formcode)) then
+        begin
+          if RepSpec.Media==mtPdf and !GetPDFLangf and usePdfLangf then begin
+            if GetPDFLangCode(RepSpec,langcode,PdfFormCode,FDr,intdocnr,gentestf) then begin
+              formcode=PdfFormCode;
+              GetPDFLangf=true;
+            end;
+          end;
+          goto LInvBREAK;
+        end;
+      end;
+    end;
+    if (nonblank(langcod2)) then begin
+      langcode = langcod2;
+      langcod2 = "";
+      goto LFINDFORMCOCEInv;
+    end;  
+LInvBREAK:;
+    if (nonblank(formcode)) then begin
+      if (gPDFEmailf) then begin
+        fname = FormGetDocumentFileNameForEmail(gaPDFEmailFiles,USetStr(1808) & IVr.SerNr,formcode);
+        gaPDFEmailFiles = AddStringToStringList(gaPDFEmailFiles,fname);
+        qupdating.FormSetDocumentFilename(fname);
+      end;
+      if (OpenForm(formcode)) then begin
+        printf = PrintInvoiceWatermarks(IVr,true,-1);
+        PrintInvoice(RepSpec,IVr,formcode,langcode);
+        CloseForm;
+      end else begin
+        printf = false;
+        MessageBox(1546,formcode);
+      end;
+    end else begin
+      printf = false;
+      if (intdocnr==1) then begin
+        MessageBox(1624, " " & USetStr(1623));
+      end;
+    end;
+    intdocnr = intdocnr + 1;
+  end;
+LDoInvForm:;  
+
+  return;
+end;
+
+global
+procedure PrintMergedInvPDF(record RcVc RepSpec,string parameters,string fax)
+begin
+  string 30 tstr,custcode;
+  Integer j;
+  record IVVc IVr;
+  date sd,ed;
+  array string 255 arrParam;
+  array longint arrIVSerNr;
+  
+  GetParamArray(parameters,",",arrParam);
+  custcode=arrParam[1];
+  tstr=arrParam[2];
+  sd.year=StringToInt(Right(tstr,4));
+  sd.month=StringToInt(MID(tstr,3,2));
+  sd.day=StringToInt(Left(tstr,2));
+  tstr=arrParam[3];
+  ed.year=StringToInt(Right(tstr,4));
+  ed.month=StringToInt(MID(tstr,3,2));
+  ed.day=StringToInt(Left(tstr,2));
+  
+  GetInvMergeArray(custcode,sd,ed,arrIVSerNr);
+  for (j=0;j<arrIVSerNr.length;j=j+1) begin
+    IVr.SerNr=arrIVSerNr[j];
+    if ReadFirstMain(IVr,1,true) then begin
+      IVr.Fax=fax;  //SET PDF LANG PARAM
+      PrintOneInvoice(RepSpec,IVr);
+    end;
+  end;
+
+  return;
+end;

@@ -1,0 +1,980 @@
+external inner procedure IPVc_PasteTransDate(var record IPVc);
+external inner procedure IPPastePayMode(var record IPVc);
+external inner function Boolean PasteInvIn2IPr(var record IPVc,Integer,Date,var val,Boolean,var Boolean);
+external inner procedure RecordAction_raExpandPay(var record IPVc,Integer);
+external inner function Boolean IPVc_PasteCustCode(var record IPVc,Integer,var longint);
+external inner procedure IPVc_PasteRecVal(var record IPVc,Integer);
+external inner procedure IPVc_PasteRecCurncy(var record IPVc,Integer);
+external inner procedure IPVc_PasteVATCode(var record IPVc,Integer);
+external inner procedure ExtractObj(string,var Integer,var string);
+external inner procedure OPVc_PasteTransDate(var record OPVc);
+external inner procedure OPPastePayMode(var record OPVc);
+external inner function Boolean PasteInvIn2OPr(var record OPVc,Integer,Date,Integer,val,var string,Boolean,var Boolean);
+external inner procedure OPVc_PasteRecVal(var record OPVc,Integer);
+external inner procedure OPVc_PasteVECode(var record OPVc,Integer);
+external inner procedure OPVc_PasteRecCurncy(var record OPVc,Integer);
+external inner procedure OPVc_PasteVATCode(var record OPVc,Integer);
+external inner updating procedure SaveTrans(record TRVc);
+external inner function Integer GetIntYc(Date);
+external inner procedure AddEuroCurncyTrRow(record TRVc,string,string,string,string,val,Boolean,Boolean,var val,string,val,val,val,val,val,val,val,LongInt,Boolean,string);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner function Boolean GetAccName(string,var string,Integer);
+external inner function val StringToValue(string,Integer,string,string);
+external inner procedure GetBaseCurncy(Integer,var string);
+external inner function Boolean GetPMRow(string,var row PMBlock);
+external inner updating function LongInt TRVcRecordRemove(var record TRVc,record TRVc,LongInt,LongInt);
+external inner function Boolean FindStringInString(string,string);
+external procedure RecordAction_raExpandPay_old(var record IPVc,Integer,string,integer,string);
+external function boolean GetActualCustCO2(string,date,var record NAContractVc,var longint);
+external function val GetCustIPrsSumTillDate(string,date,longint,var val,longint);
+
+function boolean AdditionalFidaCheck(string PmtInfo,longint contractnr,string debtRepList,date td,val amount,longint contractnr1,var val debtsum,var val vienSum,
+                                    var val tiesSum,var integer statNr,var string CaseNr)
+begin
+  boolean res,TrHs,testf;
+  record NAContractVc NAContractr;
+  record IVVc IVr;
+  // record DebtRepAgreeVc DebtRepAgreer;
+  longint tmpContr;
+  val latesum,UnpayedSum,izlSum;
+  
+  res=false;
+  vienSum=0;
+  tiesSum=0;
+  izlSum=0;
+  CaseNr="";
+  
+  if (contractnr!=contractnr1) and (contractnr1!=-1) then begin
+    statNr=3;
+    res=true;
+    GoTo LAdditionalFidaCheck;
+  end;
+  
+  if contractnr1!=-1 then begin
+    tmpContr=contractnr1;
+  end else begin
+    tmpContr=contractnr;
+  end;
+  
+  if tmpContr!=-1 then begin
+    NAContractr.SerNr=tmpContr;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      debtsum=GetCustIPrsSumTillDate(NAContractr.CustCode,td,-1,latesum,tmpContr);
+      /*
+      ResetLoop(DebtRepAgreer);
+      DebtRepAgreer.ContractNr=tmpContr;
+      TrHs=true;
+      While LoopKey("ContractNr",DebtRepAgreer,1,TrHs) begin
+        if DebtRepAgreer.ContractNr!=tmpContr then begin
+          TrHs=false;
+        end else begin
+          testf=true;
+          if DebtRepAgreer.Closed==1 then begin
+            if nonblankdate(DebtRepAgreer.CloseDate) and DebtRepAgreer.CloseDate<=td then begin
+              testf=false;
+            end;
+          end;
+          if testf then begin
+            GetDebtRepAgreeUnpayedSum(DebtRepAgreer,UnpayedSum,td);
+            if DebtRepAgreer.Type==0 then begin
+              vienSum=vienSum+UnpayedSum;
+            end; 
+            if DebtRepAgreer.Type==1 then begin
+              tiesSum=tiesSum+UnpayedSum;
+            end;
+            if DebtRepAgreer.Type==2 then begin
+              izlSum=izlSum+UnpayedSum;
+            end;
+            if nonblank(DebtRepAgreer.CivilCaseNr) and (DebtRepAgreer.Type==1) and blank(CaseNr) then begin
+              if HasCivilCaseNrInInfo(PmtInfo,DebtRepAgreer.CivilCaseNr) then begin
+                CaseNr = DebtRepAgreer.CivilCaseNr;
+              end;
+            end;
+          end;
+        end;
+      end;
+      debtsum=debtsum-(vienSum+tiesSum+izlSum);
+      // if debtRepList=="" and amount>debtsum then begin
+        // statNr=4;
+        // res=true;
+        // GoTo LAdditionalFidaCheck;
+      // end;
+      if debtRepList!="" and amount>(vienSum+tiesSum+izlSum) then begin
+        statNr=5;
+        res=true;
+        GoTo LAdditionalFidaCheck;
+      end;
+      */
+    end;  
+  end;
+  
+LAdditionalFidaCheck:;
+  AdditionalFidaCheck=res;
+  return;
+end;
+
+global
+function boolean GetFidaIPRec(longint sernr,var record FidaIPVc FidaIPr)
+begin
+  boolean res;
+  
+  FidaIPr.SerNr=sernr;
+  if ReadFirstMain(FidaIPr,1,true) then begin
+    res = true;
+  end;
+  
+  GetFidaIPRec = res;
+  return;
+end;
+
+global
+function boolean FidaRowPaymentExsist(string FidaRowID,var longint ipnr)
+begin
+  record IPVc IPr;
+  boolean res;
+  
+  ipnr=-1;
+  if nonblank(FidaRowID) then begin
+    IPr.FidaRowID=FidaRowID;
+    if ReadFirstKey("FidaRowID",IPr,1,true) then begin
+      res = true;
+      ipnr=IPr.SerNr;
+    end;
+  end;
+  
+  FidaRowPaymentExsist = res;
+  return;
+end;
+
+function longint GetContractByAddress(string fulladdress,date ondate,string CustCode)
+begin
+  record FlatsVc Flatsr;
+  record NAContractVc NAContractr;
+  longint res;
+  boolean TrHs,testf,foundf,addf;
+  string 255 address,FlatAddress;
+  string 1 char;
+  integer i,length;
+  
+  res=-1;
+  testf=false;
+  
+  length=Len(fulladdress);
+  for (i=0;i<length;i=i+1) begin
+    if Mid(fulladdress,i,1)!=" " then begin
+      char=Mid(fulladdress,i,1);
+      switch (char) begin
+        case "-":
+            if Mid(fulladdress,i-1,1)!=" " then begin
+              address = address & " -";
+            end else begin
+              address = address & "-";
+            end;
+            if Mid(fulladdress,i+1,1)!=" " then begin
+              address = address & " ";
+            end;
+        case ".":
+            address = address & ".";
+            if Mid(fulladdress,i+1,1)==" " then begin 
+              testf=true;
+            end;
+        otherwise
+            address = address & Mid(fulladdress,i,1);
+            testf=false;
+      end;
+    end else begin
+      if !testf then begin
+        address = address & " ";
+        testf=true;
+      end;
+    end;    
+  end;
+  if nonblank(address) then begin
+    ResetLoop(NAContractr);
+    NAContractr.FlatAddress=address;
+    TrHs=true;
+    while LoopKey("FlatAddress",NAContractr,1,TrHs) begin
+      if  NAContractr.FlatAddress!=address then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if NAContractr.OKFlag!=1 then begin
+          testf=false;
+        end;
+        if NonBlankDate(NAContractr.StartDate) and ondate < NAContractr.StartDate then begin
+          testf = false;
+        end;
+        if nonblankdate(NAContractr.EndDate) and ondate > NAContractr.EndDate then begin
+          testf = false;
+        end;
+        if testf then begin
+          if nonblank(CustCode) then begin
+            if NAContractr.CustCode==CustCode then begin
+              res=NAContractr.SerNr;
+            end;
+          end else begin
+            res=NAContractr.SerNr;
+          end;
+          TrHs=false;
+        end;
+      end;
+    end;
+  end;
+ 
+  GetContractByAddress=res;
+  return;
+end;
+
+global
+procedure CreateSOCFidaIP(var record FidaIPVc FidaIPr,record IPVc IPr)
+begin
+  record CUVc CUr;
+  row IPVc IPrw;
+  row FidaIPVc FidaIPrw;
+  record NAContractVc NAContractr;
+  integer i,rwc,size,length,j,type;
+  boolean testf;
+  val debtsum,vienSum,tiesSum;
+  string 60 CaseNr;
+  
+  RecordNew(FidaIPr);
+  FidaIPr.TransDate=CurrentDate;
+  
+  rwc=MatRowCnt(IPr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IPr,i,IPrw);
+    if nonblank(IPrw.Comment) and nonblank(IPrw.Comment) then begin
+      if nonblank(IPrw.CustAddress) then begin
+        FidaIPrw.ContractNr=GetContractByAddress(IPrw.CustAddress,FidaIPr.TransDate,"");
+      end;
+      if FidaIPrw.ContractNr!=-1 then begin
+        NAContractr.SerNr=FidaIPrw.ContractNr;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          CUr.Code=NAContractr.CustCode;
+          if ReadFirstMain(CUr,1,true) then begin
+            FidaIPrw.CustCode=CUr.Code;
+            FidaIPrw.Name=CUr.Name;
+            FidaIPrw.RegNr=CUr.VATNr;
+            FidaIPrw.Type=1; //Pareizs
+          end else begin
+            FidaIPrw.CustCode="";
+            FidaIPrw.Name="";
+            FidaIPrw.RegNr="";
+            FidaIPrw.Type=0; //Nezin�ms
+          end;
+        end;
+      end else begin
+        CUr.RegNr1=IPrw.CustCode;
+        if ReadFirstKey("RegNr1",CUr,1,true) then begin
+          FidaIPrw.CustCode=CUr.Code;
+          FidaIPrw.Name=CUr.Name;
+          FidaIPrw.RegNr=CUr.VATNr;
+          FidaIPrw.Type=1; //Pareizs
+        end else begin
+          FidaIPrw.CustCode="";
+          FidaIPrw.Name="";
+          FidaIPrw.RegNr="";
+          FidaIPrw.Type=0; //Nezin�ms
+        end;
+      end;
+      length=len(IPrw.Comment);
+      for (j=0;j<length;j=j+1) begin
+        if mid(IPrw.Comment,j,1)=="," then begin
+          FidaIPrw.Amount=StringToValue(IPrw.Comment,M4Val,"",",");
+          j=length;
+        end;
+        if mid(IPrw.Comment,j,1)=="." then begin
+          FidaIPrw.Amount=StringToValue(IPrw.Comment,M4Val,"",".");
+          j=length;
+        end;
+      end;
+      FidaIPrw.PayType=0; //R
+      FidaIPrw.DCType=0; //Ien. maks.
+      FidaIPrw.RowComment=IPrw.CustCode & ";" & IPrw.CustName & ";" & IPrw.CustAddress & ";" & IPrw.Comment;
+      if FidaIPrw.ContractNr!=-1 then begin
+        testf=AdditionalFidaCheck(FidaIPrw.RowComment,FidaIPrw.ContractNr,"",FidaIPr.TransDate,FidaIPrw.Amount,FidaIPrw.ContractNr,debtsum,vienSum,tiesSum,type,CaseNr);
+        // FidaIPrw.ContractNr1=FidaIPrw.ContractNr; 
+        FidaIPrw.DebtSum=debtsum;
+        FidaIPrw.AgreeSum=vienSum; 
+        FidaIPrw.CourtSum=tiesSum; 
+        FidaIPrw.CaseNr=CaseNr; 
+        if testf then begin
+          FidaIPrw.Type=type;
+        end;
+      end;
+      
+      MatRowPut(FidaIPr,size,FidaIPrw);
+      size = size + 1;
+    end;
+  end;
+
+  return;
+end;
+
+global updating
+procedure SortFidaIPRows(var record FidaIPVc Fidar)
+begin
+  record FidaIPVc tmpFidar;
+  row FidaIPVc Fidarw,tmpFidarw;
+  integer i,j,rwc,rwc2,rownr,size;
+  val tsum;
+  
+  rwc=MatRowCnt(Fidar);
+  rwc2=rwc;
+  for (i=0;i<rwc;i=i+1) begin
+    for (j=0;j<rwc2;j=j+1) begin
+      MatRowGet(Fidar,j,Fidarw);
+      if j==0 then begin
+        rownr=0;
+        tsum=Fidarw.Amount;
+      end else begin
+        if tsum>Fidarw.Amount then begin
+          rownr=j;
+          tsum=Fidarw.Amount;
+        end;
+      end;
+    end;
+    MatRowGet(Fidar,rownr,Fidarw);
+    MatRowInsert(tmpFidar,size,Fidarw);
+    MatRowDelete(Fidar,rownr);
+    rwc2=rwc2-1;
+    size=size+1;
+  end;
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(tmpFidar,i,tmpFidarw);
+    MatRowPut(Fidar,i,tmpFidarw);
+  end;
+  
+  return;
+end;
+
+global
+function boolean UpdFidaIPVcRowFromCU(var record FidaIPVc Fidar,integer rownr)
+begin
+  Row FidaIPVc Fidarw;
+  Record CUVc CUr;
+  string 255 basecur;
+  boolean res;
+  
+  GetBaseCurncy(1,basecur);
+  MatRowGet(Fidar,rownr,Fidarw);
+  if nonblank(Fidarw.CustCode) then begin
+    CUr.Code=Fidarw.CustCode;
+    if ReadFirstMain(CUr,1,true) then begin
+      Fidarw.Name=CUr.Name;
+      Fidarw.RegNr=CUr.VATNr;
+      if blank(Fidarw.Currency) then begin
+        Fidarw.Currency = basecur;
+      end;
+      MatRowPut(Fidar,rownr,Fidarw);
+      res=true;
+    end;
+  end;
+  
+UpdFidaIPVcRowFromCU=res;
+  return;
+end;
+
+global
+function boolean UpdFidaIPVcRowFromNAContr(var record FidaIPVc Fidar,integer rownr,var longint warn)
+begin
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  row FidaIPVc Fidarw;
+  boolean res,testf,foundf;
+  date ondate;
+  val debtsum,vienSum,tiesSum;
+  integer type;
+  string 20 tstr,CaseNr;
+  
+  warn=-1;
+  
+  MatRowGet(Fidar,rownr,Fidarw);
+  if nonblank(Fidarw.ContractNr) then begin
+    tstr = Fidarw.ContractNr;
+    if Len(tstr)<7 then begin
+      NAContractr.OldCode=tstr;
+      if ReadFirstKey("OldCode",NAContractr,1,true) then begin
+        foundf=true;
+        Fidarw.ContractNr=NAContractr.SerNr;
+      end;
+    end else begin
+      NAContractr.SerNr=Fidarw.ContractNr;
+      if ReadFirstMain(NAContractr,1,true) then begin
+        foundf=true;
+      end;
+    end;
+    if foundf then begin
+      Fidarw.CustCode=NAContractr.CustCode;
+      Fidarw.Name=NAContractr.CustName;
+      MatRowPut(Fidar,rownr,Fidarw);
+      if UpdFidaIPVcRowFromCU(Fidar,rownr) then begin end;
+      res=true;
+      
+      if nonblankdate(Fidar.TransDate) then begin
+        ondate=Fidar.TransDate;
+      end else begin
+        ondate=CurrentDate;
+      end;
+      testf=AdditionalFidaCheck(Fidarw.RowComment,Fidarw.ContractNr,"",ondate,0,Fidarw.ContractNr,debtsum,vienSum,tiesSum,type,CaseNr);
+      // Fidarw.ContractNr1=Fidarw.ContractNr; 
+      Fidarw.DebtSum=debtsum;
+      Fidarw.AgreeSum=vienSum; 
+      Fidarw.CourtSum=tiesSum;
+      Fidarw.CaseNr=CaseNr;
+    end;
+  end;
+  
+  UpdFidaIPVcRowFromNAContr = res;
+  return;
+end;
+
+
+global
+function boolean UpdFidaIPVcRowFromInvoice(var record FidaIPVc Fidar,integer rownr,var longint warn)
+begin
+  record NAContractVc NAContractr;
+  record IVVc IVr;
+  row FidaIPVc Fidarw;
+  boolean res,testf,foundf;
+  date ondate;
+  val debtsum,vienSum,tiesSum;
+  integer type;
+  string 20 tstr,CaseNr;
+  
+  warn=-1;
+  
+  MatRowGet(Fidar,rownr,Fidarw);
+  if nonblank(Fidarw.InvoiceList) then begin
+    if !FindStringInString(Fidarw.InvoiceList,",") then begin
+      IVr.SerNr=StringToLongInt(Fidarw.InvoiceList);
+      if ReadFirstMain(IVr,1,true) then begin
+        NAContractr.SerNr=IVr.Contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          foundf=true;
+        end;
+      end;
+    end;
+    if foundf then begin
+      Fidarw.ContractNr=NAContractr.SerNr;
+      Fidarw.CustCode=NAContractr.CustCode;
+      Fidarw.Name=NAContractr.CustName;
+      MatRowPut(Fidar,rownr,Fidarw);
+      if UpdFidaIPVcRowFromCU(Fidar,rownr) then begin end;
+      res=true;
+      if nonblankdate(Fidar.TransDate) then begin
+        ondate=Fidar.TransDate;
+      end else begin
+        ondate=CurrentDate;
+      end;
+      testf=AdditionalFidaCheck(Fidarw.RowComment,Fidarw.ContractNr,"",ondate,0,Fidarw.ContractNr,debtsum,vienSum,tiesSum,type,CaseNr);
+      // //Fidarw.ContractNr1=Fidarw.ContractNr; 
+      Fidarw.DebtSum=debtsum;
+      Fidarw.AgreeSum=vienSum; 
+      Fidarw.CourtSum=tiesSum;
+      Fidarw.CaseNr=CaseNr;
+    end;
+  end;
+  
+  UpdFidaIPVcRowFromInvoice = res;
+  return;
+end;
+
+global updating 
+procedure MakeIPFromFidaIP(string custcode,string invList,val amount,string curcode,date ondate,string paymode,
+                           integer paytype,var integer ipRowNr,var longint ipnr,var integer ipcnt,
+                           var integer ipok,longint contractnr,longint DebtRepAgreeNr,var longint error,record FidaIPVc Fidar,
+                           integer Fidarownr,string FidaRowID,string CaseNr) begin
+  val fr,to1,to2,br1,br2,t;
+  Record IPVc IPr,oldIPr;
+  // record DebtColSetBlock DebtColSetBl;
+  Row IPVc IPrw;
+  val chk,totamt;
+  Boolean testf,installmentf;
+  integer rwc,i,pos,rownr;
+  string 20 invoicenr;
+  record RLinkVc RLr,oldRLr;
+  string 255 rlink;
+  vector boolean vecAddedIP;
+  
+  // blockload(DebtColSetBl);
+  
+  error = 0;
+  
+  if !FidaRowPaymentExsist(FidaRowID,ipnr) then begin
+    RecordClear(IPr);
+    // RecordNew(IPr);
+    IPr.TransDate=ondate;
+    IPVc_PasteTransDate(IPr);
+    IPr.SerNr = NextSerNr("IPVc",IPr.TransDate,-1,false,"");
+    if IPr.SerNr==-1 then begin
+      error = 1747;
+      goto EndMakeIPFromFidaIP;
+    end;
+    IPr.FidaRowID=FidaRowID;
+    IPr.PayMode=paymode;
+    IPPastePayMode(IPr);
+    rownr = 0;
+    if paytype==0 then begin                                             /* Maksā rēķinus */
+      IPr.DebtRepAgreeNr = DebtRepAgreeNr;                               /* Ievieto tiesvedības / vienošanās numuru */
+      
+      ClearRow(IPr,IPrw,1);
+      IPrw.CustCode = custcode;                                          /* Ievieto klientu */
+      IPrw.ContractNr = contractnr;                                      /* Ievieto līgumu */
+      MatRowPut(IPr,rownr,IPrw);
+      if !(IPVc_PasteCustCode(IPr,rownr,error)) then begin end;
+      MatRowGet(IPr,rownr,IPrw);
+      
+      if IPrw.RecCurncy!=curcode then begin                              /* Ievieto valūtu ja tā nesakrīt */
+        IPrw.RecCurncy=curcode;
+        MatRowPut(IPr,rownr,IPrw);
+        IPVc_PasteRecCurncy(IPr,rownr);
+        MatRowGet(IPr,rownr,IPrw);
+      end;
+      
+      // if DebtColSetBl.PayMode==IPr.PayMode then begin
+        // IPrw.DebColType=3;
+      // end;
+      
+      IPrw.RecVal = amount;                                             /* Ievieto maksājuma summu */
+      MatRowPut(IPr,rownr,IPrw);
+      IPVc_PasteRecVal(IPr,rownr);
+      MatRowGet(IPr,rownr,IPrw);
+      
+      RecordAction_raExpandPay_old(IPr,rownr,"",0,CaseNr);                     /* Sadala maksājumu */
+    end;
+    
+    if paytype==1 then begin                                          /* Par visu summu veido vienu priek�apmaksu */
+      ClearRow(IPr,IPrw,1);
+      IPrw.CustCode = custcode;                                       /* Ievieto klientu */
+      IPrw.ContractNr = contractnr;                                   /* Ievieto līgumu */
+      MatRowPut(IPr,rownr,IPrw);
+      if !(IPVc_PasteCustCode(IPr,rownr,error)) then begin end;
+      MatRowGet(IPr,rownr,IPrw);
+      
+      if IPrw.RecCurncy!=curcode then begin                           /* Ievieto valūtu ja tā nesakrīt */
+        IPrw.RecCurncy=curcode;
+        MatRowPut(IPr,rownr,IPrw);
+        IPVc_PasteRecCurncy(IPr,rownr);
+        MatRowGet(IPr,rownr,IPrw);
+      end;
+      
+      IPrw.RecVal = amount;                                          /* Ievieto maksājuma summu */
+      MatRowPut(IPr,rownr,IPrw);
+      IPVc_PasteRecVal(IPr,rownr);
+      MatRowGet(IPr,rownr,IPrw);
+      
+      IPrw.CUPNr=IPr.SerNr;                                          /* Ievieto priekšapamksas numuru */
+      MatRowPut(IPr,rownr,IPrw);
+    end;
+    
+    rwc = MatRowCnt(IPr);
+    if rwc>0 then begin
+      MatRowGet(IPr,0,IPrw);
+      IPr.RecNumber = IPrw.CustName;
+    end;
+    
+    if RecordStore(IPr,false) then begin
+      CreateRecordLink(IPr,CurrentCompany,Fidar,CurrentCompany);
+      rlink = GetRecordLink(IPr);
+      RLr.FromRecidStr = rlink;
+      if (ReadFirstMain(RLr,1,true)) then begin
+        RecordCopy(oldRLr,RLr);
+        RLr.Comment = RLr.Comment & " " & USetStr(15095) & " " & Fidarownr;
+        if RecordUpdate(oldRLr,RLr,true)==0 then begin end;
+      end;  
+      
+      ipcnt=ipcnt+1;
+      ipnr=IPr.SerNr;
+      RecordCopy(oldIPr,IPr);
+      IPr.OKFlag=1;
+      if RecordUpdate(oldIPr,IPr,true)==0 then begin
+        ipok=ipok+1;
+      end else begin
+        error = 1001384;
+        goto EndMakeIPFromFidaIP;
+      end;
+    end;
+  end;
+  
+EndMakeIPFromFidaIP:;
+return;
+end;
+
+global updating
+procedure MakeTRFromFidaIP(string AccNumber,string AccNr,val Amount,string Currency,date TransDate,var integer rownr,var longint ipnr,var integer ipcnt,string comment) begin
+  record TRVc TRr;
+  string 60 tstr1,tstr2;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  val TotSum,v;
+  
+  RecordNew(TRr);
+  TRr.TransDate = TransDate;
+  
+  if (GetAccName(AccNumber,tstr1,60)==false) then begin
+    goto LMakeTRFromFidaIP;
+  end;
+  if (GetAccName(AccNr,tstr2,60)==false) then begin
+    goto LMakeTRFromFidaIP;
+  end;
+  GetFullCurncyRate(currency,TRr.TransDate,frrate,torate1,torate2,baserate1,baserate2);
+  v = MulRateToBase1(currency,Amount,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+  AddEuroCurncyTrRow(TRr,AccNumber,"","",tstr1,v,true,false,TotSum,
+                             currency,frrate,torate1,torate2,baserate1,baserate2,Amount,blankval,-1,false,"");
+  AddEuroCurncyTrRow(TRr,AccNr,"","",tstr2,v,true,true,TotSum,
+                             currency,frrate,torate1,torate2,baserate1,baserate2,Amount,blankval,-1,false,"");
+                               
+  
+  TRr.Number = NextSerNr("TRVc",TRr.TransDate,-1,false,"");
+  TRr.IntYc = GetIntYc(TRr.TransDate);
+  TRr.Comment = comment;
+  SaveTrans(TRr);
+  ipnr = TRr.Number;
+  ipcnt = ipcnt + 1;
+  
+LMakeTRFromFidaIP:;
+return;
+end;
+
+global updating
+function boolean CanelIPFromFidaIP(longint ipnr,var integer ipcnt,boolean ignoreActf)
+begin
+  record IPVc IPr,oldIPr;
+  boolean res;
+  transaction boolean gOBSUnOKOneRowf;
+  
+  IPr.SerNr=ipnr;
+  if ReadFirstMain(IPr,1,true) then begin
+    res=true;
+    if IPr.OKFlag==1 then begin
+      RecordCopy(oldIPr,IPr);
+      IPr.OKFlag=0;
+      if ignoreActf then begin
+        gOBSUnOKOneRowf=true;
+      end;
+      if RecordUpdate(oldIPr,IPr,true)!=0 then begin
+        LogText(0,"CanelIPFromFidaIP ERROR :: Cant unok payment " & IPr.SerNr);
+        res=false;
+      end;
+      if ignoreActf then begin
+        gOBSUnOKOneRowf=false;
+      end;
+    end;
+    if res then begin
+      ipcnt = ipcnt + 1;
+      RecordDelete(IPr);
+    end;
+  end;
+
+  CanelIPFromFidaIP=res;
+  return;
+end;
+
+global updating
+function boolean CancelTRFromFidaIP(date transdate,longint ipnr,var integer ipcnt)
+begin
+  record TRVc TRr;
+  boolean res;
+    
+  TRr.IntYc = GetIntYc(transdate);  
+  TRr.Number=ipnr;
+  if ReadFirstMain(TRr,2,true) then begin
+    if (TRVcRecordRemove(TRr,TRr,0,0)<=0) then begin
+      res=true;
+      ipcnt = ipcnt + 1;
+      RecordDelete(TRr);
+    end;
+  end;
+
+  CancelTRFromFidaIP=res;
+  return;
+end;
+
+global updating
+procedure InsertContractsFidaIP(var record FidaIPVc Fidar)
+begin
+  row FidaIPVc Fidarw;
+  integer i,rwc;
+  record NAContractVc NAContractr,tempNAContractr;
+  boolean TrHs,testf;
+  longint contract,contract2;
+  
+  rwc=MatRowCnt(Fidar);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Fidar,i,Fidarw);
+    if Fidarw.ContractNr==-1 and Fidarw.CustCode!="" then begin
+      if GetActualCustCO2(Fidarw.CustCode,Fidar.TransDate,NAContractr,contract) then begin
+        Fidarw.ContractNr=contract;
+        MatRowPut(Fidar,i,Fidarw);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global updating
+procedure AutoCreateIP_TR_FidaIPVc() begin
+  Record FidaIPVc Fidar,oldFidar;
+  Row FidaIPVc Fidarw;
+  row PMBlock PMrw;
+  integer i,rwc,rownr,ipcnt,ipok,ipcntIP;
+  boolean testf,update,TrHs,allmadef;
+  longint ipnr,error,errorStr;
+  
+  ResetLoop(Fidar);
+  TrHs=true;
+  Fidar.SerNr=-1;
+  while LoopMain(Fidar,1,TrHs) begin
+    testf=true;
+    if Fidar.Closed==1 then begin
+      testf=false;
+    end;
+    if Fidar.OKFlag!=1 then begin
+      testf=false;
+    end;
+    if Fidar.IPMadeFlag==1 then begin
+      testf=false;
+    end;
+    ipcntIP=0; ipok=0;
+    if testf then begin
+      RecordCopy(oldFidar,Fidar);
+      update=false;
+      rwc=MatRowCnt(Fidar);
+      //Make IPVc
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(Fidar,i,Fidarw);
+        testf=true;
+        if Fidarw.Type!=1 then begin
+          testf=false;
+        end;
+        if Fidarw.IPNr>0 then begin
+          testf=false;
+        end;
+        if Fidarw.DCType!=0 then begin
+          testf = false;
+        end;
+        if testf then begin
+          MakeIPFromFidaIP(Fidarw.CustCode,Fidarw.InvoiceList,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,Fidar.PayMode,Fidarw.PayType,rownr,ipnr,ipcntIP,ipok,Fidarw.ContractNr,StringToLongInt(Fidarw.DebtRepAgreements),error,Fidar,i+1,Fidarw.FidaRowID,Fidarw.CaseNr);
+          if ipnr!=-1 then begin
+            Fidarw.IPNr=ipnr;
+            MatRowPut(Fidar,i,Fidarw);
+            update=true;
+          end;
+        end;
+      end;
+      //Make TRVc
+      ipcnt=0;
+      if !GetPMRow(Fidar.PayMode,PMrw) then begin
+        LogText(0,"AutoCreateIP_TR_FidaIPVc ERROR :: " & USetStr(1100023));
+        GoTo LAutoCreateIP_TR_FidaIPVc;
+      end;  
+      if blank(PMrw.AccNr) then begin
+        LogText(0,"AutoCreateIP_TR_FidaIPVc ERROR :: " & USetStr(1100024));
+        GoTo LCreateIP_TR_FidaIPDsm;
+      end;
+      rwc=MatRowCnt(Fidar);
+      for(i=0;i<rwc;i=i+1)begin
+        MatRowGet(Fidar,i,Fidarw);
+        testf=true;
+        if Fidarw.Type!=1 then begin
+          testf=false;
+        end;
+        if Fidarw.IPNr>0 then begin
+          testf=false;
+        end;
+        if Fidarw.DCType!=2 then begin
+          testf=false;
+        end;
+        if testf then begin
+          MakeTRFromFidaIP(Fidarw.AccNumber,PMrw.AccNr,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,rownr,ipnr,ipcnt,Fidarw.RowComment);
+          Fidarw.IPNr=ipnr;
+          MatRowPut(Fidar,i,Fidarw);
+          update=true;
+        end;
+      end;
+LAutoCreateIP_TR_FidaIPVc:;
+      if update then begin
+        allMadef=true;
+        rwc=MatRowCnt(Fidar);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(Fidar,i,Fidarw);
+          if Fidarw.IPNr==-1 then begin
+            allMadef=false;
+          end;
+        end;
+        if allMadef then begin
+          Fidar.IPMadeFlag=1;
+        end;
+        if RecordUpdate(oldFidar,Fidar,true)!=0 then begin
+          LogText(0,"AutoCreateIP_TR_FidaIPVc ERROR :: Could not update FidaIPVc record " & Fidar.SerNr);
+        end else begin
+          LogText(0,"AutoCreateIP_TR_FidaIPVc :: Updated FidaIPVc record " & Fidar.SerNr);
+        end;
+      end;
+      // MessageBox(0,USetStr(1100011) & " " & ipcntIP & " (" & USetStr(1100013) & ": " & ipok & ") " & USetStr(1100012) & ". " & USetStr(1100025) & ipcnt);
+    end;
+  end;
+  
+LCreateIP_TR_FidaIPDsm:;
+  return;
+end;  
+
+function string 255 TimeToString(time t)
+begin
+  string 255 tstr;
+  
+  if (nonblanktime(t)) then begin
+    if (t.hour<10) then begin
+      tstr = "0";
+    end;
+    tstr = tstr & t.hour;
+
+    // tstr = tstr & ":";
+    
+    if (t.minute<10) then begin
+      tstr = tstr & "0";
+    end;
+    tstr = tstr & t.minute;
+    
+    if (t.second<10) then begin
+      tstr = tstr & "0";
+    end;
+    tstr = tstr & t.second;
+  end;
+  
+  TimeToString = tstr;
+  return;
+end;
+
+global updating
+procedure CreateFidaIPRowID(var record FidaIPVc Fidar)
+begin
+  row FidaIPVc Fidarw;
+  integer i,rwc;
+  rwc=MatRowCnt(Fidar);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Fidar,i,Fidarw);
+    if Fidarw.FidaRowID=="" then begin
+      Fidarw.FidaRowID=Fidar.SerNr & DateToString(CurrentDate,"DDMMYYYY") & TimeToString(CurrentTime) & i+1;
+      MatRowPut(Fidar,i,Fidarw);
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure FidaIPExpandNIP(var record FidaIPVc FidaIPr,integer rownr)
+begin
+  record ARVc ARr;
+  record IVVc IVr;
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  row FidaIPVc FidaIPrw,orgFidaIPrw;
+  val rem,paysum;
+  integer rw;
+  boolean TrHs,testf;
+  
+  MatRowGet(FidaIPr,rownr,orgFidaIPrw);
+  if orgFidaIPrw.CustCode!="1337" then begin
+    GoTo LFidaIPExpandNIP;
+  end;
+  if orgFidaIPrw.IPNr!=-1 then begin
+    GoTo LFidaIPExpandNIP;
+  end;
+  rem=orgFidaIPrw.Amount;
+  
+  ARr.CustCode=orgFidaIPrw.CustCode;
+  TrHs=true;
+  While LoopKey("CustCode",ARr,1,TrHs) begin
+    if ARr.CustCode!=orgFidaIPrw.CustCode then begin
+      TrHs=false;
+    end else begin
+      IVr.SerNr=ARr.InvoiceNr;
+      if ReadFirstMain(IVr,1,true) then begin
+        if IVr.MergedInvFlag==0 then begin
+          paysum=IVr.Sum4;
+          if paysum>rem then begin
+            paysum=rem;
+          end;
+          rem = rem - paysum;
+          FidaIPrw.DCType = 0;
+          FidaIPrw.Type=1;
+          FidaIPrw.CustCode=IVr.CustCode;
+          FidaIPrw.ContractNr=IVr.Contract;
+          FidaIPrw.InvoiceList=IVr.SerNr;
+          FidaIPrw.Amount=paysum;
+          // if nonblank(IVr.CurncyCode) and IVr.CurncyCode!="EUR" then begin
+            // Fidar.Sum=Fidar.Sum+MulWithRateToBase1(IVr.CurncyCode,Fidar.TransDate,paysum,DefaultCurRoundOff);
+          // end else begin
+            // Fidar.Sum=Fidar.Sum+paysum;
+          // end;
+          CUr.Code=IVr.CustCode;
+          if ReadFirstMain(CUr,1,true) then begin
+          end;
+          FidaIPrw.Name=CUr.Name;
+          FidaIPrw.IBANCode=CUr.IBANCode;
+          FidaIPrw.RegNr=CUr.VATNr;
+          FidaIPrw.Currency=IVr.CurncyCode;
+          FidaIPrw.RowComment=CUr.Name;
+          FidaIPrw.AccNumber="";
+          FidaIPrw.DebtRepAgreements="";
+          FidaIPrw.ContractNr1=-1; 
+          FidaIPrw.DebtSum=blankval;
+          FidaIPrw.AgreeSum=blankval; 
+          FidaIPrw.CourtSum=blankval;
+          rw = rw + 1;
+          MatRowInsert(FidaIPr,rownr+rw,FidaIPrw);
+          if rem==0 then begin
+            TrHs=false;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  // FidaIPr.Sum = FidaIPr.Sum - orgFidaIPrw.Amount;
+  orgFidaIPrw.Amount = rem;
+  MatRowPut(FidaIPr,rownr,orgFidaIPrw);
+  if rem>0 then begin
+    // FidaIPr.Sum = FidaIPr.Sum + rem;
+  end else begin
+    MatRowDelete(FidaIPr,rownr);
+  end;
+
+LFidaIPExpandNIP:; 
+  return;
+end;
+
+global
+function boolean GetFidaIPGenRec(integer DCType,longint IPNr,date TransDate,var record IPVc IPr,var record OPVc OPr,var record TRvc TRr)
+begin
+  boolean res;
+  
+  if IPNr!=-1 then begin
+    if DCType==0 then begin
+      IPr.SerNr=IPNr;
+      if ReadFirstMain(IPr,1,true) then begin
+        res=true;
+      end;
+    end;
+    if DCType==1 then begin
+      OPr.SerNr=IPNr;
+      if ReadFirstMain(OPr,1,true) then begin
+        res=true;
+      end;
+    end;
+    if DCType==2 then begin
+      TRr.Number=IPNr;
+      TRr.IntYc=GetIntYc(TransDate);
+      if ReadFirstMain(TRr,2,true) then begin
+       res=true;
+      end;
+    end;
+  end;
+
+  GetFidaIPGenRec = res;
+  return;
+end;

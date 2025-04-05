@@ -1,0 +1,43 @@
+
+global
+updating procedure RequisitionDsm()
+begin
+  Integer wn,nwn,rwcnt,rwcnt2,i,j;
+  record WSVc WSr;//worksheet
+  row WSVc WSrw;//worksheet
+  record IntORVc IntORVr;//internal orders
+  row IntORVc IntORVrw;//internal orders
+  record UserVc Userr;//persons
+
+  wn = CurWindow;
+  GetWindowRecord(wn,WSr);
+
+  RecordNew(IntORVr);
+  IntORVr.SerNr = NextSerNr("IntORVc",CurrentDate,-1,false,"");
+  IntORVr.LangCode = "ENG";
+  // get person
+  Userr.Code = CurrentUser;
+  if ReadFirstMain(Userr,1,true) then begin
+    IntORVr.OurUser = Userr.Code;//person
+    IntORVr.Name = Userr.Name;//name
+    IntORVr.FrLocation = Userr.Location;//from.location
+  end;
+  // get worksheet rows data
+  rwcnt = MatRowCnt(WSr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(WSr,i,WSrw);
+    IntORVrw.ArtCode = WSrw.ArtCode;//item
+    IntORVrw.Quant = WSrw.Quant;//qty
+    IntORVrw.Spec = WSrw.Spec;//desc
+    IntORVrw.Price = WSrw.Sum;//cost.price
+    IntORVrw.Sum = WSrw.Sum;//total.cost
+    IntORVrw.SerialNr = WSrw.SerialNr;//
+    IntORVrw.CostAcc = WSrw.CostAcc;//
+    IntORVrw.Objects = WSrw.Objects;//
+    MatRowPut(IntORVr,i,IntORVrw);
+  end;
+  IntORVr.Total = WSr.Sum4;//
+
+  nwn = OpenWindow("IntORDClass",1,0,"","",IntORVr);
+  return;
+end;

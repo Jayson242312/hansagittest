@@ -1,0 +1,265 @@
+external procedure GetCountResPeriod(var date,var date);
+external function longint CheckCountResExistsInPeriod(record CountResVc);
+external procedure updateEstimates (var record CountResVc);
+external procedure createVerifyMeterHistory(var record CountResVc);//jh
+
+//
+global
+updating procedure ReadingsIn(var record RcVc RepSpec)
+begin
+  record CountResVc CountResr; // meter.readings
+  record FlatCountersVc FlatCountersr, OldFlatCountersr; // meters
+  record MHistoryVc MHr;
+  integer i,start_val,end_val,new_Val;
+  String 255 Unassigned, StartDate, EndDate, AccNum, StartReading, EndReading, ReadingDate;
+  String 255 MeterID, BookNo, MeterNo, AlphaNo, SeqNo, Address;
+  date s,s2,e,e2;
+  Boolean testf,trhs,testp,isValid;
+  longint nr;
+  testp = true;
+  testf = true;
+  
+  s2 = RepSpec.d1;
+  e2 = AddDay(RepSpec.d1,-GetDay(RepSpec.d1) + DaysInMonth(GetYear(RepSpec.d1),GetMonth(RepSpec.d1)));
+
+  i = 0;
+  if  (RepSpec.flags[0] == 2) then begin // this code is to import initial meter readings from katima
+    while (NextImportLine(true)) begin
+      Unassigned = ImportField;
+      StartDate = ImportField;
+      EndDate = ImportField;
+      AccNum = ImportField;
+      StartReading = ImportField;
+      EndReading = ImportField;
+      ReadingDate = ImportField;//not used
+
+      FlatCountersr.Contract = AccNum;
+      if (ReadFirstKey("Contract", FlatCountersr, 1, true)) then begin  
+
+        start_val = StringToVal(StartReading,M4Val);
+        end_val = StringToVal(EndReading,M4Val);
+        new_Val = end_val - start_val;
+        if(new_Val>=0) then begin
+
+          RecordNew(CountResr);
+          CountResr.SerNr = NextSerNr("CountResVc", CurrentDate, -1, false, "");
+          CountResr.CounterNo = FlatCountersr.CounterNo; 
+          CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+          CountResr.ContractNr = FlatCountersr.Contract;
+          CountResr.FlatCode = FlatCountersr.FlatCode;
+          CountResr.BuildCode = FlatCountersr.Code;
+          CountResr.CountResType = FlatCountersr.CounterType;
+          CountResr.RegDate = CurrentDate;
+          CountResr.StartDate = StartDate; 
+          CountResr.EndDate = EndDate;
+          CountResr.StartVal = start_val;
+          CountResr.EndVal = end_val;
+          CountResr.CounterType = FlatCountersr.CounterType;
+          CountResr.CounterAddr = FlatCountersr.Address;
+          CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+          CountResr.InvAmount = CountResr.Amount; // Adjusted quantity
+          
+          RecordImportStore(CountResr, false);
+          createVerifyMeterHistory(CountResr);
+          RecordCopy(OldFlatCountersr, FlatCountersr);
+          FlatCountersr.InitAmount = StringToVal(CountResr.EndVal, M4UVal);
+          RecordUpdate(OldFlatCountersr, FlatCountersr, false);
+          testf = false;
+          i = i + 1;
+        
+        end;
+      end;
+    end;
+    MessageBox(0,"No. of Readings Imported: " & i);
+  end else begin
+    // validations
+    if ((Blank(RepSpec.d1) or Blank(RepSpec.d2)) and RepSpec.flags[0] == 0 ) then begin
+      testp = false;
+      MessageBox(12025,"");
+    end;
+    if (s2.day<>1 or e2<>RepSpec.d2 and RepSpec.flags[0] == 0) then begin
+      testp = false;
+      MessageBox(12024,"");
+    end;
+    // loops through txt file
+    while (NextImportLine(testp)) begin
+      MeterID = ImportField;
+      BookNo = ImportField;
+      AlphaNo = ImportField;
+      MeterNo = ImportField;
+      SeqNo = ImportField;
+      Unassigned = ImportField;
+      Address = ImportField;
+      StartReading = ImportField;
+      EndReading = ImportField;
+      ReadingDate = ImportField;
+
+      FlatCountersr.CounterNo = MeterNo;
+      if (ReadFirstKey("CounterNo", FlatCountersr, 1, true)) then begin  
+        RecordNew(CountResr); 
+        CountResr.SerNr  = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+        CountResr.CounterNo = FlatCountersr.CounterNo; 
+        CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+        CountResr.CounterType = FlatCountersr.CounterType;
+        CountResr.RegDate = StringToDate(ReadingDate);
+        // get.prev.reading
+        MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+        if (ReadFirstMain(MHr,1,true)) then begin
+          CountResr.StartVal = MHr.currReading;
+        end;
+        CountResr.EndVal = StringToVal(EndReading,M4Val);
+        CountResr.CounterAddr = FlatCountersr.Address;
+        CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+        CountResr.InvAmount = CountResr.Amount; //adjusted quantity
+        if(CountResr.Amount>=0) then begin
+          isValid = true;
+        end;
+        
+        if (CountResr.EndVal<CountResr.StartVal) then begin
+            trhs = false;
+            goto LEND;
+        end;
+        if (RepSpec.flags[0] == 1) then begin // if its estimate readings we use current period
+          GetCountResPeriod(s,e); // 
+          CountResr.StartDate = s; 
+          CountResr.EndDate = e; 
+        end else begin
+          s = RepSpec.d1;
+          e = RepSpec.d2;
+        end;
+
+        CountResr.StartDate = s; 
+        CountResr.EndDate = e; 
+        CountResr.ContractNr = FlatCountersr.Contract;
+        CountResr.FlatCode = FlatCountersr.FlatCode;
+        CountResr.BuildCode = FlatCountersr.Code; 
+        CountResr.CountResType = FlatCountersr.CounterType;
+      
+        CountResr.Itype = RepSpec.flags[0];
+        nr = -1 ;
+        nr = CheckCountResExistsInPeriod(CountResr);
+
+        
+        if(isValid) then begin
+          
+          if (nr == -1 ) then begin
+            trhs = true;
+          end else begin
+            trhs = false;
+          end;
+          if trhs then begin
+            RecordImportStore(CountResr,false);
+            createVerifyMeterHistory(CountResr);
+            RecordCopy(OldFlatCountersr,FlatCountersr);
+            FlatCountersr.InitAmount = StringToVal(CountResr.EndVal,M4UVal);
+            RecordUpdate(OldFlatCountersr,FlatCountersr,false);     
+          end;
+          isValid = false;
+        end;
+      end;
+  LEnd:;
+    end;
+    return;
+  end;
+  end;
+
+// //code was changed so you can only upload readings for current period. {Cannot upload Old Readings}
+// global
+// updating procedure ReadingsIn(var record RcVc RepSpec)
+// begin
+//   record CountResVc CountResr ; //Meter Readings register
+//   record FlatCountersVc FlatCountersr,OldFlatCountersr; //Meters Register
+//   record MHistoryVc MHr,newMHr,oldMHr; //Meters History Register
+//   date s,s2,e,e2;
+//   Integer i;
+//   Boolean testf,trhs,testp;
+//   longint nr;
+
+//   String 255 MeterID, AlphaNo, MeterNo, SeqNo, Address, StartReading, EndReading, ReadingDate ;
+
+//   testp = true;
+//   testf = true;
+  
+//   s2 = RepSpec.d1;
+//   e2 = AddDay(RepSpec.d1,-GetDay(RepSpec.d1) + DaysInMonth(GetYear(RepSpec.d1),GetMonth(RepSpec.d1)));
+
+
+// // validations
+//   if ((Blank(RepSpec.d1) or Blank(RepSpec.d2)) and RepSpec.flags[0] == 0 ) then begin
+//       testp = false;
+//       MessageBox(12025,"");
+//   end;
+//   if (s2.day<>1 or e2<>RepSpec.d2 and RepSpec.flags[0] == 0) then begin
+//     testp = false;
+//     MessageBox(12024,"");
+//   end;
+
+//   // loops through txt file
+//   while (NextImportLine(testp)) begin
+//     MeterID = ImportField;
+//     AlphaNo = ImportField;
+//     MeterNo = ImportField;
+//     SeqNo = ImportField;
+//     Address = ImportField;
+//     StartReading = ImportField;
+//     EndReading = ImportField;
+//     ReadingDate = ImportField;
+
+
+//     FlatCountersr.CounterNo = MeterNo;
+//     if (ReadFirstKey("CounterNo", FlatCountersr, 1, true)) then begin  
+//       RecordNew(CountResr); 
+//       CountResr.SerNr  = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+//       CountResr.CounterNo = FlatCountersr.CounterNo; 
+//       CountResr.FlatCounterSerNr = MeterID;
+//       CountResr.RegDate = StringToDate(ReadingDate); // Set from Current Date to ImportField
+//       CountResr.StartVal = StringToInt(StartReading);
+//       CountResr.CounterType = FlatCountersr.CounterType;
+//       if Blank(EndReading) then begin
+//         CountResr.EndVal = blankval;
+//       end;
+//       CountResr.EndVal = StringToInt(EndReading);
+//       CountResr.CounterAddr = FlatCountersr.Address;
+//       CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+//       CountResr.InvAmount = CountResr.Amount; //adjusted quantity
+
+      
+//       if (RepSpec.flags[0] == 1) then begin // if its estimate readings we use current period
+//       GetCountResPeriod(s,e); // 
+//         CountResr.StartDate = s; 
+//         CountResr.EndDate = e; 
+//       end else begin
+//         s = RepSpec.d1;
+//         e = RepSpec.d2;
+//       end;
+
+//       CountResr.StartDate = s; 
+//       CountResr.EndDate = e; 
+//       CountResr.ContractNr = FlatCountersr.Contract;
+//       CountResr.FlatCode = FlatCountersr.FlatCode;
+//       CountResr.BuildCode = FlatCountersr.Code;
+//       CountResr.CountResType = FlatCountersr.CounterType;
+     
+//       CountResr.Itype = RepSpec.flags[0];
+//       MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+//       nr = -1 ;
+//       nr = CheckCountResExistsInPeriod(CountResr);
+
+//       if (nr == -1 ) then begin
+//         trhs = true;
+//       end else begin
+//       trhs = false;
+//       end;
+//       if trhs then begin
+//       updateEstimates(CountResr);
+//       createVerifyMeterHistory(CountResr);
+//       RecordImportStore(CountResr,false);
+//       RecordCopy(OldFlatCountersr,FlatCountersr);
+//       FlatCountersr.InitAmount = StringToVal(CountResr.EndVal,M4UVal);
+//       RecordUpdate(OldFlatCountersr,FlatCountersr,false);     
+//       end;
+//     end;
+// LEnd:;
+//   end;
+//   return;
+// end;

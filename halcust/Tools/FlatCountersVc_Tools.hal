@@ -1,0 +1,396 @@
+global 
+function string 10 GetFlatCountersISPControllerNr(record FlatCountersVc FlatCountersr)
+begin
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  record BuildGroupVc BuildGroupr;
+  record FlatGroupVc FlatGroupr;
+  string 10 res;
+  
+  res="";
+  if Flatcountersr.FlatCode!="" then begin
+    Flatsr.FlatCode=Flatcountersr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      res=Flatsr.ISPController;
+    end;
+  end else begin
+    if FlatCountersr.RecType==1 then begin
+      Buildr.Code=Flatcountersr.Code;
+      if ReadFirstMain(Buildr,1,true) then begin
+        res=Buildr.ISPController;
+      end;
+    end;
+    if FlatCountersr.RecType==2 then begin
+      BuildGroupr.Code=FlatCountersr.BuildGroupCode;
+      if ReadFirstMain(BuildGroupr,1,true) then begin
+        res=BuildGroupr.ISPController;
+      end;
+    end;      
+    if FlatCountersr.RecType==3 then begin
+      FlatGroupr.Code=FlatCountersr.FlatGroupCode;
+      if ReadFirstMain(FlatGroupr,1,true) then begin
+        res=FlatGroupr.ISPController;
+      end;
+    end;
+  end;  
+  
+  GetFlatCountersISPControllerNr=res;
+  return;
+end;
+
+global
+function boolean KS5Check(longint sernr) begin
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+  
+  FlatCountersr.SerNr = sernr;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    if FlatCountersr.CounterType=="KS5" then begin
+      res = true;
+    end;
+  end;
+  
+  KS5Check = res;
+  return;
+end;
+
+global
+function integer GetFlatCounterLocType(longint sernr) begin
+  integer res;
+  record FlatCountersVc FlatCountersr;
+  
+  res = -1;
+  FlatCountersr.SerNr = sernr;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    res = FlatCountersr.LocType;
+  end;
+  
+  GetFlatCounterLocType = res;
+  return;
+end;
+
+global
+function string 255 GetTwoTypeCounters() begin
+  
+  GetTwoTypeCounters = "KS1,KS2,KS3,KS6,KS7,KS8,S09";
+  return;
+end;
+
+global
+function boolean IsTwoTypeFlatCounter(longint sernr) begin
+  record FlatCountersVc FlatCountersr;
+  string 255 twotypecounters;
+  boolean res;
+  
+  twotypecounters = GetTwoTypeCounters();
+  
+  FlatCountersr.SerNr = sernr;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    if SetInSet(FlatCountersr.CounterType,twotypecounters) then begin
+      res = true;
+    end;
+  end;
+  
+  IsTwoTypeFlatCounter = res;
+  return;
+end;
+
+global
+function boolean GetFlatCounterValidDate(LongInt sernr,var date validuntil) begin
+  record FlatCountersVc FlatCountersr;
+  date blankd;
+  boolean res;
+  
+  validuntil = blankd;
+  res = false;
+  // For FORTUM always return false, there are no invalid counters
+  // FlatCountersr.SerNr = sernr;
+  // if ReadFirstMain(FlatCountersr,1,true) then begin
+  //   validuntil = FlatCountersr.ValidUntil;
+  //   res = true;
+  // end;
+  
+  GetFlatCounterValidDate = res;
+return;
+end;
+
+global
+function boolean MainCounterWithTypesExist(string types,string flatcode,string buildcode) begin
+  boolean res,wloop,wloop2,testf;
+  Record FlatGroupSuppVc FlatGroupSuppr;
+  Record BuildGroupSuppVc BuildGroupSuppr;
+  Record FlatCountersVc FlatCountersr;
+  string 10 onetype;
+  longint pos;
+  
+  if blank(types) then begin
+    GoTo LMainCounterWithTypesExist;
+  end;
+  if blank(flatcode) then begin
+    GoTo LMainCounterWithTypesExist;
+  end;
+  
+  //Look for flatgroups
+  wloop = true;
+  FlatGroupSuppr.RowCode = FlatCode;
+  While LoopKey("RowCode",FlatGroupSuppr,1,wloop) begin
+    if FlatGroupSuppr.RowCode != FlatCode then begin
+      wloop = false;
+    end else begin
+      pos=-1;
+      while (GetNextSubstring(types,pos,",",onetype)) begin
+        FlatCountersr.FlatGroupCode = FlatGroupSuppr.HeadCode;
+        FlatCountersr.CounterType = onetype;
+        wloop2 = true;
+        ResetLoop(FlatCountersr);
+        While LoopKey("FlatGroupType",FlatCountersr,2,wloop2) begin
+          if FlatCountersr.FlatGroupCode != FlatGroupSuppr.HeadCode or FlatCountersr.CounterType != onetype then begin
+            wloop2 = false;
+          end else begin
+            testf = true;
+            if nonblank(FlatCountersr.FlatCode) then begin //nav lielais (galvenais) skaitītājs
+              testf = false;
+            end;
+            if FlatCountersr.Changed==1 then begin //nomainīts
+              testf=false;
+            end;
+            if FlatCountersr.Closedf==1 then begin //slēgts
+              testf=false;
+            end;
+            if testf then begin
+              res = true;
+              GoTo LMainCounterWithTypesExist;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  //Look in erf
+  wloop = true;
+  FlatCountersr.Code = buildcode;
+  FlatCountersr.FlatCode = "";
+  ResetLoop(FlatCountersr);
+  While LoopKey("BuildCodeType",FlatCountersr,2,wloop) begin
+    if FlatCountersr.Code != buildcode or nonblank(FlatCountersr.FlatCode) then begin
+      wloop = false;
+    end else begin  
+      testf = true;
+      if FlatCountersr.Changed==1 then begin //nomainīts
+        testf=false;
+      end;
+      if FlatCountersr.Closedf==1 then begin //slēgts
+        testf=false;
+      end;
+      if !SetInSet(FlatCountersr.CounterType,types) or blank(FlatCountersr.CounterType) then begin
+        testf=false;
+      end;
+      if testf then begin
+        res = true;
+        GoTo LMainCounterWithTypesExist;
+      end;
+    end;
+  end;
+  
+  //Look in erf gropus
+  wloop = true;
+  BuildGroupSuppr.RowCode = buildcode;
+  While LoopKey("RowCode",BuildGroupSuppr,1,wloop) begin
+    if BuildGroupSuppr.RowCode != buildcode then begin
+      wloop = false;
+    end else begin
+      pos=-1;
+      while (GetNextSubstring(types,pos,",",onetype)) begin
+        FlatCountersr.FlatGroupCode = BuildGroupSuppr.HeadCode;
+        FlatCountersr.CounterType = onetype;
+        wloop2 = true;
+        ResetLoop(FlatCountersr);
+        While LoopKey("FlatGroupType",FlatCountersr,2,wloop2) begin
+          if FlatCountersr.FlatGroupCode != BuildGroupSuppr.HeadCode or FlatCountersr.CounterType != onetype then begin
+            wloop2 = false;
+          end else begin
+            testf = true;
+            if nonblank(FlatCountersr.FlatCode) then begin //nav lielais (galvenais) skaitītājs
+              testf = false;
+            end;
+            if FlatCountersr.Changed==1 then begin //nomainīts
+              testf=false;
+            end;
+            if FlatCountersr.Closedf==1 then begin //slēgts
+              testf=false;
+            end;
+            if testf then begin
+              res = true;
+              GoTo LMainCounterWithTypesExist;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  
+LMainCounterWithTypesExist:;
+  MainCounterWithTypesExist = res;
+  return;
+end;
+
+global
+function boolean FindFlatCounterByCounterNo(string counterno,var record FlatCountersVc FlatCountersr)
+begin
+  boolean res;
+  longint firstser,lastser;
+  
+  FlatCountersr.CounterNo = counterno;
+  if ReadFirstKey("CounterNo",FlatCountersr,1,true) then begin
+    firstser = FlatCountersr.SerNr;
+  end else begin
+    GoTo LFindFlatCounterByCounterNo;
+  end;
+  
+  FlatCountersr.CounterNo = counterno;
+  if ReadLastKey("CounterNo",FlatCountersr,1,true) then begin
+    lastser = FlatCountersr.SerNr;
+  end else begin
+    GoTo LFindFlatCounterByCounterNo;
+  end;
+  
+  if firstser==lastser then begin
+    res = true;
+  end;
+  
+LFindFlatCounterByCounterNo:;
+  FindFlatCounterByCounterNo = res;
+return;
+end;
+
+global
+function boolean FindOldFlatCounter(record FlatCountersVc newFlatCountersr,var longint sernr)
+begin
+  record FlatCountersVc tmpFlatCountersr;
+  boolean res,TrHs,testf;
+  
+  sernr=-1;
+  ResetLoop(tmpFlatCountersr);
+  tmpFlatCountersr.CodeField=newFlatCountersr.CodeField;
+  tmpFlatCountersr.RecType=newFlatCountersr.RecType;
+  TrHs=true;
+  While LoopBackKey("CodeIndex",tmpFlatCountersr,2,TrHs) begin
+    if tmpFlatCountersr.CodeField!=newFlatCountersr.CodeField or tmpFlatCountersr.RecType!=newFlatCountersr.RecType then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if newFlatCountersr.SerNr==tmpFlatCountersr.SerNr then begin
+        testf=false;
+      end;
+      if newFlatCountersr.CounterType!=tmpFlatCountersr.CounterType then begin
+        testf=false;
+      end;
+      if testf then begin
+        sernr=tmpFlatCountersr.SerNr;
+        TrHs=false;
+        res=true;
+      end;
+    end;
+  end;  
+  
+  FindOldFlatCounter=res;
+  return;
+end;
+
+global
+function boolean FindOldFlatCounter2(record FlatCountersVc FlatCountersr,var longint sernr)
+begin
+  record FlatCountersVc tmpFlatCountersr;
+  boolean res,TrHs,testf;
+  
+  sernr=-1;
+  ResetLoop(tmpFlatCountersr);
+  tmpFlatCountersr.CodeField=FlatCountersr.CodeField;
+  tmpFlatCountersr.RecType=FlatCountersr.RecType;
+  TrHs=true;
+  While LoopBackKey("CodeIndex",tmpFlatCountersr,2,TrHs) begin
+    if tmpFlatCountersr.CodeField!=FlatCountersr.CodeField or tmpFlatCountersr.RecType!=FlatCountersr.RecType then begin
+      TrHs=false;
+    end;
+    testf=true;
+    if tmpFlatCountersr.FlatCode!=FlatCountersr.FlatCode then begin
+      testf=false;
+    end;
+    if FlatCountersr.SerNr==tmpFlatCountersr.SerNr then begin
+      testf=false;
+    end;
+    // if tmpFlatCountersr.SendToAMRf!=1 then begin
+      // testf=false;
+    // end;    
+    if tmpFlatCountersr.CounterType!=FlatCountersr.CounterType then begin
+      testf=false;
+    end;
+    if FlatCountersr.InstallDate!=tmpFlatCountersr.RemoveDate then begin
+      testf=false;
+    end;
+    if testf then begin
+      sernr=tmpFlatCountersr.SerNr;
+      TrHs=false;
+      res=true;
+    end;
+  end;  
+  
+  FindOldFlatCounter2=res;
+  return;
+end;
+
+global
+function boolean GetFlatCounterByFlatCode(string flatcode,string type,var record FlatCountersVc FlatCountersr)
+begin
+  boolean res,TrHs,foundf,testf;
+  record FlatCountersVc lFlatCountersr;
+    
+  if blank(flatcode) then begin
+    LogText(0,"GetFlatCounterByNIP ERROR :: Cant get FlatCountersVc record with flat code " & flatcode);
+    GoTo LGetFlatCounterByFlatCode;
+  end;
+
+  TrHs=true;
+  ResetLoop(FlatCountersr);
+  FlatCountersr.FlatCode = flatcode;
+  FlatCountersr.CounterType = type;
+  while LoopKey("CounterType",FlatCountersr,2,TrHs) begin
+    if FlatCountersr.FlatCode!=flatcode or FlatCountersr.CounterType!=type then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if FlatCountersr.Changed==1 then begin
+        testf=false;
+      end;
+      if FlatCountersr.Closedf==1 then begin
+        testf=false;
+      end;
+      if testf then begin
+        foundf=true;
+        TrHs=false;
+      end;
+    end;
+  end;
+
+  if !foundf then begin
+    LogText(0,"GetFlatCounterByNIP ERROR :: Could not find FlatCountersVc record for Flat code " & flatcode);
+    GoTo LGetFlatCounterByFlatCode;
+  end;
+    
+  lFlatCountersr.FlatCode = flatcode;
+  lFlatCountersr.CounterType = type;
+  if ReadLastKey("CounterType",lFlatCountersr,2,true) then begin
+    if lFlatCountersr.SerNr != FlatCountersr.SerNr then begin
+      LogText(0,"GetFlatCounterByNIP ERROR :: More than one FlatCountersVc record with Flat code " & flatcode);
+      GoTo LGetFlatCounterByFlatCode;
+    end;
+  end; 
+  
+  res = true;
+  
+LGetFlatCounterByFlatCode:;
+  GetFlatCounterByFlatCode = res;
+  return;
+end;

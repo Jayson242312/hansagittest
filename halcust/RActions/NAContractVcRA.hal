@@ -1,0 +1,452 @@
+external inner function Integer CheckObjs(string,string,var string);
+external function boolean OBS_HasConvCust(string,var string,var string);
+
+global updating
+procedure UpdateBuild(string contractNr,string buildCode,boolean okf)
+begin
+  record BuildVc Buildr,oldBuildr;
+  boolean updatef;
+  string 255 custcode,contract,custname;
+  date ondate;
+  
+  Buildr.Code=buildCode;
+  if ReadFirstMain(Buildr,1,true) then begin
+    RecordCopy(oldBuildr,Buildr);
+    if okf then begin
+      if !nonblank(Buildr.ContractNr) or (Buildr.ContractNr!=contractNr) then begin
+        Buildr.ContractNr=contractNr;
+        updatef=true;
+      end;
+    end else begin
+      if nonblank(Buildr.ContractNr) then begin
+        Buildr.ContractNr="";
+        updatef=true;
+      end;
+    end;
+    if updatef then begin
+      if RecordUpdate(oldBuildr,Buildr,true)!=0 then begin
+      // LogText(0,"");
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+// global updating 
+// procedure UpdateCURecFromNAContract(record NAContractVc NAContractr,boolean unokf) begin
+//   Record CUVc CUr,oldCUr;
+//   Boolean updatef;
+//   Record FlatsVc Flatsr;
+//   Record NApsSetBlock NSr;
+//   Record BuildVc Buildr;
+  
+//   BlockLoad(NSr);
+  
+//   if unokf then begin
+//     /* No need to check other contracts, because customer cannot have more than one active contract */
+//     CUr.Code=NAContractr.CustCode;
+//     if ReadFirstMain(CUr,1,true) then begin
+//       RecordCopy(oldCUr,CUr);
+//       CUr.HasActiveContract = 0;
+//       if RecordUpdate(oldCUr,CUr,true)!=0 then begin
+//         LogText(0,"UpdateCURecFromNAContract ERROR cannot update CUVc Record " & CUr.Code);
+//       end;
+//     end;
+//   end else begin
+//     CUr.Code=NAContractr.CustCode;
+//     if ReadFirstMain(CUr,1,true) then begin
+//       RecordCopy(oldCUr,CUr);
+//       Flatsr.FlatCode=NAContractr.FlatCode;
+//       if ReadFirstMain(Flatsr,1,true) then begin
+//         if nonblank(NSr.FlatCClassType) then begin
+//           updatef=AddCClassToCUVc(CUr,Flatsr.FlatCode,NSr.FlatCClassType,Flatsr.Address & " " & Flatsr.FlatNo,NSr.AddCClassTypeToCClassName==1);
+//         end;
+//         if nonblank(NSr.BuildCClassType) then begin
+//           Buildr.Code=Flatsr.Code;
+//           ReadFirstMain(Buildr,1,true);
+//           updatef=AddCClassToCUVc(CUr,Buildr.Code,NSr.BuildCClassType,Buildr.Address,NSr.AddCClassTypeToCClassName==1);
+//         end;
+//       end;
+//       if CUr.HasActiveContract==0 then begin
+//         CUr.HasActiveContract = 1;
+//         updatef = true;
+//       end;
+//       if updatef then begin
+//         if RecordUpdate(oldCUr,CUr,true)!=0 then begin
+//           LogText(0,"UpdateCURecFromNAContract ERROR cannot update CUVc Record " & CUr.Code);
+//         end;
+//       end;
+//     end;
+//   end;
+  
+// return;
+// end;
+
+// global
+// updating procedure UpdateMSFlat(record NAContractVc NAContractr)
+// begin
+//   record FlatsVc Flatsr,Flats2r;
+//   integer i;
+
+//   Flatsr.FlatCode = NAContractr.FlatCode;
+//   if (ReadFirstMain(Flatsr,1,true)) then begin
+//     if (dateinrange(Currentdate,NAContractr.StartDate,NAContractr.EndDate)) then begin
+//       if Flatsr.CONr <> NAContractr.SerNr then begin
+//         RecordCopy(Flats2r,Flatsr);
+//         Flatsr.CustCode = NAContractr.CustCode;
+//         Flatsr.CONr = NAContractr.SerNr;
+//         Flatsr.CustName = NAContractr.CustName;
+//         Flatsr.COStartDate = NAContractr.StartDate;
+//         i = RecordUpdate(Flats2r,Flatsr,true);
+//       end;
+//     end;
+//   end;
+// return;
+// end;
+
+function Boolean SerNrTestNAContractVc(LongInt sernr,Date tdp)
+BEGIN
+  Boolean res;
+  record NAContractSerBlock NAContractSerbl;
+  row NAContractSerBlock NAContractSerblrw;
+  Integer i,rwcnt;
+
+  if (sernr==-1) then begin
+    res = false;
+    goto LSerNrTestNAContractVc;
+  end;
+  BlockLoad(NAContractSerbl);
+  rwcnt = MatRowCnt(NAContractSerbl);
+  if (rwcnt==0) then begin
+    res = true;
+    goto LSerNrTestNAContractVc;
+  end;
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(NAContractSerbl,i,NAContractSerblrw);
+    if ((sernr<NAContractSerblrw.TSerStart) or (sernr>NAContractSerblrw.TSerEnd)) then begin
+      goto LFORNAContractVc;
+    end;  
+    if (nonblankdate(NAContractSerblrw.StartDate)) then begin
+      if (tdp<NAContractSerblrw.StartDate) then begin goto LFORNAContractVc; end;
+    end;  
+    if (nonblankdate(NAContractSerblrw.EndDate)) then begin
+      if (tdp>NAContractSerblrw.EndDate) then begin goto LFORNAContractVc; end;
+    end;
+    res = true;
+    goto LSerNrTestNAContractVc;
+LFORNAContractVc:;
+  end;
+LSerNrTestNAContractVc:;
+  SerNrTestNAContractVc = res;
+  RETURN;
+END;
+
+
+global
+updating function LongInt NAContractVcRecordCheck(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+begin
+  LongInt res,oldSernr;
+  Record FlatsVc Flatsr;
+  Record CUVc CUr;
+  record BuildVc Buildr;
+  Record NAContractVc tNAContractr;
+  Row NAContractVc NAContractrw;
+  integer i,rwcnt,errcode;
+  string 255 errstr;
+
+  res = 0;
+  oldsernr = NAContractr.SerNr;
+  if NAContractr.SerNr == -1 then begin
+    if CountRecords("NAContractVc")==0 then begin
+      NAContractr.SerNr = 100001;
+    end else begin
+      NAContractr.SerNr = NextSerNr("NAContractVc",NAContractr.CODate,-1,false,"");
+    end;
+  end;
+  if NAContractr.SerNr == -1 then begin
+    RecordCheckError(1058,"",-1,"SerNr"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  //If contract is unoked then almost no checks are needed
+  if (NAContractr.OKFlag==0) then begin
+    if (stat==2) then begin
+      if (NAContract2r.OKFlag==1) then begin
+        GoTo EndNAContractVcRecordCheck;
+      end;
+    end;
+  end;
+  
+  if (SerNrTestNAContractVc(NAContractr.SerNr,NAContractr.CODate)==false) then begin
+    RecordCheckError(1034,"",-1,"SerNr");  
+    res = -1;
+    goto EndNAContractVcRecordCheck;
+  end;
+  
+  if blankdate(NAContractr.CODate) then begin
+    RecordCheckError(1058,"",-1,"CODate"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  if blank(NAContractr.FlatCode) and blank(NAContractr.BuildCode) then begin
+    RecordCheckError(1058,"",-1,"FlatCode"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  if nonblank(NAContractr.FlatCode) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    if !ReadFirstMain(Flatsr,1,true) then begin
+      RecordCheckError(1290,"",-1,"FlatCode"); 
+      res=-1;
+      GoTo EndNAContractVcRecordCheck;
+    end;
+  end;
+  
+  if nonblank(NAContractr.BuildCode) then begin
+    Buildr.Code = NAContractr.BuildCode;
+    if !ReadFirstMain(Buildr,1,true) then begin
+      RecordCheckError(1290,"",-1,"BuildCode"); 
+      res=-1;
+      GoTo EndNAContractVcRecordCheck;
+    end;
+  end;
+  
+  if blank(NAContractr.CustCode) then begin
+    RecordCheckError(1058,"",-1,"CustCode"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  CUr.Code = NAContractr.CustCode;
+  if !ReadFirstMain(CUr,1,true) then begin
+    RecordCheckError(1290,"",-1,"CustCode"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  if blankdate(NAContractr.StartDate) then begin 
+    RecordCheckError(1058,"",-1,"StartDate"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  if nonblankdate(NAContractr.StartDate) and nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<NAContractr.StartDate then begin
+    RecordCheckError(1000810,"",-1,"StartDate"); 
+    res=-1;
+    GoTo EndNAContractVcRecordCheck;
+  end;
+  
+  // if nonblankdate(NAContractr.StartDate) and (GetDay(NAContractr.StartDate)!=1) then begin
+  //   RecordCheckError(1000038,"",-1,"StartDate");
+  //   res=-1;
+  //   GoTo EndNAContractVcRecordCheck;    
+  // end;
+  
+  // if nonblankdate(NAContractr.EndDate) and (GetDay(NAContractr.EndDate)!=DaysInMonth(GetYear(NAContractr.EndDate),GetMonth(NAContractr.EndDate))) then begin
+  //   RecordCheckError(1000039,"",-1,"EndDate");
+  //   res=-1;
+  //   GoTo EndNAContractVcRecordCheck;
+  // end;  
+  
+  if (NAContractr.OKFlag<>0) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    if (ReadFirstMain(Flatsr,1,true)) then begin
+      tNAContractr.SerNr = Flatsr.CONr;
+      if (Flatsr.CONr<>NAContractr.SerNr) then begin
+        if ReadFirstMain(tNAContractr,1,true) then begin
+          if (tNAContractr.OKFlag==1) then begin
+            if (DateInRange(tNAContractr.EndDate,NAContractr.StartDate,NAContractr.EndDate) or
+                DateInRange(tNAContractr.StartDate,NAContractr.StartDate,NAContractr.EndDate) or
+                DateInRange(NAContractr.StartDate,tNAContractr.StartDate,tNAContractr.EndDate)) then begin
+              RecordCheckError(1001040,tNAContractr.SerNr & " " & USetStr(1000970) & Datetostring(tNAContractr.StartDate,"DD.MM.YYYY") & ":" & Datetostring(tNAContractr.EndDate,"DD.MM.YYYY"),-1,"SerNr");
+              res = -1;
+              goto EndNAContractVcRecordCheck;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  rwcnt = MatRowCnt(NAContractr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(NAContractr,i,NAContractrw);
+    // if (nonblankdate(NAContractrw.ServStartDate) and NAContractrw.ServCycle <= 0) or (blankdate(NAContractrw.ServStartDate) and NAContractrw.ServCycle > 0) then begin
+    //   RecordCheckError(1001153,"",i,"ServStartDate");
+    //   res = -1;
+    //   goto EndNAContractVcRecordCheck;
+    // end;
+    // if nonblank(NAContractrw.ArtCode) and blank(NAContractrw.QtyCoef) then begin
+      // RecordCheckError(1058,"",i,"QtyCoef");
+      // res = -1;
+      // goto EndNAContractVcRecordCheck;
+    // end;
+  end;
+  
+  // AddObjectToRec("L" & NAContractr.SerNr,NAContractr.Objects,"L",NAContractr.CustName,"");
+  
+  if nonblank(NAContractr.Objects) then begin
+    errcode=CheckObjs("",NAContractr.Objects,errstr);
+    if errcode!=0 then begin
+      RecordCheckError(errcode,errstr,-1,"Objects");      
+      res = -1; 
+      goto EndNAContractVcRecordCheck;
+    end;
+  end;
+  
+EndNAContractVcRecordCheck:;
+  if res!=0 then begin
+    NAContractr.SerNr = oldsernr;
+  end;
+  NAContractVcRecordCheck = res;
+  return;
+end;
+
+
+global
+function LongInt NAContractVcRecordDefaults(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  // ============================ CUSTOM CODE =========================== 
+  NAContractr.SerNr = NextSerNr("NAContractVc",CurrentDate,-1,false,"");
+  NAContractr.ContractNr = NAContractr.SerNr;
+  NAContractr.INPayPriority = 1;
+  // ======================== END OF CUSTOM CODE ======================== 
+  
+  NAContractr.CODate = CurrentDate;
+  
+  NAContractVcRecordDefaults = res;
+  return;
+end;
+
+global
+function LongInt NAContractVcRecordDuplicate(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+
+  // ============================ CUSTOM CODE =========================== 
+  NAContractr.SerNr = NextSerNr("NAContractVc",CurrentDate,-1,false,"");
+  NAContractr.ContractNr = NAContractr.SerNr;
+  // ======================== END OF CUSTOM CODE ======================== 
+  
+  res = -1;
+  // NAContractr.SerNr = -1;
+  // NAContractr.ContractNr="";
+  NAContractr.CustCode="";
+  NAContractr.CustName="";
+  NAContractr.Objects="";
+  NAContractr.OKFlag=0;
+  
+  NAContractVcRecordDuplicate = res;
+  return;
+end;
+
+global
+updating function LongInt NAContractVcRecordSaveAfter(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  res = 0;  
+  
+  if (NAContractr.OKFlag==1) then begin
+    // UpdateMSFlat(NAContractr);
+    // UpdateCURecFromNAContract(NAContractr,false);
+  end;
+  
+  if !nonblank(NAContractr.FlatCode) and nonblank(NAContractr.BuildCode) then begin
+    UpdateBuild(NAContractr.ContractNr,NAContractr.BuildCode,NAContractr.OKFlag==1);
+  end;
+  
+  NAContractVcRecordSaveAfter = res;
+  return;
+end;
+
+global
+updating function LongInt NAContractVcRecordUpdateAfter(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  res = 0;  
+  
+  if (NAContractr.OKFlag==1) then begin
+    // UpdateMSFlat(NAContractr);
+    // UpdateCURecFromNAContract(NAContractr,false);
+  end;
+  if (NAContractr.OKFlag==0 and NAContract2r.OKFlag==1) then begin
+    // UpdateCURecFromNAContract(NAContractr,true);
+  end;
+  
+  if !nonblank(NAContractr.FlatCode) and nonblank(NAContractr.BuildCode) then begin
+    UpdateBuild(NAContractr.ContractNr,NAContractr.BuildCode,NAContractr.OKFlag==1);
+  end;
+  
+  NAContractVcRecordUpdateAfter = res;
+  return;
+end;
+
+//return 0 if not allowed to delete
+//return 1 if delete is allowed
+global
+function LongInt NAContractVcRecordRemoveTest(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 1;
+
+  // JH added permission to delete contracts
+  if (!UserCanAction("CustomRecordDeleteContracts",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteContracts"));
+    goto LNAContractVcRecordRemoveTest;
+  end;
+  //
+
+  if NAContractr.OKFlag==1 then begin
+    StopAlert("Cannot delete approved contract!");
+    res = 0;
+    Beep;
+  end;
+
+LNAContractVcRecordRemoveTest:;
+
+  NAContractVcRecordRemoveTest = res;
+  return;
+end;
+
+global
+updating function LongInt NAContractVcRecordImport(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  string 255 newcust,newname;
+  res = 0;  
+  
+  if NAContractr.INPayPriority==0 then begin
+    NAContractr.INPayPriority = -1;
+  end;
+  
+  if OBS_HasConvCust(NAContractr.CustCode,newcust,newname) then begin
+    NAContractr.CustCode=newcust;
+    NAContractr.CustName=newname;
+  end;
+  
+  NAContractVcRecordImport = res;
+  return;
+end;
+
+// global
+// updating function LongInt NAContractVcRecordImportAfter(Var Record NAContractVc NAContractr, Record NAContractVc NAContract2r, LongInt stat, LongInt check)
+// begin
+  // LongInt res;
+  // res = 0;  
+  
+  // if (NAContractr.OKFlag==1) then begin
+    // UpdateCURecFromNAContract(NAContractr,false);
+  // end;
+  
+  // NAContractVcRecordImportAfter = res;
+  // return;
+// end;

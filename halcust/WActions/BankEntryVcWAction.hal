@@ -1,0 +1,49 @@
+remote procedure BudEntryDClass_NewBudVal(var record BudEntryVc,Integer);
+
+function Boolean NewBudValDClassAddValEFAfter(Integer wn,Integer rownr,Boolean changedf)
+begin
+  record BudEntryVc BEr;
+  Boolean res;
+
+  if (changedf) then begin
+    GetWindowRecord(wn,BEr);
+    BudEntryDClass_NewBudVal(BEr,rownr);
+    PutWindowRecord(wn,BEr);
+  end;  
+  NewBudValDClassAddValEFAfter = res;
+  return;
+end;
+
+global
+function Boolean BudEntryDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+begin
+  Boolean res;
+
+  res =true;
+
+    switch (fieldname) begin
+        case "NewBudVal": res = NewBudValDClassAddValEFAfter(wn,rownr,changed!=0);
+    end;    
+
+    if(res) then begin
+      res = inner.BudEntryDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+    end;
+
+  BudEntryDClassAfterEditField = res;
+  return;
+end;
+
+global
+function Boolean BudEntryDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+  Boolean res;
+  
+  res = true;
+  if (rownr>=0) then begin  
+    switch (fieldname) begin
+      case "NewBudVal": res = true;
+    end;
+  end;
+  BudEntryDClassActiveEditField = res;
+  return;
+end;

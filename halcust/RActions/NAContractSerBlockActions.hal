@@ -1,0 +1,46 @@
+
+external inner function Integer SerBlockCheckOverlap(LongInt,LongInt,LongInt,LongInt);
+
+global
+function LongInt NAContractSerBlockCheck(var record NAContractSerBlock NAContractSerbl,record NAContractSerBlock NAContractSerbl2,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Integer j,i,rwcnt;
+  row NAContractSerBlock NAContractSerblrw;
+  row NAContractSerBlock NAContractSerblrw2;
+
+  res = 0;
+  rwcnt = MatRowCnt(NAContractSerbl);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(NAContractSerbl,i,NAContractSerblrw);
+    if (NAContractSerblrw.TSerStart<=0) then begin
+      RecordCheckError(2210,"",i,"TSerStart");
+      res = -1;
+      goto LNAContractSerBlockCheck;
+    end;
+    if (NAContractSerblrw.TSerEnd<=0) then begin
+      RecordCheckError(2210,"",i,"TSerEnd");
+      res = -1;
+      goto LNAContractSerBlockCheck;
+    end;
+    if ((nonblankdate(NAContractSerblrw.StartDate)) and (nonblankdate(NAContractSerblrw.EndDate))) then begin
+      if (NAContractSerblrw.StartDate>NAContractSerblrw.EndDate) then begin
+        RecordCheckError(20851,"",i,"EndDate");
+        res = -1;
+        goto LNAContractSerBlockCheck;
+      end;
+    end;
+    for (j=0;j<i;j=j+1) begin
+      MatRowGet(NAContractSerbl,j,NAContractSerblrw2);
+      res = SerBlockCheckOverlap(NAContractSerblrw.TSerStart,NAContractSerblrw.TSerEnd,NAContractSerblrw2.TSerStart,NAContractSerblrw2.TSerEnd);
+      if (res!=0) then begin
+        RecordCheckError(res,"",i,"TSerStart");
+        res = -1;
+        goto LNAContractSerBlockCheck;
+      end;
+    end;
+  end;
+LNAContractSerBlockCheck:;
+  NAContractSerBlockCheck = res;
+  return;
+end;

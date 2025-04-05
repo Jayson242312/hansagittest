@@ -1,0 +1,33 @@
+external procedure AddValuesToPremise(record NAContractVc,string,val,var integer);
+
+global
+updating procedure ToiletsIn()
+begin
+  record NAContractVc NAContractr,oldNAContractr;
+  string 255 AccountName,AccountNumber,ToiletString,Zone,Field;
+  integer count; 
+  val NoToilets;
+  Field = "TRTOY";
+
+  while (NextImportLine(false)) begin
+    AccountNumber = ImportField;
+    AccountName = ImportField;
+    ToiletString = ImportField;
+    Zone = ImportField;
+
+    if NonBlank(Zone) then begin
+      
+      NoToilets = StringToVal(ToiletString,M45Val);
+      NAContractr.SerNr = AccountNumber;
+      if (ReadFirstMain(NAContractr,1,true)) then begin
+        RecordCopy(oldNAContractr,NAContractr);
+        NAContractr.ZoningCode = Zone;
+        RecordUpdate(oldNAContractr,NAContractr,false);
+        AddValuesToPremise(NAContractr,Field,NoToilets,count);
+      end else begin
+        LogText(0,"Contract not found for zoning:"& Zone &" Account " & AccountName &" "& AccountNumber);
+      end;
+    end;
+  end;
+  MessageBox(0,"Number of premises affected:" & count);
+end;

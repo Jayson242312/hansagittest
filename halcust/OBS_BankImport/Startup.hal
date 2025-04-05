@@ -1,0 +1,165 @@
+
+event startup
+begin
+  SetLangMode(LangEnglish,"ENG",2);
+  
+  // Module("Banka","",730,modBank);
+  
+  // Register("Maksājumu ievades","Maksājumu ievades",FidaIPVc,modBank);
+  // Register("Maksājumi","Maksājumi",IPVc,modBank);
+  // Register("Maksājumu uzdevumi","Maksājumu uzdevumi",OPVc,modBank);
+  // Register("Izmaksātie avansi","Izmaksātie avansi",PPVc,modBank);
+  // Register("Grāmatojumi","Grāmatojumi",TRVc,modBank);
+  
+  // Report("Maksājumu ievades",FidaIPRClass,FidaIPRn,0,modBank);
+  
+  // Maintenance("Maksājumu veidošana no ievadēm",CreateIPFromFidaIPVClass,CreateIPFromFidaIPMn,modBank);
+
+  // SetBegin(5000); //Fidavista importētā maksājuma statuss
+  // SetText(0,"Nezināms");
+  // SetText(1,"Pareizs");
+  // SetText(2,"Nepareizs");
+  // SetText(3,"Nezināms (Nesakrīt līgumi)");
+  // SetText(4,"Nezināms (Parāda summas)");
+  // SetText(5,"Nezināms (T/V summas)");
+  // EndSet;
+  
+  // SetBegin(5001); //Fidavista maksājuma veids
+  // SetText(0,"R");
+  // SetText(1,"P");
+  // EndSet;
+  
+  // SetBegin(5002); //Fidavista maksājuma veids
+  // SetText(0,"Ien. maks.");
+  // SetText(1,"Izej. maks.");
+  // SetText(2,"Grāmatojums");
+  // EndSet;
+  
+  // //Fidavista Import
+  // SString(1100000,"R - rēķini");
+  // SString(1100001,"P - priekšapmaksa");
+  // SString(1100002,"Norādītais klients neeksistē");
+  // SString(1100003,"Priekšapmaksas gadījumā rēķinus nenorāda");
+  // SString(1100004,"Lai apstiprinātu tipam ir jābūt " & chr(34) & "Pareizs" & chr(34));
+  // SString(1100005,"Jābūt norādītai vismaz vienai rindiņai!");
+  // SString(1100006,"Nepareiza summa!");
+  // SString(1100007,"Norādītais rēķins neeksistē");
+  // SString(1100008,"Norādītais klients neatbilst klientam rēķinā");
+  // SString(1100009,"Norādītais fails neeksistē");
+  // SString(1100010,"Lūdzu norādiet faila nosaukumu");
+  // SString(1100011,"Veiksmīgi izveidoti ");
+  // SString(1100012,"maksājumi");
+  // SString(1100013,"grāmatoti");
+  // SString(1100014,"Jānorāda klienta reģistrācijas numurs!");
+  // SString(1100015,"Nepareiza summa!");
+  // SString(1100016,"Kļuda norādītajā rēķinā!");
+  // SString(1100017,"Norādītā summa ir lielāka nekā neapmaksātā rēķina summa!");
+  // SString(1100018,"Rēķins neeksistē!");
+  // SString(1100019,"Norādītais piegādātājs neatbilst rēķinā norādītajam");
+  // SString(1100020,"Rēķinu neapmaksātā summa ir mazāka par maksājuma summu");
+  // SString(1100021,"Izejošo maksājumu gadījumā rēķini ir jānorāda obligāti");
+  // SString(1100022,"Norādītais konts neeksistē");
+  // SString(1100023,"Norādītais samaksas veids neeksistē");
+  // SString(1100024,"Norādītajā samaksas veidā nav norādīts konts");
+  // SString(1100025,"Izveidoto grāmatojumu skaits: ");
+  // SString(1100026,"No maksājumu ievades");
+  // SString(1100027,"Norādītais līgums neatbilst līgumam rēķinā");
+  // SString(1100028,"Norādītais līgums neeksistē");
+  // SString(1100029,"Līgumā norādīts cits klients");
+  
+  // SString(1100030,"Šim līgumam ir tiesvedības vai vienošanās");
+  // SString(1100031,"Atcelti");
+  
+  // SString(1100032,"Pazudušo maksājumu meklēšana");
+  // SString(1100033,"Ievades nr.");
+  // SString(1100034,"Maks./Grām.");
+  // SString(1100035,"Atjaunotas ");
+  // SString(1100036," rindas ");
+  // SString(1100037,"Maksājumu ievades");
+  // SString(1100038,"Sagatav.");
+  // SString(1100039,"Izv.");
+  // SString(1100040,"Slēgts");
+
+  
+  SetLangMode(LangEnglish,"ENG",2);
+  
+  Module("Bank","",730,modBank);
+  
+  Register("Bank payment inputs","Bank payment inputs",FidaIPVc,modBank);
+  Register("Receipts","Receipts",IPVc,modBank);
+  Register("Payments","Payments",OPVc,modBank);
+  Register("Personnel Payments","Personnel Payments",PPVc,modBank);
+  Register("Transactions","Transactions",TRVc,modBank);
+  
+  Import("Bank imports",FiDAViSTaIn,FiDAViSTaIn,modBank);
+  Report("Bank payment inputs",FidaIPRClass,FidaIPRn,0,modBank);
+  
+  Maintenance("Create receipts from inputs",CreateIPFromFidaIPVClass,CreateIPFromFidaIPMn,modBank);
+
+  SetBegin(5000); //Fidavista importētā maksājuma statuss
+  SetText(0,"Unknown");
+  SetText(1,"Correct");
+  SetText(2,"Incorrect");
+  SetText(3,"Unknown (Mismatched contracts)");
+  SetText(4,"Unknown (Own Amounts)");
+  SetText(5,"Unknown (T/V amounts)");
+  EndSet;
+  
+  SetBegin(5001);//English:Payment method  //Fidavista maksājuma veids 
+  SetText(0,"I");
+  SetText(1,"P");
+  EndSet;
+  
+  SetBegin(5002); //English:Payment method //Fidavista maksājuma veids
+  SetText(0,"In pay.");
+  SetText(1,"Out pay.");
+  SetText(2,"Transaction");
+  EndSet;
+  
+  //Fidavista Import
+  SString(1100000,"I - invoices");
+  SString(1100001,"P - prepayment");
+  SString(1100002,"The specified client does not exist");
+  SString(1100003,"In case of prepayment, invoices are not indicated");
+  SString(1100004,"To confirm the type must be " & chr(34) & "Correct" & chr(34));
+  SString(1100005,"At least one line must be specified!");
+  SString(1100006,"Incorrect amount!");
+  SString(1100007,"The specified invoice does not exist");
+  SString(1100008,"The specified customer does not match the customer on the invoice");
+  SString(1100009,"The specified file does not exist");
+  SString(1100010,"Please specify the file name");
+  SString(1100011,"Successfully created ");
+  SString(1100012,"payments");
+  SString(1100013,"booked");
+  SString(1100014,"Customer registration number must be provided!");
+  SString(1100015,"Incorrect amount!");
+  SString(1100016,"Error in the specified invoice!");
+  SString(1100017,"The specified amount is greater than the amount of the unpaid invoice!");
+  SString(1100018,"The invoice does not exist!");
+  SString(1100019,"The supplier listed does not match the one on the invoice");
+  SString(1100020,"The unpaid amount of the invoice is less than the payment amount");
+  SString(1100021,"Invoices are mandatory for outgoing payments");
+  SString(1100022,"The specified account does not exist");
+  SString(1100023,"The specified payment method does not exist");
+  SString(1100024,"The specified payment method does not specify an account");
+  SString(1100025,"Number of transactions created: ");
+  SString(1100026,"From payment entry");
+  SString(1100027,"The specified contract does not match the contract on the invoice");
+  SString(1100028,"The specified contract does not exist");
+  SString(1100029,"Another customer is specified in the contract");
+  
+  SString(1100030,"This agreement has legal proceedings or agreements");
+  SString(1100031,"Cancelled");
+  
+  SString(1100032,"Search for missing payments");
+  SString(1100033,"Input no.");
+  SString(1100034,"Pay./trans.");
+  SString(1100035,"Updated ");
+  SString(1100036," rows ");
+  SString(1100037,"Payment inputs");
+  SString(1100038,"Prepare");
+  SString(1100039,"Made");
+  SString(1100040,"Closed");
+  
+  return;
+end;

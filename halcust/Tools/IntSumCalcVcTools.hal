@@ -1,0 +1,184 @@
+external inner function val FindVAT(string,val,Integer,Integer);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner function val MulWithRateToBase1(var string,Date,val,roundmode);
+external inner function roundmode SetRoundModeD(Integer);
+
+global
+function string 20 GetIntItem(longint CONr) begin
+  record IntPercVc IntPercr;
+  Record NAContractVc NAContractr;
+  Record CUVc CUr;
+  string 20 IntPercCode,res;
+  
+  if conr!=-1 then begin
+    NAContractr.SerNr=CONr;
+    if ReadFirstMain(NAContractr,1,true) then begin
+      if nonblank(NAContractr.IntPercCode) then begin
+        IntPercCode=NAContractr.IntPercCode;
+      end;
+    end;
+  end;
+  
+  IntPercr.Code = IntPercCode;
+  if ReadFirstMain(IntPercr,1,true) then begin
+    res = IntPercr.IntItem;
+  end;
+  
+  GetIntItem = res;
+return;
+end;
+
+updating
+procedure AddIntSumCalcVc(longint sourceiv,longint destiv,string ControlStr,date td,val intsum,string curcode) begin
+  record IntSumCalcVc IntSumCalcr;
+
+  RecordNew(IntSumCalcr);
+  
+  if CountRecords("IntSumCalcVc")==0 then begin
+    IntSumCalcr.SerNr = 10001;
+  end else begin
+    IntSumCalcr.SerNr = NextSerNr("IntSumCalcVc",CurrentDate,-1,false,"");
+  end;
+  IntSumCalcr.SourceIV = sourceiv;
+  IntSumCalcr.DestIV = destiv;
+  IntSumCalcr.IntSum = intsum;
+  IntSumCalcr.InvDate = td;
+  IntSumCalcr.CurCode = curcode;
+  IntSumCalcr.ControlStr = ControlStr;
+  RecordInSert(IntSumCalcr,false);
+  
+return;
+end;
+
+global updating
+procedure InsertIntSumCalcVcB1(longint sourceiv,string ControlStr,date ondate,val sum,string curcode) begin
+  
+  AddIntSumCalcVc(sourceiv,-1,ControlStr,ondate,sum,curcode);
+  
+return;
+end;
+
+global
+function val GetMaxIntSumIV(record IVVc IVr,string ignoreArtCodeList) begin
+  row IVVc IVrw;
+  integer i,rwc;
+  val sum,res,t;
+  
+  rwc = MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==1 and !SetInSet(IVrw.ArtCode,ignoreArtCodeList) then begin
+      sum = IVrw.Sum;
+      if IVr.InclVAT==0 then begin
+        sum = sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end;
+      sum = MulRateToBase1(IVr.CurncyCode,sum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+      t = t + sum;
+    end;
+  end;
+  
+  //Agrieþ 10% vai desmito daïu no sum
+  if t!=0 then begin
+    res = Round(t / 10,SetRoundModeD(2));
+  end;
+  
+  GetMaxIntSumIV = res;
+return;
+end;
+
+global
+function val GetUsedIntSum(longint ivser,date ondate) begin
+  val res,t;
+  record IntSumCalcVc IntSumCalcr;
+  boolean wloop;
+  
+  wloop = true;
+  IntSumCalcr.SourceIV = ivser;
+  IntSumCalcr.InvDate = ondate;
+  While LoopBackKey("SourceIV",IntSumCalcr,2,wloop) begin
+    if IntSumCalcr.SourceIV != ivser then begin
+      wloop = false;
+    end else begin
+      if IntSumCalcr.InvDate <= ondate then begin
+        t = MulWithRateToBase1(IntSumCalcr.CurCode,IntSumCalcr.InvDate,IntSumCalcr.IntSum,DefaultCurRoundOff);
+        res = res + t;
+      end;
+    end;
+  end;
+  
+  GetUsedIntSum = res;
+return;
+end;
+
+global updating
+procedure RemoveIntSumCalcVc(longint ivser) begin
+  record IntSumCalcVc IntSumCalcr;
+  boolean wloop;
+  
+  IntSumCalcr.DestIV = ivser;
+  wloop = true;
+  While LoopKey("DestIV",IntSumCalcr,1,wloop) begin
+    if IntSumCalcr.DestIV != ivser then begin
+      wloop = false;
+    end else begin
+      Recorddelete(IntSumCalcr);
+      StepBack(IntSumCalcr);
+    end;
+  end;
+  
+return;
+end;
+
+global updating 
+procedure UpdateIntSumCalcVc(record IVVc IVr) begin
+  record IntSumCalcVc IntSumCalcr,oldIntSumCalcr;
+  row IVVc IVrw;
+  boolean wloop,intartf;
+  integer i,rwc;
+  string 20 intartcode;
+  
+  intartcode = GetIntItem(IVr.Contract);
+  if nonblank(intartcode) then begin
+    rwc = MatRowCnt(IVr);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(IVr,i,IVrw);
+      if IVrw.ArtCode==intartcode then begin
+        intartf = true;
+        i=rwc;
+      end;
+    end;
+  end;
+  
+  if !intartf then begin
+    IntSumCalcr.DestIV = IVr.SerNr;
+    wloop = true;
+    While LoopKey("DestIV",IntSumCalcr,1,wloop) begin
+      if IntSumCalcr.DestIV != IVr.SerNr then begin
+        wloop = false;
+      end else begin
+        Recorddelete(IntSumCalcr);
+        StepBack(IntSumCalcr);
+      end;
+    end;
+  end;
+  
+  ResetLoop(IntSumCalcr);
+  IntSumCalcr.ControlStr = IVr.IntSumControlStr;
+  wloop = nonblank(IVr.IntSumControlStr);
+  While LoopKey("ControlStr",IntSumCalcr,1,wloop) begin
+    if IntSumCalcr.ControlStr != IVr.IntSumControlStr then begin
+      wloop = false;
+    end else begin
+      if IntSumCalcr.DestIV!=-1 and IntSumCalcr.DestIV!=IVr.SerNr then begin
+        LogText(0,"UpdateIntSumCalcVc ERROR :: Trying to update IntSumCalcVc with specified different destIV");
+      end;
+      if IntSumCalcr.DestIV!=IVr.SerNr then begin
+        RecordCopy(oldIntSumCalcr,IntSumCalcr);
+        IntSumCalcr.DestIV = IVr.SerNr;
+        RecordUpdate(oldIntSumCalcr,IntSumCalcr,true);
+      end;
+    end;
+  end;
+  
+return;
+end;

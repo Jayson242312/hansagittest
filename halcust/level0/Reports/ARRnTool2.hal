@@ -1,4 +1,3 @@
-//c85430339
 external function Boolean SetInSet2(string,string);
 external procedure FindAllPrepayLosses(string,Date,val,LongInt,val,var val,record IVVc,LongInt,LongInt,Boolean,record BaseCurBlock,val,string);
 external function val MulWithRateToBase1(var string,Date,val,roundmode);
@@ -425,7 +424,8 @@ procedure ARRPrintOverView(record CUVc CUr,record IVVc IVr,record IPrsVc IPrsr,r
 BEGIN
   string 255 tstr,tstr2,dblstr;
   record AgedBlock Ab;
-  
+  record NAContractVc NAContractr;  //OBS
+
   BlockLoad(Ab);
   if ((IVr.InstallmentInv==1) and (RepSpec.flags[19]!=0)) then begin
     PrintInstallments(RepSpec,Ab,IVr,CUr,rval,rs);
@@ -478,6 +478,14 @@ BEGIN
       end;
 //    OutString(100,"DblAR",IVr.SerNr,false);
     end else begin
+//OBS-->  
+      if IVr.Contract!=-1 then begin
+        NAContractr.SerNr=IVr.Contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          OutString(35,0,NAContractr.FlatAddress,false);
+        end;
+      end;
+//OBS<--
       tstr = CreateInvoiceNumberDisputedMark(IVr.SerNr,IVr.OfficialSerNr,IVr.DisputedFlag);
       OutStringID(90,dblstr,tstr,false,tstr2);
     end;
@@ -728,7 +736,7 @@ begin
   string 30 tstr1,tstr2,tstr3,tstr4,tstr5,tstr6,tstr7;
   LongInt p1,p2;
   LongInt totcols,colwidth,colstart,col2start;
-  
+ 
   BlockLoad(AgedRec);
   if (AgedRec.UseAccPeriod) then begin
     GetAccPeriodComments(0,agedate,tstr1,tstr2,tstr3,tstr4,tstr5,tstr6,tstr7);
@@ -833,21 +841,6 @@ begin
         OutString(105,0,USetStr(4044),false);
       end;
     end;
-    if (RepSpec.ArtMode==11) then begin //MDS:GREG -9
-      if (RepSpec.flags[23]!=0) then begin
-        OutString(40,0,USetStr(2707),false);
-        OutString(65,0,USetStr(4044),false);
-        OutString(90,0,USetStr(3100029),false);
-        OutString(110,0,USetStr(3100030),false);
-        OutString(130,0,USetStr(3100031),false);
-      end else begin
-        OutString(40,0,USetStr(2707),false);
-        OutString(80,0,USetStr(4044),false);
-        OutString(115,0,USetStr(3100029),false);
-        OutString(155,0,USetStr(3100030),false);
-        OutString(195,0,USetStr(3100031),false);
-      end;
-    end;//:MDS
     if (ActualInvoices!=0) then begin
       if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5)) then begin
         OutString(155,0,USetStr(2521),true);
@@ -855,9 +848,6 @@ begin
       end else begin
         OutString(195,0,USetStr(2521),true);
       end;
-      if (RepSpec.ArtMode==11) then begin //MDS: GREG-9
-        OutString(190,0,USetStr(2521),true);
-      end; //:MDS
       OutStringAdjust(2,0,USetStr(2519),true,M4Val);
     end else begin
       if (AgedRec.SeparateOnAcc!=0) then begin
@@ -897,7 +887,7 @@ BEGIN
   record ARInstallHistVc ARIHr;
   Boolean TrHs,testf;
   LongInt latedays;
-  
+
   if (nonblankdate(RepSpec.d1)) then begin
     ARIHr.InvoiceNr = IVr.SerNr;
     TrHs = true;
@@ -1048,7 +1038,7 @@ BEGIN
   record ARVc AR2r;
   val t,vatel,blval;
   string 255 tstr1;
-  
+
   tstr1 = CreateInvoiceNumberDisputedMark(IVr.SerNr,IVr.OfficialSerNr,IVr.DisputedFlag);
   StartFormat(15);
   if (RepSpec.flags[23]!=0) then begin
@@ -1060,18 +1050,9 @@ BEGIN
     OutDate(100,0,IVr.InvDate,false);
     OutDate(155,0,IVr.PayDate,false);
   end else begin
-    if(RepSpec.ArtMode==11) then begin//MDS GREG-9
-      OutString(11,"DblAR",tstr1,false);
-      OutDate(40,0,IVr.InvDate,false);
-      OutDate(80,0,IVr.PayDate,false);
-      OutString(120,0,IVr.PolicyNum,false);
-      OutString(160,0,IVr.ClaimNum,false);
-      OutString(200,0,IVr.OrderNum,false);
-    end else begin
-      OutString(11,"DblAR",tstr1,false);
-      OutDate(70,0,IVr.InvDate,false);
-      OutDate(115,0,IVr.PayDate,false);
-    end;//:MDS 
+    OutString(11,"DblAR",tstr1,false);
+    OutDate(70,0,IVr.InvDate,false);
+    OutDate(115,0,IVr.PayDate,false);
   end;
   if (RepSpec.flags[2]==1) then begin
     if (blank(curcode)) then begin
@@ -1162,18 +1143,21 @@ BEGIN
      OutString(240,0,USetStr(2438),false);
      if (RepSpec.flags[2]==1) then begin
        OutStringAdjustBiDi(360,0,USetStr(2425),true,M4Val,400);
-       OutStringAdjustBiDi(410,0,USetStr(3201),true,M4Val,450);
+       OutString(430,0,USetStr(1001320),true); //OBS
+       // OutStringAdjustBiDi(410,0,USetStr(3201),true,M4Val,450);  //OBS
        OutString(450,0,USetStr(2434),true);
      end else begin
        OutStringAdjustBiDi(380,0,USetStr(2425),true,M4Val,420);
-         OutStringAdjustBiDi(425,0,USetStr(3201),true,M4Val,465);
-         OutString(480,0,USetStr(2434),true);
+      OutString(430,0,USetStr(1001320),true); //OBS
+       // OutStringAdjustBiDi(425,0,USetStr(3201),true,M4Val,465);  //OBS
+       OutString(480,0,USetStr(2434),true);
      end;
     EndFormat;
   end;
   if (RepSpec.ArtMode==1) then begin
     StartFormat(15);
      OutString(0,0,USetStr(2426),false);
+     OutString(35,0,USetStr(1000181),false);  //OBS
      if (RepSpec.flags[23]!=0) then begin
 //       OutString(100,0,USetStr(2423),false);
      end else begin
@@ -1183,6 +1167,7 @@ BEGIN
      OutEmpty(RepSpec,1);
      OutString(240,0,USetStr(2422),false);
      OutString(345,0,USetStr(2428),true);
+     OutString(375,0,USetStr(1001320),false); //OBS
 //     if (lightFlag==false) then begin
 //       OutString(350,0,USetStr(2711),true);
 //     end;  
@@ -1190,7 +1175,7 @@ BEGIN
      OutString(450,0,USetStr(2434),true);
     EndFormat;       
   end;
-  if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5) or (RepSpec.ArtMode==11)) then begin // cust
+  if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5)) then begin
     PrintSLAgedHeader(RepSpec,agedate,nrofper,ActualInvoices,SeparateOnAcc);
   end;
   if (RepSpec.ArtMode==3) then begin
@@ -1487,7 +1472,7 @@ BEGIN
     CustOut = true;
   end;
   if (blank(CUp.CurncyCode)) then begin
-    if (RepSpec.ArtMode==5) or (RepSpec.ArtMode==11) then begin // cust
+    if (RepSpec.ArtMode==5) then begin
       PrintCurTotalsRow(CurTotalsr,2497,150,2,-1,-1);
     end else begin
       PrintCurTotalsRow(CurTotalsr,2497,150,450,-1,-1);

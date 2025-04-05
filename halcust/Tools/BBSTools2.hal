@@ -1,0 +1,1768 @@
+/* external inner function LongInt DateDiff(Date,Date);
+external function val GetFlatFieldValue(string,string,date,date);
+external procedure BBSGetOverLayingPeriod(date,date,date,date,var date,var date);
+external inner procedure ExtractObj(string,var integer,var string);
+external function string 100 BBSUserDefined(string,string);
+external procedure FindAssetDepartmentOnDate(record AT2UnitVc,date,var string);
+external inner procedure GetWrofDate(record AT2UnitVc,var date,var boolean);
+external inner procedure FindAssetRespPerson(record AT2UnitVc,var string);
+external inner procedure GetUserName(string, var string);
+external inner procedure GlobalValToText(record LangNrVc,string,Integer,Integer,string,string,string,string,string,string,val,var string,string,string,Boolean,Boolean,Integer);
+external inner procedure GetCurUser(var record UserVc);
+
+global
+function boolean AnyObjectInObjects(string objlist1,string objlist2) begin
+  boolean res;
+  integer pos;
+  string 20 obj;
+  
+  if blank(objlist1) then begin
+    res = true;
+    GoTo LAnyObjectInObjects;
+  end;
+  if blank(objlist2) then begin
+    res = false;
+    GoTo LAnyObjectInObjects;
+  end;
+  
+  ExtractObj(objlist1,pos,obj);
+  while nonblank(obj) begin
+    if SetInSet(obj,objlist2) then begin
+      res = true;
+      GoTo LAnyObjectInObjects;
+    end;
+    ExtractObj(objlist1,pos,obj);
+  end;
+  
+  
+LAnyObjectInObjects:;
+  AnyObjectInObjects = res;
+return;
+end;
+
+global
+procedure HTObj_ForExport(string objstr,var string tstr) begin
+  Record ObjVc OBr;
+  integer pos;
+  string 60 res;
+  string 255 tstr2;
+  
+  tstr = "";
+  OBr.Code = objstr;
+  if (ReadFirstMain(OBr,1,true)) then begin
+    tstr = USetStr(3015);
+    tstr = tstr & OBr.Code;
+    if (nonblank(OBr.Comment)) then begin
+      tstr = tstr & "  ";
+      tstr = tstr & OBr.Comment;
+    end;
+  end else begin
+    tstr2 = "";
+    tstr = USetStr(3015);
+    pos = 0;
+    ExtractObj(objstr,pos,res);
+    while (nonblank(res)) begin
+      OBr.Code = res;
+      if nonblank(tstr2) then begin
+        tstr2 = tstr2 & ", ";
+      end;
+      if ReadFirstMain(OBr,1,true) then begin
+        tstr2 = tstr2 & OBr.Code;
+        if nonblank(OBr.Comment) then begin
+          tstr2 = tstr2 & "  ";
+          tstr2 = tstr2 & OBr.Comment;
+        end;
+      end else begin
+        tstr2 = tstr2 & res;
+      end;
+      ExtractObj(objstr,pos,res);
+    end; 
+    tstr = tstr & " " & tstr2;
+  end;
+  
+return;
+end;
+
+global
+procedure PrintOneObjectTotals(Record RcVc RepSpec,val TotStartBal,val TotEndBal,val DebSumTot,
+                               val CredSumTot,val EndBalPlus,val EndBalMinus) begin
+  val v;
+  
+  if (RepSpec.flags[2]==0) then begin //Vai oriìinâlvalûtâ?
+    StartFormat(15);
+    OutString(3,0,USetStr(2495),true);  //Sâk. saldo
+    if (RepSpec.flags[10]==1) then begin
+      OutString(4,0,USetStr(7324),true);  //Debets
+      OutString(5,0,USetStr(7325),true);  //Kredîts
+    end else begin
+      OutString(4,0,USetStr(2496),true);  //Apgrozîjums
+    end;
+    OutString(1,0,USetStr(2489),true);  //Saldo
+    EndFormat;
+    Gray_Divider(0,1);
+    //v = TotStartBal - TotEndBal;
+    v = TotEndBal - TotStartBal;
+    StartFormat(15);
+    OutString(6,0,USetStr(2429),false); //Kopâ
+    OutVal(3,0,TotStartBal,M4Val,true); //Sâk. saldo
+    if (RepSpec.flags[10]==1) then begin
+      OutVal(4,0,DebSumTot,M4Val,true); //Debets kopâ
+      OutVal(5,0,CredSumTot,M4Val,true);  //Kredîts kopâ
+    end else begin
+        OutVal(4,0,v,M4Val,true); //Apgrozîjums
+    end;    
+    OutVal(1,0,TotEndBal,M4Val,true); //Saldo
+    EndFormat;
+  end else begin  //Oriìinâlvalûtâ
+    StartFormat(15);
+    OutString(3,0,USetStr(2495),true);  //Sâk. saldo
+    if (RepSpec.flags[10]==1) then begin
+      OutString(4,0,USetStr(7324),true);  //Debets
+      OutString(5,0,USetStr(7325),true);  //Kredîts
+    end else begin
+      OutString(4,0,USetStr(2496),true);  //Apgrozîjums
+    end;    
+    OutString(1,0,USetStr(2489),true);  //Saldo
+    EndFormat;
+    Gray_Divider(0,1);
+    if (RepSpec.flags[10]==1) then begin
+      //PrintDebCredCurncyTotals(acur,av1,av2,av3,av4,curcnt,3,4,5,1,6,true,RepSpec.PocketPC);
+    end else begin
+      //PrintCurncyTotals(acur,av1,av2,av3,curcnt,3,4,1,6,true,RepSpec.PocketPC);
+    end;
+  end;
+  
+  if (RepSpec.ArtMode==0) and (RepSpec.flags[10]==1) then begin
+    StartFormat(15);
+      OutString(6,0,USetStr(2496),false); //Apgrozîjums
+      OutVal(1,0,TotEndBal - TotStartBal,M4Val,true);
+    EndFormat;
+  end;
+  
+  if ((RepSpec.ArtMode==0) and ((EndBalPlus<>0) or (EndBalMinus<>0)))then begin
+    StartFormat(15);
+    OutString(6,0,USetStr(7324),false); //Debets
+    OutVal(1,0,EndBalPlus,M4Val,true);
+    OutString(6,0,USetStr(7325),false); //Kredîts
+    OutVal(1,0,EndBalMinus,M4Val,true);
+    EndFormat;
+  end;
+  
+return;
+end;
+*/
+global
+procedure BBSGetDatePeriodLimited(var date persd,var date pered,date sd,date ed,date canceld)
+begin
+  
+  persd.Day = 1;
+  persd.Month = 1;
+  persd.Year = 1900;
+  pered.Day = 1;
+  pered.Month = 1;
+  pered.Year = 2099;
+  
+  if nonblankdate(sd) then begin
+    persd = sd;
+  end;
+  if nonblankdate(ed) then begin
+    pered = ed;
+  end;
+  if nonblankdate(canceld) then begin
+    pered = canceld;
+  end;
+  
+  return;
+end;
+
+global
+procedure BBSGetDatePeriodLimited2(var date persd,var date pered,date sd,date ed,date canceld)
+begin
+  
+  persd.Day = 1;
+  persd.Month = 1;
+  persd.Year = 1900;
+  pered.Day = 1;
+  pered.Month = 1;
+  pered.Year = 2099;
+  
+  if nonblankdate(sd) then begin
+    persd = sd;
+  end;
+  if nonblankdate(ed) then begin
+    pered = AddDay(ed,-1);
+  end;
+  if nonblankdate(canceld) then begin
+    pered = AddDay(canceld,-1);
+  end;
+  
+  return;
+end;
+
+global
+procedure BBSGetDatePeriodLimited3(var date persd,var date pered,date sd,date ed,date canceld)
+begin
+  
+  persd.Day = 1;
+  persd.Month = 1;
+  persd.Year = 1900;
+  pered.Day = 1;
+  pered.Month = 1;
+  pered.Year = 2099;
+  
+  if nonblankdate(sd) then begin
+    persd = sd;
+  end;
+  if nonblankdate(canceld) then begin
+    pered = canceld;
+  end;
+  
+  return;
+end;
+/*
+global
+function val GetAbsencePersonsPartly(string flatcode,date sd,date ed) begin
+  val res;
+  record PersonasVc Personasr;
+  row PersonasVc Personasrw;
+  record PersonasAbsencesVc PersonasAbsencesr;
+  row PersonasAbsencesVc PersonasAbsencesrw;
+  integer i,i2,rwc,rwc2;
+  date sd2,ed2,sd3,ed3,tempd;
+  
+  Personasr.SerNr=0;
+  while (LoopKey("MatrixFlatCode:" & flatcode,Personasr,1,true)) begin
+    rwc=MatRowCnt(Personasr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Personasr,i,Personasrw);
+      if Personasrw.FlatCode==flatcode then begin
+        //BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,Personasrw.EndDate,Personasrw.DeclarCancelDate);
+        BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,tempd,Personasrw.DeclarCancelDate);
+        if sd2<=ed and ed2>=sd then begin // service period and declaration period have at least one common day
+          if sd2<sd then begin
+            sd2=sd;
+          end;
+          if ed2>ed then begin
+            ed2=ed;
+          end;
+          ResetLoop(PersonasAbsencesr);
+          PersonasAbsencesr.SerNr=Personasr.SerNr;
+          if ReadFirstMain(PersonasAbsencesr,1,true) then begin
+            rwc2=MatRowCnt(PersonasAbsencesr);
+            for (i2=0;i2<rwc2;i2=i2+1) begin
+              MatRowGet(PersonasAbsencesr,i2,PersonasAbsencesrw);
+              BBSGetDatePeriodLimited(sd3,ed3,PersonasAbsencesrw.StartDate,PersonasAbsencesrw.EndDate,PersonasAbsencesrw.EndDate);
+              if sd3<=ed2 and ed3>=sd2 then begin // there is at least one day when the person was absent during pretended service usage
+                if sd3<sd2 then begin
+                  sd3=sd2;
+                end;
+                if ed3>ed2 then begin
+                  ed3=ed2;
+                end;
+                if sd3<=ed3 then begin
+                  res=res+DateDiff(ed3,sd3)+1;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  res=res/(DateDiff(ed,sd)+1);
+  
+  GetAbsencePersonsPartly=res;
+end;
+
+global
+function val GetDeclaredPersFromPersonas(string flatcode,date sd,date ed,boolean checkprivstat)
+begin
+  record PersonasVc Personasr;
+  record FlatsVc Flatsr;
+  row PersonasVc Personasrw;
+  val res;
+  integer i,rwc;
+  date sd2,ed2,tempd;
+  
+  Personasr.SerNr=0;
+  while (LoopKey("MatrixFlatCode:" & flatcode,Personasr,1,true)) begin
+    rwc=MatRowCnt(Personasr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Personasr,i,Personasrw);
+      if Personasrw.FlatCode==flatcode then begin
+        // BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,Personasrw.EndDate,Personasrw.DeclarCancelDate);
+        BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,tempd,Personasrw.DeclarCancelDate);
+        if sd2<=ed and ed2>=sd then begin // there is at least one declaration day in the period
+          if sd2<sd then begin
+            sd2=sd;
+          end;
+          if ed2>ed then begin
+            ed2=ed;
+          end;
+          res=res+DateDiff(ed2,sd2)+1;
+        end;
+      end;
+    end;
+  end;
+  res=res/(DateDiff(ed,sd)+1);
+  // here we have a check for Daugavpils, not sure, whether it should be included for other clients, for now it is
+  if checkprivstat then begin
+    Flatsr.FlatCode = flatcode;
+    if ReadFirstMain(Flatsr,1,true) and Flatsr.PrivStat == 2 then begin
+      // here we should pretend, that at least one person leaves in a flat everytime
+      if res < 1 then begin
+        res = 1;
+      end;
+    end;
+  end;
+  
+  GetDeclaredPersFromPersonas=res;
+end;
+
+global
+function val GetDeclaredPers(string flatcode,date sd,date ed) begin
+  record FlatsVacRebateVc FlatsVacRebater;
+  row FlatsVacRebateVc FlatsVacRebaterw;
+  date tsd,ted;
+  val res,t;
+  integer i,rwc;
+  boolean testf;
+  record NApsSetBlock NApsSetbl;
+  record PersonasAbsencesVc PersonasAbsencesr;
+  row PersonasAbsencesVc PersonasAbsencesrw;
+  record PersonasVc Personasr;
+  row PersonasVc Personasrw;
+
+  BlockLoad(NApsSetbl);
+  switch NApsSetbl.DeclResidRegScheme begin
+    case 0: // deklarçto iedzîvotâju uzskaite veidojas no telpas lauka
+      res = GetFlatFieldValue(FlatCode,NApsSetbl.DeclPersFlatField,sd,ed);
+      
+      switch NApsSetbl.AbsenceRegScheme begin
+        case 0: // prombûtnes veidojas no telpas kartiòas
+          FlatsVacRebater.Code=flatcode;
+          if ReadFirstMain(FlatsVacRebater,1,true) then begin
+            t=0;
+            rwc=MatRowCnt(FlatsVacRebater);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(FlatsVacRebater,i,FlatsVacRebaterw);
+              BBSGetOverLayingPeriod(sd,ed,FlatsVacRebaterw.StartDate,FlatsVacRebaterw.EndDate,tsd,ted);
+              if ted>=tsd then begin
+                t=t+(DateDiff(ted,tsd)+1)*FlatsVacRebaterw.Coef;
+              end;
+            end;
+            t=t/(DateDiff(ed,sd)+1);
+            res=res-t;
+          end;
+        case 1: // prombûtnes veidojas no iedzîvotâja kartiòas
+          res=res-GetAbsencePersonsPartly(flatcode,sd,ed);
+          
+      end;
+    case 1: // deklarçto iedzîvotâju uzskaite veidojas no iedzîvotâju reìistra
+      res=GetDeclaredPersFromPersonas(flatcode,sd,ed,true);
+      
+      switch NApsSetbl.AbsenceRegScheme begin
+        case 0: // prombûtnes veidojas no telpas kartiòas
+          FlatsVacRebater.Code=flatcode;
+          if ReadFirstMain(FlatsVacRebater,1,true) then begin
+            t=0;
+            rwc=MatRowCnt(FlatsVacRebater);
+            for(i=0;i<rwc;i=i+1)begin
+              MatRowGet(FlatsVacRebater,i,FlatsVacRebaterw);
+              BBSGetOverLayingPeriod(sd,ed,FlatsVacRebaterw.StartDate,FlatsVacRebaterw.EndDate,tsd,ted);
+              if ted>=tsd then begin
+                t=t+(DateDiff(ted,tsd)+1)*FlatsVacRebaterw.Coef;
+              end;
+            end;
+            t=t/(DateDiff(ed,sd)+1);
+            res=res-t;
+          end;
+        case 1: // prombûtnes veidojas no iedzîvotâja kartiòas
+          res=res-GetAbsencePersonsPartly(flatcode,sd,ed);
+      end;
+  end;
+  
+  GetDeclaredPers = res;
+end;
+*/
+global
+function val BBSGetDeclPersCnt(string flatcode,date sd,date ed)
+begin
+  val res;
+/*  record NApsSetBlock NApsSetbl;
+  
+  BlockLoad(NApsSetbl);
+  switch NApsSetbl.DeclResidRegScheme begin
+    case 0: // deklarçto iedzîvotâju uzskaite veidojas no telpas lauka
+      res = GetFlatFieldValue(flatcode,NApsSetbl.DeclPersFlatField,sd,ed);
+    case 1: // deklarçto iedzîvotâju uzskaite veidojas no iedzîvotâju reìistra
+      res = GetDeclaredPersFromPersonas(flatcode,sd,ed,true);
+  end;
+*/  
+  BBSGetDeclPersCnt = res;
+  return;
+end;
+/*
+global
+procedure GetPersonasAbsencesPeriods(Record RcVc RepSpec,string flatcode,date sd,date ed,var array longint sernumbers,var array string names,var array string comments,var array date abssd,var array date absed,var integer arrsize) begin
+  record PersonasVc Personasr;
+  row PersonasVc Personasrw;
+  record PersonasAbsencesVc PersonasAbsencesr;
+  row PersonasAbsencesVc PersonasAbsencesrw;
+  integer i,rwc,i2,rwc2;
+  date sd2,ed2,sd3,ed3,tempd;
+  boolean testf;
+  
+  arrsize=0;
+  Personasr.SerNr=0;
+  while (LoopKey("MatrixFlatCode:" & flatcode,Personasr,1,true)) begin
+    rwc=MatRowCnt(Personasr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Personasr,i,Personasrw);
+      if Personasrw.FlatCode==flatcode then begin
+        // BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,Personasrw.EndDate,Personasrw.DeclarCancelDate);
+        BBSGetDatePeriodLimited2(sd2,ed2,Personasrw.StartDate,tempd,Personasrw.DeclarCancelDate);
+        if sd2<=ed and ed2>=sd then begin // service period and declaration period have at least one common day
+          if sd2<sd then begin
+            sd2=sd;
+          end;
+          if ed2>ed then begin
+            ed2=ed;
+          end;
+          ResetLoop(PersonasAbsencesr);
+          PersonasAbsencesr.SerNr=Personasr.SerNr;
+          if ReadFirstMain(PersonasAbsencesr,1,true) then begin
+            rwc2=MatRowCnt(PersonasAbsencesr);
+            for (i2=0;i2<rwc2;i2=i2+1) begin
+              MatRowGet(PersonasAbsencesr,i2,PersonasAbsencesrw);
+              testf = true;
+              Switch (PersonasAbsencesrw.Status) begin
+                Case 0: if RepSpec.flags[2]==0 then begin testf = false; end;
+                Case 1: if RepSpec.flags[3]==0 then begin testf = false; end;
+                Case 2: if RepSpec.flags[4]==0 then begin testf = false; end;
+              end;
+              if testf then begin
+                BBSGetDatePeriodLimited(sd3,ed3,PersonasAbsencesrw.StartDate,PersonasAbsencesrw.EndDate,PersonasAbsencesrw.EndDate); 
+                if sd3<=ed2 and ed3>=sd2 then begin // there is at least one common day between declaration and absence
+                  if sd3<sd2 then begin
+                    sd3=sd2;
+                  end;
+                  if ed3>ed2 then begin
+                    ed3=ed2;
+                  end;
+                  if sd3<=ed3 then begin
+                    sernumbers[arrsize]=PersonasAbsencesr.SerNr;
+                    names[arrsize]=PersonasAbsencesr.Name;
+                    comments[arrsize]=PersonasAbsencesrw.Comment;
+                    abssd[arrsize]=sd3;
+                    absed[arrsize]=ed3;
+                    arrsize=arrsize+1;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure BBSAddRemoveObjects(string orgObjects,string old_obj,string str_addObjects,var string res_objects) begin
+  integer pos,size;
+  string 20 res;
+  string 60 tstr;
+  
+  pos = 0;
+  ExtractObj(orgObjects,pos,res);
+  while (nonblank(res)) begin
+    if !SetInSet(res,old_obj) then begin
+      if nonblank(tstr) then begin
+        tstr = tstr & "," & res;
+      end else begin
+        tstr = res;
+      end;
+    end;
+    ExtractObj(orgObjects,pos,res);
+  end;  
+  
+  if nonblank(str_addObjects) then begin
+    if nonblank(tstr) then begin
+      tstr = tstr & "," & str_addObjects;
+    end else begin
+      tstr = str_addObjects;
+    end;
+  end;
+  
+  res_objects = tstr;
+  return;
+end;
+
+global
+function boolean CharInString(string char,string tstr) begin
+  boolean res;
+  integer i,size;
+  string 1 locch;
+  
+  res = false;
+  if len(char)!=1 then begin
+    GoTo LCharInString;
+  end;
+  
+  size = len(tstr);
+  for(i=0;i<size;i=i+1)begin
+    locch = Mid(tstr,i,1);
+    if locch==char then begin
+      res = true;
+      GoTo LCharInString;
+    end;
+  end;
+  
+LCharInString:;
+  CharInString = res;
+return;
+end;
+
+global
+function boolean BBSAllAllowedChars(string tstr,string listofallowedchars)
+begin
+  boolean res;
+  integer i,l;
+  string 1 char;
+  
+  res = true;
+  l = len(tstr);
+  for (i=0;i<l;i=i+1) begin
+    char = Mid(tstr,i,1);
+    if !CharInString(char,listofallowedchars) then begin
+      res = false;
+      goto LBBSAllAllowedChars;
+    end; 
+  end;
+
+LBBSAllAllowedChars:;
+  BBSAllAllowedChars = res;
+  return;
+end;
+
+global
+function boolean BBSCorrectLatPersID(string tstr)
+begin
+  boolean res;
+    
+  if Len(tstr) != 12 then begin
+    goto LBBSCorrectLatPersID;
+  end;
+  if !BBSAllAllowedChars(Mid(tstr,0,6),"0123456789") then begin
+    goto LBBSCorrectLatPersID;
+  end;
+  if Mid(tstr,6,1) != "-" then begin
+    goto LBBSCorrectLatPersID;
+  end;
+  if !BBSAllAllowedChars(Mid(tstr,7,5),"0123456789") then begin
+    goto LBBSCorrectLatPersID;
+  end;
+  res = true;
+  
+LBBSCorrectLatPersID:;
+  BBSCorrectLatPersID = res;
+  return;
+end;
+
+global updating
+function integer BBSAddUserDefFlatStr(string newfield)
+begin
+  integer res;
+  string 255 tstr;
+  record BBSUserDefBlock BBSUserDefbl;
+  
+  res = 0;
+  BlockLoad(BBSUserDefbl);
+  
+  tstr = BBSUserDefined("FlatsVc","FlatStr1");
+  if tstr == newfield then begin
+    res = 1;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  if blank(tstr) then begin
+    BBSUserDefbl.FlatStr1 = newfield;
+    BlockStore(BBSUserDefbl);
+    res = 1;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  
+  tstr = BBSUserDefined("FlatsVc","FlatStr2");
+  if tstr == newfield then begin
+    res = 2;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  if blank(tstr) then begin
+    BBSUserDefbl.FlatStr2 = newfield;
+    BlockStore(BBSUserDefbl);
+    res = 2;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  
+  tstr = BBSUserDefined("FlatsVc","FlatStr3");
+  if tstr == newfield then begin
+    res = 3;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  if blank(tstr) then begin
+    BBSUserDefbl.FlatStr3 = newfield;
+    BlockStore(BBSUserDefbl);
+    res = 3;
+    goto LBBSAddUserDefFlatStr;
+  end;
+  
+LBBSAddUserDefFlatStr:;
+  BBSAddUserDefFlatStr = res;
+  return;
+end;
+
+global updating
+function boolean BBSSetUserDefFlatStr(string flatcode,string fieldname,string valuestr)
+begin
+  boolean res;
+  integer nr;
+  record FlatsVc Flatsr,oldFlatsr;
+  
+  Flatsr.FlatCode = flatcode;
+  if !ReadFirstMain(Flatsr,1,true) then begin
+    goto LBBSSetUserDefFlatStr;
+  end;
+  nr = BBSAddUserDefFlatStr(fieldname);
+  switch nr begin
+    case 1:
+      RecordCopy(oldFlatsr,Flatsr);
+      Flatsr.UserStr1 = valuestr;
+      if RecordUpdate(oldFlatsr,Flatsr,true) then begin
+        goto LBBSSetUserDefFlatStr;
+      end;
+      res = true;
+      goto LBBSSetUserDefFlatStr;
+    case 2:
+      RecordCopy(oldFlatsr,Flatsr);
+      Flatsr.UserStr2 = valuestr;
+      if RecordUpdate(oldFlatsr,Flatsr,true) then begin
+        goto LBBSSetUserDefFlatStr;
+      end;
+      res = true;
+      goto LBBSSetUserDefFlatStr;
+    case 3:
+      RecordCopy(oldFlatsr,Flatsr);
+      Flatsr.UserStr3 = valuestr;
+      if RecordUpdate(oldFlatsr,Flatsr,true) then begin
+        goto LBBSSetUserDefFlatStr;
+      end;
+      res = true;
+      goto LBBSSetUserDefFlatStr;
+    otherwise
+      goto LBBSSetUserDefFlatStr;
+  end;
+  
+LBBSSetUserDefFlatStr:;
+  BBSSetUserDefFlatStr = res;
+  return;
+end;
+
+global
+function boolean BBSCheckFlatArtPer(record FlatsVc Flatsr,integer matrow,date FlatDateSD,date FlatDateED)
+begin
+  boolean res;
+  row FlatsVc Flatsrw;
+  record NAContractVc COr;
+  row NAContractVc COrw;
+  integer i,rowcnt;
+  date checkdate;
+  
+  MatRowGet(Flatsr,matrow,Flatsrw);
+  COr.SerNr = Flatsr.CONr;
+  if ReadFirstMain(COr,1,true) then begin
+    rowcnt = MatRowCnt(COr);
+    for (i=0;i<rowcnt;i=i+1) begin
+      MatRowGet(COr,i,COrw);
+      if COrw.ArtCode == Flatsrw.ArtCode then begin
+        i = rowcnt;
+        if blankdate(COrw.ServStartDate) then begin
+          res = true;
+        end else begin
+          checkdate = COrw.ServStartDate;
+          checkdate.Day = 1;
+          while checkdate >= FlatDateSD begin
+            checkdate = AddMonth(checkdate,-COrw.ServCycle);
+          end;
+          while checkdate <= FlatDateED begin
+            if GetMonth(checkdate) == GetMonth(FlatDateSD) and GetMonth(checkdate) == GetMonth(FlatDateED) then begin
+              res = true;
+              checkdate = AddMonth(FlatDateED,1);
+            end else begin
+              checkdate = AddMonth(checkdate,COrw.ServCycle);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  BBSCheckFlatArtPer = res;
+  return;
+end;
+
+global
+procedure BBSFindAssetRespPersonOnDate(record AT2UnitVc ATUnitr,date ondate,var string res)
+BEGIN
+  boolean wloop;
+  record InvrsVc Invrsr;
+  record AT2TakeVc ATTaker;
+  
+  res = ATUnitr.RespPerson;
+  wloop = true;
+  Invrsr.InventoryNr = ATUnitr.InventoryNr;
+  Invrsr.FileName = "AT2TakeVc";
+  while (LoopBackKey("FileName",Invrsr,2,wloop)) begin
+    if (Invrsr.InventoryNr!=ATUnitr.InventoryNr) then begin wloop = false; end;
+    if (Invrsr.FileName!="AT2TakeVc") then begin wloop = false; end;
+    if wloop and Invrsr.TransDate <= ondate then begin
+      ATTaker.SerNr = Invrsr.TransNr;
+      if (ReadFirstMain(ATTaker,1,true)) then begin
+        if (ATTaker.PhysCheckf==1) then begin
+          res = ATTaker.RespPerson;
+          wloop = false;
+        end;
+      end;
+    end;
+  end;    
+  RETURN;
+END;
+
+global
+function boolean BBSGetAT2TakeVc(record AT2UnitVc AT2Unitr,date ondate,integer type,var record AT2TakeVc AT2Taker)
+begin
+  boolean res,wloop;
+  record InvrsVc Invrsr;
+  
+  ResetLoop(AT2Taker);
+  wloop = true;
+  Invrsr.InventoryNr = AT2Unitr.InventoryNr;
+  Invrsr.FileName = "AT2TakeVc";
+  while LoopBackKey("FileName",Invrsr,2,wloop) begin
+    if (Invrsr.InventoryNr!=AT2Unitr.InventoryNr) then begin wloop = false; end;
+    if (Invrsr.FileName!="AT2TakeVc") then begin wloop = false; end;
+    if wloop and Invrsr.TransDate <= ondate then begin
+      AT2Taker.SerNr = Invrsr.TransNr;
+      if (ReadFirstMain(AT2Taker,1,true)) then begin
+        if (AT2Taker.PhysCheckf==type) then begin
+          res = true;
+          wloop = false;
+        end;
+      end;
+    end;
+  end;
+  
+  BBSGetAT2TakeVc = res;
+  return;
+end;
+
+global
+procedure BBSGetMatLiabPers(string department,date ondate,var array string codes,var array string names,var longint namescnt,string checkcodes)
+begin
+  record AT2UnitVc AT2Unitr;
+  string 10 usercode,depcode;
+  string 60 username;
+  date wrofdate;
+  boolean wrof;
+  vector boolean uniqueusers;
+  
+  namescnt = 0;
+  while LoopMain(AT2Unitr,1,true) begin
+    FindAssetDepartmentOnDate(AT2Unitr,ondate,depcode);
+    if depcode == department or blank(department) then begin
+      GetWrofDate(AT2Unitr,wrofdate,wrof);
+      if BlankDate(wrofdate) or wrofdate > ondate then begin
+        BBSFindAssetRespPersonOnDate(AT2Unitr,ondate,usercode);
+        if nonblank(usercode) and (blank(checkcodes) or SetInSet(usercode,checkcodes)) then begin
+          GetUserName(usercode,username);
+          if !uniqueusers[usercode] then begin
+            uniqueusers[usercode] = true;
+            codes[namescnt] = usercode;
+            names[namescnt] = username;
+            namescnt = namescnt + 1;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure BBSShowRoomAreas(real h,real v)
+begin
+  integer wn,roomcnt,i;
+  real h1,v1;  
+  
+  roomcnt = 8;
+  h1 = h; v1 = v;
+  for (i=0;i<roomcnt;i=i+1) begin
+    SoftEditField(h1,v1,80,USetStr(1001165) & i+1,ViewOnly,"RoomNr" & i,true,0,M4Str,20);
+    v1 = v1 + 20;
+  end;
+  SoftEditField(h1,v1,80,USetStr(1001184),ViewOnly,"TotRoomArea",true,0,M4Str,20);
+  
+  return;
+end;
+
+global
+function integer BBSGetIsolatedRooms(string flatcode)
+begin
+  integer res,i,roomcnt;
+  record RoomVc Roomr;
+  row RoomVc Roomrw;
+
+  res = 0;
+  Roomr.FlatCode = flatcode;
+  if ReadFirstMain(Roomr,1,true) then begin
+    roomcnt = MatRowCnt(Roomr);
+    for (i=0;i<roomcnt;i=i+1) begin
+      MatRowGet(Roomr,i,Roomrw);
+      if Roomrw.Type == 2 then begin
+        res = res + 1;
+      end;
+    end;
+  end;
+
+  BBSGetIsolatedRooms = res;
+  return;
+end;
+
+global
+function integer BBSGetFlatRoomsCnt(string flatcode)
+begin
+  integer res;
+  record RoomVc Roomr;
+
+  res = 0;
+  Roomr.FlatCode = flatcode;
+  if ReadFirstMain(Roomr,1,true) then begin
+    res = MatRowCnt(Roomr);
+  end;
+  
+  BBSGetFlatRoomsCnt = res;
+  return;
+end;
+
+global
+function boolean BBSGetCustLastContr(string custcode,var record NAContractVc NAContractr)
+begin
+  boolean res;
+  
+  ResetLoop(NAContractr);
+  NAContractr.CustCode = custcode;
+  NAContractr.OKFlag = 1;
+  if ReadLastKey("ActualLegalCO",NAContractr,2,true) then begin
+    res = true;
+  end;
+  
+  BBSGetCustLastContr = res;
+  return;
+end;
+
+global
+function boolean BBSGetFlatLastContr(string flatcode,var record NAContractVc NAContractr)
+begin
+  boolean res;
+  
+  ResetLoop(NAContractr);
+  NAContractr.FlatCode = flatcode;
+  NAContractr.OKFlag = 1;
+  if ReadLastKey("LastFlatCO",NAContractr,2,true) then begin
+    res = true;
+  end;
+  
+  BBSGetFlatLastContr = res;
+  return;
+end;
+
+global
+function longint BBSGetBuildFlatsCnt(string buildcode)
+begin
+  longint res;
+  string 255 tstr;
+  record FlatsVc Flatsr;
+  
+  tstr = "FlatNoCode:" & buildcode;
+  res = RecordsInIndex("FlatsVc",tstr);
+  
+  BBSGetBuildFlatsCnt = res;
+  return;
+end;
+
+global
+function string 255 BBSGetCustLastAddress(string cucode)
+begin
+  string 255 res;
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+
+  res = "";
+  if BBSGetCustLastContr(cucode,NAContractr) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      res = Flatsr.Address;
+    end;
+  end;
+  
+  BBSGetCustLastAddress = res;
+  return;
+end;
+
+global
+function string 255 BBSGetCustLastFlatNo(string cucode)
+begin
+  string 255 res;
+  record NAContractVc NAContractr;
+  record FlatsVc Flatsr;
+  
+  res = "";
+  if BBSGetCustLastContr(cucode,NAContractr) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      res = Flatsr.FlatNo;
+    end;
+  end;
+  
+  BBSGetCustLastFlatNo = res;
+  return;
+end;
+
+global
+procedure OBSVIVc_GetPrePaidAmount(record VIVc VIp,var val prepvp,string object)
+BEGIN
+  row VIVc VIrw;
+  Integer i,rwcnt;
+  
+  prepvp = blankval;
+  rwcnt = MatRowCnt(VIp);
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(VIp,i,VIrw);
+    if VIrw.stp == 6 and VIrw.ovst == 0 and SetInSet(object,VIrw.Objects) then begin
+      prepvp = prepvp + VIrw.PrepayAmount;
+    end;
+  end;
+  RETURN;
+END;
+
+global
+function string 20 OBSGetUserID(string usercode)
+begin
+  string 20 res;
+  record UserVc Userr;
+  
+  if nonblank(usercode) then begin
+    Userr.Code = usercode;
+    if ReadFirstMain(Userr,1,true) then begin
+      res = Userr.IDCode;
+    end;
+  end;
+  
+  OBSGetUserID = res;
+  return;
+end;
+
+
+global
+function boolean OBSVEHasVIObj2(Record OPVc OPr,Row OPVc OPrw,string rowobjects)
+begin
+  boolean res;
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt;
+  
+  if OPrw.VISerNr!=-1 then begin
+    VIr.SerNr = OPrw.VISerNr;
+    if ReadFirstMain(VIr,1,true) then begin
+      rwcnt = MatRowCnt(VIr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(VIr,i,VIrw);
+        if VIrw.ovst == 0 and VIrw.stp == 1 and AnyObjectInObjects(rowobjects,VIrw.Objects) then begin
+          i = rwcnt;
+          res = true;
+          GoTo LOBSVEHasVIObj2;
+        end;
+      end;
+    end;
+  end;
+  if OPrw.PrepayNr!=-1 then begin
+    if AnyObjectInObjects(rowobjects,OPrw.Objects) then begin
+      res = true;
+      GoTo LOBSVEHasVIObj2;
+    end;
+  end;
+  
+LOBSVEHasVIObj2:;
+  OBSVEHasVIObj2 = res;
+  return;
+end;
+
+global
+function boolean OBSVEHasVIObj(longint VISerNr,string object)
+begin
+  boolean res;
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt;
+  
+  VIr.SerNr = VISerNr;
+  if ReadFirstMain(VIr,1,true) then begin
+    rwcnt = MatRowCnt(VIr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(VIr,i,VIrw);
+      if VIrw.ovst == 0 and VIrw.stp == 1 and SetInSet(object,VIrw.Objects) then begin
+        i = rwcnt;
+        res = true;
+      end;
+    end;
+  end;
+  
+  OBSVEHasVIObj = res;
+  return;
+end;
+
+global
+function val OBSVEGetVIPayValObj(longint visernr,string object,string rowobjects)
+begin
+  val res;
+  integer i,rwcnt;
+  record VIVc VIr;
+  row VIVc VIrw;
+  
+  VIr.SerNr = visernr;
+  if ReadFirstMain(VIr,1,true) then begin
+    rwcnt = MatRowCnt(VIr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(VIr,i,VIrw);
+      if nonblank(object) then begin
+        if VIrw.ovst == 0 and VIrw.stp == 1 and SetInSet(object,VIrw.Objects) then begin
+          res = res + VIrw.Sum + VIrw.VATVal;
+        end;
+      end else begin
+        if VIrw.ovst == 0 and VIrw.stp == 1 and AnyObjectInObjects(rowobjects,VIrw.Objects) then begin
+          res = res + VIrw.Sum + VIrw.VATVal;
+        end;
+      end;
+    end;
+  end;
+  
+  OBSVEGetVIPayValObj = res;
+  return;
+end;
+
+global
+function val OBSVEGetVIVcBalObj(record CUVc VEr,record OPRSVc OPrsr,string object)
+begin
+  val res;
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt;
+  
+  VIr.SerNr = OPRSr.TransNr;
+  if ReadFirstMain(VIr,1,true) then begin
+    if VIr.OKFlag == 1 and VIr.Invalid == 0 then begin
+      rwcnt = MatRowCnt(VIr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(VIr,i,VIrw);
+        if VIrw.ovst != 1 and VIrw.stp == 1 then begin
+          if SetInSet(object,VIrw.Objects) then begin
+            res = res + VIrw.Sum;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  OBSVEGetVIVcBalObj = res;
+  return;
+end;
+
+global
+function val OBSVEGetOPVcBalObj(record CUVc VEr,record OPRSVc OPrsr,string object,date ondate)
+begin
+  val res,viprop;
+  record OPVc OPr;
+  row OPVc OPrw;
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt,j,rwcnt2;
+  record APPayHistVc APPayHistr;
+  boolean wloop;
+  
+  OPr.SerNr = OPrsr.TransNr;
+  if ReadFirstMain(OPr,1,true) then begin
+    if OPr.DoneFlag == 1 and OPr.OrderedFlag == 1 and OPr.RejectedFlag == 0 and OPr.Invalid == 0 then begin
+      rwcnt = MatRowCnt(OPr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(OPr,i,OPrw);
+        if OPrw.ovst != 1 and OPrw.VECode == VEr.Code and OPrw.stp == 1 then begin
+          if OPrw.PrepayNr == -1 then begin
+            if OPrw.VISerNr != -1 then begin
+              viprop = 0;
+              ResetLoop(VIr);
+              VIr.SerNr = OPrw.VISerNr;
+              if ReadFirstMain(VIr,1,true) then begin
+                rwcnt2 = MatRowCnt(VIr);
+                for (j=0;j<rwcnt2;j=j+1) begin
+                  MatRowGet(VIr,j,VIrw);
+                  if VIrw.ovst != 1 and VIrw.stp == 1 then begin
+                    if SetInSet(object,VIrw.Objects) then begin
+                      viprop = viprop + VIrw.Sum + VIrw.VATVal;
+                    end;
+                  end;
+                end;
+                viprop = viprop / VIr.PayVal;
+              end;
+              res = res + OPrw.RecVal * viprop;
+            end;
+          end else begin
+            ResetLoop(APPayHistr);
+            APPayHistr.VEPNr = OPrw.PrepayNr;
+            APPayHistr.FileName = "VIVc";
+            wloop = true;
+            while LoopMain(APPayHistr,2,wloop) begin
+              if APPayHistr.VEPNr != OPrw.PrepayNr or APPayHistr.FileName != "VIVc" then begin
+                wloop = false;
+              end else begin
+                if APPayHistr.TransDate <= ondate and APPayHistr.OrderNr != -1 then begin
+                  viprop = 0;
+                  ResetLoop(VIr);
+                  VIr.SerNr = APPayHistr.OrderNr;
+                  if ReadFirstMain(VIr,1,true) then begin
+                    rwcnt2 = MatRowCnt(VIr);
+                    for (j=0;j<rwcnt2;j=j+1) begin
+                      MatRowGet(VIr,j,VIrw);
+                      if VIrw.ovst != 1 and VIrw.stp == 1 then begin
+                        if SetInSet(object,VIrw.Objects) then begin
+                          viprop = viprop + VIrw.Sum + VIrw.VATVal;
+                        end;
+                      end;
+                    end;
+                    viprop = viprop / VIr.PayVal;
+                  end;
+                  res = res + APPayHistr.Val * viprop;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  OBSVEGetOPVcBalObj = res;
+  return;
+end;
+
+global
+function val OBSVEGetBalanceObj(record CUVc VEr,string column,date ondate,string object)
+begin
+  val res;
+  record OPrsVc OPrsr;
+  boolean wloop,accloop,found;
+  record ObjBalVc ObjBalr;
+  record AccVc Accr;
+
+  switch column begin
+    case "vesalesinclvat":
+      accloop = true;
+      while LoopMain(Accr,1,accloop) begin
+        if Accr.AccType == 4 then begin
+          ResetLoop(ObjBalr);
+          ObjBalr.AccNumber = Accr.AccNumber;
+          ObjBalr.Object = object;
+          if ReadFirstMain(ObjBalr,2,true) then begin
+            if GetBalance(ObjBalr,"transcredit",ondate) > 0 then begin
+              accloop = false;
+              found = true;
+            end;
+          end;
+        end;
+      end;
+      if found then begin
+        wloop = true;
+        OPrsr.VECode = VEr.Code;
+        while LoopMain(OPrsr,1,wloop) begin
+          if OPrsr.VECode != VEr.Code then begin
+            wloop = false;
+          end else begin
+            if OPrsr.TransDate <= ondate then begin
+              switch OPrsr.TransType begin
+                case 0: // ienâkoðais rçíins
+                  res = res + OBSVEGetVIVcBalObj(VEr,OPrsr,object);
+              end;
+            end;
+          end;
+        end;
+      end;
+    case "vepaidvalue":
+      accloop = true;
+      while LoopMain(Accr,1,accloop) begin
+        if Accr.AccType == 4 then begin
+          ResetLoop(ObjBalr);
+          ObjBalr.AccNumber = Accr.AccNumber;
+          ObjBalr.Object = object;
+          if ReadFirstMain(ObjBalr,2,true) then begin
+            if GetBalance(ObjBalr,"transdebit",ondate) > 0 then begin
+              accloop = false;
+              found = true;
+            end;
+          end;
+        end;
+      end;
+      if found then begin
+        wloop = true;
+        OPrsr.VECode = VEr.Code;
+        while LoopMain(OPrsr,1,wloop) begin
+          if OPrsr.VECode != VEr.Code then begin
+            wloop = false;
+          end else begin
+            if OPrsr.TransDate <= ondate then begin
+              switch OPrsr.TransType begin
+                case 1: // maksâjumu uzdevums
+                  res = res + OBSVEGetOPVcBalObj(VEr,OPrsr,object,ondate);
+              end;
+            end;
+          end;
+        end;
+      end;
+    case "vebalance":
+      res = OBSVEGetBalanceObj(VEr,"vesalesinclvat",ondate,object) - OBSVEGetBalanceObj(VEr,"vepaidvalue",ondate,object);
+  end;
+
+  OBSVEGetBalanceObj = res;
+  return;
+end;
+
+global
+function val OBSVEGetStartBalanceObj(record CUVc VEr,string column,date ondate,string object)
+begin
+  val res;
+  date ld;
+  
+  ld = AddDay(ondate,-1);
+  res = OBSVEGetBalanceObj(VEr,column,ld,object);
+  
+  OBSVEGetStartBalanceObj = res;
+  return;
+end;
+
+global
+procedure OBSCheckDBFlush(var longint flushcnt,longint limit)
+begin
+  
+  flushcnt = flushcnt + 1;
+  if flushcnt > limit then begin
+    flushcnt = 0;
+    DBFlush;
+    DBHold;
+  end;
+  
+  return;
+end;
+
+global
+function boolean PeriodOverlayCheck(date sd1,date ed1,date sd2,date ed2) begin
+  boolean res;
+  
+  res=false;
+  
+  if blankdate(sd1) then begin
+    if blankdate(ed1) then begin
+      res=true;
+      Goto EndPeriodOverlayCheck;
+    end;
+    if blankdate(sd2) then begin
+      res=true;
+      Goto EndPeriodOverlayCheck;
+    end;
+    if nonblankdate(ed1) and nonblankdate(sd2) and sd2<=ed1 then begin
+      res=true;
+      Goto EndPeriodOverlayCheck;
+    end;
+  end;
+  
+  if blankdate(ed1) then begin
+    if blankdate(ed2) then begin
+      res=true;
+      Goto EndPeriodOverlayCheck;
+    end;
+    if nonblankdate(sd1) and nonblankdate(ed2) and ed2>=sd1 then begin
+      res=true;
+      Goto EndPeriodOverlayCheck;
+    end;
+  end;
+  
+  if blankdate(sd2) and blankdate(ed2) then begin
+    res=true;
+    Goto EndPeriodOverlayCheck;
+  end;
+  
+  if nonblankdate(sd1) and nonblankdate(ed2) and nonblankdate(ed1) and ed2>=sd1 and ed1>=ed2 then begin
+    res=true;
+    Goto EndPeriodOverlayCheck;
+  end;
+  
+  if nonblankdate(ed1) and nonblankdate(sd2) and nonblankdate(sd1) and sd2<=ed1 and sd1<=sd2 then begin
+    res=true;
+    Goto EndPeriodOverlayCheck;
+  end;
+  
+EndPeriodOverlayCheck:;
+  PeriodOverlayCheck=res;
+return;
+end;
+
+global
+procedure OBSVEGetVIAllBalObj(record OPRSVc OPRSr,date ondate,vector boolean objects,var vector boolean objectsfound,var vector val supplobjcache)
+begin
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt,pos;
+  string 255 tstr,key;
+  val value;
+
+  VIr.SerNr = OPRSr.TransNr;
+  if ReadFirstMain(VIr,1,true) then begin
+    if VIr.OKFlag == 1 and VIr.Invalid == 0 then begin
+      rwcnt = MatRowCnt(VIr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(VIr,i,VIrw);
+        if VIrw.ovst != 1 and VIrw.stp == 1 then begin
+          if nonblank(VIrw.Objects) then begin
+            pos = 0;
+            ExtractObj(VIrw.Objects,pos,tstr);
+            while nonblank(tstr) begin
+              if objects[tstr] then begin
+                objectsfound[tstr] = true;
+                key = OPRSr.VECode & ":" & tstr & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "credit";
+                value = VIrw.Sum + VIrw.VATVal;
+                supplobjcache[key] = supplobjcache[key] + value;
+              end;
+              ExtractObj(VIrw.Objects,pos,tstr);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end; */
+
+/* global
+procedure OBSVEGetOPAllBalObj(record OPRSVc OPRSr,date ondate,vector boolean objects,var vector boolean objectsfound,var vector val supplobjcache,longint ivnr)
+begin
+  val viprop;
+  record OPVc OPr;
+  row OPVc OPrw;
+  record VIVc VIr;
+  row VIVc VIrw;
+  integer i,rwcnt,j,rwcnt2,pos;
+  record APPayHistVc APPayHistr;
+  boolean wloop,foundf;
+  string 255 tstr,key;
+  val value;
+  
+  OPr.SerNr = OPrsr.TransNr;
+  if ReadFirstMain(OPr,1,true) then begin
+    if OPr.DoneFlag == 1 and OPr.OrderedFlag == 1 and OPr.RejectedFlag == 0 and OPr.Invalid == 0 then begin
+      rwcnt = MatRowCnt(OPr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(OPr,i,OPrw);
+        if OPrw.ovst != 1 and OPrw.VECode == OPRSr.VECode and OPrw.stp == 1 and OPrw.VISerNr==ivnr then begin
+          if OPrw.PrepayNr == -1 then begin
+            if OPrw.VISerNr != -1 then begin
+              ResetLoop(VIr);
+              VIr.SerNr = OPrw.VISerNr;
+              if ReadFirstMain(VIr,1,true) then begin
+                rwcnt2 = MatRowCnt(VIr);
+                for (j=0;j<rwcnt2;j=j+1) begin
+                  MatRowGet(VIr,j,VIrw);
+                  if VIrw.ovst != 1 and VIrw.stp == 1 and nonblank(VIrw.Objects) then begin
+                    pos = 0;
+                    ExtractObj(VIrw.Objects,pos,tstr);
+                    while nonblank(tstr) begin
+                      if objects[tstr] then begin
+                        objectsfound[tstr] = true;
+                        viprop = (VIrw.Sum + VIrw.VATVal) / VIr.PayVal;
+                        value = (OPrw.RecVal + OPrw.VATVal) * viprop;
+                        key = OPRSr.VECode & ":" & tstr & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "debit";
+                        supplobjcache[key] = supplobjcache[key] + value;
+                      end;
+                      ExtractObj(VIrw.Objects,pos,tstr);
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end else begin
+            //Priekðapmaksâm ir divi gadîjumi 
+            //1) Kad priekðapmaksa ir uz konkrçtu objektu, tad visu summu uzliek uz ðo objektu
+            foundf = false;
+            pos = 0; tstr="";
+            ExtractObj(OPrw.Objects,pos,tstr);
+            while nonblank(tstr) and !foundf begin
+              if objects[tstr] then begin
+                value = (OPrw.RecVal + OPrw.VATVal);
+                key = OPRSr.VECode & ":" & tstr & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "debit";
+                supplobjcache[key] = supplobjcache[key] + value;
+                foundf = true;
+              end;
+              ExtractObj(OPrw.Objects,pos,tstr);
+            end;
+            
+            //2) Kad priekðapmaksa nav uz konkrçtu objektu, tad skatâs no piesaistîtâjâm summâm IREKam
+            if !foundf then begin
+              ResetLoop(APPayHistr);
+              APPayHistr.VEPNr = OPrw.PrepayNr;
+              APPayHistr.FileName = "VIVc";
+              wloop = true;
+              while LoopMain(APPayHistr,2,wloop) begin
+                if APPayHistr.VEPNr != OPrw.PrepayNr or APPayHistr.FileName != "VIVc" then begin
+                  wloop = false;
+                end else begin
+                  if APPayHistr.TransDate <= ondate and APPayHistr.OrderNr != -1 then begin
+                    ResetLoop(VIr);
+                    VIr.SerNr = APPayHistr.OrderNr;
+                    if ReadFirstMain(VIr,1,true) then begin
+                      rwcnt2 = MatRowCnt(VIr);
+                      for (j=0;j<rwcnt2;j=j+1) begin
+                        MatRowGet(VIr,j,VIrw);
+                        if VIrw.ovst != 1 and VIrw.stp == 1 and nonblank(VIrw.Objects) then begin
+                          pos = 0;
+                          ExtractObj(VIrw.Objects,pos,tstr);
+                          while nonblank(tstr) begin
+                            if objects[tstr] then begin
+                              objectsfound[tstr] = true;
+                              viprop = (VIrw.Sum + VIrw.VATVal) / VIr.PayVal;
+                              value = (APPayHistr.Val + APPayHistr.VATVal) * viprop;
+                              key = OPRSr.VECode & ":" & tstr & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "debit";
+                              supplobjcache[key] = supplobjcache[key] + value;
+                            end;
+                            ExtractObj(VIrw.Objects,pos,tstr);
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure OBSVEGetAllBalObjType(array string suppliers,longint supplarrsize,array date dates,longint datesarrsize,string objtype,var vector boolean objectsfound,var vector val supplobjcache,string rowobjects)
+begin
+  record OPRSVc OPRSr;
+  longint i,j;
+  integer pos;
+  boolean wloop;
+  string 20 object;
+  vector boolean objects;
+  record ObjVc Objr;
+  
+  if nonblank(objtype) then begin
+    Objr.OTCode = objtype;
+    wloop = true;
+    while LoopKey("OTCode",Objr,1,wloop) begin
+      if Objr.OTCode != objtype then begin
+        wloop = false;
+      end else begin
+        if blank(rowobjects) or SetInSet(Objr.Code,rowobjects) then begin
+          objects[Objr.Code] = true;
+        end;
+      end;
+    end;
+  end else begin
+    ExtractObj(rowobjects,pos,object);
+    while nonblank(object) begin
+      objects[object] = true;
+      ExtractObj(rowobjects,pos,object);
+    end;
+  end;
+  
+  for (i=0;i<supplarrsize;i=i+1) begin
+    ResetLoop(OPRSr);
+    wloop = true;
+    OPRSr.VECode = suppliers[i];
+    while LoopMain(OPRSr,1,wloop) begin
+      if OPRSr.VECode != suppliers[i] then begin
+        wloop = false;
+      end else begin
+        for (j=0;j<datesarrsize;j=j+1) begin
+          if OPRSr.TransDate <= dates[j] then begin
+            switch OPRSr.TransType begin
+              case 0: // ienâkoðais rçíins
+                OBSVEGetVIAllBalObj(OPRSr,dates[j],objects,objectsfound,supplobjcache);
+              case 1: // maksâjumu uzdevums
+                OBSVEGetOPAllBalObj(OPRSr,dates[j],objects,objectsfound,supplobjcache,OPRSr.VINr);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end; */
+
+/* global
+function val OBSVEGetBalObjCache(record CUVc VEr,string column,date ondate,string object,vector val supplcache,string rowobjects)
+begin
+  val res;
+  integer pos;
+  string 255 key;
+  string 20 lObject;
+  
+  if nonblank(object) then begin
+    switch column begin
+      case "vesalesinclvat":
+        key = VEr.Code & ":" & object & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "credit";
+        res = supplcache[key];
+      case "vepaidvalue":
+        key = VEr.Code & ":" & object & ":" & DateToString(ondate,"DDMMYYYY") & ":" & "debit";
+        res = -supplcache[key];
+      case "vebalance":
+        res = OBSVEGetBalObjCache(VEr,"vesalesinclvat",ondate,object,supplcache,rowobjects) + OBSVEGetBalObjCache(VEr,"vepaidvalue",ondate,object,supplcache,rowobjects);
+    end;
+  end else begin
+    ExtractObj(rowobjects,pos,lObject);
+    while nonblank(lObject) begin
+      res = res + OBSVEGetBalObjCache(VEr,column,ondate,lObject,supplcache,"");
+      ExtractObj(rowobjects,pos,lObject);
+    end;
+  end;
+
+  OBSVEGetBalObjCache = res;
+  return;
+end; */
+
+/* global
+function val OBSVEGetStartBalObjCache(record CUVc VEr,string column,date ondate,string object,vector val supplcache,string rowobjects)
+begin
+  val res;
+  date ld;
+  
+  ld = AddDay(ondate,-1);
+  res = OBSVEGetBalObjCache(VEr,column,ld,object,supplcache,rowobjects);
+  
+  OBSVEGetStartBalObjCache = res;
+  return;
+end; */
+
+global
+function boolean OBS_PeriodInPeriod(date sd1,date ed1,date sd2,date ed2) begin
+  boolean testf,res;
+  date sd,ed;
+  
+  res = false;
+  if blankdate(sd1) and blankdate(sd2) then begin
+    res = true;
+    Goto EndPeriodInPeriod;
+  end;
+  if blankdate(ed1) and blankdate(ed2) then begin
+    res=true;
+    Goto EndPeriodInPeriod;
+  end;
+  
+  //Get largest sd date
+  if nonblankdate(sd1) and blankdate(sd2) then begin
+    sd = sd1;
+  end;
+  if nonblankdate(sd2) and blankdate(sd1) then begin
+    sd = sd2;
+  end;
+  if nonblankdate(sd1) and nonblankdate(sd2) then begin
+    sd = sd1;
+    if sd2>sd1 then begin
+      sd = sd2;
+    end;
+  end;
+  
+  //Get smallest ed date
+  if nonblankdate(ed1) and blankdate(ed2) then begin
+    ed = ed1;
+  end;
+  if nonblankdate(ed2) and blankdate(ed1) then begin
+    ed = ed2;
+  end;
+  if nonblankdate(ed1) and nonblankdate(ed2) then begin
+    ed = ed1;
+    if ed2<ed1 then begin
+      ed = ed2;
+    end;
+  end;
+  
+  if sd<=ed then begin
+    res = true;
+  end;
+  
+EndPeriodInPeriod:;
+  OBS_PeriodInPeriod = res;
+return;
+end;
+
+/* global
+function string 60 OBSGetCustomerName(string customercode)
+begin
+  string 60 res;
+  record CUVc CUr;
+  
+  CUr.Code = customercode;
+  if ReadFirstMain(CUr,1,true) then begin
+    res = CUr.Name;
+  end;
+  
+  OBSGetCustomerName = res;
+  return;
+end;
+
+global
+function string 20 OBSGetCustomerPhone(string customercode)
+begin
+  string 20 res;
+  record CUVc CUr;
+  
+  CUr.Code = customercode;
+  if ReadFirstMain(CUr,1,true) then begin
+    res = CUr.Phone;
+  end;
+  
+  OBSGetCustomerPhone = res;
+  return;
+end;
+
+global
+procedure OBSValToText(val p,Integer t,string curncy,string lang,var string res)
+BEGIN
+  record LangNrVc LangNrr;
+  record CurncyCodeVc ccr;
+  record BaseCurBlock bcr;
+  record UserVc Userr;
+  record CYBlock cyr;
+  val lp;
+  Boolean forced;
+  Boolean nodecs;
+
+  if (p<0) then begin
+    lp = -p;
+  end else begin
+    lp = p;
+  end;
+  BlockLoad(cyr);
+  BlockLoad(bcr);
+  RecordNew(LangNrr);
+  RecordNew(ccr);
+  res = "";
+  if nonblank(curncy) then begin
+    ccr.CurncyCode = curncy;
+    if (ReadFirstMain(ccr,1,true)==false) then begin
+      ccr.CurncyCode = bcr.BaseCur1;
+      if (ReadFirstMain(ccr,1,true)==false) then begin
+        ccr.CurText = "";
+        ccr.MinorCurText = "";
+      end;
+    end;
+  end else begin
+    ccr.CurncyCode = "";
+    ccr.CurText = "";
+    ccr.MinorCurText = "";
+    ccr.CurText1 = "";
+    ccr.CurText2 = "";
+    ccr.MinorCurText = "";
+    ccr.MinorCurText1 = "";
+    ccr.MinorCurText2 = "";
+  end;
+  LangNrr.LangCode = lang;
+  if (ReadFirstMain(LangNrr,1,true)==false) then begin
+    GetCurUser(Userr);
+    LangNrr.LangCode = Userr.LangCode;
+    if (ReadFirstMain(LangNrr,1,true)==false) then begin
+      LangNrr.LangCode = cyr.LangCode;
+      if (ReadFirstMain(LangNrr,1,true)==false) then begin
+        goto LValToText;
+      end;
+    end;  
+  end;
+  if (blank(lp)) then begin
+    goto LValToText;
+  end;  
+  if (t==M40Val) then begin
+    forced = false;
+    nodecs = true;
+  end;  
+  if (t==M4Val) then begin
+    forced = false;
+    nodecs = false;
+  end;  
+  if (t==M4UVal) then begin// Has nothing to do with the actual UVal
+    forced = true;
+    nodecs = false;
+  end;
+  if (LangNrr.CutDecimals<>0) then begin
+    nodecs = true;
+  end;
+  GlobalValToText(LangNrr,ccr.CurncyCode,ccr.CurGender,ccr.MinorCurGender,ccr.CurText,ccr.CurText1,ccr.CurText2,ccr.MinorCurText,ccr.MinorCurText1,ccr.MinorCurText2,lp,res,curncy,lang,forced,nodecs,0);
+LValToText:;
+  RETURN;
+END;
+
+global
+function string 5 OBSGetBillLang(record BillsVc Billsp)
+begin
+  string 5 res;
+  record BillsTypesBlock BillsTypesbl;
+  row BillsTypesBlock BillsTypesblrw;
+  integer i,rwcnt;
+  
+  BlockLoad(BillsTypesbl);
+  rwcnt = MatRowCnt(BillsTypesbl);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(BillsTypesbl,i,BillsTypesblrw);
+    if BillsTypesblrw.BillTypeCode == Billsp.BillTypeCode then begin
+      i = rwcnt;
+      res = BillsTypesblrw.BillTypeLang;
+    end;
+  end;
+
+  OBSGetBillLang = res;
+  return;
+end;
+*/
+
+global
+function boolean OBSPerFullyInPer(date smallpersd,date smallpered,date bigpersd,date bigpered)
+begin
+  boolean res;
+  date smallsd,smalled,bigsd,biged;
+  
+  BBSGetDatePeriodLimited(smallsd,smalled,smallpersd,smallpered,smallpered);
+  BBSGetDatePeriodLimited(bigsd,biged,bigpersd,bigpered,bigpered);
+  if DateInRange(smallsd,bigsd,biged) and DateInRange(smalled,bigsd,biged) then begin
+    res = true;
+  end;
+
+  OBSPerFullyInPer = res;
+  return;
+end; 

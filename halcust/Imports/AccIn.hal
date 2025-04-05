@@ -1,0 +1,43 @@
+global
+updating procedure AccIn(record RcVc RepSpec)
+BEGIN
+  record AccVc Accr, orgAccr;
+  string 255 code, comment, accType;
+
+  while (NextImportLine(false)) begin
+    code = ImportField;
+    comment = ImportField;
+    accType = ImportField;
+
+    Accr.AccNumber = code;
+
+    if(ReadFirstMain(Accr,1,true)) then begin
+      RecordCopy(orgAccr,Accr);
+      Accr.AccNumber = code;
+      Accr.Comment = comment;
+
+      switch (accType) begin
+        case "A": Accr.AccType = 0;
+        case "L": Accr.AccType = 1;
+        case "I": Accr.AccType = 3;
+        case "E": Accr.AccType = 4;
+      end;
+
+      RecordUpdate(orgAccr,Accr,true);
+    end else begin
+      RecordNew(Accr);
+      Accr.AccNumber = code;
+      Accr.Comment = comment;
+
+      switch (accType) begin
+        case "A": Accr.AccType = 0;
+        case "L": Accr.AccType = 1;
+        case "I": Accr.AccType = 3;
+        case "E": Accr.AccType = 4;
+      end;
+
+      RecordInsert(Accr,true);
+    end;
+  end;
+  RETURN;
+END;

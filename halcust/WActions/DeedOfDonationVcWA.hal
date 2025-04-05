@@ -1,0 +1,126 @@
+external function string 255 FindZoningByErfFromContract(string);
+
+// -> AUTO POPULATE CUST.NAME
+global
+function Boolean DeedOfDonationDClassDoneeCodeEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record CUVc CUr;
+  record NAContractVc COr;
+  record BuildVc ERFMasterr;
+  record DeedOfDonationVc DeedOfDonationr;
+
+  if changedf then begin
+    GetWindowRecord(wn,DeedOfDonationr);
+
+    CUr.Code = DeedOfDonationr.DoneeCode;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      DeedOfDonationr.DoneeName = CUr.Name;
+    end;
+    COr.CustCode = DeedOfDonationr.DoneeCode;
+    if (ReadFirstKey("CustCode",COr,1,true)) then begin
+      DeedOfDonationr.Zoning = COr.ZoningCode;
+      ERFMasterr.Code = COr.BuildCode;
+       //
+      if(ReadFirstMain(ERFMasterr,1,true)) then begin
+        DeedOfDonationr.BuildCode = ERFMasterr.Code;
+        DeedOfDonationr.Township = ERFMasterr.RuralTer;
+        DeedOfDonationr.Extension = ERFMasterr.ExtensionNo;
+        DeedOfDonationr.Division = ERFMasterr.DivisionNo;
+        DeedOfDonationr.Address = ERFMasterr.Address;
+        DeedOfDonationr.LandSize = ERFMasterr.LandDimensions;
+      end;
+    end;
+    PutWindowRecord(wn, DeedOfDonationr);
+  end;
+  DeedOfDonationDClassDoneeCodeEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE HoD
+global
+function Boolean DeedOfDonationDClassHoDEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record UserVc Userr;
+  record DeedOfDonationVc DeedOfDonationr;
+
+  if changedf then begin
+    GetWindowRecord(wn,DeedOfDonationr);
+
+    Userr.Code = DeedOfDonationr.HoD;
+    if(ReadFirstMain(Userr,1,true)) then begin
+      DeedOfDonationr.HoDName = Userr.Name;
+      PutWindowRecord(wn, DeedOfDonationr);
+    end;
+  end;
+  DeedOfDonationDClassHoDEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE REPRESENTATIVE
+global
+function Boolean DeedOfDonationDClassRepEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record UserVc Userr;
+  record DeedOfDonationVc DeedOfDonationr;
+
+  if changedf then begin
+    GetWindowRecord(wn,DeedOfDonationr);
+
+    Userr.Code = DeedOfDonationr.Rep;
+    if(ReadFirstMain(Userr,1,true)) then begin
+      DeedOfDonationr.Representative = Userr.Name;
+      PutWindowRecord(wn, DeedOfDonationr);
+    end;
+  end;
+  DeedOfDonationDClassRepEFAfter = res;
+  RETURN;
+END;
+
+// -> AUTO POPULATE ERF DETAILS
+global
+function Boolean DeedOfDonationDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+BEGIN
+  record BuildVc ERFMasterr;
+  record DeedOfDonationVc DeedOfDonationr;
+  Boolean res;
+  String 25 Premise;
+  Integer rwcnt,j;
+
+  if changedf then begin
+    GetWindowRecord(wn,DeedOfDonationr);
+
+    ERFMasterr.Code = DeedOfDonationr.BuildCode;
+    if(ReadFirstMain(ERFMasterr,1,true)) then begin
+      DeedOfDonationr.Township = ERFMasterr.RuralTer;
+      DeedOfDonationr.Zoning = FindZoningByErfFromContract(ERFMasterr.Code);
+      DeedOfDonationr.Extension = ERFMasterr.ExtensionNo;
+      DeedOfDonationr.Division = ERFMasterr.DivisionNo;
+      DeedOfDonationr.Address = ERFMasterr.Address;
+      DeedOfDonationr.LandSize = ERFMasterr.LandDimensions;
+      PutWindowRecord(wn,DeedOfDonationr);
+    end;
+  end;
+  DeedOfDonationDClassBuildCodeEFAfter = res;
+  RETURN;
+END;
+
+
+global
+function boolean DeedOfDonationDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin 
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "DoneeCode": res = DeedOfDonationDClassDoneeCodeEFAfter(wn,fn,rownr,changed);
+      case "HoD": res = DeedOfDonationDClassHoDEFAfter(wn,fn,rownr,changed);
+      case "Rep": res = DeedOfDonationDClassRepEFAfter(wn,fn,rownr,changed);
+      case "BuildCode": res = DeedOfDonationDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  DeedOfDonationDClassAfterEditField = res;
+return;
+end;

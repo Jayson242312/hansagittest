@@ -1,0 +1,25 @@
+// global
+// function Boolean IPDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+// BEGIN
+//   Boolean res;
+//   record IPVc IPr;
+//   record CYBlock CYRec;
+  
+//   res = inner.IPDClassActiveEditField(wn,fieldname,fn,wnst,rownr,changed);
+  
+//   res = true;
+  
+//   IPDClassActiveEditField = res;
+//   RETURN;
+// END;
+
+// global
+// updating function LongInt IPVcRecordCheck(var record IPVc IPp,record IPVc IP2p,LongInt stat,LongInt long4)
+// BEGIN
+  // LongInt res;
+
+  // res=0;
+
+  // IPVcRecordCheck=res;
+  // return;
+// end;

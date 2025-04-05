@@ -1,0 +1,114 @@
+external function longint GetIVSerNrFromFlatCode(date,integer,record NAContractVc);
+external procedure GenFlatServCacheIntSum(record NAContractVc,date,var record SMVc,longint,var string,boolean);
+external updating procedure CreateIVFromFlatServCache(record RcVc,record NAContractVc,record BuildVc,date,string,record SMVc,var integer,var longint,integer,integer,LongInt,var longint,boolean,var boolean,integer,integer,string,var longint,boolean);
+external updating procedure CreateErrorMail(array string,integer);
+external function boolean ArtCodeIVTemplateTest(record SMVc);
+external procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+external function val GetCustPrepayAmountEx(string,date,longint);
+
+global
+procedure CreateIntPercInvoicesVClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date sd,td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"CreateIntPercInvoicesRClass");
+  if nonblankdate(RepSpec.sEndDate) then begin
+    td = AddMonth(RepSpec.sEndDate,1);
+    td.day = 1;
+    RepSpec.RegDate = td;
+  end;
+  RepSpec.flags[4]=1;
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+global updating
+procedure CreateIntPercInvoicesMn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  boolean TrHs,testf,res;
+  record SMVc Cacher;
+  Row SMVc Cacherw;
+  string 200 IntFormulaStr,langcode;
+  longint IVSerNr,IVCounter,TRIVCounter,newInvNr;
+  integer i,rw,cnt;
+  val bal,latebal,exclsum,lateexclsum;
+  // array string 255 Error_array;
+  integer cnt1;
+  langcode = "LR";
+  
+  ResetLoop(NAContractr);
+  TrHs = true;
+  NAContractr.EndDate=RepSpec.sStartDate;
+  
+  While LoopBackKey("EndDate",NAContractr,1,TrHs) begin
+    if BlankDate(NAContractr.EndDate) then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if RepSpec.long1!=-1 and NAContractr.SerNr!=RepSpec.long1 then begin
+        testf = false;
+      end;
+      if NAContractr.OKFlag==0 then begin
+        testf = false;
+      end;
+      if NAContractr.MergedInvFlag==1 then begin
+        testf = false;
+      end;
+      if blank(NAContractr.FlatCode) then begin //�eit veido tikai telpu r��inus
+        testf = false;
+      end;
+      if RepSpec.flags[29]==1 and Blank(NAContractr.eMail) then begin
+        testf=false;
+      end;
+      if testf then begin
+        COGetBalance(NAContractr.SerNr,RepSpec.RegDate,bal,latebal,exclsum,lateexclsum,"");
+        bal = bal - GetCustPrepayAmountEx(NAContractr.CustCode,RepSpec.RegDate,NAContractr.SerNr);
+        if bal<=0.00 then begin
+          testf=false;
+        end;
+      end;
+      // if testf then begin
+        // cnt1 = cnt1 + 1;
+        // if cnt1>5 then begin
+          // GoTo LExit;
+        // end;
+      // end;
+      if testf then begin
+        IVSerNr = GetIVSerNrFromFlatCode(RepSpec.RegDate,RepSpec.flags[16],NAContractr);
+        if IVSerNr==-1 then begin
+          RecordNew(Cacher);
+          GenFlatServCacheIntSum(NAContractr,RepSpec.RegDate,Cacher,IVSerNr,IntFormulaStr,true);
+          if MatRowCnt(Cacher)>0 then begin
+            if ArtCodeIVTemplateTest(Cacher) then begin
+              Buildr.Code=NAContractr.BuildCode;
+              if ReadFirstMain(Buildr,1,true) then begin
+              end;
+              qupdating.CreateIVFromFlatServCache(RepSpec,NAContractr,Buildr,RepSpec.RegDate,IntFormulaStr,Cacher,cnt,IVCounter,RepSpec.flags[4],
+                                                        RepSpec.flags[10],-1,TRIVCounter,true,res,
+                                                        RepSpec.flags[16],0,langcode,newInvNr,false); //if last param. true - prepays
+            end;
+/*             if !res then begin //TODO I do not think this works correctly, error array must be passed to procedure
+              //Add to error array
+              Error_array[0] = StringToInt(Error_array[0]) + 1;
+              Error_array[StringToInt(Error_array[0])] = Flatsr.FlatCode & "," & Flatsr.CustCode & "," & Flatsr.CONr;
+            end; */
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  // if RepSpec.flags[10] != 2 then begin // autom�tiski palaistai nav vajadz�gs msgbox
+  //   MessageBox(0,USetStr(1000646) & " " & IVCounter & " " & USetStr(1000647) & " (" & USetStr(1000648) & ": " & TRIVCounter & ")");
+  // end;
+/*   if StringToInt(Error_array[0])>0 then begin
+    queued.CreateErrorMail(Error_array);
+  end; */
+LExit:;
+  return;
+end;

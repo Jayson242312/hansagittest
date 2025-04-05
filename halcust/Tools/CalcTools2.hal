@@ -1,0 +1,631 @@
+external procedure OBS_RemoveCharFromString(var string,string);
+external function val FCALCPayMS(string,string,date,date);
+external function val GetSUMSK(string,date,date,string,integer);
+external function val GetSUMSKTELPAS(string,date,date,string,integer);
+external function val GetSUMSKTELPAS2(string,date,date,string,integer);
+external function val GetSKRADPER(string,date,date,string,integer);
+external function val GetSERVSUM(string,date,date,string,integer,boolean);
+external function val GetSERVOFFDAYS(string,date,date,string,integer);
+external function val GetSERVSUMVAT(string,date,date,string,integer);
+external function val GetSUMTELPAPAK(string,date,date,string,integer);
+external function val GetSUMTELPAPAKCOEF(string,date,date,string,integer);
+external function val GetTSKAITS(string,date,date,integer);
+external function val GetTSKAITSPAK(string,date,date,string,integer);
+external function val GetSUMTELPA(string,date,date,string,integer);
+// external function val GetSUMPROMEKA(string,date,date,string,integer);
+external inner procedure TAX_turnover(date,date,string,var Val,var Val);
+external procedure TAX_turnoverTO2(date,date,string,var Val,var Val,integer);
+external procedure OBS_TAX_objturnover(string,date,date,string,var Val,var Val,string);
+external procedure TAX_objturnoverForHOTO2(string,string,date,date,string,var val,var val,string);
+// external function val GetPreviousBalance(string,date,date,string);
+external function val GetPAYEDSUM(string,date,date,string,integer);
+external function val GetBUILDACCTO(string,date,date,string,string);
+external function val GetAVRSERVPLAN(string,date,date,string,integer);
+external function val GetBUILDDEB(string,date,date,string,integer);
+external function val GetDEBTONDATE(string,date,date,string,integer);
+external function val GetDEBTONPERENDDATE(string,date,date,string,integer);
+external function val GetSUMSKEKA(string,date,date,string,integer);
+external function val GetSUMSKKOP(string,date,date,string,integer);
+external function val GetACTIVE(string,date,date);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function LongInt DateDiff(Date,Date);
+external function val GetPAKNOPAK(string,date,date,string,integer);
+external function val GetEKASKEG(string,date,date,string,integer);
+external function val GetTGSKEKA(string,date,date,string,integer);
+external function val GetDEBTONPERENDDATEWF(string,date,date,string,integer);
+// external function val GetPrevYearBal(string,date,date,string);
+external function val GetSUMSKTELPASTG(string,date,date,string,integer);
+external function val GetSUMTELPAPAKCOEFTG(string,date,date,string,integer);
+external function val GetTSKAITSPAKCOEF(string,date,date,string,integer);
+external function val GetSUMSKKOPTG(string,date,date,string,integer);
+external function val GetSKRADEXIST(string,date,date,string,integer);
+external function val GetSUMEKAPAKCOEF(string,date,date,string,integer);
+external function val GetEKASVER(string,date,date,string);
+
+global
+function string 255 GetBuildObj(string code) begin
+  string 255 res;
+  Record BuildVc Buildr;
+
+  res="";
+  Buildr.Code=code;
+  if ReadFirstMain(Buildr,1,true) then begin
+    res=Buildr.Objects;
+  end;
+
+  GetBuildObj=res;
+end;
+
+global
+function string 60 GetLocationObj(string location)
+BEGIN
+  string 60 res;
+  record LocationVc Locr;
+
+  Locr.Code = location;
+  if (ReadFirstMain(Locr,1,true)) then begin
+    res = Locr.Objects;
+  end;
+  GetLocationObj = res;
+  RETURN;
+END;
+
+function integer getposinstr(string str1,string str2,integer start,boolean skip)
+begin
+  integer res,ls;
+  integer i,s;
+
+  res=(-1);
+  s=0;
+  ls=len(str1);
+  for (i=start;i<ls;i=i+1) begin
+    if (mid(str1,i,1)=="(") then begin s=s+1;end;
+    if (mid(str1,i,1)==")") then begin s=s-1;end;
+    if (mid(str1,i,1)==str2) then begin
+      if (skip) then begin
+        res=i;
+        i=ls+2;
+      end else begin
+        if (s==0) then begin
+          res=i;
+          i=ls+2;
+        end;
+      end;
+    end;
+  end;
+  getposinstr=res;
+  return;
+end;
+
+function val FANALYSEMS(string exp,string passedbuildcode,date sd,date ed)
+begin
+  integer ls,i,delpos,delpos1,type;
+  integer typ; //0-undefined, 1 - number, 3 - function, 2 - variable
+  val res,wv,debres,credres,wv1;
+  string 1 fs,ftype,inclvat;
+  string 255 ws,wexp,tstr;
+  string 21 accstr,accstr2;
+  string 60 objstr,buildcode;
+  string 20 fname;
+  date d1,d2,led;
+  string 1 DELIM;
+
+  //type (pçc noklusçjuma 1)
+  //1 - çkas; 2 - çku grupas; 3 - telpu grupas
+  type=1;
+  buildcode=passedbuildcode;
+  if mid(passedbuildcode,1,6)==":TIPS:" then begin
+    type=StringToInt(Left(passedbuildcode,1));
+    buildcode=Right(passedbuildcode,len(passedbuildcode)-7);
+  end;
+  //LogText(0,"passedbuildcode=" & passedbuildcode & " buildcode=" & buildcode & " type=" & type);
+  DELIM=",";
+
+  fs=mid(exp,0,1);
+  typ=0;
+  ls=len(exp);
+
+  //check number
+  if (fs>="0") and (fs<="9") then begin
+    typ=1;
+//    StopAlert(exp);
+    res=StringToVal(exp,M4UVal);
+  end;
+
+  //check function
+  if (typ==0) then begin
+    //Logtext(0,"TEST_FUNCTION5 & exp=" & exp & " fs=" & fs & " typ=" & typ & " delpos=" & delpos);
+    delpos=getposinstr(exp,"(",0,true);
+    //Logtext(0,"TEST_FUNCTION8 & exp=" & exp & " fname=" & fname & " wexp=" & wexp & " delpos=" & delpos);
+    if (delpos<>(-1)) then begin
+      fname=mid(exp,0,delpos);
+      wexp=mid(exp,delpos+1,ls-delpos-2);
+      ls=len(wexp);
+    end;
+    switch (fname) begin
+      case "SUMSK": //skaitîtâju summa (SUMSK("skaitîtâja tips"))
+        typ = 3;
+        res = GetSUMSK(buildcode,sd,ed,wexp,type);
+      case "SUMSKTELPAS": //skaitîtâju summa (SUMSK("skaitîtâja tips"))
+        typ = 3;
+        res = GetSUMSKTELPAS(buildcode,sd,ed,wexp,type);
+      case "SUMSKTELPASTG":
+        typ = 3;
+        res = GetSUMSKTELPASTG(buildcode,sd,ed,wexp,type);
+      case "SUMSKTELPAS2":
+        typ = 3;
+        res = GetSUMSKTELPAS2(buildcode,sd,ed,wexp,type);
+      case "SKRADPER": // skaitîtâju radîjumu summa par periodu lielâku par vienu mçnesi
+        typ = 3;
+        res = GetSKRADPER(buildcode,sd,ed,wexp,type);
+      case "TSKAITS": //telpu skaits çkâ (TSKAITS)
+        typ = 3;
+        res = GetTSKAITS(buildcode,sd,ed,type);
+      case "SERVOFFDAYS": //dalîtâ pakalpojuma matricâ norâdîtâ summa (SERVSUM("Aprçíina formulas kods"))
+        typ = 3;
+        res = GetSERVOFFDAYS(buildcode,sd,ed,wexp,type);  
+      case "SERVSUM": //dalîtâ pakalpojuma matricâ norâdîtâ summa (SERVSUM("Aprçíina formulas kods"))
+        typ = 3;
+        res = GetSERVSUM(buildcode,sd,ed,wexp,type,false);
+      case "SERVSUM2": //dalîtâ pakalpojuma matricâ norâdîtâ summa (SERVSUM2("Aprçíina formulas kods"))
+        typ = 3;
+        res = GetSERVSUM(buildcode,sd,ed,wexp,type,true);
+      case "SERVSUMVAT": //Atgrieþ 1 - dalîtajâ pakalpjumâ ir atzîme "Summas ar PVN", 0 - ðîs atzîmes nav
+        typ = 3;
+        res = GetSERVSUMVAT(buildcode,sd,ed,wexp,type);
+      case "SUMTELPAPAK": //telpu ar noteiktu pakalpojumu lauka summa noteiktâ çkâ SUMTELPAPAK("lauks","pakalpojums")
+        typ = 3;
+        res = GetSUMTELPAPAK(buildcode,sd,ed,wexp,type);
+      case "TSKAITSPAK": //telpu skaits çkâ ar noteiktu pakalpojumu TSKAITSPAK("pakalpojums")
+        typ = 3;
+        res = GetTSKAITSPAK(buildcode,sd,ed,wexp,type);
+      case "TSKAITSPAKCOEF":
+        typ = 3;
+        res = GetTSKAITSPAKCOEF(buildcode,sd,ed,wexp,type);
+      case "SUMTELPA": //visu telpu lauka summa noteiktâ çkâ (SUMTELPA("lauks"))
+        typ = 3;
+        res = GetSUMTELPA(buildcode,sd,ed,wexp,type);
+      // case "SUMPERSATV":
+      //   typ = 3;
+      //   res = GetSUMPERSATV(buildcode,sd,ed,wexp,type);
+      // case "SUMPERSATVPAK":
+      //   typ = 3;
+      //   res = GetSUMPERSATVPAK(buildcode,sd,ed,wexp,type);
+      // case "SUMPERSATVPAKTG":
+      //   typ = 3;
+      //   res = GetSUMPERSATVPAKTG(buildcode,sd,ed,wexp,type);
+      // case "SUMPROMEKA":
+      //   typ = 3;
+      //   res = GetSUMPROMEKA(buildcode,sd,ed,wexp,type);
+      case "SUMTELPAPAKCOEF": //telpu ar noteiktu pakalpojumu lauka summa noteiktâ çkâ SUMTELPAPAKCOEF("lauks","pakalpojums")
+        typ = 3;
+        res = GetSUMTELPAPAKCOEF(buildcode,sd,ed,wexp,type);
+      case "SUMTELPAPAKCOEFTG":
+        typ = 3;
+        res = GetSUMTELPAPAKCOEFTG(buildcode,sd,ed,wexp,type);
+      case "SUMEKAPAKCOEF": //eka ar noteiktu pakalpojumu lauka summa SUMEKAPAKCOEF("lauks","pakalpojums","eka")
+        typ = 3;
+        res = GetSUMEKAPAKCOEF(buildcode,sd,ed,wexp,type);
+      case "PAYEDSUM":
+        typ = 3;
+        res = GetPAYEDSUM(buildcode,sd,ed,wexp,type);
+      case "BUILDACCTO":
+        typ = 3;
+        res = GetBUILDACCTO(buildcode,sd,ed,wexp,"");
+      case "AVRSERVPLAN":
+        typ = 3;
+        res = GetAVRSERVPLAN(buildcode,sd,ed,wexp,type);
+      case "BUILDDEB":
+        typ = 3;
+        res = GetBUILDDEB(buildcode,sd,ed,wexp,type);
+      case "DEBTONDATE":
+        typ = 3;
+        res = GetDEBTONDATE(buildcode,sd,ed,wexp,type);
+      case "DEBTONPERENDDATE":
+        typ = 3;
+        res = GetDEBTONPERENDDATE(buildcode,sd,ed,wexp,type);
+      case "DEBTONPERSTARTDATE":
+        typ = 3;
+        led=Addday(sd,-1);
+        res = GetDEBTONPERENDDATE(buildcode,sd,led,wexp,type);
+      case "DEBTONPERENDDATEWF":
+        typ = 3;
+        res = GetDEBTONPERENDDATEWF(buildcode,sd,ed,wexp,type);
+      case "DEBTONPERSTARTDATEWF":
+        typ = 3;
+        led=AddDay(sd,-1);
+        res = GetDEBTONPERENDDATEWF(buildcode,sd,led,wexp,type);
+      case "ACTIVE":
+        typ = 3;
+        res = GetACTIVE(buildcode,sd,ed);
+      case "EKASKEG":
+        typ = 3;
+        res = GetEKASKEG(buildcode,sd,ed,wexp,type);
+      case "TGSKEKA":
+        typ = 3;
+        res = GetTGSKEKA(buildcode,sd,ed,wexp,type);
+      case "MONTHCNT":
+        typ = 3;
+        res=getmonth(ed)-getmonth(sd)+1;
+      case "DAYCNT":
+        typ = 3;
+        res=Datediff(ed,sd)+1;
+      case "IF":
+        typ=3;
+        delpos=getposinstr(wexp,DELIM,0,false);
+        ws=mid(wexp,0,delpos);
+        wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        if (wv>=0) then begin
+          delpos1=getposinstr(wexp,DELIM,delpos+1,false);
+          ws=mid(wexp,delpos+1,delpos1-delpos-1);
+          wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        end else begin
+          delpos1=getposinstr(wexp,DELIM,delpos+1,false);
+          ws=right(wexp,ls-delpos1-1);
+          wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        end;
+        res=wv;
+      case "ROUND":
+        typ=3;
+        delpos=getposinstr(wexp,DELIM,0,false);
+        ws=mid(wexp,0,delpos);
+        wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        accstr=right(wexp,ls-delpos-1);
+        wv1=FCALCPayMS(accstr,passedbuildcode,sd,ed);
+        res=Round(wv,SetRoundModeD(wv1));
+      case "GetYear":
+        typ=3;
+        ws=wexp;
+        delpos=getposinstr(ws,DELIM,0,true);
+        if (delpos <> -1) then begin
+          accstr=mid(ws,0,delpos);
+        end else begin
+          accstr=mid(ws,0,len(ws));
+        end;
+        d1=stringtodate(accstr);
+        res = GetYear(d1);
+      case "SIGN":
+        typ=3;
+        ws=wexp;
+        wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        if (wv>0) then begin res=1;end;
+        if (wv==0) then begin res=0;end;
+        if (wv<0) then begin res=(-1);end;
+      case "ABS":
+        typ=3;
+        ws=wexp;
+        wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        if (wv>0) then begin res=wv;end;
+        if (wv<0) then begin res=(-wv);end;
+      case "NOT":
+        typ=3;
+        ws=wexp;
+        wv=FCALCPayMS(ws,passedbuildcode,sd,ed);
+        if (wv==0) then begin res=1;end;
+        if (wv<>0) then begin res=0;end;
+      case "TO":
+        typ=3;
+        ws=wexp;
+        delpos=getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        ftype=mid(ws,delpos+1,1);
+        TAX_turnover(sd,ed,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "TO2":
+        typ=3;
+        ws = wexp;
+        OBS_RemoveCharFromString(ws,"\"");
+        delpos=getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        ftype=mid(ws,delpos+1,1);
+        inclvat=mid(ws,delpos+3,1);
+        TAX_turnoverTO2(sd,ed,accstr,debres,credres,StringToInt(inclvat));
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "HOTO":
+        typ=3;
+        ws = wexp;
+        OBS_RemoveCharFromString(ws,"\"");
+        objstr=GetBuildObj(buildcode);
+        delpos= getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        ftype=mid(ws,delpos+1,1);
+        inclvat=mid(ws,delpos+3,1);
+        OBS_TAX_objturnover(objstr,sd,ed,accstr,debres,credres,inclvat);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "HOTO2":
+        typ=3;
+        ws = wexp;
+        OBS_RemoveCharFromString(ws,"\"");
+        objstr=GetBuildObj(buildcode);
+        delpos= getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        delpos1= getposinstr(ws,DELIM,delpos+1,true);
+        tstr=mid(ws,delpos+1,delpos1-delpos-1);
+        ftype=mid(ws,delpos1+1,1);
+        inclvat=mid(ws,delpos1+3,1);
+        TAX_objturnoverForHOTO2(objstr,tstr,sd,ed,accstr,debres,credres,inclvat);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      // case "PREVBALANCE":
+      //   typ=3;
+      //   ws=wexp;
+      //   res=GetPreviousBalance(buildcode,sd,ed,ws);
+      // case "PREVYEARBAL":
+      //   typ = 3;
+      //   ws = wexp;
+      //   res = GetPrevYearBal(buildcode,sd,ed,ws);
+      case "OTO":
+        typ=3;
+        ws = wexp;
+        OBS_RemoveCharFromString(ws,"\"");
+        delpos= getposinstr(ws,DELIM,0,true);
+        objstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d2=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        inclvat="0";
+        OBS_TAX_objturnover(objstr,sd,ed,accstr,debres,credres,inclvat);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "SUMSKEKA":
+        typ=3;
+        res=GetSUMSKEKA(buildcode,sd,ed,wexp,type);
+      case "SUMSKKOP":
+        typ=3;
+        res=GetSUMSKKOP(buildcode,sd,ed,wexp,type);
+      case "PAKNOPAK":
+        typ=3;
+        res=GetPAKNOPAK(buildcode,sd,ed,wexp,type);
+      case "SUMSKKOPTG":
+        typ=3;
+        res=GetSUMSKKOPTG(buildcode,sd,ed,wexp,type);
+      case "SKRADEXIST":
+        typ=3;
+        res=GetSKRADEXIST(buildcode,sd,ed,wexp,type);
+      case "EKASVER":
+        typ = 3;
+        res = GetEKASVER(buildcode,sd,ed,wexp);
+      /*
+      case "TO2":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr2=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        d2=stringtodate(Right(ws,ls-delpos1-1));
+        TAX_turnover2(d1,d2,accstr,accstr2,debres);
+        res=debres;
+      case "OTO2":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        objstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr2=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        d2=stringtodate(Right(ws,ls-delpos1-1));
+        TAX_objturnover2(objstr,d1,d2,accstr,accstr2,debres);
+        res=debres;
+      case "BALPOR":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        TAX_balancePOR(d1,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "BAL":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        TAX_balance(d1,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "ARDUE":
+        typ=3;
+        ws=wexp;
+        delpos=getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        d1=stringtodate(right(wexp,ls-delpos-1));
+        TAX_ardue(d1,accstr,res);
+      case "APDUE":
+        typ=3;
+        ws=wexp;
+        delpos=getposinstr(ws,DELIM,0,true);
+        accstr=mid(ws,0,delpos);
+        d1=stringtodate(right(wexp,ls-delpos-1));
+        TAX_apdue(d1,accstr,res);
+      case "OBAL":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        objstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        TAX_objbalance(objstr,d1,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "VBAL":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        objstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        TAX_vatbalance(objstr,d1,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+      case "VTO":
+        typ=3;
+        ws=wexp;
+        delpos= getposinstr(ws,DELIM,0,true);
+        objstr=mid(ws,0,delpos);
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        accstr=mid(ws,delpos+1,delpos1-delpos-1);
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d1=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        delpos=delpos1;
+        delpos1=getposinstr(ws,DELIM,delpos+1,true);
+        d2=stringtodate(mid(ws,delpos+1,delpos1-delpos-1));
+        ftype=mid(ws,delpos1+1,1);
+        TAX_vatturnover(objstr,d1,d2,accstr,debres,credres);
+        if (ftype=="D") then begin res=debres; end;
+        if (ftype=="C") then begin res=credres; end;
+        if (ftype=="A") then begin res=debres-credres; end;
+
+      case "TAX":
+        typ=3;
+        delpos=getposinstr(wexp,DELIM,0,true);
+        objstr=mid(wexp,0,delpos);
+        delpos1=getposinstr(wexp,DELIM,delpos+1,true);
+        d1=stringtodate(mid(wexp,delpos+1,delpos1-delpos-1));
+        delpos=delpos1;
+        delpos1=getposinstr(wexp,DELIM,delpos+1,true);
+        ws=mid(wexp,delpos+1,delpos1-delpos-1);
+//        STOPALERT(WS);
+//StopAlert(wv1);
+        wv1 = FCALCPay(ws);
+        delpos=delpos1;
+        delpos1=getposinstr(wexp,DELIM,delpos+1,true);
+        accstr2=Right(wexp,ls-delpos-1);
+        EPFindTaxSum(objstr,d1,wv1,debres,credres,accstr2);
+        res=credres;
+//        StopAlert(valtostring(credres,M4UVal,"",".",0));
+//        stopalert(res);
+      */
+    end;
+  end;
+
+  //not defined
+  if (typ==0) then begin
+    res=0;
+  end;
+
+  FANALYSEMS=res;
+  return;
+end;
+
+function val FEXPMS(string exp,string buildcode,date sd,date ed)
+begin
+  integer ls,i;
+  val res;
+
+  ls=len(exp);
+  if (mid(exp,0,1)=="(") and (mid(exp,ls-1,1)==")")  then begin
+    res=FCALCPayMS(mid(exp,1,ls-2),buildcode,sd,ed);
+  end else begin
+    res=FANALYSEMS(exp,buildcode,sd,ed);
+  end;
+  FEXPMS=res;
+
+end;
+
+function val FMULTDIVMS(string exp,string buildcode,date sd,date ed)
+begin
+  string 250 op1,op2;
+  string 1 sym,op;
+  integer ls,i,sch;
+  val opr1,opr2,res;
+  boolean sfound;
+
+  ls=len(exp);
+  sch=0;
+  sfound=false;
+  for (i=ls-1;i>=0;i=i-1) begin
+    sym=mid(exp,i,1);
+    if (sym=="(") then begin sch=sch+1; end;
+    if (sym==")") then begin sch=sch-1; end;
+    if ((sym=="*") or (sym=="/")) and (sch==0) then begin
+      op1=left(exp,i);
+      op2=right(exp,ls-i-1);
+      opr1=FMULTDIVMS(op1,buildcode,sd,ed);
+//      STOPALERT(OP2);
+      opr2=FEXPMS(op2,buildcode,sd,ed);
+      sfound=true;
+      if (sym=="*") then begin res=opr1*opr2; end else begin
+      if (opr2<>0) then begin res=opr1/opr2;   end else begin res=0; end;end;
+      i=-1;
+    end;
+  end;
+
+ if (sfound==false) then begin res=FEXPMS(exp,buildcode,sd,ed); end;
+ FMULTDIVMS=res;
+ return;
+end;
+
+global function val FADDSUBPayMS(string exp,string buildcode,date sd,date ed)
+begin
+  string 250 op1,op2;
+  string 1 sym,op;
+  integer ls,i,sch;
+  val opr1,opr2,res;
+  boolean sfound;
+
+  ls=len(exp);
+  sch=0;
+  sfound=false;
+  for (i=ls-1;i>=0;i=i-1) begin
+    sym=mid(exp,i,1);
+    if (sym=="(") then begin sch=sch+1; end;
+    if (sym==")") then begin sch=sch-1; end;
+    if ((sym=="+") or (sym=="-")) and (sch==0) then begin
+      //LogText(0,"op1=" & op1 & " op2=" & op2 & " opr1=" & opr1 & " opr2=" & opr2 & " exp=" & exp & " i=" & i & " ls-i-1=" & (ls-i-1));
+      op1=left(exp,i);
+      op2=right(exp,ls-i-1);
+      opr1=FADDSUBPayMS(op1,buildcode,sd,ed);
+      opr2=FMULTDIVMS(op2,buildcode,sd,ed);
+      sfound=true;
+      if (sym=="+") then begin res=opr1+opr2; end else begin res=opr1-opr2;  end;
+      i=-1;
+    end;
+  end;
+  if (sfound==false) then begin
+    res=FMULTDIVMS(exp,buildcode,sd,ed);
+  end;
+  FADDSUBPayMS=res;
+
+  return;
+end;

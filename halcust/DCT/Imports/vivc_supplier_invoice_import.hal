@@ -1,0 +1,167 @@
+//VER 6.2 100727
+
+event startup
+begin
+
+  SetLangMode(LangEnglish,"ENG",0);
+
+  Import("Supplier Open Invoices",0,VEINvIn,modDCT);
+
+  return;
+end;
+
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean PasteVendInVI(record VIVc,var string,Boolean);
+external inner procedure VIGetRate(var record VIVc);
+external inner procedure VICalcEReb(record VIVc);
+external inner function val CalculateVINettVal(record VIVc,Boolean);
+remote inner procedure VICalcVals(var record VIVc);
+external inner procedure VISumup(record VIVc,var val);
+
+//JRX - 100802
+external function Boolean ImportPriceValue(var val, Integer);
+
+//KC Supplier Invoice Import, the file format should be as follows:
+
+//1.  Supplier code
+//2.  Invoice Date
+//3.  Due Date
+//4.  Supp Invoice Number
+//5.  Payment Term
+//6.  Blank (Order Nr)
+//7.  Inv Value
+//7.  Vat
+
+
+global
+updating procedure VEINvInOutOut()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record VIVc IVr;
+  row VIVc IVrw,IVrw2;
+  string 255 inputLine;
+  string 5 payterm;
+  string 255 tstr;
+  string 5 curncycode;
+  val from,to1,to2,base1,base2,vat,ct,Totalimport;
+  Integer NoError;
+
+/*
+  while (LoopMain(IVr,1,true)) begin
+    RecordDelete(IVr);
+    StepBack(IVr);
+  end;
+*/
+  NoError = 0;
+Totalimport = 0;
+  while (TestEOF==false) begin
+
+    RecordNew(IVr);
+
+    //payterm = ImportField;
+
+    inputLine = ImportField;  //Supplier  ---------------------------2
+
+    IVr.VECode = inputLine;
+
+
+      // uncommented this section : //JRX - 100714
+     // if (PasteVendInVI(IVr,tstr,true)) then begin
+      //   VICalcEReb(IVr);
+       // VIGetRate(IVr);
+      //end;
+      //JRX - 100714  end uncomment
+      inputLine = ImportField;  //Old Supplier Code Numbers or Creditors Account Number----------------------3
+      IVr.RefStr = inputLine;
+      inputLine = ImportField;  //Old Supplier  Invoice Number----------------------3
+      IVr.InvoiceNr = inputLine;
+      inputLine = ImportField;  //Invoice Date  ----------------------3
+      IVr.InvDate = StringToDate(inputLine);
+      IVr.TransDate = StringToDate(inputLine);
+      IVr.DueDate = AddDay(IVr.InvDate,30);  //adding 30 days to Invoice Date
+
+      IVr.RcvDate = IVr.InvDate;  // receiving date
+
+      //inputLine = ImportField;   //Due Date  ----------------------3
+     // IVr.DueDate = StringToDate(inputLine); // set above
+
+      IVr.OKPersons = "TM";
+
+       inputLine = ImportField;         //Currency
+       IVr.CurncyCode = inputLine; 
+
+      //JRX - 100714  ----over riding the above check, and using ZAR for all import
+     // curncycode = "ZAR";
+
+
+     // VIGetRate(IVr);   //JRX - 100714  added
+     // CalculateVINettVal(IVr,true);  //JRX - 100714 added
+
+      GetFullCurncyRate(curncycode,IVr.TransDate,from,to1,to2,base1,base2);
+      IVr.CurncyCode = curncycode;
+      IVr.FrRate = from;
+      IVr.ToRateB1 = to1;
+      IVr.ToRateB2 = to2;
+      IVr.BaseRate1 = base1;
+      IVr.BaseRate2 = base2;
+
+
+     // inputLine = ImportField;   //Supplier Inv nr  -------------------4
+     // IVr.InvoiceNr = inputLine;
+
+      payterm = ImportField;     //Payterm  --------------------------5
+      IVr.PayDeal = payterm;
+
+
+      inputLine = ImportField;   //Order Nr  --------------------------6
+      IVr.RefStr = inputLine;
+
+      
+     //inputLine = ImportField;   //value  -----------------------------7
+  
+      IVrw.AccNumber = "80000";  //suspense OR creditor control
+      IVrw.qty = 1;
+      IVrw.Comment = "Open Invoices Take-on";
+      inputLine = ImportField;         //Invoice Value 
+       IVrw.Sum = StringToVal(inputLine,M4Val);
+      //ImportPriceValue(IVrw.Sum,M4Val);
+      Totalimport = Totalimport + IVrw.Sum;
+     //not being used VAT   //JRX - 100714 uncommented for this import
+     // inputLine = ImportField;  //Vat  -------------------------------8 //JRX - 100714
+     // vat = StringToVal(inputLine,M4Val);  //JRX - 100714
+      vat = 0;  //JRX - 100714 added
+      IVr.PayVal = IVrw.Sum + vat;  //JRX - 100714  mod
+      IVr.VATVal = vat; //JRX - 100714
+      IVrw.VATCode = "2";
+
+      IVr.TransDate = IVr.InvDate;
+
+     
+      
+     //IVrw.VATVal = StringToVal(inputLine,M4Val);
+      //IVr.CalcVATVal = StringToVal(inputLine,M4Val);
+      MatRowPut(IVr,0,IVrw);
+
+      VISumup(IVr,ct);   //JRX - 100714
+      VICalcVals(IVr);  //JRX - 100714
+
+
+      IVr.SerNr = NextSerNr("VIVc",CurrentDate,-1,false,""); //CurrentDate
+      if (IVrw.Sum <> 0) then begin
+        if (RecordStore(IVr,true)) then begin end;
+      end else begin
+        LogText(0,"Open Supplier Invoice: Import >> Sum Value Zero: " & IVr.VECode & " ");
+      end;
+   // end else begin
+    //  LogText(0,"Open Supplier Invoice: Import >> Supplier Does Not Exist: " & IVr.VECode & " ");
+    //  NoError = NoError + 1;
+    //end;
+
+
+    if (NextImportLine(true)) then begin end;
+  end;
+
+   Messagebox(0," Total Value Import: R " & Totalimport);
+
+  RETURN;
+END;

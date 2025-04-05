@@ -1,0 +1,200 @@
+external inner procedure HT2Per(Date,Date,var string);
+external inner function boolean IsNumeric(string);
+
+function boolean GetRowNrFromComment(string source,var integer rownr)
+begin
+  integer i,l;
+  boolean res;
+  string 20 tstr;
+  
+  l=Len(source);
+  for (i=l-1;i>=0;i=i-1) begin
+    if Mid(source,i,1)==" " then begin
+      tstr = Mid(source,i+1,l-i+1);
+      if IsNumeric(tstr) then begin
+        res = true;
+        rownr=StringToInt(tstr);
+      end;
+      GoTo LGetRowNrFromComment;
+    end;
+  end;
+  
+LGetRowNrFromComment:;  
+  GetRowNrFromComment = res;
+  return;
+end;
+
+function string 255 GetPayerName(record IPVc IPr,string CustCode,var string comment)
+begin
+  /*
+  record FidaIPVc FidaIPr;
+  row FidaIPVc FidaIPrw;
+  record RLinkVc RLr;
+  string 255 rlink;
+  integer cnt,rownr;
+  string 255 res;
+  
+  comment="";
+  cnt = 1;
+  while (ReadRecordLink(IPr,cnt,FidaIPr,RLr)) begin
+    if GetRowNrFromComment(RLr.Comment,rownr) then begin
+      MatRowGet(FidaIPr,rownr-1,FidaIPrw);
+      res = FidaIPrw.PayerName;
+      comment = FidaIPrw.RowComment;
+    end;
+    GoTo LGetPayerName;
+  end;
+  */
+// LGetPayerName:;  
+  // GetPayerName = res;
+  return;
+end;
+
+procedure SumupRows(var record IPVc IPr,var record IPVc tmpIPr)
+begin
+  row IPVc IPrw,tmpIPrw;
+  boolean foundf;
+  integer i,j,rwc,rwcnt;
+  
+  RecordClear(tmpIPr);
+  
+  rwc=MatRowCnt(IPr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IPr,i,IPrw);
+    foundf=false;
+    rwcnt=MatRowCnt(tmpIPr);
+    for (j=0;j<rwcnt;j=j+1) begin
+      MatRowGet(tmpIPr,j,tmpIPrw);
+      if tmpIPrw.CustCode==IPrw.CustCode and tmpIPrw.ContractNr==IPrw.ContractNr then begin
+        tmpIPrw.RecVal = tmpIPrw.RecVal + IPrw.RecVal;
+        MAtRowPut(tmpIPr,j,tmpIPrw);
+        j=rwcnt;
+        foundf=true;
+      end;
+    end;
+    if !foundf then begin
+      if IPrw.ContractNr==-1 and IPrw.InvoiceNr==-1 and rwcnt>0 then begin
+        MatRowGet(tmpIPr,0,tmpIPrw);
+        tmpIPrw.RecVal = tmpIPrw.RecVal + IPrw.RecVal;
+        MatRowPut(tmpIPr,j,tmpIPrw);
+      end else begin
+        MatRowPut(tmpIPr,MatRowCnt(tmpIPr),IPrw);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+procedure FillVecPayModes(var vector string vecPayModes)
+begin
+  record PMBlock PMRec;
+  row PMBlock pmrw;
+  integer i,rwcnt;
+  
+  BlockLoad(PMRec);
+  rwcnt = MatRowCnt(PMRec);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PMRec,i,pmrw);
+    vecPayModes[pmrw.Code]=pmrw.Comment;
+  end;
+  
+  return;
+end;
+  
+global
+procedure PayOverviewRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record IPVc IPr,tmpIPr;
+  row IPVc IPrw;
+  integer i,rwc,rw;
+  string 255 tstr,prevcust,comment;
+  boolean TrHs;
+  longint prevcontr;
+  val totval;
+  vector string 255 vecPayModes;
+  array integer colx;
+  
+  FillVecPayModes(vecPayModes);
+  
+  
+  StartReportJob(USetStr(1001613));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw, tstr, 1);
+  rw = rw + 1;
+  EndHeader;
+  
+  colx[0]=0;
+  colx[1]=80;
+  colx[2]=160;
+  colx[3]=190;
+  colx[4]=230;
+  colx[5]=270;
+  colx[6]=310;
+  colx[7]=380;
+  colx[8]=1;
+  
+  StartFormat(15);
+  OutString(colx[0],0,USetStr(1000183),false);
+  OutString(colx[1],0,USetStr(8153),false);
+  OutString(colx[2],0,USetStr(1000541),false);
+  OutString(colx[3],0,USetStr(1001603),false);
+  OutString(colx[4],0,USetStr(1000125),false);
+  OutString(colx[5],0,USetStr(12547),false);
+  OutString(colx[6],0,USetStr(1000183),false);
+  OutString(colx[7],0,USetStr(1000136),true);
+  OutString(colx[8],0,USetStr(1000526),true);
+  EndFormat;
+  Black_Divider(0,1);
+  TrHs=true;
+  IPr.TransDate=RepSpec.sStartDate;
+  While LoopKey("TransDate",IPr,1,TrHs) begin
+    if IPr.TransDate>RepSpec.sEndDate then begin
+      TrHs=false;
+    end else begin
+      SumupRows(IPr,tmpIPr);
+      
+      rwc=MatRowCnt(tmpIPr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(tmpIPr,i,IPrw);
+        StartFormat(15);
+        OutString(colx[0],0,IPrw.CustName,false);
+        OutString(colx[1],0,GetPayerName(IPr,IPrw.CustCode,comment),false);
+        OutString(colx[2],0,IPrw.ContractNr,false);
+        if IPrw.ContractNr!=-1 then begin
+          NAContractr.SerNr=IPrw.ContractNr;
+          if ReadFirstMain(NAContractr,1,true) then begin
+          end;
+          OutString(colx[3],0,NAContractr.OldCode,false); 
+        end else begin
+          OutString(colx[3],0,"",false);
+        end;
+        OutString(colx[4],0,IPr.TransDate,false);
+        OutString(colx[5],0,IPr.PayMode,false);
+        OutString(colx[6],0,vecPayModes[IPr.PayMode],false);
+        OutVal(colx[7],0,IPrw.RecVal,M4Val,true);
+        OutString(colx[8],0,comment,true);
+        totval = totval + IPrw.RecVal;
+        EndFormat;
+        Gray_Divider(0,1);
+      end;
+    end;
+  end;
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(colx[0],0,"",false);
+  OutString(colx[1],0,"",false);
+  OutString(colx[2],0,"",false);
+  OutString(colx[3],0,"",false);
+  OutString(colx[4],0,"",false);
+  OutString(colx[5],0,"",false);
+  OutString(colx[6],0,"",false);
+  OutVal(colx[7],0,totval,M4VAl,true);
+  OutString(colx[8],0,"",false);
+  EndFormat;
+  EndJob;
+
+  return;
+end;

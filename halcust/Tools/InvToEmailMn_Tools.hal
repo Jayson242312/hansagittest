@@ -1,0 +1,147 @@
+external updating function boolean DoInvToEmailMn(Record RcVc,boolean,var LongInt,var longint,var LongInt,var longint,boolean);
+
+global
+procedure GetInvToEmailTaskBlock(var record InvToEmailTaskBlock InvToEmailTaskBl)
+begin
+  
+  BlockLoad(InvToEmailTaskBl);
+
+  return;
+end;
+
+global
+procedure SetInvToEmailTask(string prevrunno)
+begin
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  string 255 param,task,taskname,taskcode;
+  time tt,ct;
+  date td;
+    
+  BlockLoad(InvToEmailTaskBl);
+  if InvToEmailTaskBl.RunFlag==1 then begin
+
+    task = "InvToEmailTask";
+    taskname = "Invoice To Email Task";
+    
+    ct=Currenttime;
+    tt=ct;
+    tt=AddSeconds(tt,InvToEmailTaskBl.Interval);
+  
+    td = CurrentDate;
+    if tt<=ct then begin
+      td = AddDay(CurrentDate,1);
+    end;
+
+    if prevrunno=="1" then begin
+      taskcode = task & "2";
+      param = "2";
+    end else begin
+      taskcode = task & "1";
+      param = "1";
+    end;
+  
+    // LogText(0,"Set InvToEmailTask at " & td & " - " & tt);
+  
+    NewTimedTask(taskcode,taskname,taskcode,param,td,tt,"","");
+  end;
+  
+  return;
+end;
+
+function date GetRepSpecDate(string source)
+begin
+  date res;
+  
+  //DD.MM.YYYY
+  res.year = StringToInt(Right(source,4));
+  res.month = StringToInt(Mid(source,3,2));
+  res.day = StringToInt(Left(source,2));
+  
+  GetRepSpecDate = res;
+  return;
+end;
+
+function boolean SetInvToEmailRepSpec(var record RcVc RepSpec,string parameters)
+begin
+  array string 255 param;
+  longint pos;
+  string 255 tstr;
+  integer i;
+  boolean res;
+  
+  //DD.MM.YYYY:DD.MM.YYYY:f1:f2:flags[5]:flags[6]:cust_cat
+  i=0;
+  While GetNextSubstring(parameters,pos,":",tstr) begin
+    param[i]=tstr;
+    i=i+1;
+  end;
+  
+  RepSpec.sStartDate=GetRepSpecDate(param[0]);
+  RepSpec.sEndDate=GetRepSpecDate(param[1]);
+  RepSpec.f1=param[2];
+  RepSpec.f2=param[3];
+  RepSpec.flags[5]=StringToInt(param[4]);
+  RepSpec.flags[6]=StringToInt(param[5]);
+  RepSpec.f3=param[6];
+  
+  if nonblankdate(RepSpec.sStartDate) and nonblankdate(RepSpec.sEndDate) then begin
+    res = true;
+  end;
+  
+  SetInvToEmailRepSpec = res;
+  return;
+end;
+
+updating
+procedure InvToEmailTask(string argument)
+begin
+  record RcVc RepSpec;
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  Boolean res;
+  LongInt looppos,temp,errcode,cnt;
+  integer sltime;
+  
+  BlockLoad(InvToEmailTaskBl);
+  if InvToEmailTaskBl.RunFlag==1 then begin
+    if SetInvToEmailRepSpec(RepSpec,InvToEmailTaskBl.Parameters) then begin
+      errcode=-1;
+      looppos=InvToEmailTaskBl.Looppos;
+      if DoInvToEmailMn(RepSpec,true,looppos,errcode,temp,cnt,false) then begin
+        BlockLoad(InvToEmailTaskBl);
+        InvToEmailTaskBl.Send=InvToEmailTaskBl.Send+1;
+        InvToEmailTaskBl.OnDate=CurrentDate;
+        InvToEmailTaskBl.OnTime=CurrentTime;
+        InvToEmailTaskBl.Looppos=looppos;
+        BlockStore(InvToEmailTaskBl);
+        SetInvToEmailTask(argument);
+      end else begin
+        BlockLoad(InvToEmailTaskBl);
+        InvToEmailTaskBl.RunFlag=0;
+        BlockStore(InvToEmailTaskBl);
+      end;
+      if errcode>0 then begin
+        LogText(0,"InvToEmailTask ERROR :: " & USetStr(errcode));
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global updating
+procedure InvToEmailTask1(string argument)
+begin
+
+  InvToEmailTask(argument);
+
+  return;
+end;
+
+global updating
+procedure InvToEmailTask2(string argument)
+begin
+
+  InvToEmailTask(argument);
+
+  return;
+end;

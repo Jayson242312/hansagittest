@@ -1,0 +1,59 @@
+global
+updating procedure TrialBalanceIn()
+begin
+  record FBVc FBr,FB2r;
+  row FBVc FBrw;
+  String 255 TransDate;
+  String 255 Item, ItemName, Debit, Credit, Objects;
+  Val DebitVal, CreditVal;
+  Integer i;
+  i = 0;
+
+  // loops through
+  while (NextImportLine(false)) begin
+    Item = ImportField; // acc
+    ItemName = ImportField; // acc.description
+    Debit = ImportField; // debit
+    Credit = ImportField; // credit
+    Objects = ImportField; // objects
+    DebitVal = StringToVal(Debit,M4Val);
+    CreditVal = StringToVal(Credit,M4Val);
+
+    // checks if trial balance has been created?
+    // if balance exists -> update balance
+    FBr.SerNr = Objects;
+    if(ReadFirstMain(FBr,1,true)) then begin
+      RecordCopy(FB2r, FBr);
+      FBrw.AccNumber = Item;
+      FBrw.Comment = ItemName;
+      FBrw.DebVal = StringToVal(Debit,M4Val);
+      FBrw.CredVal = StringToVal(Credit,M4Val);
+      FBrw.Deb2Val = StringToVal(Debit,M4Val);
+      FBrw.Cred2Val = StringToVal(Credit,M4Val);
+      FBrw.CurncyCode = "NAD";
+      MatRowPut(FB2r,i,FBrw);
+      RecordUpdate(FBr,FB2r,false);
+    end
+    // if balance does not exist -> create balance
+    else begin
+      RecordNew(FBr);
+      FBr.SerNr = Objects; // key
+      FBr.Objects = "V" & Objects;
+      FBr.TransDate = StringToDate("31/01/2025");
+      FBr.Comment = "Opening Balance - V" & Objects;
+      FBrw.AccNumber = Item;
+      FBrw.Comment = ItemName;
+      FBrw.DebVal = StringToVal(Debit,M4Val);
+      FBrw.CredVal = StringToVal(Credit,M4Val);
+      FBrw.Deb2Val = StringToVal(Debit,M4Val);
+      FBrw.Cred2Val = StringToVal(Credit,M4Val);
+      FBrw.CurncyCode = "NAD";
+      i = 0;
+      MatRowPut(FBr,i,FBrw);
+      RecordImportStore(FBr,false);
+    end;
+    i = i + 1;
+  end;
+
+return;
+end;

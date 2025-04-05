@@ -1,0 +1,26 @@
+// PRINT DEPOSIT
+global
+function Boolean PrintCLInVcDClass(Integer wn, Boolean previewf)
+begin
+  record ClInVc CLr;
+  Boolean tmpf;
+  record RcVc RepSpec;
+
+  RepSpec.repname = "DepositForm";
+
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,CLr);
+
+  if(WindowState(wn)==Rs_normal) then begin
+    if(previewf==false) then begin
+      RepSpec.f1 = CLr.SerNr;
+      tmpf = PrintDocument(RepSpec,"DepositForm",false);
+    end else begin
+      RepSpec.f1 = CLr.SerNr;
+      tmpf = PrintDocument(RepSpec,"DepositForm",true);
+    end;
+  end;
+LExitCheck:;
+  return;
+end;
+

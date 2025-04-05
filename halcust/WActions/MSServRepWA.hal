@@ -1,0 +1,128 @@
+
+function boolean MSServRepPeriod2StrEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record RcVc RepSpec;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  // td = AddMonth(RepSpec.sEndDate,1);
+  // td.day = 1;
+  td = RepSpec.sEndDate;
+  td.day = DaysInMonth(GetYear(td),GetMonth(td));
+  Repspec.RegDate = td;
+  PutWindowRecord(wn,RepSpec);
+  
+  MSServRepPeriod2StrEFAfter  = res;
+return;
+end;
+
+function boolean MSServRepPeriod2StrEFAfter2(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record RcVc RepSpec;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  // td = RepSpec.sEndDate;
+  // td.day = 1;
+  td = RepSpec.sEndDate;
+  td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+  Repspec.RegDate = td;
+  PutWindowRecord(wn,RepSpec);
+  
+  MSServRepPeriod2StrEFAfter2  = res;
+return;
+end;
+
+global
+function boolean MSFlatServInvRClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSFlatServInvRClassAfterEditField = res;
+  return;
+end;
+
+global
+function boolean MSMergegServInvRClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSMergegServInvRClassAfterEditField = res;
+  return;
+end;
+
+global
+function boolean MSBuildServInvRClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSBuildServInvRClassAfterEditField = res;
+  return;
+end;
+
+global
+function boolean MSFlatServInvVClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSFlatServInvVClassAfterEditField = res;
+  return;
+end;
+
+global
+function boolean MSMergegServInvVClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSMergegServInvVClassAfterEditField = res;
+  return;
+end;
+
+global
+function boolean MSBuildServInvVClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Period2Str": res = MSServRepPeriod2StrEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  
+  MSBuildServInvVClassAfterEditField = res;
+  return;
+end; 

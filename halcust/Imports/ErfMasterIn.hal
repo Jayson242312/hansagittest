@@ -1,0 +1,142 @@
+global
+updating procedure ErfMasterIn()
+begin
+  record BuildVc ERFMasterr;
+  record FlatsVc Premr;
+  integer i,j,f;
+  boolean testf;
+  string 255 ErfNumber,ExtNumber,LotNumber,DivisionNumber,UnitNumber,Address,Suburb,Town,Zoning;
+ 
+  i = 0;
+  while (NextImportLine(false)) begin
+    ExtNumber = ImportField;
+    LotNumber = ImportField;
+    DivisionNumber = ImportField;
+    UnitNumber = ImportField;
+    Address = ImportField;
+    Suburb = ImportField;
+    // Zoning = ImportField;
+
+    RecordNew(ERFMasterr);
+    ERFMasterr.ExtensionNo = ExtNumber;
+    ERFMasterr.LotNo = LotNumber;
+    ERFMasterr.DivisionNo = DivisionNumber;
+    ERFMasterr.UnitNo = UnitNumber;
+    ERFMasterr.Erf = ExtNumber & "-" & LotNumber & "-" & DivisionNumber & "-" & UnitNumber;
+    ERFMasterr.Code = "E" & ERFMasterr.ExtensionNo  & ERFMasterr.LotNo & StringToInt(StripNonDigits(ERFMasterr.DivisionNo)) & StringToInt(StripNonDigits(ERFMasterr.UnitNo)); //key
+    ERFMasterr.BuildNr = ERFMasterr.LotNo;
+    ERFMasterr.Address = Address;
+    ERFMasterr.Street = Address;
+    // ERFMasterr.ZoningCode = Zoning;
+    ERFMasterr.Municipality = "ZAMBEZI"; // REGION
+    ERFMasterr.City = "KATIMA_MULILO"; //TOWN
+    ERFMasterr.RuralTer = Suburb;
+    ERFMasterr.Classification = "ERF";
+    ERFMasterr.Contry = "NA";
+    if (RecordStore(ERFMasterr,false)) then begin  end;
+    RecordNew(Premr);
+    Premr.FlatCode = "P" & ERFMasterr.ExtensionNo & ERFMasterr.LotNo & StringToInt(StripNonDigits(ERFMasterr.DivisionNo)) & StringToInt(StripNonDigits(ERFMasterr.UnitNo)); // key
+    Premr.Code = "E" & ERFMasterr.ExtensionNo & ERFMasterr.LotNo & StringToInt(StripNonDigits(ERFMasterr.DivisionNo)) & StringToInt(StripNonDigits(ERFMasterr.UnitNo));
+    Premr.Address =  Address;
+    if (RecordStore(Premr,false)) then begin end;
+  end;
+  // MessageBox(0,"No of erfs imported: " & i);
+  // MessageBox(0,"No of Zonings resi: " & f );
+  return; //f
+end;
+
+
+// global
+// updating procedure ErfMasterIn()
+// begin
+//   record BuildVc ERFMasterr;
+//   String 255 StringDivisionNo, StringUnitNo;
+//   String 255 AccNum,
+//   ExtensionNo, LotNo, DivisionNo, UnitNo,
+//   Street, Surname, Name, Address1, Address2, Address3, PostCode,
+//   CellNum, IdNum, Email, MaritalStatusCode, AccStatusCode, AccType, OwnerTypeCode,
+//   NextKin, NextKinNum, NextKinRel,
+//   Notes1, IsConsolidated, Notes2, SuburbCode, Suburb,
+//   PropCatCode, MarketValue, Outstanding, LandArea, Unassigned, DateOpened, DateClosed;
+
+//   // loop through txt file
+//   while (NextImportLine(false)) begin
+//     AccNum = ImportField;
+//     ExtensionNo = ImportField;
+//     LotNo = ImportField;
+//     DivisionNo = ImportField;
+//     UnitNo = ImportField;
+//     Street = ImportField;
+//     Surname = ImportField;
+//     Name = ImportField;
+//     Address1 = ImportField; // po.box
+//     Address2 = ImportField; // suburb
+//     Address3 = ImportField; // town
+//     PostCode = ImportField;
+//     CellNum = ImportField;
+//     IdNum = ImportField;
+//     Email = ImportField;
+//     MaritalStatusCode = ImportField;
+//     AccStatusCode = ImportField;
+//     AccType = ImportField;
+//     OwnerTypeCode = ImportField;
+//     NextKin = ImportField;
+//     NextKinNum = ImportField;
+//     NextKinRel = ImportField;
+//     Notes1 = ImportField;
+//     IsConsolidated = ImportField;
+//     Notes2 = ImportField;
+//     SuburbCode = ImportField;
+//     Suburb = ImportField;
+//     PropCatCode = ImportField; // zoning
+//     MarketValue = ImportField;
+//     Outstanding = ImportField;
+//     LandArea = ImportField;
+//     Unassigned = ImportField;
+//     Unassigned = ImportField;
+//     DateOpened = ImportField;
+//     DateClosed = ImportField;
+
+//     if((blank(DivisionNo)) OR (StringToInt(DivisionNo)==0))then begin
+//       StringDivisionNo = "0000";
+//     end else begin
+//       StringDivisionNo = DivisionNo;
+//     end;
+
+//     if((blank(UnitNo)) OR ((UnitNo)==0))thStringToInten begin
+//       StringUnitNo = "0000";
+//     end else begin
+//       StringUnitNo = UnitNo;
+//     end;
+ 
+//     // if((Notes1 != "(DELETED)") and (IsConsolidated != "CONSOLIDATED")) then begin
+//       RecordNew(ERFMasterr);
+//       ERFMasterr.Code = "E" & ExtensionNo & LotNo; // key
+
+//       ERFMasterr.LotNo = LotNo;
+//       ERFMasterr.ExtensionNo = ExtensionNo;
+//       ERFMasterr.DivisionNo = StringDivisionNo;
+//       ERFMasterr.UnitNo = StringUnitNo;
+//       ERFMasterr.Erf = ExtensionNo & "-" & LotNo & "-" & StringDivisionNo & "-" & StringUnitNo;
+     
+//       ERFMasterr.BuildNr = LotNo;
+//       ERFMasterr.Street = Street;
+//       ERFMasterr.RuralTer = SuburbCode;
+//       ERFMasterr.Address = Street;
+//       ERFMasterr.ZoningCode = PropCatCode;
+//       ERFMasterr.BDate = StringToDate("01/01/2001");
+//       ERFMasterr.LandDimensions = StringToVal(LandArea,M4Val);
+//       ERFMasterr.Classification = "ERF"; //Jh Added Field for ErfMaster classification
+//       // default values
+//       ERFMasterr.Contry = "NA"; // country
+//       ERFMasterr.Municipality = "1"; // region
+//       ERFMasterr.City = "1"; // town
+
+//       RecordImportStore(ERFMasterr,false);
+//     // end;
+//   end;
+
+//   return;
+// end;
+
+

@@ -1,0 +1,183 @@
+external inner procedure IVVc_PastePayDeal(var record IVVc,string,string);
+external function string 255 GetTagObjectForItem (string); //based off currentuser and vote
+
+
+global
+updating procedure CustInvoiceAndPaymentIn()
+begin
+  record IVVc IVr,IV2r;
+  record CUVc CUr;
+  row IVVc IVrw;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record INVc INr; 
+  record NAContractVc COr;
+  boolean isInvoice,isReceipt;
+  String 255 PrevAccNo, PrevInvNo, AccNum, TariffCode, TariffDesc, Amount, InvDate, objects, Unassigned;
+  Val valAmount, sumTotal;
+  Integer rwcnt,rwcnt2;
+
+  PrevAccNo = "0";
+  PrevInvNo = "0";
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    Unassigned = ImportField;
+    TariffCode = ImportField;
+    TariffDesc = ImportField;
+    Amount = ImportField;
+    InvDate = ImportField;
+
+    // isInvoice = false;
+    // isReceipt = false;
+
+    // if (TariffDesc == "PAYMENT") then begin
+    //   isReceipt = true;
+    // end else begin
+    //   isInvoice = true;
+    // end;
+
+    // if isInvoice then begin
+    // -> outstanding payments
+    valAmount = StringToVal(Amount,M4Val);
+      
+      // update invoice
+      IVr.SerNr = PrevInvNo;
+      if((PrevAccNo == AccNum) AND (ReadFirstMain(IVr,1,true))) then begin
+        RecordCopy(IV2r, IVr);
+          rwcnt = MatRowCnt(IV2r);
+          // row
+          IVrw.ArtCode = TariffCode; // item
+          IVrw.Price = valAmount; // unit price
+          IVrw.Sum = valAmount; // sum
+          IVrw.Quant = 1; // quantity
+          IVrw.VATCode = "0"; // exempt vat
+          
+          INr.Code = TariffCode;
+          if (ReadFirstMain(INr,1,true)) then begin
+            IVrw.Objects = GetTagObjectForItem (INr.Code); //o
+            IVrw.Spec = INr.Name;
+            IVrw.VATCode = "0"; // exempt vat
+          end;  
+
+          MatRowPut(IV2r,rwcnt,IVrw);
+          sumTotal = IV2r.Sum1 + valAmount;
+          IV2r.Sum1 = sumTotal; // sub total
+          IV2r.Sum4 = sumTotal; // total
+        RecordUpdate(IVr,IV2r,false);
+
+      // create new invoice
+      end else begin
+        RecordNew(IVr);
+          IVr.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+          rwcnt = MatRowCnt(IVr);
+          PrevInvNo = IVr.SerNr; // set invoice.no
+          PrevAccNo = AccNum; // set acc.no
+          IVr.CustCode = AccNum;
+          IVr.Contract = AccNum; // contract
+          IVr.Objects = CurrentUser & "X," & "VINV";  // hardcoded default invoice object
+          // find contract
+          COr.SerNr = AccNum;
+          if(ReadFirstMain(COr,1,true)) then begin // 
+            IVr.FlatCode = COr.FlatCode; // premise
+            IVr.BuildCode = COr.BuildCode; // erf
+            IVr.Addr0 = COr.CustName; // person name
+          end;
+          IVr.InvDate = StringToDate(InvDate);
+          IVr.TransDate = StringToDate(InvDate);
+          IVr.ServiceDelDate = StringToDate(InvDate);
+          IVr.PayDeal = "";
+
+          if(InvDate == "15/03/2025") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/02/2025") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/01/2025") then begin
+           IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/12/2024") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/11/2024") then begin
+           IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/10/2024") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/09/2024") then begin
+           IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/08/2024") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+          if(InvDate == "15/06/2024") then begin
+            IVVc_PastePayDeal(IVr,"","");
+          end;
+
+          IVr.ARAcc = "72000";
+          IVr.Location = "HQ";
+          IVr.CurncyCode = "NAD";
+          IVr.GPProc = 0; // gp %
+          IVr.TotGP = 0; // total gp
+          IVr.TAX2Sum = 0; // tax sum
+          IVr.TAX1Sum = 0; // extra tax sum
+          IVr.Sum3 = 0; // vat
+          IVr.BaseSum4 = 0; // base
+          IVr.Sum1 = valAmount; // sub total
+          IVr.Sum4 = valAmount; // total
+          IVr.PayDeal = "30";
+          IVr.InvComment = "Monthly Billings";
+          // row data
+          IVrw.ArtCode = TariffCode; // item
+          INr.Code = TariffCode;
+          if (ReadFirstMain(INr,1,true)) then begin
+            IVrw.Objects = GetTagObjectForItem (INr.Code); //based off currentuser and vote; 
+            IVrw.Spec = INr.Name; // description
+            IVrw.VATCode = "0";
+          end else begin
+            
+          end;
+          IVrw.Price = valAmount; // unit price
+          IVrw.Sum = valAmount; // sum
+          IVrw.Quant = 1; // quantity /
+          MatRowPut(IVr,rwcnt,IVrw);
+        RecordStore(IVr,false);
+      end;
+    // end;
+
+    // if isReceipt then begin
+    //   RecordNew(IPr);
+    //   valAmount = StringToVal(Amount,M4Val);
+    //   IPr.SerNr = NextSerNr("IPVc",CurrentDate,-1,false,"");
+    //   IPr.PayMode = "C";
+    //   IPr.TransDate = InvDate;
+    //   IPr.CurPayVal = valAmount;
+    //   IPr.PayCurCode = "NAD";
+    //   rwcnt2 = MatRowCnt(IPr);
+    //   IPrw.CustCode = AccNum; // item
+    //   IPrw.RecCurncy = "NAD"; // item
+      
+
+    //   COr.SerNr = AccNum;
+    //   if(ReadFirstMain(COr,1,true)) then begin
+    //     IPrw.CustName = COr.CustName;
+    //     IPrw.CustAddress = COr.FlatAddress; // erf
+    //   end;
+
+    //   IPrw.ContractNr = AccNum;
+    //   IPrw.RecVal = valAmount; 
+    //   IPrw.PayDate = InvDate; 
+    //   IPrw.InvVal = valAmount;
+    //   IPrw.BankVal = valAmount; 
+    //   IPrw.BankCurncy = "NAD"; 
+    //   IPrw.Objects = objects;
+    //   MatRowPut(IPr,rwcnt2,IPrw);
+    //   RecordStore(IPr,true);
+    // end;
+  end;
+
+  return;
+end;
+
+

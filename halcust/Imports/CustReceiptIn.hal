@@ -1,0 +1,111 @@
+global
+updating procedure CustReceiptIn()
+begin
+  record CUVc CUr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record NAContractVc COr;
+  String 255 AccNum, TariffCode, TariffDesc, Amount, InvDate;
+  Val valAmount;
+  Integer rwcnt2;
+
+
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    TariffCode = ImportField;
+    TariffDesc = ImportField;
+    Amount = ImportField;
+    InvDate = ImportField;
+    // -> payment
+    valAmount = StringToVal(Amount,M4Val);
+    
+    RecordNew(IPr);
+    IPr.SerNr = NextSerNr("IPVc",CurrentDate,-1,false,"");
+    IPr.PayMode = "01";
+    IPr.TransDate = InvDate;
+    IPr.CurPayVal = valAmount;
+    IPr.PayCurCode = "NAD";
+    rwcnt2 = MatRowCnt(IPr);
+    IPrw.CustCode = AccNum; // item
+    IPrw.RecCurncy = "NAD"; // item
+    
+    COr.SerNr = AccNum;
+    if(ReadFirstMain(COr,1,true)) then begin
+      IPrw.CustName = COr.CustName;
+      IPrw.CustAddress = COr.FlatAddress; // erf
+    end;
+
+    // IPrw.ContractNr = AccNum;
+    IPrw.RecVal = valAmount; 
+    IPrw.PayDate = InvDate; 
+    IPrw.InvVal = valAmount;
+    IPrw.BankVal = valAmount; 
+    IPrw.BankCurncy = "NAD"; 
+    IPrw.Objects = "SJX,VINV";
+    MatRowPut(IPr,rwcnt2,IPrw);
+    RecordStore(IPr,true);
+  end;
+
+  return;
+end;
+
+
+
+// global
+// updating procedure CustReceiptIn()
+// begin
+//   record IPVc IPr;
+//   row IPVc IPrw;
+//   record IVVc IVr;
+//   String 255 SetInvNo, Index, AccNum, TariffCode, TariffDesc, Amount, AccHolder, InvDate;
+//   Val valAmount;
+//   Boolean testf;
+//   SetInvNo = "0";
+
+//   while (NextImportLine(false)) begin
+//     Index = ImportField;
+//     AccNum = ImportField;
+//     TariffCode = ImportField;
+//     TariffDesc = ImportField;
+//     Amount = ImportField;
+//     AccHolder = ImportField;
+//     InvDate = ImportField;
+//     valAmount = StringToVal(Amount,M4Val);
+
+//     if (valAmount<0) then begin
+//       valAmount = valAmount * (-1);
+
+//       RecordNew(IPr);
+//         IPr.SerNr = NextSerNr("IPVc",CurrentDate,-1,false,"");
+//         IPr.TransDate = StringToDate(InvDate);
+//         IPr.RecNumber = "Payment - " & AccHolder; // reference
+//         IPr.PayMode = "C";
+//         IPr.Comment = "Cash";
+//         IPr.ARonTR = 1; // cust info in N/L transaction
+//         IPr.INPayPriority = 1; // priority
+//         IPr.IPBookVAT = 0; // okay payment vat
+//         IPr.CurPayVal = valAmount; // deposited
+//         IPr.PayCurCode = "NAD"; // currency
+//         // IPr.OKFlag = 1; // okay flag
+//         // IPrw.InvoiceNr = blankval;
+//         // IPrw.RecCurncy = "NAD"; // currency
+//         IPrw.ContractNr = AccNum;
+//         IPrw.CustCode = AccNum;
+//         IPrw.CustName = AccHolder;
+//         IPrw.rkRecNumber = "L0" & TariffCode; // item.no
+//         if(TariffDesc=="15% ADMINISTRATION FEES DEBT COLLECTION") then begin
+//           IPrw.rkRecNumber = "L00000" & TariffCode; // item
+//         end;
+//         IPrw.ArtCodeName = TariffDesc; // item name
+//         IPrw.RecVal = valAmount; // received value
+//         IPrw.InvVal = valAmount; // invoice value
+//         IPrw.PayDate = StringToDate(InvDate);
+//         IPrw.BankCurncy = "NAD";
+//         IPrw.BankVal = valAmount; // bank amount
+//         MatRowPut(IPr,0,IPrw);
+//       RecordImportStore(IPr,true);
+//     end;
+//   end;
+
+//   return;
+// end;

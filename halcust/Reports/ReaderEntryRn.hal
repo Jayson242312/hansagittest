@@ -1,0 +1,58 @@
+
+global
+procedure MeterEntryRn(record RcVc RepSpec)
+begin
+  record ReaderEntryVc Readerr;
+  row ReaderEntryVc Readerrw;
+  record BuildVc ERFMasterr;
+  String 255 tstr;
+  Integer wn,rw,rwcnt,i;
+
+
+  Readerr.SerNr = RepSpec.long1;
+  if ReadFirstMain(Readerr,1,true) then begin
+    rwcnt = MatRowCnt(Readerr);
+
+    StartReportJob("Meter Entry Report");
+    StartFormat(15);
+      OutString(140,0,"Book-No: " & Readerr.BookNo,false);
+      // OutString(250,0,"Start Date: " & Readerr.PeriodStartDate,false);
+      // OutString(390,0,"End Date: " & Readerr.PeriodEndDate,false);
+    EndHeader;
+    EndFormat;
+
+    StartFormat(15);
+    	OutString(0,0,"MeterID",false); 
+      OutString(40,0,"Book.No",false);
+      OutString(80,0,"Alpha No.",false);
+      OutString(120,0,"Meter No.",false);
+      OutString(200,0,"Erf.No",false);
+      OutString(240,0,"Cust.No",false);
+      OutString(280,0,"Address",false);
+      OutString(360,0,"Previous Reading",false);
+      OutString(420,0,"New Reading",false);
+      OutString(500,0,"Reading Date",false);
+    EndFormat;
+    
+    Gray_Divider(0,1);
+
+    for(i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(Readerr,i,Readerrw);
+      StartFormat(15);
+        OutString(0,"DblFlatCountersVc",Readerrw.MeterID,false);
+        OutString(40,0,Readerr.BookNo,false);
+        OutString(80,0,Readerrw.AlphaNo,false);
+        OutString(120,0,Readerrw.MeterNo,false);
+        OutString(200,0,Readerrw.SeqNo,false);
+        OutString(240,"DblCUVc",Readerrw.CustCode,false);
+        OutString(280,0,Readerrw.Address,false);
+        OutString(360,0,Readerrw.PrevReading,false);
+        OutString(420,0,Readerrw.CurrReading,false);
+        OutDate(500,0,Readerrw.ReadingDate,false);
+      EndFormat;
+    end;
+    EndJob;
+
+    return;
+  end;
+end;

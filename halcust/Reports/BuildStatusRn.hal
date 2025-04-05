@@ -1,0 +1,64 @@
+external procedure HTBuild(string,var string);
+
+global
+procedure BuildStatusRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  boolean TrHs;
+  string 255 tstr,custcode,custname,contract;
+  integer rw,i;
+  vector boolean vecUsedBuild;
+  array string 20 arrBuild;
+  date codate;
+  
+  StartReportJob(USetStr(1001553));
+    rw=1;
+    HTBuild(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+  EndHeader;  
+  
+  SetRepCol(2,10);
+  SetRepCol(3,80);
+  SetRepCol(4,250);
+  SetRepCol(5,350);
+  
+  StartFormat(15);
+    OutString(2,0,USetStr(1000122),false);
+    OutString(3,0,USetStr(1000183),false);
+    OutString(4,0,USetStr(1000984),false);
+    OutString(5,0,USetStr(1000985),false);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  TrHs=true;
+  NAContractr.BuildCode=RepSpec.f1;
+  while LoopKey("BuildCode",NAContractr,1,TrHs) begin
+    if NAContractr.BuildCode!=RepSpec.f1 then begin
+      TrHs=false;
+    end else begin
+      if NAContractr.OKFlag!=0 then begin
+        StartFormat(15);
+          OutString(2,"DblNAContractVc",NAContractr.SerNr,false);
+          OutString(3,0,NAContractr.CustName,false);
+          OutString(4,0,NAContractr.StartDate,false);
+          OutString(5,0,NAContractr.EndDate,false);
+        EndFormat;
+      end;
+      if !vecUsedBuild[NAContractr.BuildCode] then begin
+        vecUsedBuild[NAContractr.BuildCode]=true;
+        arrBuild[arrBuild.length]=NAContractr.BuildCode;
+      end;
+    end;
+  end;
+  
+  Black_Divider(0,1);
+  StartFormat(15);
+  EndFormat;
+  StartFormat(15);
+  EndFormat;
+  EndJob;
+  
+            
+  
+  return;
+end;

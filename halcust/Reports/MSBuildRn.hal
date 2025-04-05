@@ -1,0 +1,56 @@
+external procedure HTMSClass(string,var string);
+
+global
+procedure MSBuildRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  boolean TrHs,testf;
+  string 255 tstr;
+  integer cnt,rw;
+
+  // if !nonblank(RepSpec.f1) then begin
+    // GoTo LMSBuildRn;
+  // end;
+
+  StartReportJob(USetStr(1000745));
+  rw=1;
+  if nonblank(RepSpec.f1) then begin
+    HTMSClass(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+    rw=rw+1;
+  end;
+  EndHeader;
+  StartFormat(15);
+  OutString(0,0,USetStr(1000399),false); //Ēkas kods
+  OutString(50,0,USetStr(1000400),false); //Adrese
+  OutString(180,0,USetStr(1000402),false); //Nosaukums
+  OutString(380,0,USetStr(1000716),false); //Klasifikācija
+  EndFormat;
+  Black_Divider(0,1);
+  TrHs=true;
+  while (LoopMain(Buildr,1,TrHs)) begin
+    testf=true;
+    if (nonblank(RepSpec.f1) and !SetInSet(RepSpec.f1,Buildr.Classification)) then begin
+      testf=false;
+    end;
+    if testf begin
+      StartFormat(15);
+      OutString(0,"dblBuildVc",Buildr.Code,false);
+      OutString(50,0,Buildr.Address,false);
+      OutString(180,0,Buildr.BuildName,false);
+      OutString(380,0,Buildr.Classification,false);
+      EndFormat;
+      cnt=cnt+1;
+    end;
+  end;
+  if cnt>0 then begin
+    Black_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,USetStr(1000446) & ": " & cnt,false);
+    EndFormat;
+  end;
+  
+  EndJob;
+LMSBuildRn:;  
+  return;
+end;

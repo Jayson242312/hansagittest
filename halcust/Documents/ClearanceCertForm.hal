@@ -1,0 +1,179 @@
+external outer function val GetFlatFieldValue(string,string,date,date);
+
+
+global
+procedure DoClearanceCertForm(record RcVc RepSpec)
+begin
+  record ClearanceCertVc ClearanceCertr;
+  record NAContractVc COr;
+  row NAContractVc COrw;
+  record CUVc CUr;
+  record BuildVc ERFMasterr;
+  record FlatFieldVc FlatFieldr;//premises fields
+  row FlatFieldVc FlatFieldrw;
+  //
+  record ARInstallHistVc ARInstallHistr;
+  val InstTotal;
+  //
+  val ImpVal;
+  Integer rwcnt,i;
+  date cd,prevDate;
+  //
+  record IVVc IVr;
+  row IVVc IVrw;
+  // =====================================
+  record NotepadVc Noter;
+  record RLinkVc RLr;
+  Integer notenr;
+  boolean testf;
+  notenr = 1;
+  // ====================================
+
+  StartPrintDialogGroup;
+  //
+  ClearanceCertr.SerNr = RepSpec.f1;
+  if (ReadFirstMain(ClearanceCertr,1,true)) then begin
+    //
+    if(OpenForm("CCERT")==true) then begin
+      //
+      if(FIELDINFORM("CCERT_CONTRACTNR")) then begin
+        OUTFORMFIELD("CCERT_CONTRACTNR",ClearanceCertr.ContractNr);
+      end;
+      if(FIELDINFORM("CCERT_CUSTNAME")) then begin
+        OUTFORMFIELD("CCERT_CUSTNAME",ClearanceCertr.CustName);
+      end;
+       if(FIELDINFORM("CCERT_USER")) then begin
+        OUTFORMFIELD("CCERT_USER",ClearanceCertr.User);
+      end;
+      // payments
+      if(FIELDINFORM("CCERT_BALANCEDUE")) then begin
+        OUTFORMFIELD("CCERT_BALANCEDUE",ClearanceCertr.PrevOutstanding);
+      end;
+      if(FIELDINFORM("CCERT_OUTINTEREST")) then begin
+        OUTFORMFIELD("CCERT_OUTINTEREST",ClearanceCertr.InterestOnOutstanding);
+      end;
+      if(FIELDINFORM("CCERT_APPFEES")) then begin
+        OUTFORMFIELD("CCERT_APPFEES",ClearanceCertr.AppFees);
+      end;
+      if(FIELDINFORM("CCERT_SERVTOTAL")) then begin
+        OUTFORMFIELD("CCERT_SERVTOTAL",ClearanceCertr.ServiceFees);
+      end;
+      if(FIELDINFORM("CCERT_CLEARAMOUNT")) then begin
+        OUTFORMFIELD("CCERT_CLEARAMOUNT",(ClearanceCertr.OnAccPayment + (ClearanceCertr.TotalOpen - ClearanceCertr.PrevOutstanding)));
+      end;
+      if(FIELDINFORM("CCERT_UNPOSTEDRECPT")) then begin
+        OUTFORMFIELD("CCERT_UNPOSTEDRECPT",ClearanceCertr.OnAccPayment);
+      end;
+      if(FIELDINFORM("CCERT_PAYABLE")) then begin
+        OUTFORMFIELD("CCERT_PAYABLE",ClearanceCertr.TotalOpen);
+      end;
+      // dates
+      if(FIELDINFORM("CCERT_DATEREQUESTED")) then begin
+        OUTFORMFIELD("CCERT_DATEREQUESTED",ClearanceCertr.PeriodStartDate);
+      end;
+      if(FIELDINFORM("CCERT_DATEEXPIRED")) then begin
+        OUTFORMFIELD("CCERT_DATEEXPIRED",ClearanceCertr.PeriodEndDate);
+      end;
+      if(FIELDINFORM("CCERT_DATE")) then begin
+        OUTFORMFIELD("CCERT_DATE",CurrentDate);
+      end;
+
+      // -> from customer contract
+      COr.SerNr = ClearanceCertr.ContractNr;
+      if (ReadFirstMain(COr,1,true)) then begin
+
+      // ================= link.manager ======================
+        while (ReadRecordLink(ClearanceCertr,notenr,IVr,RLr)) begin
+          MatRowGet(IVr, 0, IVrw);
+          MatRowGet(COr, 0, COrw);
+          if(IVrw.ArtCode == COrw.ArtCode) then begin
+            rwcnt = MatRowCnt(IVr);
+            for (i=0; i<rwcnt; i=i+1) begin
+              MatRowGet(IVr,i,IVrw);
+              //
+              if(nonblank(IVrw.Sum) AND IVrw.Sum>0) then begin
+                if(FIELDINFORM("CCERT_SERVITEM")) then begin
+                  OUTFORMFIELD("CCERT_SERVITEM",IVrw.Spec);
+                end;
+                if(FIELDINFORM("CCERT_SERVFEES")) then begin
+                  OUTFORMFIELD("CCERT_SERVFEES",IVrw.Sum);
+                end;
+              //
+              ENDFORMROW;
+              end;
+            end;
+          end;
+          notenr = notenr + 1;
+        end;
+        // ================= link.manager ======================
+      end;
+
+      // -> from customer contact
+      CUr.Code = ClearanceCertr.CustCode;
+      if (ReadFirstMain(CUr,1,true)) then begin
+        // vat.reg
+        if(FIELDINFORM("CCERT_REG")) then begin
+          OUTFORMFIELD("CCERT_REG",CUr.VATNr);
+        end;
+        // adress
+        if(FIELDINFORM("CCERT_ADDRESS0")) then begin
+          OUTFORMFIELD("CCERT_ADDRESS0",CUr.InvAddr0);
+        end;
+        if(FIELDINFORM("CCERT_ADDRESS1")) then begin
+          OUTFORMFIELD("CCERT_ADDRESS1",CUr.InvAddr1);
+        end;
+        if(FIELDINFORM("CCERT_ADDRESS2")) then begin
+          OUTFORMFIELD("CCERT_ADDRESS2",CUr.InvAddr2);
+        end;
+        if(FIELDINFORM("CCERT_ADDRESS4")) then begin
+          OUTFORMFIELD("CCERT_ADDRESS4",CUr.InvAddr4);
+        end;
+        // cell n fax
+        if(FIELDINFORM("CCERT_PHONE")) then begin
+          OUTFORMFIELD("CCERT_PHONE","Tel: " & CUr.Phone);
+        end;
+        if(FIELDINFORM("CCERT_FAX")) then begin
+          OUTFORMFIELD("CCERT_FAX","Tel: " & CUr.Fax);
+        end;
+      end;
+
+      // -> from erf
+      ERFMasterr.Code = ClearanceCertr.BuildCode;
+      if (ReadFirstMain(ERFMasterr,1,true)) then begin
+        //
+        if(FIELDINFORM("CCERT_ERFNO")) then begin
+          OUTFORMFIELD("CCERT_ERFNO",ERFMasterr.Erf);
+        end;
+        if(FIELDINFORM("CCERT_LANDAREA")) then begin
+          OUTFORMFIELD("CCERT_LANDAREA",ERFMasterr.LandDimensions);
+        end;
+        if(FIELDINFORM("CCERT_STREET")) then begin
+          OUTFORMFIELD("CCERT_STREET",ERFMasterr.Address);
+        end;
+      end;
+
+      ImpVal = GetFlatFieldValue(ClearanceCertr.FlatCode,"TRIMP",currentDate,currentDate) * 12;
+      if(nonblank(ImpVal)) then begin
+        if(FIELDINFORM("CCERT_MARKETVAL")) then begin
+          OUTFORMFIELD("CCERT_MARKETVAL",ImpVal);
+        end;
+      end;
+
+      // -> from installments
+      InstTotal = 0;
+      while (LoopMain(ARInstallHistr, 1, true)) begin
+        if (ARInstallHistr.CustCode == ClearanceCertr.CustCode) then begin
+          InstTotal = InstTotal + ARInstallHistr.BookRVal;
+        end;
+      end;
+      if(FIELDINFORM("CCERT_OUTARRANGEMENT")) then begin
+        OUTFORMFIELD("CCERT_OUTARRANGEMENT",InstTotal);
+      end;
+
+      CloseForm;
+      EndPrintDialogGroup;
+    end;
+  end;
+
+  return;
+end;

@@ -1,0 +1,753 @@
+
+function boolean LocalCountResExists(longint counterid,date startdate,date enddate,var longint countresnr,
+                                      boolean ignoreAvgf,var val endval,var string typestr) begin
+  boolean res,wloop,testf;
+  record CountResVc CountResr;
+
+  countresnr = -1;
+  endval = 0;
+  typestr = "";
+
+  CountResr.StartDate = startdate;
+  CountResr.FlatCounterSerNr = counterid;
+  CountResr.EndDate = enddate;
+  wloop = true;
+  While LoopKey("FlatCountStartEndDate",CountResr,3,wloop) begin
+    if CountResr.FlatCounterSerNr != counterid or CountResr.StartDate != startdate or CountResr.EndDate != enddate then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if ignoreAvgf and CountResr.AverageFlag==1 then begin
+        testf = false;
+      end;
+      if testf then begin
+        res = true;
+        countresnr = CountResr.SerNr;
+        endval = CountResr.EndVal;
+        if CountResr.AverageFlag==1 then begin
+          typestr = typestr & "v";
+        end;
+        if CountResr.WebFlag==1 then begin
+          typestr = typestr & "w";
+        end;
+        if CountResr.ControlFlag==1 then begin
+          typestr = typestr & "k";
+        end;
+        if CountResr.RepFlag==1 then begin
+          typestr = typestr & "a";
+        end;
+        if CountResr.VacFlag==1 then begin
+          typestr = typestr & "p";
+        end;
+        if CountResr.PhoneFlag==1 then begin
+          typestr = typestr & "t";
+        end;
+        wloop = false;
+      end;
+    end;
+  end;
+
+  LocalCountResExists = res;
+  return;
+end;
+
+global
+function boolean CountResExists(longint counterid,date startdate,date enddate,boolean ignoreAvgf) begin
+  longint countresnr;
+  val t;
+  string 10 tstr;
+
+  CountResExists = LocalCountResExists(counterid,startdate,enddate,countresnr,ignoreAvgf,t,tstr);
+  return;
+end;
+
+global
+function boolean BBSCountResExists(longint counterid,date startdate,date enddate,var longint countresnr,var val endval,var string typestr)
+begin
+
+  BBSCountResExists = LocalCountResExists(counterid,startdate,enddate,countresnr,false,endval,typestr);
+  return;
+end;
+
+global
+function boolean CountResWithTypeForFlatExists(string flatcode,string counttype,date startdate,date enddate,boolean ignoreAvgf) begin
+  Record CountResVc CountResr;
+  boolean wloop,res,testf;
+
+  CountResr.FlatCode = flatcode;
+  CountResr.CounterType = counttype;
+  CountResr.StartDate = startdate;
+  CountResr.EndDate = enddate;
+  wloop = true;
+  While LoopKey("FCCTSDED",CountResr,4,wloop) begin
+    if CountResr.FlatCode != flatcode or CountResr.CounterType != counttype or CountResr.StartDate != startdate or CountResr.EndDate != enddate then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if ignoreAvgf and CountResr.AverageFlag==1 then begin
+        testf = false;
+      end;
+      if testf then begin
+        //Logtext(0,"Flat=" & flatcode & " coutner=" & CountResr.FlatCounterSerNr & " " & ignoreAvgf & " " & CountResr.AverageFlag);
+        res = true;
+        wloop = false;
+      end;
+    end;
+  end;
+
+  CountResWithTypeForFlatExists = res;
+  return;
+end;
+/*
+global
+function val GetLastCounterResBeforeDate(longint counterid,date ondate,val initamount)
+begin
+  val res;
+  boolean wloop;
+  record CountResVc CountResr;
+
+  CountResr.FlatCounterSerNr = counterid;
+  CountResr.EndDate = AddDay(ondate,-1);
+  wloop = true;
+  while LoopBackKey("FlatCounterSerNrDate",CountResr,2,wloop) begin
+    if CountResr.FlatCounterSerNr != counterid then begin
+      wloop = false;
+    end else begin
+      if CountResr.EndDate <= ondate then begin
+        wloop = false;
+        res = CountResr.Amount;
+      end;
+    end;
+  end;
+  if res == BlankVal() then begin
+    res = initamount;
+  end;
+
+  GetLastCounterResBeforeDate = res;
+  return;
+end;
+
+global
+function val BBSGetCounterResOnDate(longint counterid,date ondate,val initamount)
+begin
+  val res;
+  boolean wloop;
+  record CountResVc CountResr;
+
+  CountResr.FlatCounterSerNr = counterid;
+  CountResr.EndDate = AddDay(ondate,-1);
+  wloop = true;
+  while LoopBackKey("FlatCounterSerNrDate",CountResr,2,wloop) begin
+    if CountResr.FlatCounterSerNr != counterid then begin
+      wloop = false;
+    end else begin
+      if CountResr.EndDate <= ondate then begin
+        wloop = false;
+        res = CountResr.EndVal;
+      end;
+    end;
+  end;
+  if res == BlankVal() then begin
+    res = initamount;
+  end;
+
+  BBSGetCounterResOnDate = res;
+  return;
+end;
+
+global
+function boolean GetCountResInPeriod(longint flatcountser,date sd,date ed,var val t,var val t2) begin
+  Record CountResVc CountResr;
+  boolean res,wloop;
+
+  t = blankval;
+  t2 = blankval;
+
+  CountResr.FlatCounterSerNr = flatcountser;
+  CountResr.StartDate = sd;
+  wloop = true;
+  While LoopKey("FlatCounterSerNr",CountResr,2,wloop) begin
+    if CountResr.FlatCounterSerNr != flatcountser or CountResr.StartDate > ed then begin
+      wloop = false;
+    end else begin
+      if DateInRange(CountResr.EndDate,sd,ed) then begin
+        res = true;
+        t = t + CountResr.InvAmount;
+        t2 = t2 + CountResr.Amount;
+      end;
+    end;
+  end;
+
+  GetCountResInPeriod = res;
+return;
+end;
+
+global
+function val GetFlatCountResInPeriod(string flatcode,string type,date sd,date ed) begin
+  val res;
+  Record CountResVc CountResr;
+  boolean wloop;
+
+  CountResr.FlatCode = flatcode;
+  CountResr.CounterType = type;
+  CountResr.StartDate = sd;
+  wloop = true;
+  While LoopKey("FCCTSDED",CountResr,3,wloop) begin
+    if CountResr.FlatCode != flatcode or CountResr.StartDate > ed or CountResr.CounterType != type then begin
+      wloop = false;
+    end else begin
+      if DateInRange(CountResr.EndDate,sd,ed) then begin
+        res = res + CountResr.InvAmount;
+      end;
+    end;
+  end;
+
+  GetFlatCountResInPeriod = res;
+  return;
+end;
+
+/*
+  RecType - 1 noz�m� �ku skait�t�ju r�d�jumi
+  RecType - 2 noz�m� �ku grupu skait�t�ju r�d�jumi
+  RecType - 3 noz�m� telpu grupu skait�t�ju r�d�jumi
+*/
+/*
+global
+function boolean GetCountResInPeriodWithType(string code,string countertype,integer RecType,date sd,date ed,var val t,var val t2) begin
+  Record CountResVc CountResr;
+  boolean res,wloop;
+
+  t = blankval;
+  t2 = blankval;
+
+  CountResr.CounterType = countertype;
+  CountResr.CodeField = code;
+  CountResr.RecType = RecType;
+  CountResr.StartDate = sd;
+  wloop = true;
+  While LoopKey("CodeIndexCTypeSD",CountResr,4,wloop) begin
+    if CountResr.CounterType != countertype then begin
+      wloop = false;
+    end;
+    if CountResr.CodeField != code then begin
+      wloop = false;
+    end;
+    if CountResr.RecType != RecType then begin
+      wloop = false;
+    end;
+    if CountResr.StartDate>ed then begin
+      wloop = false;
+    end;
+    if wloop then begin
+      if DateInRange(CountResr.EndDate,sd,ed) and blank(CountResr.FlatCode) then begin
+        res = true;
+        t = t + CountResr.InvAmount;
+        t2 = t2 + CountResr.Amount;
+      end;
+    end;
+  end;
+
+  GetCountResInPeriodWithType = res;
+return;
+end;
+
+global
+function val GetNoItemCounterQty(date d1,date d2,longint sernr)
+begin
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr;
+  record FlatsVc Flatsr;
+  record CounterTypeVc CTyper;
+  row CounterTypeVc CTyperw;
+  val res,qty;
+  integer rwc,rw;
+  boolean trhs,testf;
+  val totamount,countamount;
+
+  CountResr.StartDate = d1;
+  CountResr.FlatCounterSerNr = sernr;
+  trhs = true;
+  while LoopKey("FlatCounterSerNr",CountResr,2,trhs) begin
+    if CountResr.FlatCounterSerNr != sernr or CountResr.StartDate>d2 then begin
+      Trhs = false;
+    end else begin
+      if (CountResr.StartDate < d2) then begin
+        totamount = CountResr.Amount - CountResr.DaughterAmount;
+      end;
+    end;
+  end;
+
+  GetNoItemCounterQty = totamount;
+return;
+end;
+
+global
+function integer GetNextCountRes(var record CountResVc CountResr,var record FlatcountersVc FlatCounterr)
+begin
+  record CountResVc CountResr2;
+  integer res;
+  date ed;
+  boolean TrHs;
+  ed = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + DaysInMonth(GetYear(CountResr.StartDate),GetMonth(CountResr.StartDate)));
+  FlatCounterr.SerNr=CountResr.FlatCounterSerNr;
+  if (ReadFirstMain(FlatCounterr,1,true)) then begin
+    if (ed > CountResr.EndDate) then begin //finding the same count result in the same month
+      CountResr2.StartDate = CountResr.EndDate;
+      CountResr2.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+      trhs = true;
+      While (LoopKey("FlatCounterSerNr",CountResr2,2,Trhs)) begin
+        if (CountResr2.StartDate > ed) or CountResr2.FlatCounterSerNr != CountResr.FlatCounterSerNr then begin
+          trhs = false;
+        end else begin
+          if (CountResr2.StartDate > CountResr.EndDate) then begin
+            RecordCopy(CountResr,CountResr2);
+            res= 2;
+            trhs = false;
+          end;
+        end;
+      end;
+    end;
+    if (res <> 2) then begin
+      Trhs = true;
+      res = -1;
+      while LoopKey("EnterSortOrder:" & FlatCounterr.Code,FlatCounterr,4,TrHs) begin //finding next counter in row
+        if (FlatCounterr.FlatCode <> CountResr.FlatCode) then begin
+          Trhs = false;
+        end else begin
+          if (FlatCounterr.SerNr <> CountResr.FlatCounterSerNr) then begin
+            res = 1;
+            trhs = false;
+          end;
+        end;
+      end;
+      if (res==-1) then begin //finding first counter in counter row
+        Flatcounterr.FlatCode = CountResr.FlatCode;
+        if (ReadFirstKey("EnterSortOrder",FlatCounterr,1,true)) then begin
+          res = 1;
+        end;
+      end;
+      if (res==1) then begin //searching for count res for found counter
+        CountResr.FlatCounterSerNr = Flatcounterr.SerNr;
+        CountResr.StartDate = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + 1);
+        if (ReadFirstKey("FlatCounterSerNr",CountResr,2,true)) then begin
+          res = 2;
+        end;
+      end;
+    end;
+  end;
+
+  GetNextCountRes= res;
+  return;
+end;
+*/
+global
+function integer GetPrevCountRes(var record CountResVc CountResr,var record FlatcountersVc FlatCounterr)
+begin
+  record CountResVc CountResr2;
+  integer res;
+  date ed;
+  boolean TrHs;
+
+  ed = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + DaysInMonth(GetYear(CountResr.StartDate),GetMonth(CountResr.StartDate)));
+  FlatCounterr.SerNr = CountResr.FlatCounterSerNr;
+  if (ReadFirstMain(FlatCounterr,1,true)) then begin
+    if (ed > CountResr.EndDate) then begin //finding the same count result in the same month
+      CountResr2.StartDate = CountResr.EndDate;
+      CountResr2.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+      trhs = true;
+      while (loopBackKey("FlatCounterSerNr",CountResr2,2,Trhs)) begin
+        if (CountResr2.StartDate > ed) or CountResr2.FlatCounterSerNr != CountResr.FlatCounterSerNr then begin
+          trhs = false;
+        end else begin
+          if (CountResr2.StartDate > CountResr.EndDate) then begin
+            RecordCopy(CountResr,CountResr2);
+            res= 2;
+            trhs = false;
+          end;
+        end;
+      end;
+    end;
+    if (res <> 2) then begin
+      Trhs = true;
+      res = -1;
+      while LoopBackKey("EnterSortOrder:" & FlatCounterr.Code,FlatCounterr,4,TrHs) begin //finding next counter in row
+        if (FlatCounterr.FlatCode <> CountResr.FlatCode) then begin
+          Trhs = false;
+        end else begin
+          if (FlatCounterr.SerNr <> CountResr.FlatCounterSerNr) then begin
+            res = 1;
+            trhs = false;
+          end;
+        end;
+      end;
+      if (res==-1) then begin //finding first counter in counter row
+        Flatcounterr.FlatCode = CountResr.FlatCode;
+        if (readLastkey("EnterSortOrder",FlatCounterr,1,true)) then begin
+          res = 1;
+        end;
+      end;
+      if (res==1) then begin //searching for count res for found counter
+        CountResr.FlatCounterSerNr = Flatcounterr.SerNr;
+        CountResr.StartDate = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + 1);
+        if (readLastKey("FlatCounterSerNr",CountResr,2,true)) then begin
+          res = 2;
+        end;
+      end;
+    end;
+  end;
+
+  GetPrevCountRes = res;
+  return;
+end;
+
+global
+function string 20 OBSGetCountResFlags(longint countressernr)
+begin
+  string 20 res;
+  record CountResVc CountResr;
+
+  CountResr.SerNr = countressernr;
+  if ReadFirstMain(CountResr,1,true) then begin
+    if CountResr.AverageFlag == 1 then begin
+      res = res & Chr(118);
+    end;
+    if CountResr.WebFlag == 1 then begin
+      res = res & Chr(119);
+    end;
+    if CountResr.ControlFlag == 1 then begin
+      res = res & Chr(107);
+    end;
+    if CountResr.RepFlag == 1 then begin
+      res = res & Chr(97);
+    end;
+    if CountResr.VacFlag == 1 then begin
+      res = res & Chr(112);
+    end;
+    if (CountResr.PhoneFlag == 1) then begin
+      res = res & Chr(116);
+    end;
+  end;
+
+  OBSGetCountResFlags = res;
+  return;
+end;
+
+// global
+// function boolean LastCounterResTypes(longint FlatCounterSerNr,date beforedate,integer cnt,integer type) begin
+//   boolean res,wloop,testf;
+//   Record CountResVc CountResr;
+//   integer lCnt;
+
+//   res = false;
+//   CountResr.FlatCounterSerNr = FlatCounterSerNr;
+//   CountResr.EndDate = beforedate;
+//   wloop = true;
+//   While LoopBackKey("FlatCounterSerNrDate",CountResr,2,wloop) begin
+//     if CountResr.FlatCounterSerNr != FlatCounterSerNr then begin
+//       wloop = false;
+//     end else begin
+//       if CountResr.EndDate<beforedate then begin
+//         Switch (type) begin
+//           Case 0: //AverageFlag
+//             if CountResr.AverageFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//           Case 1: //WebFlag
+//             if CountResr.WebFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//           Case 2: //ControlFlag
+//             if CountResr.ControlFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//           Case 3: //RepFlag
+//             if CountResr.RepFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//           Case 4: //VacFlag
+//             if CountResr.VacFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//           Case 5: //PhoneFlag
+//             if CountResr.PhoneFlag!=1 then begin
+//               res = false;
+//               GoTo LLastCounterResTypes;
+//             end;
+//         end;
+//         lcnt = lcnt + 1;
+//         if lcnt==cnt then begin
+//           res = true;
+//           GoTo LLastCounterResTypes;
+//         end;
+//       end;
+//     end;
+//   end;
+
+// LLastCounterResTypes:;
+//   LastCounterResTypes = res;
+// return;
+// end;
+
+/* iepreikseja skaititaju radijuma atrasana */
+global
+function boolean PrevCounterRes(record CountResVc CountResr,var record CountResVc prevResr)
+begin
+  boolean res,testf;
+  date td;
+
+  td = Countresr.StartDate;
+  if blankdate(td) then begin
+    td = CurrentDate;
+  end;
+
+  PrevResr.EndDate = td;
+  PrevResr.FlatCounterSerNr = Countresr.FlatCounterSerNr;
+  PrevResr.CountResType = Countresr.CountResType;
+  prevResr.SerNr = -1;
+  ResetLoop(PrevResr);
+  res = true;
+  testf = loopBackKey("CountResType",PrevResr,3,true);
+  if (PrevResr.FlatCounterSerNr!=CountResr.FlatCounterSerNr or
+      PrevResr.SerNr==-1 or
+      PrevResr.EndDate>=td or
+      PrevResr.CountResType!=Countresr.CountResType) then begin
+    res = false;
+  end;
+
+  prevCounterRes = res;
+  return;
+end;
+
+global
+function boolean GetCountResRecInPeriod(longint countersernr,string type,date sd,date ed,var record CountResVc CountResr) begin
+  boolean wloop,res,testf;
+
+  CountResr.FlatCounterSerNr = countersernr;
+  CountResr.EndDate=ed;
+  ResetLoop(CountResr);
+  wloop = true;
+  While LoopBackKey("FlatCounterSerNrDate",CountResr,2,wloop) begin
+    if CountResr.FlatCounterSerNr != countersernr then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      // if type!=CountResr.CountResType then begin
+      //   testf = false;   //JH this was commented out as it was not allowing readings to be put in the 
+      // end;
+      if !DateInRange(CountResr.EndDate,sd,ed) then begin
+        testf = false;
+      end;
+      if !DateInRange(CountResr.StartDate,sd,ed) then begin
+        testf = false;
+      end;
+      if testf then begin
+        res = true;
+        GoTo LGetCountResRecInPeriod;
+      end;
+    end;
+  end;
+
+LGetCountResRecInPeriod:;
+  GetCountResRecInPeriod = res;
+
+  return;
+end;
+
+global
+function boolean GetLastCounterResData(Record FlatCountersVc FlatCountersr,var val prevcr,var date prevdate,date sd,string crestype)
+begin
+  boolean res,wloop,testf,foundf;
+  record CountResVc CountResr,prevCountResr;
+
+  res=true;
+  CountResr.StartDate = AddYear(CurrentDate,10);
+  CountResr.CountResType = crestype;
+  CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  foundf = PrevCounterRes(CountResr,prevCountResr);
+  if !foundf then begin
+    prevCountResr.EndDate=FlatCountersr.InstallDate;
+    if (blank(crestype) and (FlatCountersr.CounterType!="KS5")) or crestype=="MWH" then begin
+      prevCountResr.EndVal=FlatCountersr.InitAmount;
+    end else begin
+      prevCountResr.EndVal=FlatCountersr.InitAmount2;
+    end;
+  end;
+
+  if foundf and prevCountResr.StartDate > sd then begin
+    res = false;
+  end;
+
+  prevcr   = prevCountResr.EndVal;
+  prevdate = prevCountResr.EndDate;
+
+  GetLastCounterResData=res;
+  return;
+end;
+
+global
+procedure GetCountResPeriodReport(var date sd,var date ed)
+begin
+  record NApsSetBlock NApsSetBl;
+
+  BlockLoad(NApsSetBl);
+  sd=NApsSetBl.DefaultCountResSDate;
+  ed=NApsSetBl.DefaultCountResEDate;
+
+  // date td;
+
+  // td=CurrentDate;
+  // if td.day>=20 then begin
+    // sd=td;
+    // sd.day=1;
+    // ed=sd;
+    // ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  // end else begin
+    // td=AddMonth(td,-1);
+    // sd=td;
+    // sd.day=1;
+    // ed=sd;
+    // ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  // end;
+
+  return;
+end;
+
+global
+procedure GetCountResPeriod(var date sd,var date ed)
+begin
+  date td;
+
+  td=CurrentDate;
+
+  if td.day>15 then begin //JH from 20 to 15
+    sd=td;
+    sd.day=1;
+    ed=sd;
+    ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  end else begin
+    td=AddMonth(td,-1);
+    sd=td;
+    sd.day=1;
+    ed=sd;
+    ed.day=DaysInMonth(GetYear(ed),GetMonth(ed));
+  end;
+  return;
+end;
+
+global
+procedure CRGetFlatCountRec(record CountResVc CountResr,var record FlatCountersVc FlatCountersr)
+begin
+  record FlatCountersVc tmpFlatCountersr;
+
+  RecordClear(FlatCountersr);
+  if CountResr.FlatCounterSerNr!=-1 then begin
+    tmpFlatCountersr.SerNr=CountResr.FlatCounterSerNr;
+    if ReadFirstMain(tmpFlatCountersr,1,true) then begin
+      RecordCopy(FlatCountersr,tmpFlatCountersr);
+    end;
+  end;
+
+  return;
+end;
+
+global
+function string 255 GetFileNameFromFullPath(string fullname)
+begin
+  integer i,l;
+  string 255 res,char;
+
+  l = Len(fullname);
+  for(i=(l-1);i>=0;i=i-1)begin
+    char = Mid(fullname,i,1);
+    if char == chr(47) or char == chr(92) then begin
+      i = -1;
+    end else begin
+      res = char & res;
+    end;
+  end;
+
+  GetFileNameFromFullPath = res;
+  return;
+end;
+
+global
+function boolean CountResAllreadyExsist(record CountResVc CountResr,longint ssernr)
+begin
+  record CountResVc tCountResr;
+  boolean res,TrHs,testf;
+  string 255 CodeField;
+
+  res = false;
+  // TrHs=true;
+  // tCountResr.CounterNo=CountResr.CounterNo;
+  // tCountResr.FlatCode=CountResr.FlatCode;
+  // tCountResr.StartDate=CountResr.StartDate;
+  // While LoopKey("CounterNo",tCountResr,3,TrHs) begin
+    // if tCountResr.CounterNo!=CountResr.CounterNo or
+      // tCountResr.FlatCode!=CountResr.FlatCode or
+      // tCountResr.StartDate!=CountResr.StartDate then begin
+      // TrHs=false;
+    // end else begin
+      // if (tCountResr.FileName==CountResr.FileName) and (tCountResr.CounterType==CountResr.CounterType) then begin
+        // testf=true;
+        // if ssernr!=-1 then begin
+          // if tCountResr.SerNr>=ssernr then begin
+            // testf=false;
+          // end;
+        // end;
+        // if testf then begin
+          // res=true;
+          // TrHs=false;
+        // end;
+      // end;
+    // end;
+  // end;
+
+  CodeField = "";
+  if nonblank(CountResr.BuildCode) then begin
+    CodeField = CountResr.BuildCode;
+  end;
+  if nonblank(CountResr.FlatGroupCode) then begin
+    CodeField = CountResr.FlatGroupCode;
+  end;
+  if nonblank(CountResr.BuildGroupCode) then begin
+    CodeField = CountResr.BuildGroupCode;
+  end;
+
+  TrHs=true;
+  tCountResr.CodeField=CodeField;
+  tCountResr.CounterType=CountResr.CounterType;
+  tCountResr.StartDate=CountResr.StartDate;
+  while LoopKey("CodeTypeSd",tCountResr,3,TrHs) begin
+    if (tCountResr.CodeField!=CodeField) or (tCountResr.CounterType!=CountResr.CounterType) or (tCountResr.StartDate!=CountResr.StartDate) then begin
+      TrHs = false;
+    end else begin
+      testf=true;
+      if nonblank(CountResr.FlatCode) and tCountResr.FlatCode!=CountResr.FlatCode then begin
+        testf=false;
+      end;
+      if testf then begin
+        if (tCountResr.FileName==CountResr.FileName) and (tCountResr.CounterType==CountResr.CounterType) then begin
+          testf=true;
+          if ssernr!=-1 then begin
+            if tCountResr.SerNr>=ssernr then begin
+              testf=false;
+            end;
+          end;
+          if testf then begin
+            res=true;
+            TrHs=false;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  CountResAllreadyExsist = res;
+  return;
+end;

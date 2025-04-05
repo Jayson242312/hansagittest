@@ -1,0 +1,1423 @@
+external inner function LongInt DateDiff(Date,Date);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner procedure GetARAcc(string,var string);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner procedure ChangeSVIPRecCur(row IPVc,Date,val);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function roundmode GetTotalRoundMode(record RoundBlock);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external function val GetArtCodeUnpayedSumFromIV(Record IVVc,string,var boolean);
+external function boolean FindINPayPriorityRecFromIPVc(Record IPVc,var Record INPayPriorityVc,var longint);
+external procedure LoadINPayPriorityInVectors(Record INPayPriorityVc,var array string,var vector boolean);
+
+external inner procedure GetOnAccBalance(record RcVc,string,string,Boolean,Integer,var val,var val,var val,var val,var val,var val,var val,record SMVc,
+                   Array string,Array val,var Integer); // jh     // to put on accountbal
+ external inner function string 60 AddObjectToObjectList(string,string); //JH
+procedure MinM4Val(val a,val b,var val c)
+BEGIN
+  if (a<b) then begin
+    c = a;
+  end else begin
+    c = b;
+  end;
+  RETURN;
+END;
+
+//the line is unique, when rowtype invoicenr and recnumber is same
+//added RecNumber and aRecNumber
+function Integer InvInAS(Array Integer aRowType,Array LongInt aInvNr,Array string aCustCode,Array string aARAcc,Array string aInvCurncy,
+                         Array val aval,Array val ainvoutstand,Array val afrrate,Array val atorate1,Array val atorate2,
+                         Array val abaserate1,Array val abaserate2,Integer rows,Integer rowtype,LongInt Inv,array string aRecNumber,string RecNumber,
+                         longint contractnr,array longint aContracts)
+BEGIN
+  Integer i;
+  Integer res;
+
+  res = -1;
+  for(i=0;i<rows;i=i+1) begin
+    if (aRowType[i]==rowtype) and (aInvNr[i]==Inv) and (aRecNumber[i]==RecNumber) and (aContracts[i]==contractnr) then begin
+      res = i;
+      goto LInvInAS;
+    end;
+  end;
+LInvInAS:;
+  InvInAS = res;
+  RETURN;
+END;
+
+//added RecNumber
+procedure AddToAS(Array Integer AMpRowType,Array LongInt AMpInvNr,Array string AMpCustCode,Array Integer AMpInvType,Array string AMpInvCurncy,
+                  Array val AMpRVal,Array val AMpfrrate,Array val AMptorate1,Array val AMptorate2,Array val AMpbaserate1,
+                  Array val AMpbaserate2,Array string AMpARAcc,Array integer AMpRowSourceType,Integer AMcount,
+                  Array Integer aRowType,Array LongInt aInvNr,Array string aCustCode,Array string aARAcc,Array string aInvCurncy,
+                  Array val aval,Array val ainvoutstand,Array val afrrate,Array val atorate1,Array val atorate2,
+                  Array val abaserate1,Array val abaserate2,Integer asrwcnt,
+                  var val PV,Boolean interest,var Integer AScount,array string aRecNumber,array string AMpRecNumber,date dp,
+                  record INPayPriorityVc INPayPriorityr,array longint AMpContracts,array longint aContracts,string itemignorelist,string itemlist)
+BEGIN
+  Record IVVc IVr;
+  val t,r,totpayed,totunpayed,usedsum,tt,t2;
+  Integer line,usedlines,linetouse,lastlinechanged;
+  Integer i,rwcnt,rwc,ii,size,size2,temp;
+  boolean DontAddAnymore,found,existsf; //OBS
+  row INPayPriorityVc INPayPriorityrw; //OBS
+  array integer RowsToChange,RowsWithUnpayedArtCodes; //OBS
+
+  rwcnt = asrwcnt;
+  line = -1;
+  for (i=0;i<AMcount;i=i+1) begin
+    if (interest) then begin
+      if (AMpInvType[i]!=4) then begin goto L20AddToAS; end;
+    end;
+    if nonblank(itemignorelist) then begin
+      if SetInSet(AMpRecNumber[i],itemignorelist) then begin
+        goto L20AddToAS;
+      end;
+    end;
+    if nonblank(itemlist) then begin
+      if !SetInSet(AMpRecNumber[i],itemlist) then begin
+        goto L20AddToAS;
+      end;
+    end;
+    if (PV!=0) then begin
+      line = InvInAS(aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,rwcnt,AMpRowType[i],AMpInvNr[i],aRecNumber,AMpRecNumber[i],AMpContracts[i],aContracts);
+      if (line==-1) then begin
+        line = rwcnt;
+        aRowType[line] = AMpRowType[line];
+        aInvNr[line] = AMpInvNr[i];
+        aContracts[line] = AMpContracts[i];
+        aCustCode[line] = "";
+        aARAcc[line] = "";
+        aCustCode[line] = AMpCustCode[i];
+        aInvCurncy[line] = AMpInvCurncy[i];
+        aRecNumber[line] = AMpRecNumber[i];
+        aval[line] = blankval;
+        ainvoutstand[line] = AMpRVal[i];
+        afrrate[line] = AMpfrrate[i];
+        atorate1[line] = AMptorate1[i];
+        atorate2[line] = AMptorate2[i];
+        abaserate1[line] = AMpbaserate1[i];
+        abaserate2[line] = AMpbaserate2[i];
+        aARAcc[line] = AMpARAcc[i];
+        rwcnt = rwcnt + 1;
+      end;
+      r = AMpRVal[i] - aval[line];
+      MinM4Val(PV,r,t);
+      if PV<r then begin
+        t = PV;
+        DontAddAnymore = true;
+      end else begin
+        t = r;
+      end;
+      aval[line] = aval[line] + t;
+      //t = MulRateToBase1(AMpInvCurncy[i],AMpRVal[i],AMpfrrate[i],AMptorate1[i],AMptorate2[i],AMpbaserate1[i],AMpbaserate2[i],DefaultCurRoundOff);
+      t = MulRateToBase1(AMpInvCurncy[i], r, AMpfrrate[i], AMptorate1[i],
+                       AMptorate2[i], AMpbaserate1[i], AMpbaserate2[i],
+                       DefaultCurRoundOff);
+
+      
+      if (t>=0) then begin //already done for negative amounts in ARCheckDistPay
+        PV = PV - t;
+      end;
+      if DontAddAnymore then begin
+        i = AMcount;
+      end;
+L20AddToAS:;
+    end;
+  end;
+  //Adding and Replacing rows for Pro rata payment division
+  // LogText(0,"PV=" & PV & " rwcnt=" & rwcnt & " invnr=" & aInvNr[0] & " AMcount=" & AMcount);
+  // for(i=0;i<rwcnt;i=i+1)begin
+   // LogText(0,"aInvNr=" & aInvNr[i] & " aRecNumber=" & aRecNumber[i] & " aval=" & aval[i] & " i=" & i & " int=" & interest & " AMpRowSourceType=" & AMpRowSourceType[i]);
+  // end;
+  if INPayPriorityr.INPayType==1 and !interest and blank(itemlist) then begin
+    //getting payed amount without priority artcodes
+    totpayed=0; totunpayed=0; size=0; size2=0;
+    // rwc=MatRowCnt(INPayPriorityr);
+    for(i=(rwcnt-1);i>=0;i=i-1)begin
+      //LogText(0,"aInvNr[rwcnt-1]=" & aInvNr[rwcnt-1] & " aInvNr[i]=" & aInvNr[i]);
+      if aInvNr[rwcnt-1]==aInvNr[i] then begin
+        // found=false;
+        // for(ii=0;ii<rwc;ii=ii+1)begin
+          // MatRowGet(INPayPriorityr,ii,INPayPriorityrw);
+          // if INPayPriorityrw.Type==0 and INPayPriorityrw.ArtCode==aRecNumber[i] then begin
+            // found=true;
+            // ii=rwc;
+          // end;
+        // end;
+        // if !found then begin
+        if AMpRowSourceType[i]==3 then begin /* Artikuli bez nor�d�tas priorit�tes */
+          if aval[i]>0 then begin
+            RowsToChange[size]=i;
+            size=size+1;
+            totpayed=totpayed+aval[i];
+          end;
+        end;
+      end;
+    end;
+    // for(i=0;i<size;i=i+1)begin
+     // LogText(0,"RowsToChange=" & RowsToChange[i]);
+    // end;
+    //getting total unpayed sum for invoice without priority artcodes
+    for(i=0;i<AMcount;i=i+1)begin
+      if aInvNr[rwcnt-1]==AMpInvNr[i] then begin
+        // found=false;
+        // for(ii=0;ii<rwc;ii=ii+1)begin
+          // MatRowGet(INPayPriorityr,ii,INPayPriorityrw);
+          // if INPayPriorityrw.Type==0 and INPayPriorityrw.ArtCode==AMpRecNumber[i] then begin
+            // found=true;
+            // ii=rwc;
+          // end;
+        // end;
+        // if !found then begin
+        if AMpRowSourceType[i]==3 then begin /* Artikuli bez nor�d�tas priorit�tes */
+          //Logtext(0,"Unpayed increase=" & AMpRVal[i]);
+          if AMpRVal[i]>0 then begin
+            RowsWithUnpayedArtCodes[size2]=i;
+            size2=size2+1;
+            totunpayed=totunpayed+AMpRVal[i];
+          end;
+        end;
+      end;
+    end;
+    //for(i=0;i<size2;i=i+1)begin
+    //  LogText(0,"RowsWithUnpayedArtCodes=" & RowsWithUnpayedArtCodes[i]);
+    //end;
+
+    //if no rows needs to be changed then all rows pays for Type==0 and there is no need to divide pro rata
+    if size>0 then begin
+      //replacing existing lines with new
+      usedlines=0; linetouse=-1; lastlinechanged=-1;
+      for(i=0;i<size;i=i+1)begin
+        line=RowsToChange[i];
+        if line>lastlinechanged then begin
+          lastlinechanged=line;
+        end;
+        linetouse=RowsWithUnpayedArtCodes[usedlines];
+        usedlines=usedlines+1;
+        aRowType[line] = AMpRowType[linetouse];
+        aInvNr[line] = AMpInvNr[linetouse];
+        aContracts[line] = AMpContracts[linetouse];
+        aCustCode[line] = "";
+        aARAcc[line] = "";
+        aCustCode[line] = AMpCustCode[linetouse];
+        aInvCurncy[line] = AMpInvCurncy[linetouse];
+        aRecNumber[line] = AMpRecNumber[linetouse];
+        aval[line] = blankval;
+        ainvoutstand[line] = AMpRVal[linetouse];
+        afrrate[line] = AMpfrrate[linetouse];
+        atorate1[line] = AMptorate1[linetouse];
+        atorate2[line] = AMptorate2[linetouse];
+        abaserate1[line] = AMpbaserate1[linetouse];
+        abaserate2[line] = AMpbaserate2[linetouse];
+        aARAcc[line] = AMpARAcc[linetouse];
+        r=(AMpRVal[linetouse]/totunpayed)*totpayed;
+        r=MulRateToBase1(AMpInvCurncy[linetouse],r,AMpfrrate[linetouse],AMptorate1[linetouse],AMptorate2[linetouse],AMpbaserate1[linetouse],AMpbaserate2[linetouse],DefaultCurRoundOff);
+        aval[line]=Round(r,SetRoundModeD(2));
+        usedsum=usedsum+aval[line];
+      end;
+      //adding new lines
+      line=lastlinechanged;
+      while usedlines<size2 begin
+        line=line+1;
+        linetouse=RowsWithUnpayedArtCodes[usedlines];
+        usedlines=usedlines+1;
+        aRowType[line] = AMpRowType[linetouse];
+        aInvNr[line] = AMpInvNr[linetouse];
+        aContracts[line] = AMpContracts[linetouse];
+        aCustCode[line] = "";
+        aARAcc[line] = "";
+        aCustCode[line] = AMpCustCode[linetouse];
+        aInvCurncy[line] = AMpInvCurncy[linetouse];
+        aRecNumber[line] = AMpRecNumber[linetouse];
+        aval[line] = blankval;
+        ainvoutstand[line] = AMpRVal[linetouse];
+        afrrate[line] = AMpfrrate[linetouse];
+        atorate1[line] = AMptorate1[linetouse];
+        atorate2[line] = AMptorate2[linetouse];
+        abaserate1[line] = AMpbaserate1[linetouse];
+        abaserate2[line] = AMpbaserate2[linetouse];
+        aARAcc[line] = AMpARAcc[linetouse];
+        r=(AMpRVal[linetouse]/totunpayed)*totpayed;
+        r=MulRateToBase1(AMpInvCurncy[linetouse],r,AMpfrrate[linetouse],AMptorate1[linetouse],AMptorate2[linetouse],AMpbaserate1[linetouse],AMpbaserate2[linetouse],DefaultCurRoundOff);
+        aval[line]=Round(r,SetRoundModeD(2));
+        usedsum=usedsum+aval[line];
+        rwcnt=rwcnt+1;
+      end;
+      //for(i=0;i<rwcnt;i=i+1)begin
+      //  LogText(0,"aInvNr=" & aInvNr[i] & " aRecNumber=" & aRecNumber[i] & " aval=" & aval[i] & " i=" & i & " int=" & interest);
+      //end;
+      //LogText(0,"usedsum=" & usedsum & " totpayed=" & totpayed & " rwcnt=" & rwcnt & " line=" & line);
+      if usedsum!=totpayed then begin
+        for(i=line;i>=0;i=i-1)begin
+          tt=(totpayed-usedsum);
+          if tt>0 then Begin //if diff is bigger than 0 then it can be added to zero rows otherwise look for non zero rows only
+            IVr.SerNr = aInvNr[i];
+            ReadFirstMain(IVr,1,true);
+            t2=GetArtCodeUnpayedSumFromIV(IVr,aRecNumber[i],existsf); //get total unpaid amount for this art code, because we cannot pay more than this amount
+            //LogText(0,"Art = " & aRecNumber[i] & " t2=" & t2 & " aval=" & aval[i]);
+            t2 = t2 - aval[i];
+            if t2>0 then begin
+              if t2>=tt then begin
+                aval[i]=aval[i]+tt;
+                i=0;
+              end else Begin
+                aval[i]=aval[i] + t2;
+                usedsum=usedsum+t2;
+              end;
+            end;
+          end else begin
+            if aval[i]>0 then begin
+              if aval[i]>=(-1*tt) then begin
+                aval[i]=aval[i]+tt;
+                i=0;
+              end else begin
+                usedsum=usedsum-aval[i];
+                aval[i]=0;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    //LogText(0,"RowCnt=" & size & " totpayed=" & totpayed & " totunpayed=" & totunpayed);
+  end;
+  if nonblank(itemlist) then begin
+    AScount = rwcnt;
+  end else begin
+    AScount = rwcnt;
+  end;
+  RETURN;
+END;
+
+//added RecNumber
+procedure AddARtoAM(record ARVc ARp,Array Integer AMpRowType,Array LongInt AMpInvNr,Array string AMpCustCode,Array Integer AMpInvType,
+                    Array string AMpInvCurncy,Array val AMpRVal,Array val AMpfrrate,Array val AMptorate1,
+                    Array val AMptorate2,Array val AMpbaserate1,Array val AMpbaserate2,Array string AMpARAcc,Array integer AMpRowSource,
+                    var Integer rwcnt,record AccBlock ARAccb,record RoundBlock Roundb,var array string AMpRecNumber,
+                    string RecNumber,integer rowsourcetype,array longint AMpContracts,longint contractnr)
+BEGIN
+  record IVVc IVr;
+  Boolean testf,rebf;
+  val rebval,rval,vatval;
+  LongInt rebdays;
+
+  rval = ARp.RVal;
+  
+  AMpRowSource[rwcnt] = rowsourcetype;
+  AMpRowType[rwcnt] = 1;
+  AMpARAcc[rwcnt] = "";
+  AMpCustCode[rwcnt] = "";
+  AMpInvNr[rwcnt] = ARp.InvoiceNr;
+  AMpContracts[rwcnt] = contractnr;
+  AMpRecNumber[rwcnt] = RecNumber;
+  AMpCustCode[rwcnt] = ARp.CustCode;
+  AMpRVal[rwcnt] = rval;
+  IVr.SerNr = ARp.InvoiceNr;
+
+  if (ReadFirstMain(IVr,1,true)) then begin
+    testf = true;
+    if (IVr.Invalid!=0) then begin
+      testf = false;
+    end;
+  end;
+  if (testf) then begin
+    if (IVr.pdvrebt!=0) then begin
+      rebdays = DateDiff(ARp.ARRebDate,CurrentDate);
+      if (rebdays>=0) then begin
+        if (ARAccb.DiscCashVAT!=0) then begin
+          vatval = (IVr.Sum3*rval)/ARp.RVal;
+          rebval = (rval - vatval)*IVr.pdvrebt;
+          rebval = rebval/100;
+          rebval = Round(rebval,GetTotalRoundMode(Roundb));
+        end else begin
+          rebval = rval*IVr.pdvrebt;
+          rebval = rebval/100;
+          rebval = Round(rebval,GetTotalRoundMode(Roundb));
+        end;
+        rebf = true;
+      end;
+      if (rebf==false) then begin
+        rebdays = DateDiff(ARp.ARRebDate2,CurrentDate);
+        if (rebdays>=0) then begin
+          if (ARAccb.DiscCashVAT!=0) then begin
+            vatval = (IVr.Sum3*rval)/ARp.RVal;
+            rebval = (rval - vatval)*IVr.pdvrebt2;
+            rebval = rebval/100;
+            rebval = Round(rebval,GetTotalRoundMode(Roundb));
+          end else begin
+            rebval = rval*IVr.pdvrebt2;
+            rebval = rebval/100;
+            rebval = Round(rebval,GetTotalRoundMode(Roundb));
+          end;
+          rebf = true;
+        end;
+      end;
+    end;
+    AMpInvType[rwcnt] = IVr.InvType;
+    AMpARAcc[rwcnt] = IVr.ARAcc;
+    AMpInvCurncy[rwcnt] = IVr.CurncyCode;
+    AMpfrrate[rwcnt] = IVr.FrRate;
+    AMptorate1[rwcnt] = IVr.ToRateB1;
+    AMptorate2[rwcnt] = IVr.ToRateB2;
+    AMpbaserate1[rwcnt] = IVr.BaseRate1;
+    AMpbaserate2[rwcnt] = IVr.BaseRate2;
+    if (rebf) then begin
+      AMpRVal[rwcnt] = rval - rebval;
+      rwcnt = rwcnt + 1;
+
+      AMpRowType[rwcnt] = 5;
+      AMpInvNr[rwcnt] = ARp.InvoiceNr;
+      AMpCustCode[rwcnt] = ARp.CustCode;
+      AMpRVal[rwcnt] = rebval;
+      AMpInvType[rwcnt] = IVr.InvType;
+      AMpARAcc[rwcnt] = IVr.ARAcc;
+      AMpInvCurncy[rwcnt] = IVr.CurncyCode;
+      AMpfrrate[rwcnt] = IVr.FrRate;
+      AMptorate1[rwcnt] = IVr.ToRateB1;
+      AMptorate2[rwcnt] = IVr.ToRateB2;
+      AMpbaserate1[rwcnt] = IVr.BaseRate1;
+      AMpbaserate2[rwcnt] = IVr.BaseRate2;
+    end;
+  end else begin
+    AMpInvType[rwcnt] = -1;
+    AMpARAcc[rwcnt] = "9999";
+    AMpInvCurncy[rwcnt] = "";
+    AMpfrrate[rwcnt] = blankval;
+    AMptorate1[rwcnt] = blankval;
+    AMptorate2[rwcnt] = blankval;
+    AMpbaserate1[rwcnt] = blankval;
+    AMpbaserate2[rwcnt] = blankval;
+  end;
+  rwcnt = rwcnt + 1;
+  RETURN;
+END;
+
+//splits IV to ArtCode priority
+procedure ARCheckDistPay(string custcode,string curncy,Date dp,var val PV,
+                         Array Integer aRowType,Array LongInt aInvNr,Array string aCustCode,Array string aARAcc,Array string aInvCurncy,
+                         Array val aval,Array val ainvoutstand,Array val afrrate,Array val atorate1,Array val atorate2,
+                         Array val abaserate1,Array val abaserate2,var Integer asrwcnt,var array string aRecNumber,
+                         record INPayPriorityVc INPayPriorityr,string invoicelist,longint debtRepAgreeNr,
+                         integer distType,longint contractnr,array longint aContracts,integer InvType,string debtRepAgreeList)
+BEGIN
+  Boolean TrHs;
+  record ARVc ARr;
+  Array LongInt AMpInvNr;
+  Array string 20 AMpCustCode,AMpRecNumber;
+  Array Integer AMpInvType;
+  Array string 5 AMpInvCurncy;
+  Array val AMpRVal;
+  Array val AMpfrrate;
+  Array val AMptorate1;
+  Array val AMptorate2;
+  Array val AMpbaserate1;
+  Array val AMpbaserate2;
+  Array string 10 AMpARAcc;
+  Array Integer AMpRowType;
+  Array Integer AMpRowSourceType;
+  array longint AMpContracts;
+  Integer AMcount;
+  Integer AScount,rwcnt,maxStage,curStage;
+  Integer i,masi,masrw,AddedPriority,PriorityCounter;
+  val fr,to1,to2,br1,br2,remain;
+  string 255 tstr,itemignorelist;
+  record AccBlock ARAccb;
+  record RoundBlock Roundb;
+  Record INPayPriorityVc locInPayPriorityr,debInPayPriorityr;
+  row INPayPriorityVc INPayPriorityrw;
+  record IVVc IVr;
+  row IVVc IVrw;
+  boolean InvoiceArtCodePriority,ivfound,testf,CourtBailiffDone,debtRepayf;
+  boolean InvArtCodePriorityDonef;
+  longint debInPayprSer;
+  array string 20 ArtCodeMas,ArtNameMas,RecNumberPriority,CustPriorityMas;
+  array string 10 arrStageType;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+  vector boolean vecItemPayPriorityType,vecAddedItemFlag,vecDRAInv;
+  vector string 20 vecDebtRepayAgreement,vecAllDebtRepayAgr;
+
+  BlockLoad(ARAccb);
+  BlockLoad(Roundb);
+  // LogText(0,"ARCheckDistPay START");
+  /* distType - Apmaksu veidi
+    PR - rēķini atbilstoši klienta / sitēmas apmaksas prioritātei, kas nav parādu atmaksu vienošanās kartiņā (tos maksā pēc tam - VIENR) un kas nav iekļauti izpildrakstos (visos)
+    VIENR - vispirms parādu atmaksas vienošanās kartiņā nenorādītie rēkini (tekošie) un tad rēķini no vienošanās kartiņas
+    TIR - tiesu izdevumu r��ini
+    IZPR - r�kini no izpildraksta karti�as
+    NR - konkr�ti nor�d�tais r��ins
+    CBR - Tiesu izpild�t�ja r��ini (atz�m�ti sagatavo�an� r��ini uz kuriem neapr��ina l�gumsodu)
+    IZPRP - visi izpildrakstu r��ini
+    VISI - Apmaksā visus pēc kārtas no vecākā.
+    TIES - Apmaksā tikai tiesvedības
+    Apmaksas secība
+    0 - PR - VIENR - IZPRP
+    1 - CBR - PR - VIENR - IZPRP
+    2 - Secība - TIR - IZPR - PR - VIENR - IZPRP
+    3 - Secība - NR - PR - VIENR - IZPRP
+    4 - Secība - TIR - PR - VIENR - IZPRP
+  */
+
+  curStage = 0; maxStage=1;
+  arrStageType[0]="VISI";
+  // if NonBlank(debtRepAgreeList) then begin
+    // arrStageType[0]="TIES";
+    // FillVecDRAInv(debtRepAgreeList,vecDRAInv);
+    // itemignorelist="T01,T02";
+  // end;
+  
+    
+  // Switch (distType) begin
+  //   Case 0: arrStageType[0]="PR";  arrStageType[1]="VIENR"; arrStageType[2]="IZPRP"; arrStageType[3]="";      arrStageType[4]="";
+  //   Case 1: arrStageType[0]="CBR"; arrStageType[1]="PR";    arrStageType[2]="VIENR"; arrStageType[3]="IZPRP"; arrStageType[4]="";
+  //   Case 2: arrStageType[0]="TIR"; arrStageType[1]="IZPR";  arrStageType[2]="PR";    arrStageType[3]="VIENR"; arrStageType[4]="IZPRP";
+  //   Case 3: arrStageType[0]="NR";  arrStageType[1]="PR";    arrStageType[2]="VIENR"; arrStageType[3]="IZPRP"; arrStageType[4]="";
+  //   Case 4: arrStageType[0]="TIR"; arrStageType[1]="PR";    arrStageType[2]="VIENR"; arrStageType[3]="IZPRP"; arrStageType[4]="";
+  //   otherwise
+  //     LogText(0,"ARCheckDistPay ERROR :: Incorrect distribution type " & distType);
+  // end;
+
+
+  remain=PV;
+
+  //vector keys - INPayPriority.SerNr + ::CUST:: + ItemCode - customer priority (pay first)
+  //vector keys - INPayPriority.SerNr + ::INV:: + ItemCode - invoice priority (pay first)
+  //vector keys - INPayPriority.SerNr + ::NOPAY:: + ItemCode - do not pay priority
+  //vector keys - INPayPriority.SerNr + ::CUSTLAST:: + ItemCode - customer priority (pay last)
+  //vector keys - INPayPriority.SerNr + ::INVLAST:: + ItemCode - invoice priority (pay last)
+  RecordCopy(locInPayPriorityr,INPayPriorityr);
+  LoadINPayPriorityInVectors(locInPayPriorityr,CustPriorityMas,vecItemPayPriorityType);                     /* Build item pay priority vector */
+  // if contractnr!=-1 then begin
+    // GetDebtRepAgreements(contractnr,dp,vecAllDebtRepayAgr);
+  // end;
+  // LogText(0,"contractnr = " & contractnr);
+  // if debtRepAgreeNr!=-1 then begin
+    // GetDebRepAgreeDataSerNr(debtRepAgreeNr,debInPayprSer,vecDebtRepayAgreement,custcode,contractnr,dp);                            /* Get all invoices that are in active DebtRepAgreeVc record and inpaypriority record that is specified in DebtRepAgreeVc */
+  // end;
+
+  for(curStage=0;curStage<maxStage;curStage=curStage+1) begin
+    // if arrStageType[curStage]=="VIENR" and debtRepAgreeNr!=-1 then begin
+      // if debInPayprSer!=-1 and locInPayPriorityr.SerNr!=debInPayprSer then begin
+        // debInPayPriorityr.SerNr = debInPayprSer;
+        // if ReadFirstMain(debInPayPriorityr,1,true) then begin
+          // RecordCopy(locInPayPriorityr,debInPayPriorityr);                                                  /* use different priority for debt repay agreements */
+          // LoadINPayPriorityInVectors(locInPayPriorityr,CustPriorityMas,vecItemPayPriorityType);
+        // end;
+      // end;
+    // end else begin
+      if INPayPriorityr.SerNr!=locInPayPriorityr.SerNr then begin
+        RecordCopy(locInPayPriorityr,debInPayPriorityr);                                                    /* load default pay priority, might be needed if VIENR is not last stage */
+        LoadINPayPriorityInVectors(locInPayPriorityr,CustPriorityMas,vecItemPayPriorityType);
+      end;
+    // end;
+
+    PriorityCounter = 0;
+    InvoiceArtCodePriority = false;
+    InvArtCodePriorityDonef = false;
+
+CheckForArtCodePriority:;                                                                                   /* returns here after customer priority item is done, then adds next customer piority item or invoice priority */
+    PriorityCounter = PriorityCounter + 1;
+    if PriorityCounter > StringToInt(CustPriorityMas[0]) then begin
+      InvoiceArtCodePriority = true;
+    end;
+
+    ARr.CustCode = custcode;
+    TrHs = true;
+    if arrStageType[curStage]=="" then begin                                                                    /* do nothing if stage is blank */
+      TrHs = false;
+    end;
+    ResetLoop(ARr);
+    while (LoopKey("CustDue",ARr,1,TrHs)) begin
+      if (ARr.CustCode<>custcode or PV==0) then begin
+        TrHs = false;
+        if (PV==0) then begin
+          curStage = maxStage;                                                                                 /* No amount left so no point to do further stages*/
+        end;
+        if !InvoiceArtCodePriority and PV<>0 then begin                                                        /* after customer priority is added, add next customer priority or invoice artcode priority */
+          goto CheckForArtCodePriority;
+        end;
+        if InvoiceArtCodePriority and !InvArtCodePriorityDonef then begin                                      /* after inv priority and no priority items are added, add customer - last items */
+          InvArtCodePriorityDonef = true;
+          goto CheckForArtCodePriority;
+        end;
+      end else begin
+        ArtCodeMas[0] = 0;
+        IVr.SerNr = ARr.InvoiceNr;
+        testf = ReadFirstMain(IVr,1,true);  
+
+        // Jh this was added to exclude disputed invoices since they will be settled in agreement
+        if ((IVr.DisputedFlag==1)) then begin     
+        testf = false;
+        end;                     
+        // Jh
+
+
+        // if IVr.NoInclExpIP==1 then begin
+        //   testf = false;
+        // end;
+        // LogText(0,"sta"arrStageType[curStage] & " test=" & vecAllDebtRepayAgr[IVr.SerNr & "::1"]=="1");
+        if (arrStageType[curStage]=="VISI") and testf then begin
+          testf=false;
+          if InvType==0 and IVr.PayDate<dp then begin
+            testf=true;
+            if vecDRAInv[IVr.SerNr] then begin
+              testf=false;
+            end;
+          end;
+          if InvType==1 and dp<=IVr.PayDate then begin
+            testf=true;
+          end;
+        end;
+
+        /*
+        if arrStageType[curStage]=="PR" and vecAllDebtRepayAgr[IVr.SerNr & "::1"]=="1" then begin
+          testf = false;
+        end;
+        if arrStageType[curStage]=="VIENR" and vecDebtRepayAgreement[IVr.SerNr & "::1"]!="1" then begin
+          testf = false;
+        end;
+        */
+        if arrStageType[curStage]=="TIES" and !vecDRAInv[IVr.SerNr] then begin
+          testf = false;
+        end;
+        if contractnr!=-1 and IVr.Contract!=contractnr and IVr.MergedInvFlag==0 then begin
+          testf = false;
+        end;
+        if testf and contractnr!=-1 and IVr.MergedInvFlag==1 then begin
+          testf = false;
+          masrw = MatRowCnt(IVr);
+          for(masi=0;masi<masrw;masi=masi+1)begin
+            MatRowGet(IVr,masi,IVrw);
+            if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ContractNr==contractnr then begin
+              masi = masrw;
+              testf = true;
+            end;
+          end;
+        end;
+        if testf then begin
+          // LogText(0,"InvType: " & InvType & " invoice: " & IVr.SerNr);
+          GetIVUnPayedArtCodeUniqMasOnDate(IVr,AddYear(CurrentDate,5),false,ArtCodeMas,UnPayedSumMas,arrContractNrs);                       /* get item unpayed sum array on current date */
+          masrw = StringToInt(ArtCodeMas[0]);
+          // for(masi=1;masi<=masrw;masi=masi+1)begin
+            // LogText(0,IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi] & ":" & UnPayedSumMas[masi]);
+          // end;
+          //add priority items
+          if !InvArtCodePriorityDonef then begin
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                         /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                      /* each item from invoice should be added only once per contract */
+                  if (InvoiceArtCodePriority and vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]) or         /* invoice priority check */
+                      (CustPriorityMas[PriorityCounter]==ArtCodeMas[masi] and nonblank(CustPriorityMas[PriorityCounter])) then begin        /* customer priority check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],1,AMpContracts,arrContractNrs[masi]);
+                    masi = masrw + 1;
+                  end;
+                end;
+              end;
+            end;
+          end;
+
+          //Ievieto artikulus kuri apmaksu priorit�t� ir nor�d�ti k� "klienta - apm. p�d�jais"
+          if InvoiceArtCodePriority and InvArtCodePriorityDonef then begin
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==false and                        /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==true then begin                 /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],2,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+          end;
+
+          //add other items incase InvoiceArtCodePriority
+          //Other artcodes are added only in case INPayType is not 2 (only specified)
+          if InvoiceArtCodePriority and locInPayPriorityr.INPayType!=2 and !InvArtCodePriorityDonef then begin
+            //Ievieto artikulus kuri nav apmaksu priorit�t�
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==false and                        /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==false then begin                /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],3,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+
+            //Ievieto artikulus kuri apmaksu priorit�t� ir nor�d�ti k� "r��ina - apm. p�d�jais"
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==true and                         /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==false then begin                /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],4,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end; //while (LoopKey("CustDue",ARr,1,TrHs)) begin
+
+    //This is needed here because otherwise, last customer does not go through full cycle
+    if !InvoiceArtCodePriority and PV<>0 then begin                                                        /* after customer priority is added, add next customer priority or invoice artcode priority */
+      goto CheckForArtCodePriority;
+    end;
+    if InvoiceArtCodePriority and !InvArtCodePriorityDonef then begin                                      /* after inv priority and no priority items are added, add customer - last items */
+      InvArtCodePriorityDonef = true;
+      goto CheckForArtCodePriority;
+    end;
+  end; //for(curStage=0;curStage<maxStage;curStage=curStage+1) begin
+
+  // for (i=0;i<AMcount;i=i+1) begin
+  //  LogText(0,"1. Row=" & i & " AMpRowType=" & AMpRowType[i] & " AMpInvNr=" & AMpInvNr[i] & " AMpRecNumber=" & AMpRecNumber[i] & " AMpRVal=" & AMpRVal[i] & " AMpContracts=" & AMpContracts[i]);
+  // end;
+  // AMh now contains all open invoices for this customer
+  // Take all negative AR records and get rid of them
+  // If INPayPriority type is 2 then do not add those records that have no mention in INPayPriority
+  for (i=0;i<AMcount;i=i+1) begin
+    if (AMpRVal[i]<0) then begin // the AR record is < 0
+      aRowType[AScount] = AMpRowType[i];
+      aInvNr[AScount] = AMpInvNr[i];
+      aval[AScount] = AMpRVal[i];
+      aCustCode[AScount] = custcode;
+      aRecNumber[AScount] = AMpRecNumber[i];
+      aInvCurncy[AScount] = AMpInvCurncy[i];
+      afrrate[AScount] = AMpfrrate[i];
+      atorate1[AScount] = AMptorate1[i];
+      atorate2[AScount] = AMptorate2[i];
+      abaserate1[AScount] = AMpbaserate1[i];
+      abaserate2[AScount] = AMpbaserate2[i];
+      aARAcc[AScount] = AMpARAcc[i];
+      aContracts[AScount] = AMpContracts[i];
+      //PV = PV - AMpRVal[i];//this is already done early
+      AScount = AScount + 1;
+    end;
+  end;
+  asrwcnt = AScount;
+
+  //stopalert("pv=" & PV); 42.43
+  if (PV>0) then begin
+    // AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,   //JH THIS WAS COMMENTED OUT AS THERE IS NO NEED TO CALL THE FUNCTION TWICE
+    //         aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt,
+    //         PV,true,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,itemignorelist,""); // look at interest invoices
+    AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,
+            aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt, //JH This was changed to false as interest invoices are already part of list of invoices, That boolean does nothing
+            PV,false,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,itemignorelist,""); // don't look at interest invoices
+    if NonBlank(itemignorelist) and (PV!=0) then begin
+      asrwcnt = AScount;
+      AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,
+            aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt,
+            PV,false,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,"",itemignorelist);
+    
+    end;
+  end;
+  //Pievieno priekšapmaksu tikai tad kad ir apskatīti aktuālie rēķini.
+  if (PV!=0) and InvType==1 then begin
+    aRowType[AScount] = 1;
+    aInvNr[AScount] = -1;
+    aval[AScount] = PV;
+    ainvoutstand[AScount] = blankval;
+    // aContracts[AScount] = -1;  //OBS
+    aContracts[AScount] = contractnr; //OBS
+    aCustCode[AScount] = custcode;
+    aInvCurncy[AScount] = curncy;
+    GetFullCurncyRate(curncy,dp,fr,to1,to2,br1,br2);
+    afrrate[AScount] = fr;
+    atorate1[AScount] = to1;
+    atorate2[AScount] = to2;
+    abaserate1[AScount] = br1;
+    abaserate2[AScount] = br2;
+    GetARAcc(custcode,tstr);
+    aARAcc[AScount] = tstr;
+    AScount = AScount + 1;
+  end;
+  asrwcnt = AScount;
+
+  RETURN;
+END;
+
+
+//splits IV to ArtCode priority
+procedure ARCheckDistPayAgreement(string custcode,string curncy,Date dp,var val PV,
+                         Array Integer aRowType,Array LongInt aInvNr,Array string aCustCode,Array string aARAcc,Array string aInvCurncy,
+                         Array val aval,Array val ainvoutstand,Array val afrrate,Array val atorate1,Array val atorate2,
+                         Array val abaserate1,Array val abaserate2,var Integer asrwcnt,var array string aRecNumber,
+                         record INPayPriorityVc INPayPriorityr,string invoicelist,longint debtRepAgreeNr,
+                         integer distType,longint contractnr,array longint aContracts,integer InvType,string debtRepAgreeList)
+BEGIN
+  Boolean TrHs;
+  record ARVc ARr;
+  Array LongInt AMpInvNr;
+  Array string 20 AMpCustCode,AMpRecNumber;
+  Array Integer AMpInvType;
+  Array string 5 AMpInvCurncy;
+  Array val AMpRVal;
+  Array val AMpfrrate;
+  Array val AMptorate1;
+  Array val AMptorate2;
+  Array val AMpbaserate1;
+  Array val AMpbaserate2;
+  Array string 10 AMpARAcc;
+  Array Integer AMpRowType;
+  Array Integer AMpRowSourceType;
+  array longint AMpContracts;
+  Integer AMcount;
+  Integer AScount,rwcnt,maxStage,curStage;
+  Integer i,masi,masrw,AddedPriority,PriorityCounter;
+  val fr,to1,to2,br1,br2,remain;
+  string 255 tstr,itemignorelist;
+  record AccBlock ARAccb;
+  record RoundBlock Roundb;
+  Record INPayPriorityVc locInPayPriorityr,debInPayPriorityr;
+  row INPayPriorityVc INPayPriorityrw;
+  record IVVc IVr;
+  row IVVc IVrw;
+  boolean InvoiceArtCodePriority,ivfound,testf,CourtBailiffDone,debtRepayf;
+  boolean InvArtCodePriorityDonef;
+  longint debInPayprSer;
+  array string 20 ArtCodeMas,ArtNameMas,RecNumberPriority,CustPriorityMas;
+  array string 10 arrStageType;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+  vector boolean vecItemPayPriorityType,vecAddedItemFlag,vecDRAInv;
+  vector string 20 vecDebtRepayAgreement,vecAllDebtRepayAgr;
+
+  BlockLoad(ARAccb);
+  BlockLoad(Roundb);
+
+  curStage = 0; maxStage=1;
+  arrStageType[0]="VISI";
+
+  remain=PV;
+
+  RecordCopy(locInPayPriorityr,INPayPriorityr);
+  LoadINPayPriorityInVectors(locInPayPriorityr,CustPriorityMas,vecItemPayPriorityType);                     /* Build item pay priority vector */
+  
+
+  for(curStage=0;curStage<maxStage;curStage=curStage+1) begin  
+      if INPayPriorityr.SerNr!=locInPayPriorityr.SerNr then begin
+        RecordCopy(locInPayPriorityr,debInPayPriorityr);                                                    /* load default pay priority, might be needed if VIENR is not last stage */
+        LoadINPayPriorityInVectors(locInPayPriorityr,CustPriorityMas,vecItemPayPriorityType);
+      end;
+    PriorityCounter = 0;
+    InvoiceArtCodePriority = false;
+    InvArtCodePriorityDonef = false;
+
+CheckForArtCodePriority:;                                                                                   /* returns here after customer priority item is done, then adds next customer piority item or invoice priority */
+    PriorityCounter = PriorityCounter + 1;
+    if PriorityCounter > StringToInt(CustPriorityMas[0]) then begin
+      InvoiceArtCodePriority = true;
+    end;
+
+    ARr.CustCode = custcode;
+    TrHs = true;
+    if arrStageType[curStage]=="" then begin                                                                    /* do nothing if stage is blank */
+      TrHs = false;
+    end;
+    ResetLoop(ARr);
+    while (LoopKey("CustDue",ARr,1,TrHs)) begin
+      if (ARr.CustCode<>custcode or PV==0) then begin
+        TrHs = false;
+        if (PV==0) then begin
+          curStage = maxStage;                                                                                 /* No amount left so no point to do further stages*/
+        end;
+        if !InvoiceArtCodePriority and PV<>0 then begin                                                        /* after customer priority is added, add next customer priority or invoice artcode priority */
+          goto CheckForArtCodePriority;
+        end;
+        if InvoiceArtCodePriority and !InvArtCodePriorityDonef then begin                                      /* after inv priority and no priority items are added, add customer - last items */
+          InvArtCodePriorityDonef = true;
+          goto CheckForArtCodePriority;
+        end;
+      end else begin
+        ArtCodeMas[0] = 0;
+        IVr.SerNr = ARr.InvoiceNr;
+        testf = ReadFirstMain(IVr,1,true);
+        // Jh cust begin
+        if ((IVr.DisputedFlag<>1)) then begin    // Jh this will only allow for disputed invoices and invoices of type interest
+          testf = false;
+        end;            
+        // Jh cust end                        
+        
+        if (arrStageType[curStage]=="VISI") and testf then begin
+          testf=false;
+          if InvType==0 and IVr.PayDate<dp then begin
+            testf=true;
+            if vecDRAInv[IVr.SerNr] then begin
+              testf=false;
+            end;
+          end;
+          if InvType==1 and dp<=IVr.PayDate then begin
+            testf=true;
+          end;
+        end;
+        if arrStageType[curStage]=="TIES" and !vecDRAInv[IVr.SerNr] then begin
+          testf = false;
+        end;
+        if contractnr!=-1 and IVr.Contract!=contractnr and IVr.MergedInvFlag==0 then begin
+          testf = false;
+        end;
+        if testf and contractnr!=-1 and IVr.MergedInvFlag==1 then begin
+          testf = false;
+          masrw = MatRowCnt(IVr);
+          for(masi=0;masi<masrw;masi=masi+1)begin
+            MatRowGet(IVr,masi,IVrw);
+            if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ContractNr==contractnr then begin
+              masi = masrw;
+              testf = true;
+            end;
+          end;
+        end;
+        if testf then begin
+          // LogText(0,"InvType: " & InvType & " invoice: " & IVr.SerNr);
+          GetIVUnPayedArtCodeUniqMasOnDate(IVr,AddYear(CurrentDate,5),false,ArtCodeMas,UnPayedSumMas,arrContractNrs);                       /* get item unpayed sum array on current date */
+          masrw = StringToInt(ArtCodeMas[0]);
+          //add priority items
+          if !InvArtCodePriorityDonef then begin
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                         /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                      /* each item from invoice should be added only once per contract */
+                  if (InvoiceArtCodePriority and vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]) or         /* invoice priority check */
+                      (CustPriorityMas[PriorityCounter]==ArtCodeMas[masi] and nonblank(CustPriorityMas[PriorityCounter])) then begin        /* customer priority check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],1,AMpContracts,arrContractNrs[masi]);
+                    masi = masrw + 1;
+                  end;
+                end;
+              end;
+            end;
+          end;
+
+          //Ievieto artikulus kuri apmaksu priorit�t� ir nor�d�ti k� "klienta - apm. p�d�jais"
+          if InvoiceArtCodePriority and InvArtCodePriorityDonef then begin
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==false and                        /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==true then begin                 /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],2,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+          end;
+
+          //add other items incase InvoiceArtCodePriority
+          //Other artcodes are added only in case INPayType is not 2 (only specified)
+          if InvoiceArtCodePriority and locInPayPriorityr.INPayType!=2 and !InvArtCodePriorityDonef then begin
+            //Ievieto artikulus kuri nav apmaksu priorit�t�
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==false and                        /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==false then begin                /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],3,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+
+            //Ievieto artikulus kuri apmaksu priorit�t� ir nor�d�ti k� "r��ina - apm. p�d�jais"
+            for(masi=1;masi<=masrw;masi=masi+1)begin
+              if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::NOPAY::" & ArtCodeMas[masi]]==false then begin                          /* do not pay check */
+                if vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]]==false then begin                       /* each item from invoice should be added only once per contract */
+                  if vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INV::" & ArtCodeMas[masi]]==false and                               /* invoice priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUST::" & ArtCodeMas[masi]]==false and                           /* customer priority check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::INVLAST::" & ArtCodeMas[masi]]==true and                         /* invoice priority - last check */
+                        vecItemPayPriorityType[locInPayPriorityr.SerNr & "::CUSTLAST::" & ArtCodeMas[masi]]==false then begin                /* customer priority - last check */
+                    ARr.RVal = UnPayedSumMas[masi];
+                    vecAddedItemFlag[IVr.SerNr & ":" & ArtCodeMas[masi] & ":" & arrContractNrs[masi]] = true;
+                    AddARtoAM(ARr,AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,
+                              AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,ARAccb,Roundb,
+                              AMpRecNumber,ArtCodeMas[masi],4,AMpContracts,arrContractNrs[masi]);
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end; //while (LoopKey("CustDue",ARr,1,TrHs)) begin
+
+    //This is needed here because otherwise, last customer does not go through full cycle
+    if !InvoiceArtCodePriority and PV<>0 then begin                                                        /* after customer priority is added, add next customer priority or invoice artcode priority */
+      goto CheckForArtCodePriority;
+    end;
+    if InvoiceArtCodePriority and !InvArtCodePriorityDonef then begin                                      /* after inv priority and no priority items are added, add customer - last items */
+      InvArtCodePriorityDonef = true;
+      goto CheckForArtCodePriority;
+    end;
+  end; //for(curStage=0;curStage<maxStage;curStage=curStage+1) begin
+
+  // for (i=0;i<AMcount;i=i+1) begin
+  //  LogText(0,"1. Row=" & i & " AMpRowType=" & AMpRowType[i] & " AMpInvNr=" & AMpInvNr[i] & " AMpRecNumber=" & AMpRecNumber[i] & " AMpRVal=" & AMpRVal[i] & " AMpContracts=" & AMpContracts[i]);
+  // end;
+  // AMh now contains all open invoices for this customer
+  // Take all negative AR records and get rid of them
+  // If INPayPriority type is 2 then do not add those records that have no mention in INPayPriority
+  for (i=0;i<AMcount;i=i+1) begin
+    if (AMpRVal[i]<0) then begin // the AR record is < 0
+      aRowType[AScount] = AMpRowType[i];
+      aInvNr[AScount] = AMpInvNr[i];
+      aval[AScount] = AMpRVal[i];
+      aCustCode[AScount] = custcode;
+      aRecNumber[AScount] = AMpRecNumber[i];
+      aInvCurncy[AScount] = AMpInvCurncy[i];
+      afrrate[AScount] = AMpfrrate[i];
+      atorate1[AScount] = AMptorate1[i];
+      atorate2[AScount] = AMptorate2[i];
+      abaserate1[AScount] = AMpbaserate1[i];
+      abaserate2[AScount] = AMpbaserate2[i];
+      aARAcc[AScount] = AMpARAcc[i];
+      aContracts[AScount] = AMpContracts[i];
+      //PV = PV - AMpRVal[i];//this is already done early
+      AScount = AScount + 1;
+    end;
+  end;
+  asrwcnt = AScount;
+
+  //stopalert("pv=" & PV); 42.43
+  if (PV>0) then begin
+    // AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,   //JH THIS WAS COMMENTED OUT AS THERE IS NO NEED TO CALL THE FUNCTION TWICE
+    //         aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt,
+    //         PV,true,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,itemignorelist,""); // look at interest invoices
+    AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,
+            aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt, //JH This was changed to false as interest invoices are already part of list of invoices, That boolean does nothing
+            PV,false,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,itemignorelist,""); // don't look at interest invoices
+    if NonBlank(itemignorelist) and (PV!=0) then begin
+      asrwcnt = AScount;
+      AddToAS(AMpRowType,AMpInvNr,AMpCustCode,AMpInvType,AMpInvCurncy,AMpRVal,AMpfrrate,AMptorate1,AMptorate2,AMpbaserate1,AMpbaserate2,AMpARAcc,AMpRowSourceType,AMcount,
+            aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,atorate2,abaserate1,abaserate2,asrwcnt,
+            PV,false,AScount,aRecNumber,AMpRecNumber,dp,locInPayPriorityr,AMpContracts,aContracts,"",itemignorelist);
+    
+    end;
+  end;
+  //Pievieno priekšapmaksu tikai tad kad ir apskatīti aktuālie rēķini.
+  if (PV!=0) and InvType==1 then begin
+    aRowType[AScount] = 1;
+    aInvNr[AScount] = -1;
+    aval[AScount] = PV;
+    ainvoutstand[AScount] = blankval;
+    // aContracts[AScount] = -1;  //OBS
+    aContracts[AScount] = contractnr; //OBS
+    aCustCode[AScount] = custcode;
+    aInvCurncy[AScount] = curncy;
+    GetFullCurncyRate(curncy,dp,fr,to1,to2,br1,br2);
+    afrrate[AScount] = fr;
+    atorate1[AScount] = to1;
+    atorate2[AScount] = to2;
+    abaserate1[AScount] = br1;
+    abaserate2[AScount] = br2;
+    GetARAcc(custcode,tstr);
+    aARAcc[AScount] = tstr;
+    AScount = AScount + 1;
+  end;
+  asrwcnt = AScount;
+
+  RETURN;
+END;
+
+
+
+procedure AddOnAccountLineOldReceipt(record IPVc IPp,row IPVc IP0rw)
+begin
+  record RcVc RepSpec;
+  record CUVc CUp;
+  record UserVc Userr;
+   
+
+  row IPVc IPrw;
+  Boolean inAR;
+  val sum,sum2,sumincur,sumbooked,sumnow,sumdiff,rval,rsb1,bal;
+  record SMVc CurTotalsr;
+  Integer lastpaidnr,keynr,rwcnt;
+  Array string 10 debaccs;
+  Array val debbal;
+  Integer debcnt;
+  val totalSum;
+
+  CUp.Code = IP0rw.CustCode;
+  CUp.CurncyCode = "NAD";
+
+  GetOnAccBalance(RepSpec,CUp.Code,CUp.CurncyCode,false,1,sum,sum2,rval,sumbooked,sumnow,sumincur,sumdiff,CurTotalsr,debaccs,debbal,debcnt);
+  
+  totalsum = IP0rw.InvVal; 
+  sum = sum * -1; 
+
+  if (sum > totalsum) then begin 
+    sum = totalsum; 
+  end;
+
+  rwcnt = MatRowCnt(IPp);
+  MatRowGet(IPp,0,IP0rw);
+  IPrw.InvoiceNr = "";
+  IPrw.ContractNr = "";
+  IPrw.CustAddress = "";
+
+
+  //
+  Userr.Code = CurrentUser;
+  if ReadFirstMain(Userr,1,true) then begin
+    IPrw.Objects = CurrentUser  & "," & "VINV";
+    // IVr.Objects = AddObjectToObjectList(IVr.Objects,Userr.Location);
+  end;
+  //
+  IPrw.CustCode =  CUp.Code;
+  IPrw.InvCurncy = CUp.CurncyCode;
+  IPrw.CustName = "On Account Payment";
+  IPrw.RecVal = -sum;
+  IPrw.InvVal = -sum;
+  IPrw.BankVal = -sum ;
+  IPrw.RecCurncy = IP0rw.RecCurncy;
+  IPrw.PayDate = IP0rw.PayDate;
+  IPrw.ARAcc = IP0rw.ARAcc; 
+  IPrw.InvOutstand = IP0rw.InvOutstand;
+  IPrw.BankCurncy = IP0rw.BankCurncy; 
+  MatRowPut(IPp,rwcnt,IPrw);
+
+  RETURN;
+END;
+
+
+
+//Global procedure used to add onaccount line to new receipt window
+global
+procedure AddOnAccountLine(record IPVc IPp,integer rwcnt1)
+begin
+  record RcVc RepSpec;
+  record CUVc CUp;
+  record UserVc Userr; 
+  row IPVc IPrw;
+
+  Boolean inAR;
+  val sum,sum2,sumincur,sumbooked,sumnow,sumdiff,rval,rsb1,bal;
+  record SMVc CurTotalsr;
+  Integer lastpaidnr,keynr,rwcnt;
+  Array string 10 debaccs;
+  Array val debbal;
+  Integer debcnt;
+
+  val totalSum;
+  integer i;
+
+  string 255 custname,reccurncy,paydate,bankcurncy,aracc,receiptval;
+
+  for(i=0;i<rwcnt1;i=i+1) begin
+    MatRowGet(IPp,i,IPrw);
+    custname =   IPrw.CustCode ;
+    reccurncy =   IPrw.RecCurncy;
+    paydate = IPrw.PayDate ;
+    bankcurncy = IPrw.BankCurncy  ;
+    totalsum = totalsum + IPrw.RecVal;
+    aracc = IPrw.ARAcc;
+    CUp.Code = IPrw.CustCode;
+    receiptval = IPp.CurPayVal;
+  end;
+
+  CUp.CurncyCode = "NAD";
+
+  GetOnAccBalance(RepSpec,CUp.Code,CUp.CurncyCode,false,1,sum,sum2,rval,sumbooked,sumnow,sumincur,sumdiff,CurTotalsr,debaccs,debbal,debcnt);
+  
+  // totalsum = IP0rw.InvVal;
+
+  sum = sum * -1; 
+
+  if sum > 0 then begin
+    if (sum > totalsum) then begin 
+    sum = totalsum; 
+  end;
+
+  rwcnt = MatRowCnt(IPp);
+  IPrw.InvoiceNr = "";
+  IPrw.ContractNr = "";
+  IPrw.ArtCodeName = "";
+  IPrw.rkRecNumber = "";
+
+  //
+  Userr.Code = CurrentUser;
+  if ReadFirstMain(Userr,1,true) then begin
+    // IVr.Objects = AddObjectToObjectList(IVr.Objects,Userr.Code);
+    IPrw.Objects = CurrentUser  & "," & "VINV";
+    // IVr.Objects = AddObjectToObjectList(IVr.Objects,Userr.Location);
+  end;
+  //
+  IPrw.CustCode =  CUp.Code;
+  IPrw.InvCurncy = CUp.CurncyCode;
+  IPrw.CustName = "On Account Payment";
+  IPrw.RecVal = -sum;
+  IPrw.InvVal = -sum;
+  IPrw.BankVal = -sum ;
+  IPrw.RecCurncy = reccurncy;
+  IPrw.PayDate = paydate;
+  IPrw.ARAcc = aracc; 
+  IPrw.BankCurncy = bankcurncy; 
+  IPp.CurPayVal = StringToVal(receiptval,M4UVal) - sum  ;
+  MatRowPut(IPp,rwcnt,IPrw);
+  end;
+
+  RETURN;
+END;
+
+
+
+procedure ExpandPayRow(record IPVc IPp,row IPVc IP0rw,record INPayPriorityVc INPayPriorityr,var val t,var val rem,string invoicelist,integer distType,
+                      integer InvType,var integer rw,var boolean skipf,integer i,string debtRepAgreeList)
+begin
+  record INVc INr;
+  row IPVc IPrw,IP1rw;
+  Record IVVc IVr;
+  Record CUVc CUr;
+  array longint aContracts;
+  Array LongInt aInvNr;
+  Array string 20 aCustCode,aRecNumber;
+  Array string 10 aARAcc;
+  Array string 5 aInvCurncy;
+  Array val aval;
+  Array val ainvoutstand;
+  Array val afrrate;
+  Array val atorate1;
+  Array val atorate2;
+  Array val abaserate1;
+  Array val abaserate2;
+  Array Integer aRowType;  
+  integer asrwcnt,j,rw0;
+  
+  rw0=rw;
+  
+
+  if (IP0rw.CredManNr == -1) then begin  // JH if credmannr is blank then it distributes normally
+      ARCheckDistPay(IP0rw.CustCode,IP0rw.RecCurncy,IPp.TransDate,t, 
+          aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,    //JH if credmanr nr is nonblank then it would distribute 
+          atorate2,abaserate1,abaserate2,asrwcnt,aRecNumber,INPayPriorityr,invoicelist,-1,
+          distType,IP0rw.ContractNr,aContracts,InvType,debtRepAgreeList);
+  end else begin
+    if NonBlank(IP0rw.CredManNr) then begin
+    ARCheckDistPayAgreement(IP0rw.CustCode,IP0rw.RecCurncy,IPp.TransDate,t,
+                    aRowType,aInvNr,aCustCode,aARAcc,aInvCurncy,aval,ainvoutstand,afrrate,atorate1,
+                    atorate2,abaserate1,abaserate2,asrwcnt,aRecNumber,INPayPriorityr,invoicelist,-1,
+                    distType,IP0rw.ContractNr,aContracts,InvType,debtRepAgreeList);
+  end;
+  end;
+
+  for (j=0;j<asrwcnt;j=j+1) begin
+      // StopAlert(aInvNr[j]); 
+    if (asrwcnt>1) then begin
+      MatRowGet(IPp,rw0+j,IP1rw);
+    end;
+    if (rem<=0) then begin
+      // MatRowDelete(IPp,rw0);
+      skipf=true;
+      goto LRecordAction_raExpandPaySKIP;
+    end;    MatRowInsert(IPp,rw0+j+1,IPrw);
+    ClearRow(IPp,IPrw,aRowType[i]);
+    IPrw.InvoiceNr = aInvNr[j];
+    IVr.SerNr=aInvNr[j];
+
+    if ReadFirstMain(IVr,1,true) then begin
+      if nonblank(IVr.Objects) then begin
+        if nonblank(IPrw.Objects) then begin
+          IPrw.Objects=IPrw.Objects & "," & IVr.Objects;
+        end else begin
+          IPrw.Objects=IVr.Objects;
+        end;
+      end;
+    end;
+    if aInvNr[j]==-1 then begin
+      CUr.Code=aCustCode[j];
+      if ReadFirstMain(CUr,1,true) then begin
+        if nonblank(CUr.Objects) then begin
+          if nonblank(IPrw.Objects) then begin
+            IPrw.Objects=IPrw.Objects & "," & CUr.Objects;
+          end else begin
+            IPrw.Objects=CUr.Objects;
+          end;
+        end;
+      end;
+    end;
+    IPrw.CustCode = aCustCode[j];
+    IPrw.CustAddress = IVr.Addr1;
+    //insert ArtCode and it`s name
+    IPrw.rkRecNumber = aRecNumber[j];
+    INr.Code = IPrw.rkRecNumber;
+    if ReadFirstMain(INr,1,true) then begin end;
+    IPrw.ArtCodeName = INr.Name;
+    IPrw.InvCurncy = aInvCurncy[j];
+    IPrw.CustName = IP0rw.CustName;
+    IPrw.RecCurncy = IP0rw.RecCurncy;
+    IPrw.ovst = 0;
+    IPrw.CUPNr = -1;
+    IPrw.PayDate = IP0rw.PayDate;
+    // IPRw.DebColType = IP0rw.DebColType;
+    IPrw.latedays = 0;
+    IPrw.InvVal = aval[j];
+    IPrw.InvOutstand = ainvoutstand[j];
+    IPrw.ContractNr = aContracts[j];
+    //Jh 07.10.2024
+    IPrw.CredManNr = IVr.CredManNr; // added agreement nr 
+    IPrw.BankCurncy = IVr.CurncyCode; // added currency
+    IPrw.ARAcc = IVr.ARAcc; // added debit account
+    //
+    ChangeSVIPRecCur(IPrw,IPrw.PayDate,rem);
+    rem = rem - IPrw.RecVal;
+    //jh
+    IPrw.stp=1;
+    IPrw.BankVal = IPrw.RecVal; // added received value
+    //
+    if (IPrw.InvoiceNr==-1) then begin
+      IPrw.InvoiceNr = -2;
+    end;
+    rw=rw0+j+1;
+    MatRowPut(IPp,rw,IPrw);
+    // i+j+1
+  end;
+LRecordAction_raExpandPaySKIP:;
+  return;
+end;
+
+
+//splits IV to ArtCode priority, fills ArtCodeName and CustAddress
+global
+procedure RecordAction_raExpandPay_old(var record IPVc IPp,Integer rownr,string invoicelist,integer distType,string CaseNr)
+BEGIN
+  Integer rwcnt,i,j,rw,rw0;
+  row IPVc IP0rw,IPrw;
+  val t,rem;
+  record INPayPriorityVc INPayPriorityr,tmpINPayPriorityr; //OBS
+  longint prepaypr;
+  array longint aContracts;
+  integer InvType;
+  boolean skipf,testf;
+  string 60 debtRepAgreeList;
+
+  prepaypr = IPp.PrePayPriority;
+  if !FindINPayPriorityRecFromIPVc(IPp,INPayPriorityr,prepaypr) then begin //OBS
+    LogText(0,"RecordAction_raExpandPay_old cannot find INPayPriorityVc for payment " & IPp.SerNr);
+  end;
+
+LRecordAction_raExpandPayBEGIN:;
+  rwcnt = MatRowCnt(IPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    if (i>=rownr) then begin
+      MatRowGet(IPp,i,IP0rw);
+      if (IP0rw.stp==1) then begin
+        if (IP0rw.InvoiceNr==-1) then begin
+          testf=true;
+          t = IP0rw.RecVal;
+          rem = IP0rw.RecVal;
+          rw=i;
+          rw0=i;
+          // if i==rownr and (nonblank(CaseNr) or ((INPayPriorityr.SerNr==105) and blank(CaseNr))) then begin
+            // if PayTiesvInvoices(IP0rw.ContractNr,CaseNr,debtRepAgreeList) then begin
+              // testf=true;
+              // if INPayPriorityr.SerNr!=105 then begin
+                // INPayPriorityr.SerNr=105;
+                // if !ReadFirstMain(INPayPriorityr,1,true) then begin
+                  // testf=false;
+                  // LogText(0,"RecordAction_raExpandPay_old: cannot find INPayPriorityVc for payment " & IPp.SerNr);
+                // end;
+              // end;
+              // if testf then begin
+                // ExpandPayRow(IPp,IP0rw,INPayPriorityr,t,rem,invoicelist,distType,1,rw,skipf,i,debtRepAgreeList);
+                // MatRowDelete(IPp,i);
+                // goto LRecordAction_raExpandPayBEGIN;
+              // end;
+            // end;
+          // end;
+          if testf then begin
+            //Apmaksā rēķinus kam ir iestājies beigu datums.
+            ExpandPayRow(IPp,IP0rw,INPayPriorityr,t,rem,invoicelist,distType,0,rw,skipf,i,"");
+            // AddOnAccountLineOldReceipt(IPp,IP0rw);
+            // if (skipf) or (rem<=0) then begin
+            //   MatRowDelete(IPp,rw0);
+            //   goto LRecordAction_raExpandPaySKIP0;
+            // end;
+            // Apmaksā rēķinus kam nav iestājies beigu datums.
+            // ExpandPayRow(IPp,IP0rw,INPayPriorityr,t,rem,invoicelist,distType,1,rw,skipf,i,"");
+            if (skipf) or (rem<=0) then begin
+              MatRowDelete(IPp,rw0);
+              goto LRecordAction_raExpandPaySKIP0;
+            end;
+            MatRowDelete(IPp,i);
+            goto LRecordAction_raExpandPayBEGIN;
+    LRecordAction_raExpandPaySKIP0:;
+          end;
+        end;
+      end;
+    end;
+  end;
+  rwcnt = MatRowCnt(IPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    if (i>=rownr) then begin
+      MatRowGet(IPp,i,IPrw);
+      if (IPrw.stp==1) then begin
+        if (IPrw.InvoiceNr==-2) then begin
+          // ClearRow(IPp,rownr,i)
+          matRowDelete(IPp,i);
+          // IPrw.InvoiceNr = -1;
+          // if IPp.SerNr>0 then begin
+          //   IPrw.CUPNr=IPp.SerNr;
+          // end;
+          // MatRowPut(IPp,i,IPrw);
+        end;
+      end;
+    end;
+  end;
+
+  //Remove rows with total payed amount 0
+  rwcnt = MatRowCnt(IPp);
+  for (i=rwcnt-1;i>=0;i=i-1) begin
+    MatRowGet(IPp,i,IPrw);
+    if IPrw.RecVal==0 then Begin
+      MatRowDelete(IPp,i);
+    end;
+  end;
+
+  if IPp.INPayPriority != INPayPriorityr.SerNr then begin
+    IPp.INPayPriority = INPayPriorityr.SerNr;
+  end;
+  if prepaypr != IPp.PrePayPriority then begin
+    IPp.PrePayPriority = prepaypr;
+  end;
+
+  RETURN;
+END;

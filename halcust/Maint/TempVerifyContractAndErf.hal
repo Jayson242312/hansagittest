@@ -1,0 +1,27 @@
+  global 
+  updating procedure TempVerifyContractAndErf()
+  BEGIN
+    record NAContractVc NAContractr;
+    record CUVc CUr;
+    
+    while loopmain(NAContractr,1,true) begin    // loop through contracts using zoning
+        CUr.Code = NAContractr.CustCode;
+        if ((ReadFirstMain(CUr,1,true)) == false) then begin
+        RecordNew(CUr);
+        CUr.Code = NAContractr.CustCode;
+        CUr.Name = NAContractr.CustName;
+        CUr.CUType = 1;
+        CUr.VEType = 1;
+        CUr.OnAccount = 1;
+        CUr.CustCat = "ONACC";
+        CUr.Classification = "ONACC";
+        CUr.CountryCode = "NA";
+        CUr.PayDeal = "30";
+        CUr.VEPayDeal = blankval;
+        CUr.CreditLimit = blankval;
+        CUr.CreditLimitDays = blankval;
+        RecordImportStore(CUr,false);
+        END;
+    END;
+  return;
+  END;

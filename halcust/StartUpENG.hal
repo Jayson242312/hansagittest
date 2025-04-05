@@ -1,0 +1,347 @@
+event startup
+begin
+  // SetLangMode(LangEnglish, "SAF",0);
+  // Module("Property Management","",730,modWater);
+  SetLangMode(LangLatvian,"ENG",2);
+  Module("Municipality", "", 730, modWater);
+
+  // Register("Tariffs","Tariffs",ServicePlanVc,modWater);
+  // Register("Divided Services","Divided services",ServRecPlanVc,modWater);
+
+  Document("Meter reading inputs",CountResInputRClass,CountResInputForm,CountResInputFClass,modWater);
+  Document("Contracts",NAContractRClass,NAContractForm,NAContractFClass,modWater);
+  Document("Open Invoice Customer Statement",ARSRClass,ARSForm,ARSFClass,modWater); //
+  Document("Warning Letter",DebtLetRClass,DebtorLetForm,DebtLetFClass,modWater);
+  Document("Periodic Customer Statement",CuPerRClass,CuPerForm,CuPerFClass,modWater);
+  Document("Deed Of Sale",NullRClass,DeedOfSaleForm,NullFClass,modWater); // 
+  Document("Deed Of Donation",NullRClass,DeedOfDonationForm,NullFClass,modWater); // 
+  Document("Lease Agreement",NullRClass,LeaseAgreementForm,NullFClass,modWater); // 
+  Document("Receipt POS",NullRClass,ReceiptPOSForm,NullFClass,modWater); // municipality
+
+  Setting("Item Payment Priorities",INPayPriorityLClass,modSL);
+  // Setting("Address fields",AddressFieldLClass,modWater);
+  // Setting("Calculated values",ServCalcValueLClass,modWater);
+  // Setting("Erf fields",BuildFieldCodeLClass,modWater);
+  // Setting("Erf field settings",BuildFieldSetTClass,modWater);
+  // Setting("Erf field values",BuildFieldLClass,modWater);
+  // Setting("Erf flat field settings",BFlatFieldSetTClass,modWater);
+  // Setting("Erf groups",BuildGroupLClass,modWater);
+  // Setting("Erf meter reading inputs",BuildCountResInputLClass,modWater);
+  Setting("ERF - Types",BuildTypeLClass,modWater);
+
+  // Setting("Constants",MSConstWClass,modWater);
+  // Setting("Contract fields",COFieldCodeLClass,modWater);
+  // Setting("Contract field settings",COFieldSetTClass,modWater);
+  // Setting("Contract field values",COFieldLClass,modWater);
+  // Setting("Premises classifiers",MSClassLClass,modWater);
+  // Setting("Number series - Meter readings",CountResSerTClass,modWater);
+  // Setting("Invoice comments",BBSIVCommentLClass,modWater);
+  // Setting("Meter producer",CountManTClass,modWater);
+  // Setting("Meter reading types",CountResTypeTClass,modWater);
+  // Setting("Meter reading inputs",CountResInputLClass,modWater);
+  // Setting("Meter installation organizations",CountInstOrgTClass,modWater);
+  Setting("Number series - Contracts",NAContractSerTClass,modWater);
+
+  // Setting("Penalty interest",IntPercLClass,modWater);
+  // Setting("Tariff calculation formulas",CalcServicePlanLClass,modWater);
+  // Setting("Premises groups",FlatGroupLClass,modWater);
+  Setting("Premises fields",FlatFieldCodeLClass,modWater);
+  Setting("Premises field settings",FlatFieldSetTClass,modWater);
+  Setting("Premises field values",FlatFieldLClass,modWater);
+
+  Setting("Direct Payment Settings",NApsSetTClass,modWater);
+  // Setting("PDF Invoice texts",PDFInvTextTClass,modWater);
+  // Setting("PDF Invoice languages",PDFInvGenLangTClass,modWater);
+  // Setting("Service packages",DefaultItemLClass,modWater);
+  // Setting("Client Status Report",CustPSLClass,modWater); //
+  Setting("Send invoice to e-mail status",InvToEmailTaskWClass,modWater);
+  // Setting("Penalty item accounts",LSItemTRTClass,modWater);
+  // Setting("Non stop service suspension times",NonStopSleepTClass,modWater);
+
+  Setting("Reasons (KMTC)",StandProblemLClass,modIN); // REASONS
+
+  // Report("Create invoices - merged",MSMergegServInvRClass,MSMergegServInvRn,0,modWater);
+  // Report("Create invoices - erfs",MSBuildServInvRClass,MSBuildServInvRn,0,modWater);
+  Report("Create Invoices - Premises",MSFlatServInvRClass,MSFlatServInvRn,0,modWater);
+  Report("Premises Fields",FlatFieldsRClass,FlatFieldsRn,0,modWater);
+  Report("Meter Readings List",MSCountListRClass,MSCountListRn,0,modWater);
+  // Report("Meter readings check",CounterResCheckRClass,CounterResCheckRn,0,modWater);
+  Report("Send PDF Invoice to e-mail",PDFInvToEmailRClass,PDFInvToEmailRn,0,modWater);
+  // Report("Property overview",MSBuildRClass,MSBuildRn,0,modWater);
+  // Report("Service calculation / payments",ServCalcPayRClass,ServCalcPayRn,0,modWater);
+  // Report("Erf debt",BuildDebtRClass,BuildDebtRn,0,modWater);
+  // Report("Erf calculation/payment",BuildCalcPaybackRClass,BuildCalcPaybackRn,0,modWater);
+  // Report("Comparison of calculations",MSCalcCompRClass,MSCalcCompRn,0,modWater);
+  // Report("Comparison of print fields",PrintFieldTestRClass,PrintFieldTestRn,0,modWater);
+  // Report("Invoice merge",InvMergeRClass,InvMergeRn,0,modWater);
+  // Report("Stopped penalty %",SuspIntPercRClass,SuspIntPercRn,0,modWater);
+  // Report("Contract calculation/payment",ContractCalcPayRClass,ContractCalcPayRn,0,modWater);
+
+  Maintenance("Add / remove services in contracts",AddINToNAContrVClass,AddInToNAContrMn,modWater);
+  
+  // Maintenance("Cancel invoice preparation",UnDoInvVClass,MSUnDoInvMn,modWater);
+  // Maintenance("Create tariffs / calc. values",CalcServPlanVClass,CalcServPlanMn,modWater);
+  // Maintenance("Create invoices - merged",MSMergegServInvVClass,MSMergegServInvMn,modWater);
+  // Maintenance("Create invoices - Erfs",MSBuildServInvVClass,MSBuildServInvNSMn,modWater);
+  Maintenance("Create invoices - premises",MSFlatServInvVClass,MSFlatServInvNSMn,modWater);
+  Maintenance("Send invoices to e-mail",InvToEmailVClass,InvToEmailMn,modWater);
+  Maintenance("Send invoices to e-mail (Non stop)",InvToEmailVClass,InvToEmailNSMn,modWater);
+  Maintenance("Send invoices to e-mail (Task)",InvToEmailTaskVClass,InvToEmailTaskMn,modWater);
+  // Maintenance("Create penalty invoices",CreateIntPercInvoicesVClass,CreateIntPercInvoicesMn,modWater);
+  // Maintenance("Renew information in invoice",RecalcIVInfoVClass,RecalcIVInfoMn,modSL);
+  // Maintenance("Renew address fields",FillAddrFieldsVClass,FillAddrFieldsMn,modWater);
+  // Maintenance("Recalculate item payment history",RecalcItemPayHistVClass,RecalcItemPayHistMn,modWater);
+  Maintenance("PDF invoice attach. remake",PDFInvRemakeVClass,PDFInvRemakeMn,modWater);
+  Maintenance("Delete meter readings",RemCounterResVClass,RemCounterResMn,modWater);
+ 
+
+  // For emailing of documents
+  Maintenance("Create Emails for Open Invoice Customer Statement Email",ARSEmailVClass,ARSEmailMn,modWater); //
+  Maintenance("Create Emails for Periodic Customer Statement Email",CUPerEmailVClass,CUPerEmailMn,modWater); //
+  // Maintenance("Create Emails for Warning Letters",WarnEmailVClass,WarnEmailMn,modWater); // Might need to add this
+
+  Export("Calculated value exports",ServCalcValueExpEClass,ServCalcValueExpEn,modWater);
+
+  Setting("Item payment history",ItemPayHistLClass,modWater); //Jh changed from modDBMain to modWater
+  Setting("Item payment statistics",ItemPayStatLClass,modWater); //
+  // Setting("Calculate penalties",IntSumCalcLClass,modWater); //
+
+
+  // ========================================== OUR CODE ==========================================
+
+
+  // -> Register
+  RegisterWS("Contacts","Contacts","New contact",CUVc,modWater);
+  Register("ERF Master","ERF Master",BuildVc,modWater);
+  Register("Premises","Premises",FlatsVc,modWater);
+  Register("Deed Of Sale","Deed Of Sale",DeedOfSaleVc,modWater);
+  Register("Deed Of Donation","Deed Of Donation",DeedOfDonationVc,modWater);
+  Register("Lease Agreement","Lease Agreement",LeaseAgreementVc,modWater);
+  Register("Contracts","Contracts",NAContractVc,modWater);
+  Register("Meters","Meters",FlatCountersVc,modWater);
+  Register("Meter Readings","Meter readings",CountResVc,modWater);
+  Register("Meter Readings History","MeterReadingsHistory",MHistoryVc,modWater); // Support Register -> readings history
+  Register("Meter Books (Routes)", "Meter Books (Routes)", ReaderEntryVc, modWater);
+  Register("Clearance Cert. Applications", "Clearance Certificate", ClearanceCertVc, modWater);
+  Register("Account Transfer History", "Account Transfer History", AccountTransferVc, modWater);
+  Register("Service Orders", "Service Orders", SVOVc, modWater);
+  RegisterWS("Work Orders","Work Orders","New Work Order",WOVc,modWater);
+  RegisterWS("Work Sheets","Work Sheets","New Work Sheet",WSVc,modWater);
+  Register("Accounts", "Accounts", AccVc, modWater);
+  Register("Invoices", "Invoices", IVVc, modWater);
+  Register("Consolidated Receipts", "Receipts", IPVc, modWater);
+  Register("Items", "Items", INVc, modWater);
+  Register("Deposit In","Deposit In",CLInVc,modWater); // Register for deposits ( maybe should be register)
+  Register("Deposit Out","Deposit Out",CLOutVc,modWater); // Register for deposits ( maybe should be register)
+  RegisterWS("#Internal Stock Issue#","#Internal Stock Issue#","New #Internal Stock Issue#",SDVc,modIN); // Register to transfer stock to other departments 
+
+  // -> Settings
+  Setting("Accounts - Status", AccountStatusLClass, modWater);
+  // Setting("Accounts - Owner Type", OwnerTypeLClass, modWater);
+  Setting("Customer - Type", AccountTypeLClass, modWater);
+  Setting("ERF - Zoning", ZoneLClass, modWater);
+  Setting("List - Towns", VVTownLClass, modWater);
+  Setting("List - Suburbs",VVSuburbLClass, modWater);
+  Setting("List - Regions", VVRegionLClass, modWater);
+  Setting("List - Extension", ExtensionLClass, modWater);
+  Setting("List - Division", DivisionLClass, modWater);
+  Setting("List - Titles", TitleLClass, modWater);
+	Setting("Clearance Certificate Period",ComplianceCertTClass,modWater);
+  Setting("User Defined Fields - Meters",MeterUserLabelTClass,modCRM);// User defined Fields for Meters (CRM module)
+  Setting("Interest Settings",IITClass,modWater);
+  Setting("Receipts POS",IPPOSLClass,modPOS); //TMK
+
+  // -> Imports
+  Import("A. Import Default Dataset",DefaultIn,DefaultIn,modWater);
+  // Import("B. Import Item Group",ItemGroupsIn,ItemGroupsIn,modWater);
+  Import("B. Import Levy Items",ItemsLevyIn,ItemsLevyIn,modWater);
+  Import("C. Import Customer Contacts",CustContactIn,CustContactIn,modWater);
+  Import("D. Import Customer Contracts",ContractIn,ContractIn,modWater);
+  Import("E. Import Customer Service Items",ContractServIn,ContractServIn,modWater);
+  Import("F. Import Customer Emails",EmailsIn,EmailsIn,modWater);
+  Import("G. Import ERFs/Premises",ErfMasterIn,ErfMasterIn,modWater);// BuildVc/FlatsVc
+  Import("H. Import Premises Field Values", PremisesFieldIn, PremisesFieldIn, modWater);
+  Import("I. Import Meters",MetersIn,MetersIn,modWater);
+  Import("J. Import Meter Readings",ReadingsIClass,ReadingsIn,modWater);
+  Import("K. Import Customer Invoices",CustInvoiceAndPaymentIn,CustInvoiceAndPaymentIn,modWater);
+  Import("K. Import Customer Receipts",CustReceiptIn,CustReceiptIn,modWater);
+  Import("L. Import Supplier Contacts",SuppContactIn,SuppContactIn,modWater);
+  // Import("M. Import Supplier Invoices",supplierInvIn,supplierInvIn,modWater);// -> DCT
+  Import("M. Import Deposits","",DepositIn,modWater);
+  Import("N. Import Trial Balance",TrialBalanceIn,TrialBalanceIn,modWater);
+  Import("O. Import Goods Receipt",GoodsReceipt2In,GoodsReceipt2In,modWater);
+  // Import("Z. Ok Customer Invoices",CustInvoiceOkayIn,CustInvoiceOkayIn,modWater);
+  Import("Z. Toilets Per Zoning","",ToiletsIn,modWater)
+  //  -> Maintenace
+  Maintenance("OK Invoices",OKInvVClass,OKInvMn,modWater); // Hansa Maint
+  // Maintenance("OK Invoices (Non Stop)",OKInvVClass,OKInvNSMn,modWater); // Hansa Maint
+  //
+  Maintenance("Ok Receipts",OKIPvVClass,OkIPVcMn,modWater);
+  Maintenance("Ok Contracts",OkNAContractVClass,OkNAContractVcMn,modWater);
+  Maintenance("Ok Purchase Invoices",OkVIVVClass,OKVIVcMn,modWater);
+  Maintenance("Ok Payments",OkOPVVClass,OKOPVcMn,modWater);
+  Maintenance("Create Estimate Readings",EstimateReadingsVClass,EstimateReadingsMn,modWater);
+  Maintenance("Transfer to Agreement",AgreementCUVClass,AgreementCUMn,modCredMan); //jh transfer to agreement
+  Maintenance("Update Tariff Rates In Contract",TarrifCUVClass,updateTarrifInContractMn,modWater);
+  // Maintenance("Add Premise Values (Toilets) to  Residential Premise",AddPremiseValuesToPremVClass,AddPremiseValuesToPremMn,modWater); // only used for residential zoning
+  // Maintenance("Update Erf in Meter And Readings",EmptyVClass,UpdateErfInMeterAndReadings,modWater);
+  // Maintenance("Verify contract cust",EmptyVClass,TempVerifyContractAndErf,modWater); 
+  // Maintenance("Create Interest Invoicing (Custom)",InterestInvoicingVClass,InterestInvoicingMn,modWater); //create interest-invoice 
+  // Maintenance("Create Interest Invoices",CUIntVClass,CUIntMn,modWater); // Hansa Maint
+
+	// -> Document Print Form
+  Document("Contract Form",NullRClass,ContractForm,NullFClass,modWater);
+	Document("Clearance Certificate Form",NullRClass,ClearanceCertForm,NullFClass,modWater);
+  Document("Deposit Form",NullRClass,DepositForm,NullFClass,modWater);
+  Document("Deposit Out Form",NullRClass,DepositOutForm,NullFClass,modWater);
+
+  // -> Reports
+  Report("Meter Readings Estimation Report",MeterEstimationsRClass,MeterEstimationsRn,0,modWater);
+  Report("Deposit Book Report",DEORClass,Dep2BRn,0,modWater); /* needs some english strings. */
+  Report("Credit Agreement Accounts Report",CustAccountsAgedRClass,CustAccountsAgedRn,0,modCredMan);
+  Report("Levies Report",CustLeviesAgedRClass,CustLeviesAgedRn,0,modWater);
+  Report("Levies vs Payments Report",CustLevyVsPaymentRClass,CustLevyVsPaymentRn,0,modWater);
+  Report("Levies vs Payments By Item Report",LevyVsPaymentByItemRClass,LevyVsPaymentByItemRn,0,modWater);
+  Report("Levies by Item Report",LeviesByItemRClass,LeviesByItemRn,0,modWater);
+  Report("Levies by Item (Per Customer) Report",LeviesByItemCustRClass,LeviesByItemCustRn,0,modWater);
+  Report("Payments Report",CustPaymentsAgedRClass,CustPaymentsAgedRn,0,modWater);
+  Report("Payments Overview Report",PayOverviewRClass,PayOverviewRn,0,modWater); // Hansa Report
+  Report("Payments by Item Report",PaymentsByItemRClass,PaymentsByItemRn,0,modWater);
+  Report("Unpaid Water Levies Report",CustUnpaidWaterLeviesRClass,CustUnpaidWaterLeviesRn,0,modWater);
+  // Report("Levies by Suburb Report",LeviesBySuburbRClass,LeviesBySuburbRn,0,modWater);
+  // Report("Levies by Customer-Type Report",LeviesByCustTypeRClass,LeviesByCustTypeRn,0,modWater);
+  // Report("Payments by Suburb Report",PaymentBySuburbRClass,PaymentBySuburbRn,0,modWater);
+  // Report("Payments by Customer-Type Report",PaymentByCustTypeRClass,PaymentByCustTypeRn,0,modWater);
+  // Report("Interest Invoicing",CUIntRClass,CUIntRn,0,modWater); // Hansa Report
+  Report("Item Turnover History Report",ItemTurnRClass,ItemTurnRn,0,modWater); // Hansa Report
+  Report("Meter Readings (All Books)",MassReadingsRClass,MassReadingsImportRn,0,modWater); // Meter readings for all books
+  Report("Meter Classifications Report",MeterClassificationsRClass,MeterClassificationsRn,0,modWater);
+  Report("ERF Types Report",ERFTypeRClass,ERFTypeRn,0,modWater);
+  // o
+
+
+  // ========================================== PERMISSIONS ==========================================
+
+  // Custom Permissions
+  StrSetAdd(3);
+  StrSetText(CustomRecordDeleteMeterReadings,"Allow to delete meter readings");
+  StrSetText(CustomRecordDeleteERF,"Allow to delete ERFS");
+  StrSetText(CustomRecordDeleteContracts,"Allow to delete Contracts");
+  StrSetText(CustomRecordDeleteMeterBooksEntries,"Allow to delete Meter Book Entries");
+  StrSetText(CustomRecordDeleteMeterHistory,"Allow to delete Meter History");
+  StrSetText(CustomRecordDeleteClearanceCertificate,"Allow to delete Clearance Certificates");
+  StrSetText(CustomRecordDeleteAccountTransferHistory,"Allow to delete Account Transfer History");
+  StrSetText(CustomRecordDeleteReceipts,"Allow to delete Receipts"); //Delete receipts
+  StrSetText(CustomRecordDeleteInvoices,"Allow to delete Invoices"); //Delete invoices
+  StrSetText(CustomRecordDeleteDeedOfSale,"Allow to delete Deed Of Sale"); //Delete deed.of.sale
+  StrSetText(CustomRecordDeleteDeedOfDonation,"Allow to delete Deed Of Donation"); //Delete deed.of.donation
+  StrSetText(CustomRecordDeleteLeaseAgreement,"Allow to delete Lease Agreement"); //Delete lease.agreement
+
+  StrSetText(CustomRecordAgreementOk,"Allow to Approve Agreements"); //Allow Approve Agreements
+  StrSetText(CustomRecordAgreementUNOk,"Allow to UnApprove Agreements"); //Allow UnApprove Agreements
+  StrSetText(CustomRecordAgreementCreateAgreementReceipt,"Allow to Create Agreement Receipt"); //Allow Create Agreement Receipt
+
+  StrSetText(CustomRecordOkInvoices,"Allow to Ok Invoices"); //Allow Ok Invoices
+  StrSetText(CustomRecordOkReceipts,"Allow to Ok Receipts"); //Allow Ok Receipts
+  StrSetText(CustomRecordUnOkInvoices,"Allow to UnOk Invoices"); //Allow UnOk Invoices
+  StrSetText(CustomRecordUnOkReceipts,"Allow to UnOk Receipts"); //Allow UnOk Receipts
+  StrSetText(CustomRecordOkCCERT,"Allow to Ok Clearance Certificate"); //Allow Ok Clearance Certificate
+  StrSetText(CustomRecordUnOkCCERT,"Allow to UnOk Clearance Certificate"); //Allow Clearance Certificate
+  StrSetText(CustomRecordOkAccTransfer,"Allow Transfer of Accounts"); //Allow Account Transfer
+  StrSetText(CustomRecordOkTransCCERT,"Allow to Ok 'Clearance Certificate was transferred'"); //Allow Ok Clearance Certificate Transfer
+  StrSetText(CustomRecordUnOkTransCCERT,"Allow to UnOk 'Clearance Certificate was transferred'"); //Allow UnOk Clearance Certificate Transfer
+  StrSetText(CustomRecordOkDeedOfSale,"Allow to Ok Deed Of Sale"); //Allow Ok Deed Of Sale
+  StrSetText(CustomRecordUnOkDeedOfSale,"Allow to UnOk Deed Of Sale"); //Allow UnOk Deed Of Sale
+  StrSetText(CustomRecordOkDeedOfDonation,"Allow to Ok Deed Of Donation"); //Allow Ok Deed Of Donation
+  StrSetText(CustomRecordUnOkDeedOfDonation,"Allow to UnOk Deed Of Donation"); //Allow UnOk Donation
+  StrSetText(CustomRecordOkLeaseAgreement,"Allow to Ok Lease Agreement"); //Allow Ok Lease Agreement
+  StrSetText(CustomRecordUnOkLeaseAgreement,"Allow to UnOk Lease Agreement"); //Allow UnOk Lease Agreement
+
+  // Latvia Permissions
+  StrSetText(OBSAllowDeleteMeters,"Allow to delete meter records");
+  StrSetText(OBSAllowDeleteFlat,"Allow to delete flat records");
+  StrSetText(BBSAllowUncheckMailClosed,"Permit mail closed sign to be changed");
+  StrSetText(OBSAllowNAContrRowChange,"Allow to change services in contract");
+  StrSetText(OBSAllowChgMainIntPerc,"Allow change mainīt basic panalty precent records (OBS)");
+  EndStrSet;
+
+  //Custom POS Strings
+  StrSetBegin(465);
+  StrSetText(IVCashDClass,"POS Invoice");
+  StrSetText(NPTSIVCashDClass,"Touch Screen Invoice - POS");
+  StrSetText(RestAccDClass,"#Bar Tab#");
+  StrSetText(IVDClass,"Touch Screen Invoice - SL");
+  EndStrSet;
+  //
+
+
+
+  // ========================================== VALIDATION ==========================================
+
+  SString(312191,"Please enter Erf Code field (Provide a unique ERF identifier)");
+  SString(31220, "Please enter Erf!");
+  SString(31221, "Please enter Region!");
+  SString(31222, "Please enter Town!");
+  SString(31223, "Please enter Suburb!");
+  SString(31224, "Please enter Street!");
+  SString(31225, "Please enter Zoning!");
+
+  SString(31238, "Please enter LotNo!");
+  SString(31239, "Please enter ExtensionNo!");
+  SString(31240, "Please enter DivisionNo!");
+  SString(31241, "Please enter UnitNo!");
+
+  SString(31226, "Please select Region from list option");
+  SString(31227, "Please select Town from list options");
+  SString(31228, "Please select Suburb from list options");
+  SString(31229, "Please select Zone from list options");
+
+/* Transfer to agreement debtors */
+  // SString(11781,"Transfer to Agreement Debtors");
+  SString(3100022,"Please enter a reason");
+  SString(3100023,"Start Date");
+
+ // ======================================= MOD-DCT =======================================                                                                                                                                                                                                                                                                                                        
+
+  Module("Data Conversion Toolkit","",730,modDCT);
+
+  Import("Customer Master *",CustIn,CustIn,modDCT);
+  Import("Supplier Master *",SuppIn,SuppIn,modDCT);
+  Import("Items In *",ItemIn,ItemIn,modDCT);
+  Import("Customer Open Invoices",0,CUINvIn,modDCT);
+  Import("Supplier Open Invoices",0,VEINvIn,modDCT);
+  Import("Users",0,UsersIn,modDCT);
+  Import("Objects",0,ObjectsIn,modDCT);
+  Import("Assets",0,AssetsIn,modDCT);
+  Import("Goods Receipts *",GoodsReceiptIn,GoodsReceiptIn,modDCT);
+  Import("Invoice History (Header) *",CustInvHistIn,CustInvHistIn,modDCT);
+  Import("Invoice History (Rows) *",CustInvHistRowIn,CustInvHistRowIn,modDCT);
+  Import("Loyalty Cards *",LoyaltyCardsIn,LoyaltyCardsIn,modDCT);
+  Import("Orders (Header) *",SalesOrderHeaderIn,SalesOrderHeaderIn,modDCT);
+  Import("Orders (Rows) *",SalesOrderRowsIn,SalesOrderRowsIn,modDCT);
+  Import("Purchase Orders (Header) *",PurchOrdHeaderIn,PurchOrdHeaderIn,modDCT);
+  Import("Purchase Orders (Rows) *",PurchOrdRowsIn,PurchOrdRowsIn,modDCT);
+  Import("Quotations (Header) *",QuoteHeaderIn,QuoteHeaderIn,modDCT);
+  Import("Quotations (Rows) *",QuoteRowsIn,QuoteRowsIn,modDCT);
+  Import("Recipes (BOM) * ",RecipeIn,RecipeIn,modDCT);
+
+  Maintenance("Update Invoice Customer Names",HalUpdateCustNameVClass,HalUpdateCustNameMn,modSL);
+
+  Register("Contacts","Contacts",CUVc,modDCT);
+  Register("Goods Receipts","Goods Receipts",PUVc,modDCT);
+  Register("Invoices","Invoices",IVVc,modDCT);
+  Register("Items","Items",INVc,modDCT);
+  Register("Orders","Orders",ORVc,modDCT);
+  Register("Purchase Orders","Purchase Orders",POVc,modDCT);
+  Register("Quotations","Quotations",QTVc,modDCT);
+  Register("Recipes","Recipes",RecVc,modDCT);
+
+  // Setting("Routings",RoutingLClass,modDCT);
+
+  Maintenance("Delete Records",HalDelAllRecordsVClass,HalDelAllRecordMnDCT,modDCT);
+
+  // ========================= MOD-DCT -> CUSTOM DELETE ALL RECORDS =========================
+
+
+  return;
+end;

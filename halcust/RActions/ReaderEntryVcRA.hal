@@ -1,0 +1,104 @@
+external procedure GetReaderEntryPeriod(var date,var date);
+external function longint CheckCountResExistsInPeriod(record CountResVc);
+external procedure GetCountResPeriod(var date,var date);
+
+global
+function longint ReaderEntryVcRecordDefaults(var record ReaderEntryVc ReaderEntryr,record ReaderEntryVc ReaderEntryr2,longint a,longint b)
+begin
+  longint res;
+  date sd,ed,cd;
+
+  GetCountResPeriod(sd,ed);
+  
+  ReaderEntryr.SerNr = NextSerNr("ReaderEntryVc",currentDate,-1,false,"");
+  // GetReaderEntryPeriod(sd,ed);
+  ReaderEntryr.PeriodStartDate = sd;
+  ReaderEntryr.PeriodEndDate = ed;
+  ReaderEntryr.Person = CurrentUser;
+  
+  ReaderEntryVcRecordDefaults = res;
+return;
+end;
+
+global
+function longint ReaderEntryVcRecordDuplicate(var record ReaderEntryVc ReaderEntryr,record ReaderEntryVc ReaderEntryr2,longint a,longint b)
+begin
+  longint res;
+  date sd,ed;
+  ReaderEntryr.SerNr = NextSerNr("ReaderEntryVc",currentDate,-1,false,"");
+  ReaderEntryVcRecordDuplicate = res;
+return;
+end;
+
+
+
+
+global
+function longint CheckBookExistsInPeriod(record ReaderEntryVc ReaderEntryr)
+begin
+  record ReaderEntryVc tmpReaderEntryr;
+  longint res;
+  boolean wLoop;
+  res = 0;
+  wLoop = true;
+  tmpReaderEntryr.BookNo = ReaderEntryr.BookNo;
+  while (LoopKey("BookNo", tmpReaderEntryr, 1, wloop)) begin
+    if (tmpReaderEntryr.BookNo == ReaderEntryr.BookNo AND tmpReaderEntryr.PeriodStartDate == ReaderEntryr.PeriodStartDate AND tmpReaderEntryr.PeriodEndDate == ReaderEntryr.PeriodEndDate) then begin
+        wloop = false;
+        res = 1;
+    end;
+  end;
+  CheckBookExistsInPeriod = res;
+  return;
+end;
+
+
+global
+function longint ReaderEntryVcRecordCheck(var record ReaderEntryVc ReaderEntryr,record ReaderEntryVc ReaderEntryr2,longint a,longint b)
+begin
+  longint res;
+  longint nr;
+  
+  res = 0;
+  nr = CheckBookExistsInPeriod(ReaderEntryr);
+
+  if (blank(ReaderEntryr.BookNo)) then begin
+    MessageBox(0,"Please enter Book No");
+    res = -1;
+    goto LExitCheck;
+  end;
+   if (nr==1) then begin
+      MessageBox(0,"Entry for this period already exists for bookNo: " & ReaderEntryr.BookNo);
+      res = -1;
+      goto LExitCheck;
+    end;
+
+    if (blank(ReaderEntryr.Person)) then begin
+        MessageBox(0,"Please enter Reader");
+        res = -1;
+        goto LExitCheck;
+    end;
+
+LExitCheck:;
+
+  ReaderEntryVcRecordCheck=res;
+  return;
+end;
+
+
+global
+function longint ReaderEntryVcRecordRemoveTest(var record ReaderEntryVc ReaderEntryr,record ReaderEntryVc ReaderEntryr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+    if (!UserCanAction("CustomRecordDeleteMeterBooksEntries",false)) then begin
+      res = 0;
+      MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteMeterBooksEntries"));
+      goto LReaderEntryVcRecordRemoveTest;
+  end;
+
+LReaderEntryVcRecordRemoveTest:;
+  ReaderEntryVcRecordRemoveTest = res;
+  return;
+end;

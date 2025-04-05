@@ -1,0 +1,2791 @@
+
+event startup
+begin
+  SetLangMode(LangLatvian,"LAT",2);
+
+  SetBegin(1002);//owner type
+  SetText(0,"-");
+  SetText(1,"Kopīpašums");
+  SetText(2,"Fiziska persona");
+  SetText(3,"Juridiska persona");
+  SetText(4,"Valsts");
+  SetText(5,"Pašvaldība");
+  SetText(6,"Nav īpašnieku");
+  EndSet;
+
+  SetBegin(1003);//privatizācijas statuss
+  SetText(0,"-");
+  SetText(1,"Privātīpašums");
+  SetText(2,"Privatizēts");
+  SetText(3,"Daļēji privatizēts");
+  SetText(4,"Valsts īpašums");
+  SetText(5,"Pašvaldības īpašums");
+  SetText(6,"Nav statusa");
+  SetText(7,"Neprivatizēts");
+  endset;
+
+  SetBegin(1004);//rūm taips
+  SetText(0,"-");
+  SetText(1,"Dzīvoklis");
+  SetText(2,"Komunālais dzīvoklis");
+  SetText(3,"Dienesta dzīvoklis");
+  SetText(4,"Mākslinieku darbnīca");
+  SetText(5,"Garāža");
+  SetText(6,"Pagrabtelpas");
+  SetText(7,"Pazemes autostāvvietas");
+  SetText(8,"Nedzīvojamās telpas");
+  SetText(9,"Māja");
+  SetText(10,"Rindu māja");
+  SetText(11,"Komercdarbība");
+  SetText(12,"Apdzīvojama telpa");
+  SetText(13,"Neapdzīvojama telpa");
+  endset;
+
+  SetBegin(1005);//rūm aptaisīšans līmeņ
+  SetText(0,"-");
+  SetText(1,"Visas ērtības");
+  SetText(2,"Daļējas ērtības");
+  SetText(3,"Bez ērtībām");
+  endset;
+
+  SetBegin(1006);//land owner type
+  SetText(0,"-");
+  SetText(1,"Valsts īpašums");
+  SetText(2,"Pašvaldības");
+  SetText(3,"Kopīpašums");
+  SetText(4,"Juridiskas personas");
+  SetText(5,"Fiziskas personas");
+  SetText(6,"Nav zināms");
+  EndSet;
+
+  SetBegin(1007);//land owner type
+  SetText(0,"-");
+  SetText(1,"Īrnieks");
+  SetText(25,"Īrniece");
+  SetText(2,"Meita");
+  SetText(21,"Dēls");
+  SetText(4,"Māte");
+  SetText(5,"Tēvs");
+  SetText(6,"Sieva");
+  SetText(7,"Vīrs");
+  SetText(8,"Brālis");
+  SetText(9,"Māsa");
+  SetText(10,"Vectēvs");
+  SetText(11,"Vecāmāte");
+  SetText(12,"Mazdēls");
+  SetText(13,"Mazmeita");
+  SetText(14,"Apakšīrnieks");
+  SetText(15,"Vedekla");
+  SetText(16,"Znots");
+  SetText(17,"Vīra māte");
+  SetText(18,"Vīra tēvs");
+  SetText(19,"Sievas māte");
+  SetText(20,"Sievas tēvs");
+  SetText(23,"Īpašniece");
+  SetText(24,"Īpašnieks");
+  SetText(22,"Cits");
+  EndSet;
+
+  SetBegin(1008);
+  SetText(0,"-");
+  SetText(1,"Istabu skaits");
+  SetText(2,"Balkonu skaits");
+  SetText(3,"Kopējā platība");
+  SetText(4,"Dzīvojamā platība");
+  SetText(5,"Apsildāmā platība");
+  SetText(6,"Ārējās platības");
+  SetText(7,"Domājamās daļas");
+  SetText(8,"Balkona platība");
+  SetText(9,"Lodžijas platība");
+  SetText(10,"Faktiski dzīv. personu skaits");
+  SetText(11,"Deklarēto personu skaits");
+  SetText(12,"Radiatoru skaits");
+  SetText(13,"Garāžas platība");
+  SetText(14,"Komercplatība");
+  EndSet;
+
+  SetBegin(1009);
+  SetText(0,"-");
+  SetText(1,"Istabu skaits");
+  SetText(2,"Kopējā platība");
+  SetText(3,"Dzīvojamā platība");
+  SetText(4,"Apsildāmā platība");
+  SetText(5,"Ārējās platības");
+  SetText(6,"Fakt. iedz. skaits");
+  SetText(7,"Deklarēto iedz. skaits");
+  EndSet;
+
+  SetBegin(1010);
+  SetText(0,"-");
+  SetText(1,"Janvāris");
+  SetText(2,"Februāris");
+  SetText(3,"Marts");
+  SetText(4,"Aprīlis");
+  SetText(5,"Maijs");
+  SetText(6,"Jūnijs");
+  SetText(7,"Jūlijs");
+  SetText(8,"Augusts");
+  SetText(9,"Septembris");
+  SetText(10,"Oktobris");
+  SetText(11,"Novembris");
+  SetText(12,"Decembris");
+  EndSet;
+
+  SetBegin(1011);
+  SetText(0,"-");
+  SetText(1,"Aprēķināts");
+  SetText(2,"Pabeigts");
+  endset;
+
+  SetBegin(1012);
+  SetText(0,"Pēc skaitītājiem");
+  SetText(1,"Pēc periodiem");
+  endset;
+
+  SetBegin(1013);//artcode payment priority, INPayPriorityBlock
+  SetText(0,"Klienta - apm. pirmais");
+  SetText(1,"Rēķina - apm. pirmais");
+  SetText(2,"Neapmaksāt");
+  SetText(3,"Klienta - apm. pēdējais");
+  SetText(4,"Rēķina - apm. pēdējais");
+  EndSet;
+
+  SetBegin(1014); //Tarifa aprēķina formula
+  SetText(0,"Aprēķins");
+  SetText(1,"Tarifs");
+  SetText(2,"Reģistrēt");
+  SetText(3,"Ūdens starp.");
+  SetText(4,"Uzst. ēkas lauku");
+  SetText(5,"Uzst. telpas lauku");
+  EndSet;
+
+  SetBegin(1015); //Telpu lauki
+  SetText(0,"Dekl. iedzīvotāji");
+  SetText(1,"Iedzīvotāji");
+  SetText(2,"Apsildāmā platība");
+  EndSet;
+
+  SetBegin(1016); //Ēku bilances aprēķina formula
+  SetText(0,"Aprēķins");
+  SetText(1,"Uzstādīt");
+  EndSet;
+
+  SetBegin(1017); //Ēku bilances aprēķina formula
+  SetText(0,"Summa");
+  SetText(1,"Vidējais");
+  SetText(2,"Pirmais");
+  SetText(3,"Pēdējais");
+  SetText(4,"1. kolona (per. sākumā)");
+  SetText(5,"2. kolona (samaksāts)");
+  SetText(6,"3. kolona (izdots)");
+  //SetText(7,"4. kolona (per. beigās)");
+  EndSet;
+
+  SetBegin(1018); //Ēku bilances aprēķina formula
+  SetText(0,"-");
+  SetText(1,"Rēķinu drukāšana");
+  SetText(2,"PDF rēķinu sūtīšana");
+  SetText(3,"Ēku bilances aprēķini");
+  EndSet;
+
+  SetBegin(1019);
+  SetText(0,"Nezināms");
+  SetText(1,"Pareizs");
+  SetText(2,"Interneta maksājums");
+  SetText(3,"Tiesu izpildītājs");
+  EndSet;
+
+  SetBegin(1020);
+  SetText(0,"Sagatavots");
+  SetText(1,"Izveidots");
+  EndSet;
+
+  SetBegin(1021);
+  SetText(0,"-");
+  SetText(1,"Mājas vecākais");
+  SetText(2,"Kāpņutelpas vecākais");
+  EndSet;
+
+  SetBegin(1022);
+  SetText(0,"Aktīvs");
+  SetText(1,"Slēgts");
+  EndSet;
+
+  SetBegin(1023);
+  SetText(0,"-");
+  SetText(1,"Apsaimniekošanā");
+  SetText(2,"Pilnvarojuma līgums");
+  SetText(3,"Biedrība");
+  SetText(4,"Zaudējumi");
+  //SetText(5,"Neaktīvs");
+  SetText(6,"Avārijas stāvoklī");
+  EndSet;
+
+  SetBegin(1024);
+  SetText(0,"Neatbildēts");
+  SetText(1,"Atbildēts");
+  SetText(2,"Atcelts");
+  EndSet;
+
+  SetBegin(1025); //Telpu lauka tips, pievienot tikai tad, ja vajag izdalīt telpas lauku no pārējiem
+  SetText(0,"-");//None
+  SetText(1,"Platība");//Area
+  SetText(2,"Iedzīvotāji");
+  EndSet;
+
+  SetBegin(1026); //Izdrukas tips paziņojumiem par neapmaksātajiem rēķiniem
+  SetText(0,"Atgādinājums");
+  SetText(1,"Brīdinājums");
+  SetText(2,"Paskaidrojums");
+  SetText(3,"Brīdinājums īp / Īrn");
+  EndSet;
+
+  SetBegin(1027); //Izdrukas tips tāmēm
+  SetText(0,"Plānots");
+  SetText(1,"Procesā");
+  SetText(2,"Izpildīts");
+  EndSet;
+
+  SetBegin(1028);  //Piegādātāju līgumu tips
+  SetText(0,"Aktīvs");
+  SetText(1,"Neaktīvs");
+  EndSet;
+
+  SetBegin(1029);  //Prombūtnes statusi
+  SetText(0,"-");
+  SetText(1,"Apstiprināts");
+  SetText(2,"Neapstiprināts");
+  EndSet;
+
+  SetBegin(1030);  //Izziņu veida maksāšanas veids
+  SetText(0,"-");
+  SetText(1,"Maksas");
+  SetText(2,"Bezmaksas");
+  EndSet;
+
+  SetBegin(1031);  //Istabas veids
+  SetText(0,"-");
+  SetText(1,"Caurstaigājama");
+  SetText(2,"Izolēta");
+  EndSet;
+
+  SetBegin(1032);  //Tiesības privatizēt
+  SetText(0,"-");
+  SetText(1,"Nav priv., nevar iegūt īpašumā");
+  SetText(2,"Bez tiesībām uz privatizāciju");
+  SetText(3,"Ir");
+  SetText(4,"Nav");
+  EndSet;
+
+  SetBegin(1033);  //Domes lēmuma veids
+  SetText(0,"-");
+  SetText(1,"Piešķiršana");
+  SetText(2,"Pārformēšana");
+  SetText(3,"Pagarināšana");
+  EndSet;
+
+  SetBegin(1034);  // pamatlīdzekļa statusa tipi
+  SetText(0,"Departam. maiņa");
+  SetText(1,"Atb.pers. maiņa");
+  SetText(2,"Inventarizācija");
+  EndSet;
+
+  SetBegin(1035);  // iedzīvotāja statuss
+  SetText(0,"-");
+  SetText(1,"Ģimenes loceklis");
+  SetText(2,"Apakšīrnieks");
+  EndSet;
+
+  SetBegin(1036);  // deklarēšanas anulēšanas datums
+  SetText(0,"-");
+  SetText(1,"Miris");
+  SetText(2,"Anulēts");
+  SetText(3,"Dekl. citā adresē");
+  EndSet;
+
+  SetBegin(1037);  // avots priekš periodiskajiem pakalpojumiem
+  SetText(0,"-");
+  SetText(1,"Aktivitāte");
+  SetText(2,"Darba uzdevums");
+  SetText(3,"Periodisko pakalpojumu ievade");
+  SetText(4,"Ēku kredītu sadale");
+  SetText(5,"Ūdens starpību sadale");
+  EndSet;
+
+  SetBegin(1038);  // teksti priekš inventarizācijas atskaites
+  SetText(0,"Pamatojoties uz ________.gada\"____.\"________________ rīkojuma Nr.________");
+  SetText(1,"ir veikta bilances kontā Nr.________ esošo vērtību faktisko daudzumu noteikšana, saskaitot tās");
+  SetText(2,"glabāšanas vietās uz________.gada\"____.\"________________");
+  SetText(3,"Inventarizācija sākta     ________.gada\"____.\"________________");
+  SetText(4,"Inventarizācija pabeigta  ________.gada\"____.\"________________");
+  SetText(5,"Inventarizācijā konstatēts sekojošais:");
+  SetText(6,"Inv.nom.nr.");
+  SetText(7,"Nod.dat.");
+  SetText(8,"Mat.atb.per.");
+  SetText(9,"Skaitās");
+  SetText(10,"Atz. par izieš. no ierindas");
+  SetText(11,"fakt.daudz.");
+  SetText(12,"pēc grām. ziņ.");
+  SetText(13,"skaits");
+  SetText(14,"vērtība");
+  SetText(15,"Kopā materiāli atbildīgai personai:");
+  SetText(16,"A) par summu, Eur:");
+  SetText(17,"B) skaits,gab.:");
+  SetText(18,"Komisijas priekšsēdētājs:");
+  SetText(19,"amats");
+  SetText(20,"vārds, uzvārds");
+  SetText(21,"paraksts");
+  SetText(22,"Komisijas locekļi:");
+  SetText(23,"Visas vērtības, kas ir pieminētas šajā inventarizācijas sarakstā no Nr.__________ līdz Nr.__________, komisija");
+  SetText(24,"pārbaudījusi darbā manā (mūsu) klātbūtnē un ir ierakstītas sarakstā, un līdz ar to man (mums) pretenzijas pret");
+  SetText(25,"inventarizācijas komisiju nav. Vērtības, kas uzskaitītas sarakstā,atrodas manā (mūsu) atbildīgā glabāsanā.");
+  SetText(26,"________.g.\"____.\"______________");
+  SetText(27,"Šajā sarakstā dotās ziņas un aprēķinus pārbaudīja:");
+  SetText(28,"Inv.n.nr.");
+  SetText(29,"Kopā pēc saraksta:");
+  EndSet;
+
+  SetBegin(1039);  //Rindas tips priekš ēku un ien. rēķinu sasaistes
+    SetText(0,"Av. un Ien. rēķini");
+    SetText(1,"Grāmatojumi");
+    SetText(2,"Ēku vērtības");
+  EndSet;
+
+  SetBegin(1040);  //Rādīt / nerādīt personas telpās
+    SetText(0,"Rādīt");
+    SetText(1,"Nerādīt");
+  EndSet;
+
+  SetBegin(1041);  // Saīsināti nosaukumi priekš parādnieku apkopojuma atskaites
+    SetText(0,"S.saldo");
+    SetText(1,"Apr.");
+    SetText(2,"Sam.");
+    SetText(3,"B.saldo");
+    SetText(4,"KL");
+    SetText(5,"Kds.");
+    SetText(6,"PA");
+    SetText(7,"Aktivitātes");
+  EndSet;
+
+  SetBegin(1042);
+    SetText(0,"-");
+    SetText(1,"Vidējais");
+    SetText(2,"WEB");
+    SetText(3,"Kontrolakts");
+    SetText(4,"Atskaite");
+    SetText(5,"Prombūtne");
+    SetText(6,"Tālrunis");
+  EndSet;
+
+  SetBegin(1043); //Plānotās bilances aprēķini
+    SetText(0,"Jā");
+    SetText(1,"Nē");
+  EndSet;
+
+  SetBegin(1044); // Kādā orientācijā drukāt izziņu
+    SetText(0,"Portrētorientēti");
+    SetText(1,"Ainavorientēti");
+  EndSet;
+
+  SetBegin(1045);  // kopa priekš atskaites 'Ēku izdevumu pārskats'
+    SetText(0,"Ēku izdevumu pārskats");
+    SetText(1,"Ēkas kods");
+    SetText(2,"Pakalpojumu veids");
+  EndSet;
+
+  SetBegin(1046);
+    SetText(0,"Iekļaut negatīvos");
+    SetText(1,"Neiekļaut negatīvos");
+  EndSet;
+
+  SetBegin(1047);  // kopa priekš atskaites 'Ēku skaitītāju rādījumi'
+    SetText(0,"Ēku skaitītāju rādījumi");
+    SetText(1,"Sāk. rād.");
+    SetText(2,"Patēriņš");
+    SetText(3,"Pielikums");
+    SetText(4,"Māju skaitītāju rādījumi un ūdens realizācija par");
+    SetText(5,". gada");
+  EndSet;
+
+  SetBegin(1048);  // Elektrības daudzumu tipi
+    SetText(0,"Dāvanu karte");
+    SetText(1,"Pap. starta tarifs");
+  EndSet;
+
+  SetBegin(1049); // Ēkas darbinieku amati
+    SetText(0,"Ēkas pārvaldnieks");
+    SetText(1,"Mājas vecākais");
+    SetText(2,"Atbildīgā persona");
+    SetText(3,"Sētnieks");
+    SetText(4,"Atbildīgais par siltummezgliem");
+    SetText(5,"Atslēgas no pagrabtelpām");
+    SetText(6,"Namu pārzinis");
+    SetText(7,"Inic.grupas dalībnieks");
+    SetText(8,"Cits");
+  EndSet;
+
+  SetBegin(1050);  // Kolonu tips priekš logu definīcijām
+    SetText(0,"Parasta");
+    SetText(1,"Paplašinās");
+  EndSet;
+
+  SetBegin(1051);
+    SetText(0,"Izlaist telpā trūkstošus artikulus");
+    SetText(1,"Ņemt daudzumu no skaitītāja telpā trūkstošiem artikuliem");
+    SetText(2,"Ja ir rādījums (vid.neiesk.)-0, ja nav-Koef.(Apr. vērt.)");
+    SetText(3,"Ja ir rādījums (vid.iesk.)-0, ja nav-Koef.(Apr. vērt.)");
+    SetText(4,"Izlaist telpā trūkstošus artikulus (koef. 0)");
+  EndSet;
+
+  SetBegin(1052);
+    SetText(0,"No apsaimniekošanas");
+    SetText(1,"Maksas");
+  EndSet;
+
+  SetBegin(1053);
+    SetText(0,"-");
+    SetText(1,"Ūdens netika noplūdināts");
+    SetText(2,"Karstais");
+    SetText(3,"Aukstais");
+    SetText(4,"Apkure");
+  EndSet;
+
+  SetBegin(1054);
+    SetText(0,"-");
+    SetText(1,"Pa stāvvadu");
+    SetText(2,"Pa ieeju");
+    SetText(3,"Pa visu māju");
+  EndSet;
+
+  SetBegin(1055);
+    SetText(0,"-");
+    SetText(1,"Aukstais");
+    SetText(2,"Karstais");
+  EndSet;
+
+  SetBegin(1056);
+    SetText(0,"-");
+    SetText(1,"Noliktavas pārrēķins");
+    SetText(2,"Datu bāzes rezerves kopijas veidošana");
+    SetText(3,"Sūtīt un saņemt e-pastus");
+  EndSet;
+
+  SetBegin(1057);
+    SetText(0,"-");
+    SetText(1,"Vienreizējs");
+    SetText(2,"Katru dienu");
+    SetText(3,"Periodiski");
+  EndSet;
+
+  SetBegin(1058); //Universāls Jā - Nē sets
+    SetText(0,"Nē");
+    SetText(1,"Jā");
+  EndSet;
+
+  SetBegin(1059); //Jā - Nē sets ar defaulto atzīmi "-"
+    SetText(0,"-");
+    SetText(1,"Nē");
+    SetText(2,"Jā");
+  EndSet;
+
+  SetBegin(1060);
+    SetText(0,"Parasts");
+    SetText(1,"Tiesu izpildītājs");
+  EndSet;
+
+  SetBegin(1061);
+    SetText(0,"-");
+    SetText(1,"Trīs mēnešus nav nodoti rādījumi");
+    SetText(2,"Telpā nav skaitītāju");
+    SetText(3,"Telpā nav ielaists kontrolieris");
+    SetText(4,"Telpā ir bojāts skaitītājs");
+    SetText(5,"Beidzies skaitītāja derīguma termiņš");
+  EndSet;
+
+  SetBegin(1062);
+    SetText(0,"Aukstais ūdens");
+    SetText(1,"Karstais ūdens");
+  EndSet;
+
+  SetBegin(1063);
+    SetText(0,"Neaprēķina līgumsodu");
+    SetText(1,"Tiesu izpildītājs");
+  EndSet;
+
+  SetBegin(1064);
+    SetText(0,"Nav noslēgts");
+    SetText(1,"Ir noslēgts");
+  EndSet;
+
+  SetBegin(1065);
+    SetText(0,"-");
+    SetText(1,"Vēstule");
+    SetText(2,"Ierakstīta vēstule");
+    SetText(3,"Fakss");
+    SetText(4,"E-pasts");
+    SetText(5,"Nodots personīgi");
+  EndSet;
+
+  SetBegin(1066);
+    SetText(0,"Sagatavots");
+    SetText(1,"Drukā");
+    SetText(2,"Pabeigts");
+  EndSet;
+
+  SetBegin(1067);
+    SetText(0,"-");
+    SetText(1,"Nesakrīt");
+    SetText(2,"Sakrīt");
+  EndSet;
+
+  SetBegin(1068);
+    SetText(0,"Lik. procenti");
+    SetText(1,"Līgumsods");
+    SetText(2,"Nerēķināt");
+  EndSet;
+
+  SetBegin(1069);
+  	SetText(0,"Vispārējā kārtībā");
+    SetText(1,"Brīdinājuma kārtībā");
+    SetText(2,"Maza apmēra prasība");
+    SetText(3,"Prasības pieteikums");
+  EndSet;
+
+  SetBegin(1070);
+    SetText(0,"-");
+    SetText(1,"Prasītājs");
+    SetText(2,"Atbildētājs");
+    SetText(3,"Trešā persona");
+  EndSet;
+
+  SetBegin(1071)
+    SetText(0,"Nav nodots");
+    SetText(1,"Nodots sāk. sinh.");
+    SetText(2,"Nodots atsevišķi");
+    SetText(3,"Maks. no piedz.");
+    SetText(4,"Maks. no piedz. (apstrādāts)");
+  EndSet;
+  
+  SetBegin(1072);
+    SetText(0,"-");
+    SetText(1,"Nodots");
+  EndSet;
+  
+  SetBegin(1073);
+  SetText(0,"Rindā");
+  SetText(1,"Nosūtīts");
+  SetText(2,"Tiek sūtīts");
+  SetText(3,"Neizdevās");
+  EndSet;
+  
+  SetBegin(1074);
+    SetText(0,"Standarts");
+    SetText(1,"Šaubīgs");
+    SetText(2,"Bezcerīgs");
+  EndSet;
+  
+  SetBegin(1081);
+    SetText(0,"-");
+    SetText(1,"Kods");
+    SetText(2,"Klienta kods");
+    SetText(3,"Līguma numurs");
+    SetText(4,"Rēķina summa");
+    SetText(5,"Summa apmaksai");
+    SetText(6,"Rēķina numurs");
+  EndSet;
+  
+  SetBegin(1082);
+  SetText(0,"-");
+  SetText(1,"Aktīva");
+  SetText(2,"Pasīva");
+  EndSet;
+
+  SetBegin(1083);
+  SetText(0,"-");
+  SetText(1,"Aktīvs");
+  SetText(2,"Pabeigts");
+  EndSet;
+  
+  // Papildu darbības personu grupās
+  StrSetAdd(3);
+    // StrSetText(OBSAllowSDWithBadDate,"Atļaut saglabāt un apstiprināt norakstīšanas ar nepareiziem datumiem");  // OBS
+    // StrSetText(OBSAllowSDWithCostZero,"Atļaut saglabāt un apstiprināt norakstīšanas ja pašizmaksa ir 0");  // OBS
+    StrSetText(OBSAllowDeleteMeters,"Atļaut dzēst skaitītāju kartiņas");  // OBS
+    StrSetText(OBSAllowDeleteFlat,"Atļaut dzēst telpu kartiņas");  // OBS
+    // StrSetText(OBSChangeUsedINPayPr,"Atļaut mainīt izmantotas apmaksu prioritātes"); // OBS
+    // StrSetText(OBSModPerServRec,"Atļaut modificēt periodisko pakalpojumu ierakstus"); // OBS
+    // StrSetText(OBSDelPerServRec,"Atļaut dzēst periodisko pakalpojumu ierakstus"); // OBS
+    StrSetText(BBSAllowUncheckMailClosed,"Atļaut noņemt pastam slēgts pazīmi"); //BBS
+    // StrSetText(BBSAllowUnOkStock,"Atļaut atgrāmatot noliktavu (nepieciešams pārrēķins)"); //BBS
+    // StrSetText(AllOpenConfDClass,"Atļaut mainīt pasta kastes paramterus"); //BBS
+    // StrSetText(AllChangeInvEflip,"Atļaut mainīt rēķina E sadaļas"); //BBS
+    // StrSetText(BBSAllowOnOkPerRec,"Atļaut noņemt apstiprinājumu Periodisko pakalpojumu pirmierakstos"); //BBS
+    // StrSetText(BBSAllowSendSMS,"Atļaut sūtīt SMS"); //BBSAllowOnOkPerRec
+    // StrSetText(BBSShowMSEstimateAddTab,"Darba uzdevumos rādīt sadaļu papildus"); //BBS
+    // StrSetText(OBSAllowDeleteEMService,"Atļaut dzēst Izsaukumu reģistra ierakstus"); //BBS
+    // StrSetText(OBSDelContrServiceRow,"Atļaut dzēst līguma periodisko pakalpojumu rindas"); //OBS
+    StrSetText(OBSAllowNAContrRowChange,"Atļaut mainīt līguma pakalpojumus"); //OBS
+    // StrSetText(OBSAllowNegItemPayChange,"Atļaut rēķinā mainīt neg. artikula apmaksu prioritāti"); //OBS
+    StrSetText(OBSAllowUnOKFidaPayment,"Atļaut atgrāmatot bankas maks. ievades maksājumus (OBS)"); //OBS
+    StrSetText(OBSAllowChgMainIntPerc,"Atļaut mainīt pamata soda procetu ierakstus (OBS)"); //OBS
+    StrSetText(OBSAllowDebtOverview2,"Atskaite Debitoru pārskats (Jūlija) (OBS)"); //OBS
+    StrSetText(OBSAllowCUSameName,"Atskaite Klienti ar vienādiem nos. (OBS)"); //OBS
+  EndStrSet;
+
+  //New set for dynamic window columns
+  /*
+    When adding new window support do it this way
+    1) Add window code as id and name in StringSet 999
+    2) Next add all supported columns in StringSet 1000 (add them in a similar way to EMSERVICESLCLASS window columns)
+    3) Add support in hal code
+  */
+
+  StrSetBegin(999);
+    StrSetText(EMSERVICESLCLASS,"Izsaukumu pārskata logs");
+  EndStrSet;
+
+  StrSetBegin(1000);
+    StrSetText(EMSERVICESLCLASS1,"Dispečers");
+    StrSetText(EMSERVICESLCLASS2,"Adrese");
+    StrSetText(EMSERVICESLCLASS3,"Tālr.");
+    StrSetText(EMSERVICESLCLASS4,"Pieteikuma apraksts");
+    StrSetText(EMSERVICESLCLASS5,"Izpildītāji");
+    StrSetText(EMSERVICESLCLASS6,"Izbr. datums");
+    StrSetText(EMSERVICESLCLASS7,"Izbr. laiks");
+    StrSetText(EMSERVICESLCLASS8,"Kas izdarīts");
+    StrSetText(EMSERVICESLCLASS9,"Akts");
+    StrSetText(EMSERVICESLCLASS10,"Piezīmes");
+    StrSetText(EMSERVICESLCLASS11,"Kam nodots");
+    StrSetText(EMSERVICESLCLASS12,"Stat.");
+    StrSetText(EMSERVICESLCLASS13,"Piek.sm.");
+    StrSetText(EMSERVICESLCLASS14,"Dzīv.");
+    StrSetText(EMSERVICESLCLASS15,"Darbu izp.dat.");
+    StrSetText(EMSERVICESLCLASS16,"Darbu izp.laiks");
+    StrSetText(EMSERVICESLCLASS17,"Disp. uzv.");
+  EndStrSet;
+
+  //This set is for User defineable report defaults
+  //To add new report/document to this setting only this set and reportdefaults must be modified
+  StrSetBegin(1001);
+    //Atbalstītās atskaites / dokumenti
+    StrSetText(REPORT_CODE_0,"BUILDWATERUSAGERN");
+    StrSetText(REPORT_CODE_1,"BUILDCOUNTRESRN");
+    StrSetText(REPORT_CODE_2,"TOTALWATERUSAGERN");
+    StrSetText(REPORT_CODE_3,"WATERUSAGECOMPRN");
+    StrSetText(REPORT_CODE_4,"LSREPRN");
+    StrSetText(REPORT_CODE_5,"CALCWATERDIFFRN");
+    StrSetText(REPORT_CODE_6,"AT2DEPRRN");
+    StrSetText(REPORT_CODE_7,"FLATCOUNTERDATERN");
+    StrSetText(REPORT_CODE_8,"SAVFUNDDOCFORM");
+    StrSetText(REPORT_CODE_9,"DEBTORCALCRN");
+    StrSetText(REPORT_CODE_10,"DEBTOROVERVIEWRN");
+    StrSetText(REPORT_CODE_11,"FLATCOUNTERSEXPFORM");
+    StrSetText(REPORT_CODE_12,"MSBUILDINVOICERN");
+    StrSetText(REPORT_CODE_13,"NOT1014PIEL3FORM");
+    StrSetText(BUILDWATERUSAGERN,"Ēkas ūdens patēriņš (Atskaite)");
+    StrSetText(BUILDCOUNTRESRN,"Ēku skaitītāju rādījumi (Atskaite)");
+    StrSetText(TOTALWATERUSAGERN,"Kopējais ūdens patēriņš (Atskaite)");
+    StrSetText(WATERUSAGECOMPRN,"Ūdens patēriņa salīdzinājums (Atskaite)");
+    StrSetText(LSREPRN,"Pārskats par līgumsodiem/lik.procentiem (Atskaite)");
+    StrSetText(CALCWATERDIFFRN,"Aprēķinātā ūdens starpība (Atskaite)");
+    StrSetText(AT2DEPRRN,"Nolietojuma atskaite (Atskaite)");
+    StrSetText(FLATCOUNTERDATERN,"Skaitītāju derīguma termiņi (Atskaite)");
+    StrSetText(SAVFUNDDOCFORM,"Pārskats par uzkrājuma fondu (Dokuments)");
+    StrSetText(DEBTORCALCRN,"Debitoru aprēķini (Atskaite)");
+    StrSetText(DEBTOROVERVIEWRN,"Debitoru pārskats (Atskaite)");
+    StrSetText(FLATCOUNTERSEXPFORM,"Skaitītāju derīguma termiņi (Dokuments)");
+    StrSetText(MSBUILDINVOICERN,"Ēku rēķini (atskaite)");
+    StrSetText(NOT1014PIEL3FORM,"3. pielikums 1014. not. (Dokuments)");
+
+    //Lauku saraksti
+    //Pārskats par līgumsodiem/lik.procentiem
+    StrSetText(LSREPRN_F1,"Klients");
+    StrSetText(LSREPRN_FIELD_CODE_0,"F1");
+    StrSetText(LSREPRN_F2,"Artikuls");
+    StrSetText(LSREPRN_FIELD_CODE_1,"F2");
+
+    //Ūdens patēriņa salīdzinājums
+    StrSetText(WATERUSAGECOMPRN_F1,"Skaitītāju tipi");
+    StrSetText(WATERUSAGECOMPRN_FIELD_CODE_0,"F1");
+
+    //Ēkas ūdens patēriņš
+    StrSetText(BUILDWATERUSAGERN_F3,"Skaitītāju tipi");
+    StrSetText(BUILDWATERUSAGERN_FIELD_CODE_0,"F3");
+
+    //Ēku skaitītāju rādījumi
+    StrSetText(BUILDCOUNTRESRN_F5,"Skait. tips");
+    StrSetText(BUILDCOUNTRESRN_FIELD_CODE_0,"F5");
+
+    //Kopējais ūdens patēriņš
+    StrSetText(TOTALWATERUSAGERN_F1,"Skaitītāju tipi");
+    StrSetText(TOTALWATERUSAGERN_FIELD_CODE_0,"F1");
+
+    //Aprēķinātā ūdens starpība
+    StrSetText(CALCWATERDIFFRN_F3,"Ūdens starp. vērt. kods");
+    StrSetText(CALCWATERDIFFRN_FIELD_CODE_0,"F3");
+    StrSetText(CALCWATERDIFFRN_F4,"Ūdens skait. vērt. kods");
+    StrSetText(CALCWATERDIFFRN_FIELD_CODE_1,"F4");
+
+    //Nolietojuma atskaite
+    StrSetText(AT2DEPRRN_FLAGS6,"Sākt ar");
+    StrSetText(AT2DEPRRN_FIELD_CODE_0,"FLAGS6");
+
+    //Skaitītāju derīguma termiņi (Atskaite)
+    StrSetText(FLATCOUNTERDATERN_F1,"Skait. tips");
+    StrSetText(FLATCOUNTERDATERN_FIELD_CODE_0,"F1");
+
+    //Pārskats par uzkrājuma fondu (Dokuments)
+    StrSetText(SAVFUNDDOCFORM_F2,"Pakalpojumu kompl.");
+    StrSetText(SAVFUNDDOCFORM_FIELD_CODE_0,"F2");
+    StrSetText(SAVFUNDDOCFORM_F3,"Ēku vērtības kods");
+    StrSetText(SAVFUNDDOCFORM_FIELD_CODE_1,"F3");
+    StrSetText(SAVFUNDDOCFORM_F4,"Darba uzd. klases");
+    StrSetText(SAVFUNDDOCFORM_FIELD_CODE_2,"F4");
+    StrSetText(SAVFUNDDOCFORM_F5,"Telpu lauki");
+    StrSetText(SAVFUNDDOCFORM_FIELD_CODE_3,"F5");
+    StrSetText(SAVFUNDDOCFORM_F6,"Konts");
+    StrSetText(SAVFUNDDOCFORM_FIELD_CODE_4,"F6");
+
+    //Debitoru aprēķini (Atskaite)
+    StrSetText(DEBTORCALCRN_F3,"Līgumsods");
+    StrSetText(DEBTORCALCRN_FIELD_CODE_0,"F3");
+
+    //Debitoru pārskats (Atskaite)
+    StrSetText(DEBTOROVERVIEWRN_F1,"Līgumsods");
+    StrSetText(DEBTOROVERVIEWRN_FIELD_CODE_0,"F1");
+
+    //Skaitītāju derīguma termiņi (Dokuments)
+    StrSetText(FLATCOUNTERSEXPFORM_F3,"Pakalpojumi");
+    StrSetText(FLATCOUNTERSEXPFORM_FIELD_CODE_0,"F3");
+
+    //Ēku rēķini (atskaite)
+    StrSetText(MSBUILDINVOICERN_F5,"Nor. samaksas veids");
+    StrSetText(MSBUILDINVOICERN_FIELD_CODE_0,"F5");
+
+    //3. pielikums 1014. not. (Dokuments)
+    StrSetText(NOT1014PIEL3FORM_F3,"Ēku vērtību kods");
+    StrSetText(NOT1014PIEL3FORM_FIELD_CODE_0,"F3");
+  EndStrSet;
+
+//----------------------------------------------
+  SString(1000000,"Līgums ir parakstīts vai apstiprināts, nevar labot");
+  SString(1000001,"Obligāti jānorāda rādījums uz skait. nomaiņas brīdi");
+  SString(1000002,"Skaitītāja rādījums skaitītājam norādītajā periodā jau ir ievadīts. Lūdzu koriģējiet to pirms apkalpošanas palaišanas!");
+  SString(1000003,"Nav norādīts skaitītāju rādījumu periods. Lūdzu pārbaudiet iestatījumu \"Namu apsaimniekošanas uzstādījumi\"");
+  SString(1000004,"Norādītajā periodā tāda pakalpojuma telpā nav!");
+  SString(1000005,"Norādiet eksistējošo telpas lauku priekš deklarēto iedzīvotāju uzskaites!");
+  SString(1000006,"Obligāti jānorāda klasifikācija");
+  SString(1000007,"Periodiskie pakalpojumi");
+  SString(1000008,"Sadalījums");
+  SString(1000009,"Skaitītāju rādījumu saraksts");
+  SString(1000010,"Nav atrasts neviens artikuls atbilstoši - Skaitītāja klasifikācijas tipam = ");
+  SString(1000011,"Īpaš.");
+  SString(1000012,"Īpašumi");
+  SString(1000013,"Patēriņš pēc");
+  SString(1000014,"Apr. pat. pēc");
+  SString(1000015,"Nesadalīts");
+  SString(1000016,"skaits");
+  SString(1000017,"ar skait.");
+  SString(1000018,"bez skait.");
+  SString(1000019,"kop. skait.");
+  SString(1000020,"Kopējais ūdens patēriņš");
+  SString(1000021,"Kopā bez klasifikācijas");
+  SString(1000022,"Izziņa par ūdens patēriņu par ");
+  SString(1000023,".gada");
+  SString(1000024,"Iepriekšējā mēnesī Jums tika ieskaitīta deklarācija: ");
+  SString(1000025,"Likumiskie %: ");
+  SString(1000026,"Atskaite par ūdens patēriņu  par ");
+  SString(1000027,"pēc adreses");
+  SString(1000028,"Pēc skait.,Ls");
+  SString(1000029,"Vidēji, Ls");
+  SString(1000030,"Norma, Ls");
+  SString(1000031,"Nesad.ūdens, Ls");
+  SString(1000032,"Ēkas ūdens patēriņš");
+  SString(1000033,"-- NAV ATRASTS --");
+  SString(1000034,"Norādīts negatīvais patēriņš rindā ");
+  SString(1000035,"Skaitītāja rādījums jau ir ievadīts priekš skaitītāja rindā ");
+  SString(1000036,"HAL versija");
+  SString(1000037,"Iziet");
+  SString(1000038,"Sākuma datumam jābūt no mēneša pirmajam datumam");
+  SString(1000039,"Beigu datumam jābūt mēneša pēdējam datumam");
+  SString(1000040,"Pakalpojumu aprēķins/apmaksas pa telpām");
+  SString(1000041,"Norādīts neeksistējošais pakalpojumu komplekts!");
+  SString(1000042,"Beigu datums obligāti jānorāda \"Papildus starta tarifa\" gadījumā");
+  SString(1000043,"līg. nav");
+  SString(1000044,"slēgts");
+  SString(1000045,"PVN deklarācijas 1. pielikuma III daļa");
+  SString(1000046,"Šajā objektā jau eksistē aktīvs skaitītājs ar šo pašu numuru");
+  SString(1000047,"Telpai nav piesaistīts līgums!");
+  SString(1000048,"Telpu lauki (neiekļaut)");
+  SString(1000049,"Funkcionalitāte paradzēta tikai ēkas skaitītājiem");
+  SString(1000050,"Klientu kategorija nav norādīta!");
+  SString(1000051,"Nevar atrast norādīto klientu kategoriju!");
+  SString(1000052,"Klientu kategorijas kodam jābūt unikālam sagatavošanas robežās!");
+  SString(1000053,"Rēķinu numuru sērija nav norādīta!");
+  SString(1000054,"Nevar atrast norādīto rēķinu numuru sēriju!");
+  SString(1000055,"Skaitītāju nolasījuma lapa");
+  SString(1000056,"Klienta parāda atšifrējums");
+  SString(1000057,"Parāda atšifrējums par laika periodu no ");
+  SString(1000058,"Aprēķināts, t.sk.:");
+  SString(1000059,"1. Pamatparāds, t.sk.:");
+  SString(1000060,"2. Likumiskie %");
+  SString(1000061,"Samaksāts, t.sk.:");
+  SString(1000062," - Pamatparāds");
+  SString(1000063," - Likumiskie %");
+  SString(1000064,"Saldo uz pēdējo datumu, t.sk.");
+  SString(1000065,"Grāmatvedības uzskaitvede");
+  SString(1000066,"Skaitītājs ar šādu numuru un telpu jau norādīts!");
+  SString(1000067,"Šis skaitītājs norādīts arī rindā ");
+  SString(1000068,"Prioritārs");
+  SString(1000069,"Proporcionāls");
+  SString(1000070,"Tikai norādītos");
+  SString(1000071,"Kļūda artikulu apmaksu prioritātēs");
+  SString(1000072,"Nepareizs priekšapmsas artikulu apm. prioritātes apmaksas veids");
+  SString(1000073,"Kļūda sadalot priekšapmaksu");
+  SString(1000074,"PVN kods nedrīkst būt ar norādītiem procentiem");
+  SString(1000075,"PVN kods nedrīkst būt ar norādītiem procentiem, pārbaudiet artikulu grupu");
+  SString(1000076,"PVN kods nedrīkst būt ar norādītiem procentiem, pārbaudiet kontējumu sastādīšanu realizācijai");
+  SString(1000077,"Rindām ar vienādiem artikuliem jābūt arī vienādai grāmatošanas pazīmei");
+  SString(1000078,"Telpas kartiņu nevar izdzēst, jo telpai piesaistīts aktīvs līgums!");
+  SString(1000079,"Aprēķinātās summas periodā");
+  SString(1000080,"Aprēķināts periodā");
+  SString(1000081,"Tikai vienā rindā drīkst būt norādīts tips \"Paplašinās\"");
+  SString(1000082,"Klienta kods neatbilst kritērijiem, lai to izmantotu rēķina numurā");
+  SString(1000083,"Skaitītājiem nav norādīts tekošais rādījums");
+  SString(1000084,"Periodisko pakalpojumu ierakstu pārbaude");
+  SString(1000085,"Izp.");
+  SString(1000086,"Skait.(m3)");
+  SString(1000087,"Starp.(m3)");
+  SString(1000088,"Starp.(%)");
+  SString(1000089,"Aprēķinātā ūdens starpība");
+  SString(1000090,"Iedzīvotājam reģistrēta prombūtne, pārdeklarēšanās datumā!");
+  SString(1000091,"Iedzīvotājam reģistrēta prombūtne, pēc pārdeklarēšanās datuma!");
+  SString(1000092,"Ir piesaistīti periodisko pakalpojumu ieraksti, kas nav tikuši iekļauti rēķinos!");
+  SString(1000093,"Obligāti jānorāda skaitītāja ID");
+  SString(1000094,"Invent.Nr.");
+  SString(1000095,"Iegādes dat.");
+  SString(1000096,"Dep");
+  SString(1000097,"Sk");
+  SString(1000098,"Uzsk.vērt.ps");
+  SString(1000099,"Atl.vērt.p");
+  SString(1000100,"Uzkr.noliet.ps");
+  SString(1000101,"Ieg.periodā");
+  SString(1000102,"Kap.ieguld.");
+  SString(1000103,"Noliet.per.");
+  SString(1000104,"Uzsk.vērt.pb");
+  SString(1000105,"Atlik.vērt.p");
+  SString(1000106,"Uzkr.noliet.pb");
+  SString(1000107,"Dalīto pakalpojumu summas periodā");
+  SString(1000108,"Tarifu aprēķinu formula");
+  SString(1000109,"Rēķinu veidošanas kļūdu paziņojums");
+  SString(1000110,"Rēķina veidošana pārrakstītu jau esošu rēķinu.");
+  SString(1000111,"Nekorekts norakstīšanas datums");
+  SString(1000112,"Artikulam nav pašizmaksas");
+  SString(1000113,"Likumisko % aprēķins.");
+
+  SString(1000114,"Pamatparāda");
+  SString(1000115,"Likumisko %");
+
+  SString(1000116,"Sēde : ");
+  SString(1000117," zāle: ");
+  SString(1000118," izpildītājs: ");
+  SString(1000119,"Lieta Nr: ");
+
+  SString(1000120,"Nodevu pārskats");
+  SString(1000121,"Numurs");
+  SString(1000122,"Līgums");
+  SString(1000123,"Klients");
+  SString(1000124,"Samaksāts");
+  SString(1000125,"Datums");
+  SString(1000126,"Atgūts");
+  SString(1000127,"Datums");
+  SString(1000128,"Parāds");
+  SString(1000129,"Kopā");
+  SString(1000130,"Veids");
+  SString(1000131,"Līgums : ");
+  SString(1000132,"Nodevas veids : ");
+
+  SString(1000133,"Debitoru statuss");
+
+  SString(1000134,"Rēķins");
+  SString(1000135,"Datums");
+  SString(1000136,"Summa");
+  SString(1000137,"Parāds");
+  SString(1000138,"Atlikums");
+  SString(1000139,"Parāda dinamika");
+  SString(1000140,"Aktivitātes");
+
+  SString(1000141,"Parāds sākumā");
+  SString(1000142,"Parāds beigās");
+  SString(1000143,"Priekšapm. sāk.");
+  SString(1000144,"Priekšapm. beig.");
+  SString(1000145,"Ūdens patēriņa salīdzinājums");
+  SString(1000146,"Patēriņš, tek. (m3)");
+
+  SString(1000150,"Ārējie parādi");
+  SString(1000151,"Datums");
+  SString(1000152,"Atlikums");
+  SString(1000153,"Aktivitātei nav piesaistīts izdrukas veids");
+
+  SString(1000155,"Atskaite par telpām");
+  SString(1000156,"Ēka : ");
+  SString(1000157,"Ēku klasifikācija : ");
+
+  SString(1000158,"-");
+  SString(1000159,"Privātīpašums");
+  SString(1000160,"Privatizēts");
+  SString(1000161,"Daļēji privatizēts");
+  SString(1000162,"Valsts īpašums");
+  SString(1000163,"Pašvaldības īpašums");
+  SString(1000164,"Nav statusa");
+  SString(1000165,"Neprivatizēts");
+
+  SString(1000166,"-");
+  SString(1000167,"Dzīvoklis");
+  SString(1000168,"Komunālais dzīvoklis");
+  SString(1000169,"Dienesta dzīvoklis");
+  SString(1000170,"Mākslinieku darbnīca");
+  SString(1000171,"Garāža");
+  SString(1000172,"Pagrabtelpas");
+  SString(1000173,"Pazemes autostāvvietas");
+  SString(1000174,"Nedzīvojamās telpas");
+  SString(1000175,"Māja");
+  SString(1000176,"Rindu māja");
+  SString(1000177,"Komercdarbība");
+  SString(1000178,"Apdzīvojama telpa");
+  SString(1000179,"Neapdzīvojama telpa");
+
+  SString(1000180,"Nr.p.k.");
+  SString(1000181,"Adrese");
+  SString(1000182,"Klients");
+  SString(1000183,"Nosaukums");
+  SString(1000184,"Jur. adrese");
+  SString(1000185,"Priv. statuss");
+  SString(1000186,"Kat.");
+  SString(1000187,"Telpu tips");
+  SString(1000188,"Dzīv. plat.");
+  SString(1000189,"Kop. plat.");
+  SString(1000190,"Ar balk.");
+  SString(1000191," dz. ");
+
+  SString(1000192,"Izziņa par parādu");
+  SString(1000193,"Klients : ");
+  SString(1000194,"Mēnesis");
+  SString(1000195,"Saldo");
+  SString(1000196,"Aprēķins");
+  SString(1000197,"Apm.");
+  SString(1000198,"Saldo");
+  SString(1000199,"Izziņa par īpašuma apsaimniekošanas komunālo pakalpojumu aprēķinu un apmaksu");
+  SString(1000200,"Kopā : ");
+
+  SString(1000201,"Eksistē skaitītāju rādījumu ievades ar tipiem: ");
+  SString(1000202,"Nepareizs skaitītāja tips");
+
+  SString(1000203,"Rezultāts : ");
+
+  SString(1000204,"Tiesā iesniegto prasību pārskats");
+  SString(1000205,"Nr.p.k.");
+  SString(1000206,"Adrese");
+  SString(1000207,"Dzīvoklis");
+  SString(1000208,"Klients");
+  SString(1000209,"Datums");
+
+  SString(1000210,"Tiesas sēdes");
+  SString(1000211,"Adrese");
+  SString(1000212,"Dzīvoklis");
+  SString(1000213,"Klients");
+  SString(1000214,"Priv.");
+  SString(1000215,"Datums");
+  SString(1000216,"Ak. tiesas sēde");
+
+  SString(1000220,"PVN ");
+  SString(1000221,"%:");
+  SString(1000222,"Ar PVN ");
+  SString(1000223,"% apl.:");
+  SString(1000224,"Ar PVN neapl.:");
+  SString(1000225,"Ar PVN neapl.: ");
+
+  SString(1000226,"īpašumā esošā dzīvokļa Nr.");
+
+  SString(1000227,"Pārskats par nodotiem izsaukumiem");
+  SString(1000228,"Kam nodots");
+  SString(1000229,"Piet. grupa");
+  SString(1000230,"Pieteikuma apraksts");
+  SString(1000231,"Pieteikts");
+
+  SString(1000232,"Avārijas izsaukumu pārskats");
+  SString(1000233,"Izbr. laiks");
+
+  SString(1000234,"Pārskats par nopludināto ūdeni");
+
+  SString(1000235,"Noslēgto līgumu saraksts");
+  SString(1000236,"Vārds/Uzvārds");
+  SString(1000237,"Pamats");
+  SString(1000238,"Darījuma veids");
+  SString(1000239,"Domes lēmums");
+
+  SString(1000240,"Pavadzīmes nr.");
+  SString(1000241,"Pamatsumma");
+  SString(1000242,"Kor.konts");
+
+  SString(1000243,"īrē esošā dzīvokļa Nr.");
+  SString(1000244,"Norakst.per.");
+
+  SString(1000245,".janvārī");
+  SString(1000246,".februārī");
+  SString(1000247,".martā");
+  SString(1000248,".aprīlī");
+  SString(1000249,".maijā");
+  SString(1000250,".jūnijā");
+  SString(1000251,".jūlijā");
+  SString(1000252,".augustā");
+  SString(1000253,".septembrī");
+  SString(1000254,".oktobrī");
+  SString(1000255,".novembrī");
+  SString(1000256,".decembrī");
+
+  SString(1000257,"Nav norādīti sākuma un beigu datumi!");
+  SString(1000258,"Nevar izveidot ierakstu!");
+
+  SString(1000259,"aukstais");
+  SString(1000260,"karstais");
+  SString(1000261,"gāze");
+  SString(1000262,"Obligāti jānorāda eksistējošas kategorijas, un tās nedrīkst būt vienādas!");
+  SString(1000263,"Periodā iegādātie pamatlīdzekļi");
+  SString(1000264,"Inv. nr.");
+  SString(1000265,"Vērtības izm.");
+  SString(1000266,"Materiālie");
+  SString(1000267,"Nemateriālie");
+  SString(1000268,"Izsaukums Nr.");
+  SString(1000269,"No:Līdz");
+  SString(1000270,"Nostr. laiks");
+  SString(1000271,"Skaitītāju tipu klases");
+  SString(1000272,"Visas skaitītāju tipu klases ar tipu");
+  SString(1000273,"Izsaukums");
+  SString(1000274,"Klasifikācija telpām");
+  SString(1000275,"Daugavpils pilsētas pašvaldība");
+
+  SString(1000276,"Norādiet formas kodu!");
+  SString(1000277,"Kombinācija jau ir definēta:");
+  SString(1000278,"Pārbaudiet sagatavošanu \"Ieņēmumu/izdevumu pārskata formas\"");
+  SString(1000279,"telpu skait.");
+
+  SString(1000280,"Zāle");
+  SString(1000281,"Dokumentu skaits");
+  SString(1000282,"Par ko");
+  SString(1000283,"Obligāti jānorāda ūdens noplūdināšanas tips");
+
+  SString(1000284,"Noplūdinātais ūdens");
+  SString(1000285,"Noplūd. skaits");
+  SString(1000286,"Noplūd. (M3)");
+  SString(1000287,"AŪ");
+  SString(1000288,"KŪ");
+  SString(1000289,"Profil. nopl.");
+  SString(1000290,"Komercnopl.");
+  SString(1000291,"Kases grāmatas lapa");
+  SString(1000292,"Pārsniegts pārplānošanas dienu skaits");
+
+  SString(1000293,"Maksājumi ar neg. rindām");
+  SString(1000294,"Tai sk. Likumiskie %");
+  SString(1000295,"Debitoru pārskats");
+  SString(1000296,"Neiesk. likumiskos %");
+
+  SString(1000297,"Izpildītāji");
+  SString(1000298,"Izp. laiks");
+  SString(1000299,"Kas izdarīts");
+
+  SString(1000300,"Numuru sērijas periods neatbilst dokumenta datumam");
+
+  SString(1000301,"Ieraksts ievadīts ar atpakaļejošu datumu");
+
+  SString(1000302,"Rēķinu numuru neatbilstība klientu kodiem");
+  SString(1000303,"Debitoru aprēķini");
+  SString(1000304,"Apr.bez.līgums.");
+  SString(1000305,"Vidējo aprēķinu neveidošanas periodu drīkst norādīt TIKAI kombinācijā ar atzīmi \"Neveidot vidējos rādījumus\"");
+
+  SString(1000306,"Negatīvs saskaitītais daudzums nav atļauts");
+  SString(1000307,"Atgādinājums par skaitītāju derīguma termiņiem");
+  SString(1000308,"Norakstītā");
+
+  SString(1000309,"Lai ievietotu numurus, saistītajam pastam jābūt nosūtītam uz konferenci");
+  SString(1000310,"Grām.summa");
+  SString(1000311,"Pakalpojumu grupa");
+  SString(1000312,"Skaitītājiem beidzas derīguma termiņs ievades periodā");
+  SString(1000313,"Skaitītājos norādītais pakalpojums nav reģistrēts telpā");
+  SString(1000314,"Skaitītājam ir beidzies derīguma termiņš");
+  SString(1000315,"Sam. no A/M");
+
+  SString(1000316,"Darba uzdevumu pārskats");
+  SString(1000317,"Dok. numurs");
+  SString(1000318,"Izlaisti dokumentu numuri");
+
+  SString(1000319,"Skaitītāju skaits");
+
+  SString(1000320,"Apsaimniekošanas rēķinu pārbaude");
+  SString(1000321,"Iztrūkstošie rēķini");
+  SString(1000322,"Iztrūkstošie artikuli");
+
+  SString(1000323,"Uzkrājumu fonds");
+  SString(1000324,"Uzkrājuma fonda atlikums uz ");
+  SString(1000325,"Uzkrājuma fonda izlietojums");
+  SString(1000326,"BRĪDINĀJUMS - Jūsu skaitītājiem beidzies derīguma termiņš!");
+
+  SString(1000327,"Korekcija");
+  SString(1000328,"Artikuli ar prioritāti \"Neapmaksāt\" nav atļauti, ja apmaksas veids ir \"Tikai norādītie\"");
+
+  SString(1000329,"Ir izveidoti periodisko pakalpojumu ieraksti");
+  SString(1000330,"Nav norādīta neviena telpa");
+  SString(1000331,"Telpa nav reģistrēta šajā ēkā, ēku grupā vai telpu grupā");
+  SString(1000332,"Nav norādīts ūdens sadales artikuls - lūdzu pārbaudiet Namu apsaimniekošanas uzstādījums");
+  SString(1000333,"Obligāti jānorāda ēka, ēku grupa vai telpu grupa");
+  SString(1000334,"Klientu kopējie atlikumi");
+  SString(1000335,"1. parāda rēķ. datums");
+  SString(1000336,"Neapmaksāto rēķinu skaits");
+  SString(1000337,"Laikā neapmaksāti");
+  SString(1000338,"Nav kavēti");
+  SString(1000339,"t.sk. pamatsumma");
+  SString(1000340,"t.sk. likumiskie %");
+  SString(1000341,"Priekšapmaksa");
+  SString(1000342,"Atlikums uz ");
+
+  SString(1000343,"Kopsavilkums par reģistrētajiem izlīgumiem");
+  SString(1000344,"Izlīgums noslēgts");
+  SString(1000345,"Izlīguma periods mēneši");
+  SString(1000346,"Min. ikmēneša maksājums");
+  SString(1000347,"Pēdējā maks. datums");
+  SString(1000348,"Sam. pamatsumma");
+  SString(1000349,"Parāda atl. ar likumiskajiem %");
+  SString(1000350,"Kopējā izl. summa");
+  SString(1000351,"Parāda atlikums, pamatsummas (bez līgumsoda)");
+  SString(1000352,"Pēdējā maks. summa");
+
+  SString(1000353,"Ar PVN ");
+  SString(1000354,"% apliek:");
+  SString(1000355,"Nav atļauta apmaksu prioritāte ar  veidu \"Tikai norādītie\"");
+  SString(1000356,"Rindas bez artikula nav atļautas");
+  SString(1000357,"Rādījumu nevar ievadīt. Skaitāja derīguma termiņš ir pārniegts par atļauto mēnešu skaitu");
+
+  SString(1000358,"Pieteikums saņemts");
+  SString(1000359,"Noslēgtās vienošanās");
+  SString(1000360,"Vien.");
+  SString(1000361,"Vien. periods");
+  SString(1000362,"Stadija");
+  SString(1000363,"Kavē");
+  SString(1000364,"Nekavē");
+  SString(1000365,"Šajā datu bāze nav datu pirms 2014. gada!");
+  SString(1000366,"Šajā datu bāze nav datu pēc 2013. gada!");
+  SString(1000367,"Likumisko % dat.");
+  SString(1000368,"EUR");
+  SString(1000369,"Līgumā nav norādīts pārvaldīšanas līguma datums");
+  SString(1000370,"Līgumam nav piesaistītas parāda atmaksas vienošanās uz maks. datumu");
+  SString(1000371,"Norādiet izpildraksta nr.");
+  SString(1000372,"Sūtīšanas laikā bija kļūdas, lūdzu pārbaudiet log failu");
+  SString(1000373,"Apm. prioritātes rindās atļauti tikai tipi \"Klienta - apm. pirmais\" un \"Rēķina - apm. pirmais\"");
+  SString(1000374,"no");
+  SString(1000375,"līdz");
+  SString(1000376, "Pārskats par tiesu izpildrakstiem");
+  SString(1000377, "Līguma nr.");
+  SString(1000378, "Izpildraksta Nr");
+  SString(1000379, "Rēķina Nr");
+  SString(1000380, "Rēķina summa");
+  SString(1000390, "Maksājumu summa");
+  SString(1000391, "Parāds");
+  SString(1000392, "Datums");
+  SString(1000393, "Klients");
+  SString(1000394, "Ēka");
+  SString(1000395, "Klients");
+
+  SString(1000396,"Veiksmīgi izdzēsti");
+  SString(1000397,"Neveiksmīgi izdzēsti");
+
+  SString(1000398,"Obligāti jānorāda ēka!");
+  SString(1000399,"Ēkas kods");
+  SString(1000400,"Adrese");
+  SString(1000401,"Dz.Nr.");
+  SString(1000402,"Nosaukums");
+  SString(1000403,"Reģ.nr.");
+  SString(1000404,"Pārskats par parādniekiem");
+  SString(1000405,"Telpu saraksts");
+  SString(1000406,"Ēka: ");
+  SString(1000407,"Norādīta neeksistējoša ēka!");
+  SString(1000408,"KOPĀ");
+  SString(1000409,"Paraksts");
+  SString(1000410,"Pārskats par līgumsodiem/lik.procentiem");
+  SString(1000411,"Klients: ");
+  SString(1000412,"Artikuls: ");
+  SString(1000413,"Adrese: ");
+  SString(1000414,"Apr. likumiskie %");
+  SString(1000415,"rēķinos");
+  SString(1000416,"Rēķ.numurs");
+  SString(1000417,"Rēķ.datums");
+  SString(1000418,"Neietilpst sērijā!");
+  SString(1000419,"Obligāti jānorāda!");
+  SString(1000420,"Datu pārbaude");
+  SString(1000421,"Telpas");
+  SString(1000422,"Ēkas");
+  SString(1000423,"Klienti");
+  SString(1000424,"Kopājā summa pārsniedz 100!");
+  SString(1000425,"Jūs varat ievadīt priekšapmaksas Nr., rēķina Nr. vai Konta Nr");
+  SString(1000426,"Ievadiet priekšapmaksas numuru vai Konta Nr");
+  SString(1000427,"Lūdzu norādiet noliktavu!");
+  SString(1000428,"Datumi pārklājas!");
+  SString(1000429,"Nenorādīt beigu datumu drīkst tikai pēdējā rindā!");
+  SString(1000430,"Skaitītāju rādījumi");
+  SString(1000431,"Skaitītājs");
+  SString(1000432,"Pak.kods");
+  SString(1000433,"Iedzīvotājam reģistrēta prombūtne, pārdeklarēšanās datumā!");
+  SString(1000434,"Statuss");
+  SString(1000435,"Iepr.rād.");
+  SString(1000436,"Tek.rād.");
+  SString(1000437,"Aprēķināts");
+  SString(1000438,"Nav rādījuma");
+  SString(1000439,"Rādījums nodots");
+  SString(1000440,"Piemaksas no tāmēm");
+  SString(1000441,"Ēku iedzīvotāju pārskats");
+  SString(1000442,"Izm.avanss");
+  SString(1000443,"Algas maks.");
+  SString(1000444,"Obligāti jānorāda sākuma vai beigu datums");
+  SString(1000445,"Prombūtnes");
+  SString(1000446,"Kopā");
+  SString(1000447,"Karstā ūdens rādījumi");
+  SString(1000448,"Skaitītāji");
+  SString(1000449,"Normas");
+  SString(1000450,"Aukst.skait.");
+  SString(1000451,"KU skait.1");
+  SString(1000452,"KU skait.2");
+  SString(1000453,"Norma uz cilv.");
+  SString(1000454,"Starpība");
+  SString(1000455,"Galv.skait.");
+  SString(1000456,"Aukstā ūdens rādījumi");
+  SString(1000457,"Veidot tarifus");
+  SString(1000458,"Aukstā ūdens izlietojums");
+  SString(1000459,"Atskaite par prombūtnēm");
+  SString(1000460,"Ūdens patēriņš bez mājas skaitītājiem");
+  SString(1000461,"Sociālais");
+  SString(1000462,"Vienošanās");
+  SString(1000463,"Tiesas izpildītājs");
+  SString(1000464,"Pakalpojumu aprēķins/apmaksas");
+  SString(1000465,"Aprēķinātā summa");
+  SString(1000466,"Apmaksātā summa");
+  SString(1000467,"apkure");
+  SString(1000468,"karstā ūdens uzsildīšana");
+  SString(1000469,"aukstais ūdens");
+  SString(1000470,"Ēkas kopējie skaitītāji");
+  SString(1000471,"Pārskats par tāmēm");
+  SString(1000472,"Kopā pa tāmi");
+  SString(1000473,"Kopā pa ēku");
+  SString(1000474,"Algas piemaksas par tāmēm");
+  SString(1000475,"PVN");
+  SString(1000476,"Trans.izd.");
+  SString(1000477,"NAI");
+  SString(1000478,"Procentuāli");
+  SString(1000479,"Tukšie dzīvokļi");
+  SString(1000480,"Datums no");
+  SString(1000481,"Datums līdz");
+  SString(1000482,"Parādnieku saraksts periodā");
+  SString(1000483,"Klients");
+  SString(1000484,"Sāk.saldo");
+  SString(1000485,"Apr.summa");
+  SString(1000486,"Samaksāts");
+  SString(1000487,"Beigu saldo");
+  SString(1000488,"Artikuls");
+  SString(1000489,"Summa");
+  SString(1000490,"Daudz.");
+  SString(1000491,"Cena");
+  SString(1000492,"Mērv.");
+  SString(1000493,"Likumisko % aprēķins");
+  SString(1000494,"Rēķins");
+  SString(1000495,"Daudzums lielāks nekā uzstādījumos atļautais");
+  SString(1000496,"Parādnieku saraksts ar pakalpojumiem");
+  SString(1000497,"Npk");
+  SString(1000498,"Parāds kopā");
+  SString(1000499,"Periods");
+  SString(1000500,"Dienas");
+  SString(1000501,"Procents");
+  SString(1000502,"Likumiskie %");
+  SString(1000503,"Tiesas darbi");
+  SString(1000504,"Atlaide");
+  SString(1000505,"Tar. bez. atl.");
+  SString(1000506,"Tar. ar. atl.");
+  SString(1000507,"Kopā (apr.)");
+  SString(1000508,"Kopā (no reg.)");
+  SString(1000509,"P.izm.");
+  SString(1000510,"Vid.sv.");
+  SString(1000511,"Objekts");
+  SString(1000512,"Šablons");
+  SString(1000513,"Kļūda");
+  SString(1000514,"tips nav");
+  SString(1000515,"ir slēgts");
+  SString(1000516,"Objekts neatbilst šablonam");
+  SString(1000517,"Vairāk kā viens objekts");
+  SString(1000518,"Nav norādīts objekts");
+  SString(1000519,"neeksistē");
+  SString(1000520,"Objekta");
+  SString(1000521,"Kļūdainie");
+  SString(1000522,"no");
+  SString(1000523,"Rēķins");
+  SString(1000524,"Ēka");
+  SString(1000525,"Akt. tips");
+  SString(1000526,"Komentārs");
+  SString(1000527,"Laiks");
+  SString(1000528,"Aprēķinātā summa");
+  SString(1000529,"Samaksātā summa");
+  SString(1000530,"Maksātspēja (%)");
+  SString(1000531,"Derīgs līdz");
+  SString(1000532,"Dz.");
+  SString(1000533,"Faktisko ieņēmumu un izdevumu pārskats");
+  SString(1000534,"Ēkas bilances aprēķins ir izveidots");
+  SString(1000535,"Ēkas bilances aprēķins nav izveidots");
+  SString(1000536,"Rēķina Summa");
+  SString(1000537,"Rēķina Nr.");
+  SString(1000538,"Neap.Realizācija");
+  SString(1000539,"Neap.Pakalpojumi");
+  SString(1000540,"Starpība");
+  SString(1000541,"Līgums");
+  SString(1000542,"Citas peronas");
+  SString(1000543,"Kopā pa klientiem");
+  SString(1000544,"dalīts");
+  SString(1000545,"Kopā pa ēku");
+  SString(1000546,"Kopā pa visu");
+  SString(1000547,"Parādnieku saraksts");
+  SString(1000548,"Datums");
+  SString(1000549,"A/M");
+  SString(1000550,"Parāds");
+  SString(1000551,"Neiek.");
+  SString(1000552,"Saldo");
+  SString(1000553,"Telpa/Klients");
+  SString(1000554,"Stat.");
+  SString(1000555,"Neapmaksāto summu pārbaude");
+  SString(1000556,"Summa I");
+  SString(1000557,"Summa II");
+  SString(1000558,"Gr.");
+  SString(1000559,"Negr.");
+  SString(1000560,"Rēķinu skaits");
+  SString(1000561,"Iedzīvotāju iesniegtie dokumenti par prombūtni");
+  SString(1000562,"Cilv.");
+  SString(1000563,"Mēn.");
+  SString(1000564,"Dienas");
+  SString(1000565,"Pamatojums");
+  SString(1000566,"Sāk.dat.");
+  SString(1000567,"Beig.dat.");
+  SString(1000568,"Garāmatvede");
+  SString(1000569,"Kods");
+  SString(1000570,"Garantijas");
+  SString(1000571,"Reģ.datums");
+  SString(1000572,"Term.no");
+  SString(1000573,"Term.līdz");
+  SString(1000574,"Garantiju sniedzējs");
+  SString(1000575,"Saņ.");
+  SString(1000576,"Konts");
+  SString(1000577,"Pak. kods");
+  SString(1000578,"Summa bez PVN");
+  SString(1000579,"PVN 10%");
+  SString(1000580,"PVN 21%");
+  SString(1000581,"Summa ar PVN");
+  SString(1000582,"Samaksātā");
+  SString(1000583,"Maksātspēja");
+  SString(1000584,"ēku rēkini");
+  SString(1000585,"Stāvu skaits");
+  SString(1000586,"Datumam jābūt pēdējai mēneša dienai");
+  SString(1000587,"Telpu/dzīvokļu sk.");
+  SString(1000588,"Celšanas gads");
+  SString(1000589,"Maksas pakalpojums nedrīkst būt norādīts, ja nav atzīmēts \"Pievienot pakalpojumu apmaksai rēķinā\"");
+  SString(1000590,"Ēkas tips");
+  SString(1000591,"Priv. statuss");
+  SString(1000592,"Ipaš. tipi");
+  SString(1000593,"Zemes īpašnieki");
+  SString(1000594,"Maksas paklpojumam jābūt obligāti norādītam, ja ir atzīmēts \"Pievienot pakalpojumu apmaksai rēķinā\"");
+  SString(1000595,"Kopl. telpas");
+  SString(1000596,"S. n. zeme.");
+  SString(1000597,"Pagr. pl.");
+  SString(1000598,"Autost.");
+  SString(1000599,"Nedz. pl.");
+  SString(1000600,"Ārēj. pl");
+  SString(1000601,"Dom. daļ.");
+  SString(1000602,"Zaļā zona");
+  SString(1000603,"Cit. pl.");
+  SString(1000604,"Privātipašums");
+  SString(1000605,"Privatizēts");
+  SString(1000606,"Daļēji privatizēts");
+  SString(1000607,"Valsts īpašums");
+  SString(1000608,"Pašvaldības īpašums");
+  SString(1000609,"Nav statusa");
+  SString(1000610,"Kopīpašums");
+  SString(1000611,"Fiziska persona");
+  SString(1000612,"Juridiska persona");
+  SString(1000613,"Valsts");
+  SString(1000614,"Pašvaldība");
+  SString(1000615,"Nav īpašnieku");
+  SString(1000616,"Deklar. sk.");//JS: possibly not used -- VG: this is used in DebStatRn
+  SString(1000617,"Telpai jābūt norādītai, ja ir atzīmēts \"Pievienot pakalpojumu apmaksai rēķinā\"");
+  SString(1000618,"Objekta adrese");
+  SString(1000619,"Izrakstītais rēķins (norma)");
+  SString(1000620,"Patērēts faktiski");
+  SString(1000621,"Skaitītāju pārbaude");
+  SString(1000622,"Skaitītājs");
+  SString(1000623,"Sask.");
+  SString(1000624,"Pēc ind. koef.");
+  SString(1000625,"Pēc koef.");
+  SString(1000626,"Rēķinā");
+  SString(1000627,"Skaitītāju saraksts");
+  SString(1000628,"Dzīvoklis");
+  SString(1000629,"Veids");
+  SString(1000630,"Pēdējais rādījums");
+  SString(1000631,"Skaitītāju pārbaude");
+  SString(1000632,"Dzīv.");
+  SString(1000633,"Saskaitīts");
+  SString(1000634,"Skait.tips");
+  SString(1000635,"Vieta");
+  SString(1000636,"Rādījums");
+  SString(1000637,"Beigu rād.");
+  SString(1000638,"Nav rēķina");
+  SString(1000639,"Atl.%");
+  SString(1000640,"Daudzums");
+  SString(1000641,"Rēķinu sagatave Nr.");
+  SString(1000642,"sagatavju izmantošana ir atslēgta");
+  SString(1000643,"Veidot pakalpojumu rēķinus");
+  SString(1000644,"Sagatavot pakalpojumu rēķinus");
+  SString(1000645,"Kopā pa artikuliem");
+  SString(1000646,"Izveidoti");
+  SString(1000647,"rēķini");
+  SString(1000648,"grāmatoti");
+  SString(1000649,"Veido rēķinus ēkai");
+  SString(1000650,"Nav izveidota rēķina sērija datumā");
+  SString(1000651,"Norādītais rēķina datums");
+  SString(1000652,"neiekļaujas periodā");
+  SString(1000653,"Rēķina datums nevar būt tukšs");
+  SString(1000654,"Rādījuma Nr.");
+  SString(1000655,"Iesn.");
+  SString(1000656,"Galv.sk.");
+  SString(1000657,"Bez skait.");
+  SString(1000658,"Platība");
+  SString(1000659,"Aprēķins");
+  SString(1000660,"Koeficients");
+  SString(1000661,"Viena iedzīvotāja maksa");
+  SString(1000662,"Tarifs");
+  SString(1000663,"Summa uz māju");
+  SString(1000664,"Cena par m2");
+  SString(1000665,"Mēneša aprēķins");
+  SString(1000666,"Plānots");
+  SString(1000667,"Faktiski");
+  SString(1000668,"Korekcija");
+  SString(1000669,"Ūdens aprēķins");
+  SString(1000670,"Visas ēkas");
+  SString(1000671,"Aukstais");
+  SString(1000672,"Karstais");
+  SString(1000673,"Apkure");
+  SString(1000674,"Nav skaitītāja");
+  SString(1000675,"Nav rādījuma");
+  SString(1000676,"Nav derīga skaitītāja");
+  SString(1000677,"Kopā nodots pa ēku");
+  SString(1000678,"Kopā platība pa ēku");
+  SString(1000679,"Kopā aukstā ūdens rād.");
+  SString(1000680,"Kopā karstā ūdens rād.");
+  SString(1000681,"Kopā ar skaitītājiem");
+  SString(1000682,"Kopā bez skaitītājiem");
+  SString(1000683,"Norādiet ēkas kodu");
+  SString(1000684,"Norādiet pakalpojuma veidu");
+  SString(1000685,"Jānorāda viens konkrēts mēnesis");
+  SString(1000686,"Sagatavots");
+  SString(1000687,"Aprēķināts");
+  SString(1000688,"Grāmatots");
+  SString(1000689,"Apr. likumiskos %");
+  SString(1000690,"Izdrukāts");
+  SString(1000691,"Ēku rēķinu sagatavošanas atskaite");
+  SString(1000692,"Stāvs");
+  SString(1000693,"Telpu skaits");
+  SString(1000694,"WEB rādījumi");
+  SString(1000695,"Rādījuma numurs");
+  SString(1000696,"Skaitītāja numurs");
+  SString(1000697,"Reģistrācijas datums");
+  SString(1000698,"Skaitītāja tips");
+  SString(1000699,"Kopā rādījumi");
+  SString(1000700,"Formula");
+  SString(1000701,"Tarifi");
+  SString(1000702,"Uz");
+  SString(1000703,"Kopā par summu");
+  SString(1000704,"Komisijas priekšsēdētājs/a");
+  SString(1000705,"Amats/Uzvārds/Vārds/Paraksts");
+  SString(1000706,"Komisijas locekļi");
+  SString(1000707,"Sarakstā uzskaitītās vērtības atrodas manā glabāšanā.");
+  SString(1000708,"Materiālu atbildīgā persona");
+  SString(1000709,"Kontu apgrozījums bez objektu tipa");
+  SString(1000710,"Objekti");
+  SString(1000711,"Klientu/rēķinu saraksts");
+  SString(1000712,"E-pasts");
+  SString(1000713,"Tālr.");
+  SString(1000714,"Fakss");
+  SString(1000715,"Telpa");
+  SString(1000716,"Klasifikācija");
+  SString(1000717,"Telpu pārskats");
+  SString(1000718,"N/A");
+  SString(1000719,"Jā");
+  SString(1000720,"Nē");
+  SString(1000721,"KPL");
+  SString(1000722,"Apl");
+  SString(1000723,"C.sk.");
+  SString(1000724,"Dekl.");
+  SString(1000725,"Priv.");
+  SString(1000726,"Bpl");
+  SString(1000727,"Lpl");
+  SString(1000728,"FiDAViSta maksājumu uzdevumi");
+  SString(1000729,"Maksājumu uzdevumu eksports");
+  SString(1000730,"Ēku maksātspēja");
+  SString(1000731,"Nāmu parvalde");
+  SString(1000732,"Ēka(saraksts)");
+  SString(1000733,"Ēka(no:līdz)");
+  SString(1000734,"Izdevumu grupu pārskats");
+  SString(1000735,"Izdevumu grupas");
+  SString(1000736,"Veiktie darbi");
+  SString(1000737,"Alga");
+  SString(1000738,"VSAOI");
+  SString(1000739,"Periodi pārklājas");
+  SString(1000740,"Virsizd.");
+  SString(1000741,"Materiāli");
+  SString(1000742,"Peļņa");
+  SString(1000743,"Bez PVN");
+  SString(1000744,"Vpl");
+  SString(1000745,"Ēkas pārskats");
+  SString(1000746,"Drīkst būt norādīta tikai viena no klasifikācijām \"KM\", \"MKM\", \"SEZKM\"");
+  SString(1000747,"Norādītajam rindas tipam šo lauku nedrīkst norādīt");
+  SString(1000748,"Uzmanību, līgums ir neapstiprināts");
+  SString(1000749,"Nedzīv. plat.");
+  SString(1000750,"Dzīv. plat.");
+  SString(1000751,"Ja tiek rēķināta faktiskā bilance, tad aprēķina formulu nenorāda");
+  SString(1000752,"Ārējā plat.");
+  SString(1000753,"Kopliet. plat.");
+  SString(1000754,"Citas plat.");
+  SString(1000755,"Zaļā zona");
+  SString(1000756,"Per. sākumā");
+  SString(1000757,"Samaksāts");
+  SString(1000758,"Izdots");
+  SString(1000759,"Per. beigās");
+  SString(1000760,"Apsaimniekošanas bilance");
+  SString(1000761,"Kopējā starpība");
+  SString(1000762," rēķini netika izdzēsti, jo tos nevarēja atgrāmatot");
+  SString(1000763,"Ieraksts nav saglabāts!");
+  SString(1000764,"Telpa/ēka neeksistē");
+  SString(1000765,"Nav nr.sērija");
+  SString(1000766,"Skaitītājam pārsniegts derīguma termiņš");
+  SString(1000767,"Nepieciešams skaitītāja nr.");
+  SString(1000768,"Ievadiet sākuma datumu");
+  SString(1000769,"Ievadiet telpas kodu");
+  SString(1000770,"Ūdens pārrēķins");
+  SString(1000771,"Iemesls: Nav kopējo ūdens mērītāju pa mājām");
+  SString(1000772,"Objekta adrese");
+  SString(1000773,"Izrakstītais rēķins (norma)");
+  SString(1000774,"Patērēts faktiski");
+  SString(1000775,"Pēc");
+  SString(1000776,"bez");
+  SString(1000777,"ūdens");
+  SString(1000778,"ar");
+  SString(1000779,"normām");
+  SString(1000780,"skaitītāja");
+  SString(1000781,"mērītājiem");
+  SString(1000782,"skaitītāju");
+  SString(1000783,"patērēts");
+  SString(1000784,"m3");
+  SString(1000785,"Par pakalp.");
+  SString(1000786,"PVN 21%");
+  SString(1000787,"Ls");
+  SString(1000788,"dzīvokļos");
+  SString(1000789,"Jāmaksā");
+  SString(1000790,"Par pakalp.");
+  SString(1000791,"Pakalpojumi");
+  SString(1000792,"visi");
+  SString(1000793,"Vispārējā info");
+  SString(1000794,"Iedzīvotāji");
+  SString(1000795,"Platība (summas no telpam)");
+  SString(1000796,"Izveidoto līgumu skaits");
+  SString(1000797,"Nav norādīts objekta tips namu apsaimniekošanas uzstādījumos");
+  SString(1000798,"Nav norādīts objekts");
+  SString(1000799,"Vairāk kā viens objekts ar tipu");
+  SString(1000800,"Objekts neatbilst šablonam");
+  SString(1000801,"Objekts neeksistē");
+  SString(1000802,"Objekts ir slēgts");
+  SString(1000803,"Objekta tips neeksistē");
+  SString(1000804,"Hierarhijas kļūda");
+  SString(1000805,"Datu pārbaude");
+  SString(1000806,"Ēku aktivitātes");
+  SString(1000807,"Aktiv. tipi");
+  SString(1000808,"Obligāti jānorāda ēka vai klasifikācija!");
+  SString(1000809,"Neapmaksāto rēķinu salīdzināšana");
+  SString(1000810,"Sākuma datums lielāks par beigu datumu");
+  SString(1000811,"Periods pārklājas");
+  SString(1000812,"Pakalpojumu rēķini");
+  SString(1000813,"Summas: Ģenerētas");
+  SString(1000814,"Summas: No rēķiniem");
+  SString(1000815,"Standarta teksts neeksistē!");
+  SString(1000816,"gada");
+  SString(1000817,"Skaititāju maiņa");
+  SString(1000818,"mainīt");
+  SString(1000819,"rēķins ar negatīvu summu!");
+  SString(1000820,"Ēkas statusa atskaite");
+  SString(1000821,"Pamatinformācija");
+  SString(1000822,"Deklarēti");
+  SString(1000823,"Faktiski");
+  SString(1000824,"Bērni");
+  SString(1000825,"Pensionāri");
+  SString(1000826,"Invalīdi");
+  SString(1000827,"Maznodrošinātie");
+  SString(1000828,"Iedzīvotāji");
+  SString(1000829,"Platības");
+  SString(1000830,"Obligāti jābūt atzīmei Ēka, Ēku gurpa vai Telpu grupa");
+  SString(1000831,"Pakalpojumu kopsummas");
+  SString(1000832,"Rindas objektu tipu drīkst norādīt tikai pārskatam");
+  SString(1000833,"Skaitītāju derīguma termiņi");
+  SString(1000834,"Koplietošanas plat.");//JS: possibly not used
+  SString(1000835,"Nav atrasts aktīvs līgums uz ");
+  SString(1000836,"Parādnieku skaits");
+  SString(1000837,"Ēkas bilances aprēķini");
+  SString(1000838,"Darba uzdevumi");
+  SString(1000839,"Ēkas vecākais");
+  SString(1000840,"Apm. %");
+  SString(1000841,"Sākumā");
+  SString(1000842,"Apr.kopā");
+  SString(1000843,"Sam.kopā");
+  SString(1000844,"Aprēķināts"); //not used
+  SString(1000845,"Samaksāts"); //not used
+  SString(1000846,"Beigās");
+  SString(1000847,"Kadastra Nr.");
+  SString(1000848,"Namu pārv.");
+  SString(1000849,"Sākuma numurs lielāks kā beigu numurs");
+  SString(1000850,"Pēdējā rēķ. datums");
+  SString(1000851,"Balkona platība");
+  SString(1000852,"Lodžijas platība");
+  SString(1000853,"Istabu skaits");
+  SString(1000854,"Telpas statusa atskaite");
+  SString(1000855,"Obligāti jānorāda sākuma datums!");
+  SString(1000856,"Ēku rēķini");
+  SString(1000857,"Kopā pa ciematiem");
+  SString(1000858,"Kopā pa ēkām");
+  SString(1000859,"Kopā pa artikuliem");
+  SString(1000860,"Kopā pa nomniekiem");
+  SString(1000861,"Ēku maksājumi");
+  SString(1000862,"Nav objekta ar tipu");
+  SString(1000863,"Rindas");
+  SString(1000864,"Kontaktu objekti");
+  SString(1000865,"Ēku objekti");
+  SString(1000866,"Telpu objekti");
+  SString(1000867,"Negatīvas summas rēķinu E sadaļās");
+  SString(1000868,"Negatīvas rēķinu kopsummas");
+  SString(1000869,"Nav klasifkācijas ar tipu");
+  SString(1000870,"Klasifikācija neatbilst šablonam");
+  SString(1000871,"Klientu klasifikācijas");
+  SString(1000872,"Pārskats par tarifiem");
+  SString(1000873,"Rēķini ar negatīvām neapmaksātām summām");
+  SString(1000874,"Nevar atrast skaitītāju telpai");
+  SString(1000875,"ar tipu");
+  SString(1000876,"Veiksmīgi izveidoti ");
+  SString(1000877,"grāmatoti ");
+  SString(1000878,"maksājumi ");
+  SString(1000879,"Jānorāda klienta reģistrācijas numurs!");
+  SString(1000880,"Nepareiza summa!");
+  SString(1000881,"Kļuda norādītajā rēķinā!");
+  SString(1000882,"Norādītā summa ir lielāka nekā neapmaksātā rēķina summa!");
+  SString(1000883,"Rēķins neeksistē!");
+  SString(1000884,"Lai apstiprinātu tipam ir jābūt " & chr(34) & "Pareizs" & chr(34));
+  SString(1000885,"Jābūt norādītai vismaz vienai rindiņai!");
+  SString(1000886,"Norādītais klients neatbilst klientam rēķinā");
+  SString(1000887,"Statistikā par parādniekiem");
+  SString(1000888,"Rēķina pakalpojumu apmaksu salīdzināšana");
+  SString(1000889,"E sadaļa");
+  SString(1000890,"Rēķ.summa");
+  SString(1000891,"Statistika par parādniekiem");
+  SString(1000892,"Nav ielikta atzīme " & chr(34) & " Veidot bez papildus parametriem" & chr(34));
+  SString(1000893,"Obligāti jānorāda pozīcijas");
+  SString(1000894,"Bilances pozīciju atšifrējums");
+  SString(1000895,"Realizācijas periods var būt tikai viens kalendārais mēnesis");
+  SString(1000896,"Ja ien. rēķinā tiek norādīts dalītais pakalpojums vai real. artikuli, tad obligāti jānorāda Real. periods");
+  SString(1000897,"Saskaņā ar");
+  SString(1000898,"rēķinu Nr.");
+  SString(1000899,". janvāra");
+  SString(1000900,". februāra");
+  SString(1000901,". marta");
+  SString(1000902,". aprīļa");
+  SString(1000903,". maija");
+  SString(1000904,". jūnija");
+  SString(1000905,". jūlija");
+  SString(1000906,". augusta");
+  SString(1000907,". septembra");
+  SString(1000908,". oktobra");
+  SString(1000909,". novembra");
+  SString(1000910,". decembra");
+  SString(1000911,"Nav norādīta ēka");
+  SString(1000912,"Nav norādīts sākuma datums");
+  SString(1000913,"Nav norādīts beigu datums");
+  SString(1000914,"Norādītā ēka neeksistē");
+  SString(1000915,"Nav datu par norādīto ēku");
+  SString(1000916,"Skaitītāju rādījumi izveidoti");
+  SString(1000917,"Atgādinājumi");
+  SString(1000918,"Klienta līgumi");
+  SString(1000919,"Piegādātāju līgumi");
+  SString(1000920,"Neapmaks.");
+  SString(1000921,"Veidot norakstīšanas");
+  SString(1000922,"Lai veidotu norakstīšanas obligāti jābūt norādītai noliktavai!");
+  SString(1000923,"Kļūda norakstīšanā ievietot artikulu ");
+  SString(1000924,"Kļūda norakstīšanā ievietot daudzumu artikulam ");
+  SString(1000925," preču saņemšana nr ");
+  SString(1000926,"Izveidotas sagatavošanas ar numuriem ");
+  SString(1000927,"Veidošanas laikā bija ");
+  SString(1000928," kļūdas. Sīkāk skatīt log failā!");
+  SString(1000929,"Pārvaldnieku peļņa");
+  SString(1000930,"Pārv. peļņa");
+  SString(1000931,"Pakalpojumu komplekts");
+  SString(1000932,"Nav norādīta bilances aprēķina formula");
+  SString(1000933,"Norādīta bilances aprēķina formula neeksistē");
+  SString(1000934,"Ēku bilance");
+  SString(1000935,"Delta");
+  SString(1000936,"Nav norādīts pakalpojumu komplekta kods");
+  SString(1000937,"Drīkst būt norādīts TIKAI viens no laukiem Ēka, Ēku grupa vai Telpu grupa");
+  SString(1000938,"Summa no ien. rēķina iespējams saņemt TIKAI, ja dalītais pak. veidots priekš Ēkas");
+  SString(1000939,"Obligāti jābūt norādītai Ēkai, Ēku grupai vai telpu grupai, ja nenorāda pazīmi Globālais tarifs");
+  SString(1000940,"Ja tiek ielikta atzīme Globālais tarifs, tad nedrīkst būt aizpildīti lauki Ēka, Ēku grupa un Telpu grupa");
+  SString(1000941,"Telpu nedrīkst norādīt, ja skaitītājs tiek veidots telpu vai ēku grupai");
+  SString(1000942,"Jau reģistrēts šajā kartiņā, rindā ");
+  SString(1000943,"Drīkst norādīt TIKAI ēku vai telpu");
+  SString(1000944,"Norādītajai ēkai jau ir izveidota papildu artikulu kartiņa ar numuru ");
+  SString(1000945,"Norādītajai telpai jau ir izveidota papildu artikulu kartiņa ar numuru ");
+  SString(1000946,"Norādītajam skaitītāja tipam vai skaitītājam nevar veidot vidējos rādījumus");
+  SString(1000947,"Nevar ievadīt jaunus globālos papildu artikulus");
+  SString(1000948,"Artiklus nedrīkst būt vienāds ar papildu artikulu");
+  SString(1000949,"Artiklus norādīts arī kā papildus artikuls rindā ");
+  SString(1000950,"Artiklus norādīts arī kā papildus artikuls, globālajā papildus artikulu kartiņā, rindā ");
+  SString(1000951,"Artiklus norādīts arī kā papildus artikuls, ēkas papildus artikulu kartiņā, rindā ");
+  SString(1000952,"Artiklus norādīts arī kā papildus artikuls, telpas papildus artikulu kartiņā ar numuru ");
+  SString(1000953,"Klasifikācija neeksistē ");
+  SString(1000954,"Jums nav tiesību izpildīt šo operāciju");
+  SString(1000955,"SMS Serviss");
+  SString(1000956,"SMS skaits");
+  SString(1000957,"Simbolu skaits virs 150!");
+  SString(1000958,"Ja norādā kontaktpersonu, tad obligāti jānorāda klienta kods");
+  SString(1000959,"SMS jau izveidoti");
+  SString(1000960,"Dokumentu meklēšana");
+  SString(1000961,"Konference");
+  SString(1000962,"Numurs");
+  SString(1000963,"Virsraksts");
+  SString(1000964,"Kam nodots");
+  SString(1000965,"Rēķini ar negatīvām priekšapmaksām");
+  SString(1000966,"Pasts ir slēgts");
+  SString(1000967,"Nav norādīts klienta kods");
+  SString(1000968,"Nav norādīts telpas kods");
+  SString(1000969,"Telpai jau ir aktīvs līgums ar numuru ");
+  SString(1000970," ar periodu ");
+  SString(1000971,"Norādītais klients neeksistē");
+  SString(1000972,"Norādītā ēku grupa neeksistē");
+  SString(1000973,"Norādītā telpu grupa neeksistē");
+  SString(1000974,"Norādītais pakalpojums neeksistē");
+  SString(1000975,"Ar norādīto pakalpojumu jau reģistrēts globālais tarifs");
+  SString(1000976,"Šāda tipa tarifs jau reģistrēts");
+  SString(1000977,"Šāda tipa dalītais pakalpojums jau reģistrēts");
+  SString(1000978,"Grāmatotu ierakstu nevar dzēst");
+  SString(1000979,"Kopā pa pakalpojumu grupām");
+  SString(1000980,"Telpu grupas");
+  SString(1000981,"Laukā un kolonā " & chr(34) & "Objekti" & chr(34) & " atļauts norādīt 60 simbolus");
+  SString(1000982,"Māju lietas");
+  SString(1000983,"Perioda veids: ");
+  SString(1000984,"Sākuma datums");
+  SString(1000985,"Beigu datums");
+  SString(1000986,"Datums");
+  SString(1000987,"Parādīt visus dokumentus");
+  SString(1000988,"LŪDZU IEVĒROJIET APMAKSAS HRONOLOĢIJU.  Klientam jau ir izveidoti rēķini ar jaunāku datumu skat. atskaiti " & chr(34) & "Pārskats par klientiem" & chr(34));
+  SString(1000989,"Maksimāli pieļaujami 80 " & chr(34) & "+, -, *, / " & chr(34) & " simboli");
+  SString(1000990,"Periodam jābūt norādītam pilnos mēnešos");
+  SString(1000991,"Kodu nedrīkst mainīt, tas jau tiek izmanotots klientam: ");
+  SString(1000992,"Kodu nedrīkst mainīt, tas jau tiek izmanotots līgumā: ");
+  SString(1000993,"PDF rēķinu sūtīšana uz e-pastiem");
+  SString(1000994,"Sūtīt rēķinus uz e-pastiem");
+  SString(1000995,"Klienti ar līgumiem");
+  SString(1000996,"Klienti bez līgumiem");
+  SString(1000997,"E-pasts nav atrasts");
+  SString(1000998,"E-pasts izveidots");
+  SString(1000999,"E-pasts ievietots sūtīšanas rindā");
+  SString(1001000,"E-pasts nosūtīts");
+  SString(1001001,"Bilances apr. formula");
+  SString(1001002,"Virsizdevumi");
+  SString(1001003,"Palīgmateriāli");
+  SString(1001004,"Mehānismi");
+  SString(1001005,"Peļņa");
+  SString(1001006,"Nav atrasts standarta teksts. Lūdzu pārbaudiet PDF rēķinu sūtīšanas sagatavošanu");
+  SString(1001007,"Sūtītājs nav norādīts. Lūdzu pārbaudiet Pasta un konferenču parametru sagatavošanu");
+  SString(1001008,"Kļūda ievietojot e-pastu sūtīšanas rindā");
+  SString(1001009,"Apstiprinātu ierakstu nevar mainīt");
+  SString(1001010,"Šis ir globālais ieraksts, ēku norādīt nedrīkst");
+  SString(1001011,"Klientam ir vairāki līgumi. Samaksas veids tika nomainīts visos.");
+  SString(1001012,"Nav ielikta atzīme " & chr(34) & " Palaist apkalpošanu bez papildus parametriem" & chr(34));
+  SString(1001013,"Obligāti jānorāda ieņ./izd. periods, ja tiek ielikta atzīme " & chr(34) & "Drukāt Ieņ./Izd. pārskatus" & chr(34));
+  SString(1001014,"Ierakstam jābūt saglabātam un grāmatotam.");
+  SString(1001015,"Rēķinu apmaksu sadalījums");
+  SString(1001016,"Rēķ. val.");
+  SString(1001017,"Bankas konts neatbilst uzdotajam šablonam LV##BANK#############");
+  SString(1001018,"Bankas kontus var pievienot tikai piegādātājiem");
+  SString(1001019,"Ja rēķina rindā norāda summu, tad obligāti jānorāda artikuls un daudzums");
+  SString(1001020,"Lietotājam nav norādīta e-pasta adrese");
+  SString(1001021,"Tāmju pārskats pa izdevumu veidiem");
+  SString(1001022,"Skaitītāju rādījums periodā");
+  SString(1001023,"Dati uz");
+  SString(1001024,"Persona");
+  SString(1001025,"Klienta kods");
+  SString(1001026,"Uzvārds, Vārds");
+  SString(1001027,"Paredzēts, ka jānorāda viens pilns mēnesis");
+
+  SString(1001028,"Ēku un telpu grupas");
+  SString(1001029,"Ēku grupas kods");
+  SString(1001030,"Telpu grupas kods");
+  SString(1001031,"Telpas kods");
+  SString(1001032, "Darbu veidi");
+  SString(1001033, "Darba uzdevumu klase");
+	SString(1001034, "Lūdzu, norādiet artikulu klasi!");
+	SString(1001035, "Norādītā artikulu klase neeksistē!");
+	SString(1001036, "Fiksēta summa");
+
+  SString(1001037,"Ēkas kods nav reģistrēts");
+  SString(1001038,"Dzīvokļa numurs nav reģistrēts");
+  SString(1001039,"Neapmaksātie pakalpojumi");
+  SString(1001040,"Uz šo telpu jau reģistrēts līgums ");
+  SString(1001041,"Negatīvs saskaitītais daudzums atļauts tikai pārsūtot to uz uzkrājumiem");
+  SString(1001042,"Dzīvokļa skaitītājam nepieciešams galvenais skaitītājs");
+  SString(1001043,"Pārsniegts maksimālais rādījums");
+  SString(1001044,"Skaitītājs slēgts");
+  SString(1001045,"Pārsniegts skaitītāja beigu datums");
+  SString(1001046,"Pievienots saņēmējs ");
+  SString(1001047,"Noņemts saņēmējs ");
+  SString(1001048,"Teksta/satura izmaiņas");
+  SString(1001049,"Pievienots statuss ");
+  SString(1001050,"Noņemts statuss ");
+  SString(1001051,"Jau ir reģistrēts ieraksts uz šo periodu : ");
+  SString(1001052,"Telpa");
+  SString(1001053,"Ēka");
+
+  //Telpas pakalpojumi
+  SString(1001054,"Telpa");
+  SString(1001055,"Pakalpojums");
+  SString(1001056,"Nosaukums");
+  SString(1001057,"Daudzuma apr.");
+  SString(1001058,"Telpu pakalpojumi");
+  SString(1001059,"No telpas");
+  SString(1001060,"No skaitītāja");
+  SString(1001061,"Cits");
+
+  //Dalītie pakalpojumi
+  SString(1001062,"Norādītajam pakalpojumam nav piesaistīts artikuls!");
+  SString(1001063,"Pakalpojumam piesaistītais artikuls neeksistē!");
+  SString(1001064,"Pakalpojumu aprēķins");
+
+  SString(1001065,"Izdrukāts atgādinājums par neapmaksātajiem rēķiniem");
+  SString(1001066,"Izdrukāts brīdinājums par neapmaksātajiem rēķiniem");
+  SString(1001067,"Izdrukāts paskaidrojums par neapmaksātajiem rēķiniem");
+
+  SString(1001068,"Stundas");
+  SString(1001069,"Persona un darbinieks obligāti jānorāda");
+  SString(1001070,"Darba algas aprēķins");
+  SString(1001071,"Darba alga");
+  SString(1001072,"Likme");
+  SString(1001073,"Materiālu norakstīšana jau ir izveidota");
+
+  SString(1001074,"Hansa līguma nr.");
+  SString(1001075,"Piegādātāja līguma nr.");
+  SString(1001076,"Līguma dat.");
+  SString(1001077,"Aktīvs/neaktīvs");
+  SString(1001078,"Piegādātāja nosaukums");
+  SString(1001079,"Līguma izpildes dat.");
+  SString(1001080,"Ēkas adrese");
+  SString(1001081,"Līguma summa");
+  SString(1001082,"Norādītais piegādātājs neeksistē!");
+
+  SString(1001083,"Nepietiek vietas, lai ievietotu objektu(s) no noliktavas!");
+
+  SString(1001084,"Līgumi bez telpām");
+
+  SString(1001085,"Pārskats par tāmēm 3");
+  SString(1001086,"Nr.p.k.");
+  SString(1001087,"Darba/materiāla nosaukums");
+  SString(1001088,"Mērvien.");
+  SString(1001089,"Kopā uz visu apjomu");
+  SString(1001090,"Darb.ietilp.,c/st");
+  SString(1001091,"Alga(Ls)");
+  SString(1001092,"Mater.(Ls)");
+  SString(1001093,"Mehān.(Ls)");
+  SString(1001094,"Summa(Ls)");
+  SString(1001095,"Kopā par visu darba uzdevumu");
+  SString(1001096,"PVN 22%"); //not used
+  SString(1001097,"Kopā ar PVN");
+  SString(1001098,"Kopā par visiem darba uzdevumiem");
+  SString(1001099,"Nodeva:");
+  SString(1001100,"Pieņēma:");
+
+  SString(1001101,"Uzskaites mēraparātu rādījumi siltummezglā:");
+  SString(1001102,"plkst.");
+  SString(1001103,"Siltumenerģija");
+  SString(1001104,"Karstais ūdens");
+  SString(1001105,"Ūdens sistēmas piebarošanai");
+  SString(1001106,"Papildus informācija:");
+  SString(1001107,"Datus apkopoja:");
+  SString(1001108,"Kav.d.sk.vec.rēķ.");
+  SString(1001109,"Kon.kar.iev.klas.");
+  SString(1001110,"Personas, kas ievadīja aktivitātes ēkai");
+  SString(1001111,"Personas, kas ievadīja aktivitātes dotajai telpai:");
+  SString(1001112,"Personas, kas ievadīja aktivitātes dotajam klientam:");
+  SString(1001113,"Aktivitāšu tipi, kas ievadīti dotajai telpai:");
+  SString(1001114,"Aktivitāšu tipi, kas ievadīti dotojam klientam:");
+  SString(1001115,"Aktivitāšu tipi, kas ievadīti ēkai");
+  SString(1001116,"Atskaite netiek veidota bez papildus parametriem, un ēka nav norādīta!");
+
+  SString(1001117,"Lūdzu norādiet lauku");
+
+  SString(1001118,"Vērtībām laukos 'No' un 'Līdz' jābūt vienādā garumā");
+  SString(1001119,"Izziņu tipa kodam jābūt unikālam sagatavošanas robežās!");
+  SString(1001120,"Norādītais adresāts neeksistē!");
+  SString(1001121,"Norādītais izsniedzējs neeksistē!");
+  SString(1001122,"Norādītais saņēmējs neeksistē!");
+  SString(1001123,"Norādītais izziņu veids neeksistē!");
+  SString(1001124,"Nav iespējams piešķirt numuru izziņai izvēlētās izziņu numuru sērijas ietvaros! Izvēlētais izziņu veids neder!");
+  SString(1001125,"Izsniegtās izziņas");
+  SString(1001126,"Līguma numurs: ");
+  SString(1001127,"Izziņas numurs");
+  SString(1001128,"Izziņas datums");
+  SString(1001129,"Izziņas veids");
+  SString(1001130,"Laukam 'No dat.' jābūt obligāti aizpildītam!");
+  SString(1001131,"Laukam 'Līdz dat.' jābūt obligāti aizpildītam!");
+  SString(1001132,"Datums 'Līdz dat.' nevar būt agrāks par datumu 'No dat.'!");
+  SString(1001133,"Lauks 'No' nevar būt tukšs!");
+  SString(1001134,"Lauks 'Līdz' nevar būt tukšs!");
+  SString(1001135,"Izziņas veida kods nevar būt tukšs!");
+  SString(1001136,"Izziņas veidam nav norādīta numuru sērija!");
+  SString(1001137,"Izziņa nevar būt saglabāta bez numura! Ievadiet derīgo izziņas veidu!");
+  SString(1001138,"Izziņa nevar būt saglabāta bez līguma numura! Ievadiet derīgo līguma numuru!");
+  SString(1001139,"Norādītais līgums neeksistē!");
+  SString(1001140,"Izziņai nav piesaistīta forma. Pārbaudiet izziņas veida definīciju!");
+  SString(1001141,"Nav iespējam atrast izziņai piesaistīto formu. Pārbaudiet, vai tāda ir nodefinēta!");
+  SString(1001142,"Izziņas adresāta kods un nosaukums nevar būt tukši!");
+  SString(1001143,"Izziņas adresāta kodam un nosaukumam jābūt unikāliem sagatavošanas robežās!");
+  SString(1001144,"Ja atskaites pārskatā jāizvada kredīta un debeta summas, tad atskaites periodam jābūt pilnos mēnešos");
+  SString(1001145,"Vecie parādnieki");
+  SString(1001146,"Iedzīvotājs ar tādu numuru neeksistē!");
+  SString(1001147,"Prombūtnes jāveido no telpas kartiņas!");
+  SString(1001148,"Prombūtnes jāveido no iedzīvotāja kartiņas!");
+  SString(1001149,"Iedzīvotāja vārds un uzvārds nevar būt tukši! Izvēlējieties derīgu iedzīvotāja numuru!");
+  SString(1001150,"Iedzīvotāja numurs nevar būt tukšs!");
+  SString(1001151,"Deklarēšanas anulēšanas datums nevar būt agrāks par deklarēšanas sākuma datumu!");
+  SString(1001152,"Iedzīvotāja kartiņa ar norādīto personas kodu jau eksistē: ");
+  SString(1001153,"Lauki 'Pakalpojuma sākuma datums' un 'Termiņš' var būt vai nu abi norādīti, vai nu abi tukši");
+  SString(1001154,"Pamatlīdzekļu inventarizācijas saraksts");
+  SString(1001155,"Uzņēmums:");
+  SString(1001156,"Apakšnodaļa:");
+  SString(1001157,"PAMATLĪDZEKĻU INVENTARIZĀCIJAS SARAKSTS Nr.");
+  SString(1001158,"Pamatlīdzekļi");
+  SString(1001159,"Atrašanās vieta");
+  SString(1001160,"APLIECINĀJUMS");
+  SString(1001161,"Līdz inventarizācijas sākumam visi dokumenti par manā (mūsu) atbildībā nodoto vērtību pieņemšanu un");
+  SString(1001162,"Materiāli atbildīgās personas:");
+  SString(1001163,"vārds, uzvārds");
+
+  SString(1001164,"izsniegšanu ir iegrāmatoti un nodoti grāmatvedībā.");
+  SString(1001165,"Istaba Nr.");
+  SString(1001166,"Nevar atrast parakstītu un apstiprinātu līgumu priekš norādītā klienta!");
+  SString(1001167,"Vienlaicīgi var norādīt tikai telpu un ēku, ēku, telpu grupu vai ēku grupu!");
+  SString(1001168,"Skaitītāji jau ir savādīti!");
+  SString(1001169,"Norādītais skaitītājs nevar būt atrasts rindā: ");
+  SString(1001170,"Obligāti jānorāda kāda platība, reģistrācijas datums, visi rindas laukumi!");
+  SString(1001171,"Skaitītāja rādījums jau ir ievadīts!");
+  SString(1001172,"Darba uzdevuma izpildes statusam jābūt \"Izpildīts\"!");
+  SString(1001173,"Darba veids");
+  SString(1001174,"Pārskats par klientu");
+  SString(1001175,"Telpu sk.");
+  SString(1001176,"Namu apsaimniekošanas uzstādījumos nav norādīts skaitītāju klasifikācijas tips");
+  SString(1001177,"Klasifikācijas ar tipu");
+  SString(1001178,"Rād.tips");
+  SString(1001179,"Izveidot dokumentu ēkai");
+  SString(1001180,"Dok. dat.");
+  SString(1001181,"Aktuālitāte");
+  SString(1001182,"Arhīvā");
+  SString(1001183,"Bez dokumenta veida");
+  SString(1001184,"Platība kopā");
+  SString(1001185,"Periodi pārklājas rindām");
+  SString(1001186,"Nav norādīts numurs no");
+  SString(1001187,"Līguma numurs jau aizņemts ");
+  SString(1001188,"Nosaukumi pārklājas rindām");
+  SString(1001189,"Tukšs lauks rindā");
+  SString(1001190,"Nav norādīts datums");
+  SString(1001191,"Noliktava Nr.");
+  SString(1001192,"Noliktava neeksistē");
+  SString(1001193,"MATERIĀLO VĒRTĪBU INVENTARIZĀCIJAS SARAKSTS Nr.");
+  SString(1001194,"Materiālo vērtību inventarizācijas saraksts");
+  SString(1001195,"Periodiskais pakalpojums ievietots rēķinā. Nevar dzēst.");
+  SString(1001196,"Bez klasifikācijas");
+  SString(1001197,"Tips");
+  SString(1001198,"Ēkas kods atkārtojas!");
+
+  SString(1001199,"Sagatavots");
+  SString(1001200,"Drukā");
+  SString(1001201,"Apturēts");
+  SString(1001202,"Pabeigts");
+
+  SString(1001203,"Nekorektas vērtības laukos telpa, ēka, līgums");
+  SString(1001204,"Apraksts");
+  SString(1001205,"Nav noradīts līgums");
+  SString(1001206,"Nav norādīta ēka");
+  SString(1001207,"Nav noradita telpa");
+  SString(1001208,"Neatbilstošs līgums");
+  SString(1001209,"Nav tāds līgums");
+  SString(1001210,"Nav tāda ēka");
+  SString(1001211,"Neatbilstoša telpa");
+  SString(1001212,"Nav tādas telpas");
+
+  SString(1001213,"Vairāki aktīvi līgumi vienai telpai");
+  SString(1001214,"Atkārtojošie līgumi");
+
+  SString(1001215,"Sākuma un beigu datumi ir obligāti jānorāda");
+  SString(1001216,"Sākuma un beigu datumiem nesakrīt mēneši vai gadi");
+  SString(1001217,"Nekorekta diena sākuma datumam");
+  SString(1001218,"Nekorekta diena beigu datumam");
+
+  SString(1001219,"Rēķinā tiek izmanoti uzkrājumi");
+
+  SString(1001220,"paraksts");
+
+  SString(1001221,"Rēķini pa lietotājiem");
+  SString(1001222,"Rēķinu sk.");
+  SString(1001223,"Grām. summa");
+  SString(1001224,"Negrām. summa");
+  SString(1001225,"E-mail statistika");
+
+  SString(1001226,"Lietvedības pārskats");
+  SString(1001227,"Saņemtā korespondence");
+  SString(1001228,"Dok. datums");
+  SString(1001229,"Korespondents");
+  SString(1001230,"Atb. datums");
+
+  SString(1001231,"Nav definēta konference priekš saņemtās korespondences");
+  SString(1001232,"Iestatījumos norādītā konference neeksistē");
+  SString(1001233,"Nosūtītā korespondence");
+  SString(1001234,"Kas sagatavoja");
+  SString(1001235,"Atbilde uz");
+  SString(1001236,"Kam nosūtīts");
+  SString(1001237,"Dokumenta saturs");
+  SString(1001238,"Nav definēta konference priekš nosūtītās korespondences");
+
+  SString(1001239,"Līguma kontrahents");
+  SString(1001240,"Līguma priekšmets");
+  SString(1001241,"Līgums spēkā no");
+  SString(1001242,"Līgums spēkā līdz");
+  SString(1001243,"Līguma pagarināts līdz");
+
+  SString(1001244,"Klientu līgumi");
+  SString(1001245,"Līguma objekts");
+  SString(1001246,"Piezīmes - Līgumi");
+
+  SString(1001247,"Kontrole");
+  SString(1001248,"Nav atbildēts");
+  SString(1001249,"Atbildēts");
+  SString(1001250,"Dokuments ar šādu numuru sistēmā nav reģistrēts");
+  SString(1001251,"Saimnieciskie līgumi");
+  SString(1001252,"Līgumi par siltumenerģijas piegādi un lietošanu");
+
+  SString(1001253," skaitītāju rādījumi");
+  SString(1001254,"Šādā periodā jau ir rādījums skaititājam ");
+  SString(1001255,"Nav norādīts sākuma un/vai beigu datums");
+  SString(1001256,"Ēkas nesakrīt");
+  SString(1001257,"Ievadiet daudzumu");
+
+  SString(1001258,"Jau tiek drukāti rēķini, vienlaicīgi iespējams tikai drukāt no viena ieraksta");
+
+  SString(1001259,"Nosaukums ir par garu");
+
+  SString(1001260,"Sākuma datums nevar būt lielāks par beigu datumu");
+  SString(1001261,"Sākuma datumam jāsākās ar mēneša pirmo dienu");
+  SString(1001262,"Beigu datumam jābūt ar mēneša pēdējo dienu");
+  SString(1001263,"Ievadiet sākuma datumu");
+
+  SString(1001264,"Ienākošo rēķinu PVN pārbaude");
+  SString(1001265,"Rēķina nr.");
+  SString(1001266,"Galv. PVN");
+  SString(1001267,"Apr. PVN");
+  SString(1001268,"Aprēķinātais");
+
+  SString(1001269,"Datumam jāsākās ar mēneša pirmo dienu");
+
+  SString(1001270,"Rēķins ar šādu datumu eksistē");
+  SString(1001271,"Rēķina datums ir vecāks nekā pēdējā rēķina datums");
+  SString(1001272,"Proc.");
+
+  SString(1001273,"Līgumā reģistrēts cits klients");
+  SString(1001274,"Līgumā reģistrēta cita telpa");
+
+  SString(1001275,"Kļūda veidojot skaitītāja rādījumus, lūdzu pārbaudiet žurnalēšanas datni");
+  SString(1001276,"Kļūda veidojot rēķinu, lūdzu pārbaudiet žurnalēšanas datni");
+  SString(1001277,"Kļūda veidojot rēķinu, rēķins šajā periodā jau eksistē");
+  SString(1001278,"Kļūda veidojot maksājumu, lūdzu pārbaudiet žurnalēšanas datni");
+  SString(1001279,"Kļūda veidojot kases orderi, lūdzu pārbaudiet žurnalēšanas datni");
+
+  SString(1001280,"Rēķini");
+  SString(1001281,"VIENM");
+  SString(1001282,"VIENR");
+
+  SString(1001283,"Algu maks");
+
+  SString(1001284,"Kodam ir jasākas ar simbolu: ");
+
+  SString(1001285,"Nav norādīta ēka un telpa");
+
+  SString(1001286,"Telpu lauki");
+  SString(1001287,"Summa ar koef.");
+  SString(1001288,"Dzīvoklis nr. ");
+  SString(1001289,"Koef.");
+
+  SString(1001290,"Kopā pa visām ēkām");
+
+  SString(1001291,"Kopā pa visām telpām:");
+
+  SString(1001292,"Šādā periodā jau ir dienas vidējās temperatūras ieraksts!");
+  SString(1001293,"Mēnesī nav tik daudz dienas!");
+
+  SString(1001294,"Nenodotie rādījumi");
+  SString(1001295,"Nav norādīts");
+
+  SString(1001296,"Kļūda ievietojot līgumam piesaistīto klientu!");
+  SString(1001297,"Ir nepiesaistītas priekšapmaksas");
+
+  SString(1001298,"Nav norādīts daudzums!");
+  SString(1001299,"Nav norādīts skaitītāja numurs!");
+
+  SString(1001300,"Sāk. rād.");
+  SString(1001301,"Beig.rād.");
+  SString(1001302,"Kor. daudzums");
+  SString(1001303,"Bez tipa");
+
+  SString(1001304,"Rēķinu pārbaude");
+  SString(1001305,"Aktīvo līgumu");
+  SString(1001306,"skaits telpām");
+  SString(1001307,"skaits uz ēku");
+  SString(1001308,"Akt. līgumi kopā");
+  SString(1001309,"Sagatavoti");
+  SString(1001310,"rēķini");
+  SString(1001311,"Aktīvie līgumi");
+  SString(1001312,"kopā");
+
+  SString(1001313,"Fails izveidots!");
+  SString(1001314,"Kļūda! Fails nav izveidots!");
+
+  SString(1001315,"Vienošanās atlikums (EUR):");
+  SString(1001316,"Tiesvedības atlikums (EUR):");
+  SString(1001317,"Ēkas kopējais parāds (EUR):");
+  SString(1001318,"Tiesvedība");
+  SString(1001319,"Vienošanās");
+
+  SString(1001320,"V/T/I");
+  SString(1001321,"Tekošie rēķini");
+  SString(1001322,"Vienošanās grafiks");
+  SString(1001323,"Telpa: ");
+  SString(1001324,"Kopsumma: ");
+  SString(1001325,"Sākuma datums: ");
+  SString(1001326,"Mēnešu skaits: ");
+  SString(1001327,"Veiksmīgi eksportēti ");
+  SString(1001328,"Kļūda atceļot rēķinu.");
+  SString(1001329,"Kļūda atceļot rēķinu. Nebija iespējams atgrāmatot rēķinu.");
+  SString(1001330,"Kļūda atceļot rēķinu. Rēķins nav apsaimniekošanas rēķins.");
+  // SString(1001330,"JSTU");
+  SString(1001331,"Skaitītājs ar šādu numuru jau norādīts!");
+  SString(1001332,"Nav norādīta eksporta mape!");
+  SString(1001333," rēķini, no kuriem izveidots arhīva fails.");
+  SString(1001334,"Kļūda. Nav izveidots arhīva fails!");
+  SString(1001335,"Nav izveidots arhīva fails, jo nav neviens PDF fails.");
+
+  SString(1001336,"Skaitītāju rādījumu pārbaude");
+  SString(1001337,"Skaitītāju tipi ");
+  SString(1001338,"Skait. tips");
+  SString(1001339,"Nav skaitītāju");
+  SString(1001340,"Nav rādījuma");
+  SString(1001341,"Telpa/ēka");
+  SString(1001342,"Tiesvedības");
+  SString(1001343,"Vecie konti: ");
+  SString(1001344,"Tiesvedības/vienošanās");
+  SString(1001345,"Nevarēja atrast klientu!");
+  SString(1001346,"Rēķinu veidošana - apvienotie");
+  SString(1001347,"Obligāti jānorāda klients vai klasifikācija!");
+  SString(1001348,"Atjaunoti");
+  SString(1001349,"līgumi");
+  SString(1001350,"Rēķini uz e-pastu");
+  SString(1001351,"nedrukāt rēķinus");
+  SString(1001352,"Nedrukāt rēķinus");
+  SString(1001353,"Skaitītājam ar šādu tipu nenorāda rādījuma tipu");
+
+  SString(1001354,"Šim periodam jau reģistrēts ieraksts: ");
+  SString(1001355,"Obligāti jānorāda konts");
+  SString(1001356,"Business control - Ienākošie maksājumi");
+  SString(1001357,"Šāds kods jau norādīts rindā: ");
+
+  SString(1001358,"Periodam ir jābūt tieši vienam kalendārajam mēnesim");
+  SString(1001359,"Business control - Realizācija");
+  SString(1001360,"Business control - Debitori");
+  SString(1001361,"Obligāti jānorāda klasifikācijas tips");
+  SString(1001362,"Klientu parādu atlikums uz ");
+  // SString(1001363,"Fortum Jelgava debitoru atlikums uz ");
+  // SString(1001364,"Fortum Jelgava klientu avansu/pārmaksu atlikums");
+  SString(1001365,"Klientu grupa");
+  SString(1001366,"Pamatsumma");
+  SString(1001367,"Soda nauda");
+  SString(1001368,"Tiesu izdevumi");
+  SString(1001369,"Avansu atlikums");
+  SString(1001370,"reserved");
+
+  SString(1001371,"Juridiskā adrese:");
+  SString(1001372,"Parāda apmaksa jāveic atsevišķā maksājumā, obligāti norādot attiecīgās vienošanās vai tiesvedības numuru.");
+  SString(1001373,"Atgādinām, ka uz rēķina izrakstīšanas datumu Jums ir kavēts maksājums EUR "); //-> 1001375
+  SString(1001374,"Paldies par savlaicīgu rēķina apmaksu!");
+  SString(1001375," apmērā. Lūdzam to nekavējoties samaksāt.");
+  SString(1001376,"Ēkas kopējais siltumenerģijas patēriņš MWh: ");
+  SString(1001377,"Kopējais ");
+  SString(1001378,"apkures ");
+  SString(1001379,"ūd. uzsild. ");
+  SString(1001380,"Klientam netiek sūtīti rēķini uz e-pastu!");
+  SString(1001381,"Nosūtīti rēķini");
+  SString(1001382,"uz e-pastu");
+  SString(1001383,"Imports pabeigts. Importēto failu skaits: ");
+  SString(1001384,"Kļūda grāmatojot maksājumu");
+  SString(1001385,"Nav pakalpojumi līgumos");
+  SString(1001386,"Atšķirīgi skaitītāju tipi");
+  SString(1001387,"Skaitītāju pakalpojumu pārbaude");
+  SString(1001388,"JNIP skaitītāju rādījumu importa neg. vērtības");
+  SString(1001389,"Skaitītāju rādijumu validācija");
+  SString(1001390,"Skaitītāja rādījums");
+  SString(1001391,"Ēkas ");
+  SString(1001392,"Veikt Itella rēķinu eksportu?");
+  SString(1001393,"Veikt NIP rēķinu eksportu?");
+
+  // SString(1001394,"Saldo JSTU");
+  // SString(1001395,"LS JSTU");
+  SString(1001396,"Pamatparāds");
+  SString(1001397,"Domes dzīvokļu parādi");
+
+  SString(1001398,"Tiesvedības parāds");
+  SString(1001399,"Vienošanās parāds");
+  SString(1001400,"Pārmaksa");
+  SString(1001401,"Parāds/pārmaksa salīdzināšana");
+
+  SString(1001402,"UZMANĪBU! Šis maksājums ir veidots no maksājuma ievades. Izmaiņu gadījumā jāveic izmaiņas arī konkrētājā maksājumu ievades rindā.");
+
+  SString(1001403,"Maksājumi bez artikuliem");
+
+  SString(1001404,"Parādnieku kopsavilkums");
+  SString(1001405,"Vārds uzvārds / uzņēmums");
+  SString(1001406,"Personas kods /reģ.nr.");
+  SString(1001407,"Līguma statusi");
+  SString(1001408,"Parāds uz perioda sākumu");
+  SString(1001409,"Aktīvs");
+  SString(1001410,"Neaktīvs");
+  SString(1001411,"t.sk. PVN");
+  SString(1001412,"t.sk. lik.% kopā");
+  SString(1001413,"Klientu parāds uz ");
+  SString(1001414,"Beigu atlikums uz atskaites sagatavošanas brīdi");
+  SString(1001415,"Piestādītie rēķini");
+  // SString(1001416,"t.sk. Pamatparāds bez JSTU");
+  // SString(1001417,"t.sk. JSTU");
+  SString(1001418,"t.sk. Vienošanās");
+  SString(1001419,"t.sk. Tiesvedības");
+
+  // SString(1001420,"Bez JSTU");
+  SString(1001421,"Pāradu vecuma sadalījums");
+  SString(1001422,"ĪRNIEKS");
+	SString(1001423,"t.sk. Vienošanās JSTU");
+  SString(1001424,"t.sk. Tiesvedības JSTU");
+	SString(1001425,"Vienošanās JSTU parāds");
+  SString(1001426,"Tiesvedības JSTU parāds");
+
+  SString(1001427,"Pārskats par līgumu");
+  SString(1001428,"t.sk. lik.% bez JSTU");
+  SString(1001429,"Norādītā summa ir lielāka nekā neapmaksātā pakalpojuma summa!");
+  SString(1001430,"Rēķina neapm. summa");
+  SString(1001431,"Art. apmaksas vēst. reģ. summa");
+
+  SString(1001432,"Vienošanās atlikumi");
+  SString(1001433,"Tiesvedības atlikumi");
+  SString(1001434,"Kārtējo rēķinu atlikumi");
+  SString(1001435,"Bijušo dzīvokļu īpašnieku parāds");
+  SString(1001436,"Ēku parādi");
+  SString(1001437,"Dzīvokļu īpašnieki");
+  SString(1001438,"Bijušie dzīvokļu īpašnieki");
+  SString(1001439,"Vārds, Uzvārds");
+  SString(1001440,"Ēkas kods,TG kods, dzīvokļa nr.");
+  SString(1001441,"Kopā par bijušajiem īpašniekiem");
+
+  SString(1001442,"Fiziskās personas");
+  SString(1001443,"Juridiskās personas");
+  SString(1001444,"Valsts un pašvaldību iestātes");
+
+  SString(1001445,"Telpas ar koeficientiem");
+  SString(1001446,"JSTU bilance");
+  SString(1001447,"Atšķirās norādītais līguma nr. ar rēķinā esošo!");
+  SString(1001448,"Lielo skaitītāju rādījumu pārbaude");
+  SString(1001449,"E,TG,EG");
+  SString(1001450,"Iepr.rād.datums");
+  SString(1001451,"Mēn. -1");
+  SString(1001452,"Mēn. -2");
+  SString(1001453,"Mēn. -3");
+  SString(1001454,"Balance report");
+  SString(1001455,"Pārējie");
+
+  SString(1001456,"Izveidots");
+  SString(1001457,"Nodots piedziņai");
+  SString(1001458,"Piedziņas procesā");
+  SString(1001459,"Slēgts");
+  SString(1001460,"Šim līgumam jau eksistē parādu piedziņas lieta ar nr. ");
+
+  SString(1001461,"Artikulu apmaksas vēstures reģistrs");
+  SString(1001462,"Artikulu pārmaksa");
+  SString(1001463,"Parādu piedziņas lietu veidošana");
+  SString(1001464,"Conventus lieta");
+  SString(1001465,"Veidot Conventus lietas");
+
+  SString(1001466,"Siltumapgādes pakalpojums");
+  SString(1001467,"Neizmantoto kredītrēķinu saraksts");
+  SString(1001468,"Parāda aprēķins");
+  SString(1001469,"Samaksa");
+  SString(1001470,"t.sk.");
+  SString(1001471,"pamatpar.");
+  SString(1001472,"Saldo uz mēn. pēdējo datumu");
+  SString(1001473,"likumiskie %");
+
+  SString(1001474,"Pārskaitījums");
+  SString(1001475,"Maksājumi, kur rodas pārmaksa");
+
+  SString(1001476,"Lursoft dati");
+  SString(1001477,"Rēķini kuriem nav atbilstošu ierakstu");
+  SString(1001478,"Nav norādīts neviens monitorings");
+  SString(1001479,"Nav apstiprināts periods");
+  SString(1001480,"K.ūd.");
+  SString(1001481,"Siltumenerģijas patēriņš");
+  SString(1001482,"Šāds pakalpojums nav norādītajā rēķinā!");
+  // SString(1001483,"Fortum Jelgava, reģ.nr.:");
+  SString(1001484,"Mēneša maksājums");
+
+  SString(1001485,"Ēkas aprēķins/apmaksa");
+  SString(1001486,"Periodā aprēķinātie pakalpojumi:");
+  SString(1001487,"Periodā apmaksātie pakalpojumi:");
+
+  SString(1001488,"Pakalpojums ir apmaksāts vai tā neapmaksātā summa ir mazāka!");
+  SString(1001489,"Pārādu piedziņas lietu pārskats");
+  SString(1001490,"Nodots");
+  SString(1001491,"Nod. summa");
+  SString(1001492,"Saņ. summa");
+  SString(1001493,"Atlikums");
+  SString(1001494,"Kredītrēķ.");
+  SString(1001495,"Atjaunots");
+  SString(1001496,"Slēgts");
+  SString(1001497,"lik. %");
+  SString(1001498,"Conventus");
+  // SString(1001499,"Fortum");
+  
+  SString(1001500,"Siltumenerģijas līguma nr.");
+  SString(1001501,"Aprēķinātās vērtības");
+  
+  SString(1001502,"Mēn. -4");
+  SString(1001503,"Mēn. -5");
+  SString(1001504,"Mēn. -6");
+  
+  SString(1001505,"Siltumenerģijas");  
+  SString(1001506,"t.sk. lik.% par pamatparādu");
+  SString(1001507,"t.sk. Pamatparāds");
+  SString(1001508,"Salīdzinājuma periodā");
+  
+  SString(1001509,"Koef."); //Siltumenerģijas patēriņa validācija
+  SString(1001510,"Rēķinu veidošana - telpas");
+  SString(1001511,"Rēķinu veidošana - ēkas");
+  SString(1001512,"Pakalpojumu rēķins šajā datumā jau eksistē");
+  SString(1001513,"Creditreform");
+  
+  SString(1001514,"Nav norādīts reģ. nr.");
+  SString(1001515,"KIB datu atskaite");
+  SString(1001516,"Kavēts no");
+  SString(1001517,"Ziņots");
+  SString(1001518,"KIB klientu datu validācija");
+  SString(1001519,"Nekorekts reģ. nr.");
+  SString(1001520,"Siltumenerģijas aprēķinu pārbaude");
+  SString(1001521,"GG summa");
+  SString(1001522,"Rād. summa");
+  SString(1001523,"GG MWh");
+  SString(1001524,"Rād. MWh");
+  SString(1001525,"MWh starp");
+  SString(1001526,"MWh %");
+  SString(1001527,"Virt. pat.");
+  SString(1001528,"Kopējais parāds");
+  SString(1001529,"Alokatoru exporta pārbaude");
+  SString(1001530,"NIP kods");
+  SString(1001531,"Pāradu vecuma sadalījums detalizēti");
+  SString(1001532,"Apakšsistēmas ierakstu pārbaude");
+  SString(1001533,"Lursoft pievienotie klienti");
+  SString(1001534,"Pievienots");
+  SString(1001535,"Nepievienots");
+  SString(1001536,"KS5 eksporta pārbaude");
+  SString(1001537,"Izl. dienas");
+  SString(1001538,"Patēriņš");
+  SString(1001539,"Dz. no");
+  SString(1001540,"Dz. līdz");
+  SString(1001541,"Mainīts skaitītājs");
+  SString(1001542,"Datums nevar būt vairāk par 3 mēnešiem uz priekšu kā šodienas datums");
+  SString(1001543,"AMR skaitītāju rādījumu imports");
+  SString(1001544,"Sākuma rād.");
+  SString(1001545,"Beigu rād.");
+  SString(1001546,"IMPORTĒT FAILU");
+  SString(1001547,"DZĒST FAILU");
+  SString(1001548,"Fails izdzēsts");
+  SString(1001549,"Fails neeksistē");
+  SString(1001550,"Nomainītie skaitītāji");
+  SString(1001551,"Noņemts");
+  SString(1001552,"Jaunais skaitītājs");
+  SString(1001553,"Ēkas statusa atskaite");
+  SString(1001554,"Sūta");
+  SString(1001555,"Nesūta");
+  SString(1001556,"Samaksas datums");
+  SString(1001557,"Creditreform lieta");
+  SString(1001558,"Veidot Creditreform lietas");
+  SString(1001559,"% iekasējums");
+  SString(1001560,"Conventus");
+  SString(1001561,"Piedzinējs");
+  SString(1001562,"Nod. kopā");
+  SString(1001563,"Saņ. kopā");
+  SString(1001564,"Atlikums kopā");
+  SString(1001565,"Par. pirms 12. mēn");
+  SString(1001566,"% izmaiņas");
+  SString(1001567,"Izmaksāts");
+  SString(1001568,"Atsaukts");
+  SString(1001569,"Skaitītāju rādījumu kontrole");
+  SString(1001570,"NIP rēķinu pārskats");
+  SString(1001571,"bez PVN 12%");
+  SString(1001572,"PVN 12%");
+  SString(1001573,"ar PVN 12%");
+  SString(1001574,"bez PVN 21%");
+  SString(1001575,"PVN 21%");
+  SString(1001576,"ar PVN 21%");
+  SString(1001577,"Kopā PVN");
+  SString(1001578,"Kopā ar PVN");
+  SString(1001579,"ZG un JS datu salīdzināšana");
+  SString(1001580,"Vecais konta nr");
+  SString(1001581,"Aktīvo līgumu pārbaude");
+  SString(1001582,"Apsild. pl.");
+  SString(1001583,"Rēķ. izrakst.");
+  SString(1001584,"KU Summa");
+  SString(1001585,"KU piegāde");
+  SString(1001586,"KU cilv.");
+  SString(1001587,"KU skaits");
+  SString(1001588,"Cilv. skaits");
+  SString(1001589,"Līgumu pakalpojumu izmaiņas");
+  SString(1001590,"Pakalpojuma maiņa");
+  SString(1001591,"Noņemts S03.");
+  SString(1001592,"Pievienots S07.");
+  SString(1001593,"Izmaiņas deklarētajās peronās");
+  SString(1001594,"Skaitītāju rādījumu imports");
+  
+  SString(1001595,"Noņemts S07.");
+  SString(1001596,"Pievienots S03.");
+  SString(1001597,"Mailmaster rēķini");
+  SString(1001598,"Apvienotie");
+  SString(1001599,"Veidot skaitītāju no atskaites");
+  
+  SString(1001600,"Standarts");
+  SString(1001601,"Šaubīgs");
+  SString(1001602,"Bezcerīgs");
+  SString(1001603,"Vecais kods");
+  SString(1001604,"1. Ēkas kopējais karstā ūdens patērīņš");
+  SString(1001605,"2. Kopējais iedzīvotāju uzrādītais un ");
+  SString(1001606,"aprēķinātais karstā ūdens patēriņš, t.sk.");
+  SString(1001607,"- iedzīvotāju uzrādītais kopējais karstā");
+  SString(1001608,"ūdens patēriņš");
+  SString(1001609,"- pēc patēriņa normām aprēķinātais ");
+  SString(1001610,"kopējais karstā ūdens patēriņš");
+  SString(1001611,"3. Starpība (1.p. - 2.p.)");
+  SString(1001612,"Apsaimniekotāja sniegtie dati:");
+  SString(1001613,"Maksājumu pārskats");
+  SString(1001614,"Kopā aprēķināts");
+  SString(1001615,"Līgumsods");
+  SString(1001616,"Pakalpojumu aprēķins / apmaksas");
+  SString(1001617,"Īpašnieki");
+  
+  SString(1001618,"Jūrmalas pilsētas dome");
+  SString(1001619,"90000056357");
+  SString(1001620,"Jomas ielā 1/5, Jūrmalā, LV 2015");
+  
+  SString(1001621,"SIA Jūrmalas namsaimnieks");
+  SString(1001622,"40003426429");
+  SString(1001623,"Dubultu prospekts 3, Jūrmala, LV-2015");
+  
+  SString(1001624,"Klientu nosaukumu salīdzināšana");
+  SString(1001625,"Dom. daļa");
+  SString(1001626,"PVN pielikums Horizon");
+  SString(1001627,"Proj.");
+  SString(1001628,"Summa samaksai");
+  SString(1001629,"Iedzīvotāju maksājumi");
+  SString(1001630,"Kavējuma nauda");
+  SString(1001631,"Jums nav tiesības atgrāmatot bankas maks. ievades maksājumus!");
+  SString(1001632,"Izdrukas lauku salīdzinājums");
+  SString(1001633,"Siltumenerģijas patēriņa aprēķins dzīvojamai mājai");
+  SString(1001634,"Atskaites periods:");
+  SString(1001635,"MWh daudzums pēc māraparāta rādījumiem:");
+  SString(1001636,"Maksa par 1 kv.m. kopējās platības apkurei (EUR/kv.m):");
+  SString(1001637,"Maksa par 1 kub.m.karst. ūdens uzsildīšanu (EUR/kub.m.):");
+  SString(1001638,"Maksa par ūdens uzsildīšanu 1 cilvēkam (EUR/cilv):");
+  SString(1001639,"Maksa par");
+  SString(1001640,"apkuri");
+  SString(1001641,"Ūdens");
+  SString(1001642,"(cilv.)");
+  SString(1001643,"(ind. sk.)");
+  SString(1001644,"m3 pēc");
+  SString(1001645,"indiv. skait.");
+  SString(1001646,"Abon.");
+  SString(1001647,"Nr.");
+  SString(1001648,"Nomnieks");
+  SString(1001649,"Veidot apvienoto failu");
+  SString(1001650,"Realizācijas atskaite");
+  SString(1001651,"PVN deklarācijas V rindas atšifrējums");
+  SString(1001652,"/kategorija");
+  SString(1001653,"siltumenerģija");
+  SString(1001654,"ar PVN");
+  SString(1001655,"bez PVN");
+  SString(1001656,"Abonementa Nr.");  
+  SString(1001657,"Patērētā");  
+  SString(1001658,"Pavisam kopā");  
+  SString(1001659,"PVN deklarācijas X rindas atšifrējums");
+  SString(1001660,"PVN deklarācijas T rindas atšifrējums");
+  SString(1001661,"Neapstrādātie maksājumi");
+  SString(1001662,"Veidot parāda statusa rēķinu");
+  SString(1001663,"Abonementu saraksts");
+  SString(1001664,"Telpas adrese");
+  SString(1001665,"Tukšs");
+  SString(1001666,"PVN rinda");
+  SString(1001667,"Nav rēķini kam jāsūta e-pasts!");
+  SString(1001668,"Atmaksājamās bankas summas");
+  SString(1001669,"Veco parādu analīze");
+  SString(1001670,"Arhīva parāds");
+  SString(1001671,"Klients no līguma");
+  SString(1001672,"Klients no arhīva");
+  
+  SString(1001673,"janvāri");
+  SString(1001674,"februāri");
+  SString(1001675,"martu");
+  SString(1001676,"aprīli");
+  SString(1001677,"maiju");
+  SString(1001678,"jūniju");
+  SString(1001679,"jūliju");
+  SString(1001680,"augustu");
+  SString(1001681,"septembri");
+  SString(1001682,"oktobri");
+  SString(1001683,"novembri");
+  SString(1001684,"decembri");
+  
+  SString(1001685,"Atlikumi 31.12.2019");
+  
+  SString(1001686,"Šis fails jau ir importēts!");
+  SString(1001687,"Rēķins");
+  SString(1001688,"Notikums");
+  SString(1001689,"Notikumi");
+  SString(1001690,"Lietas nr.");
+  SString(1001691,"Saraksts");
+  SString(1001692,"Kavēts vairāk par");
+  SString(1001693,"Kavētā summa");
+  SString(1001694,"Parādu piedziņas lietas");
+  SString(1001695,"Maksājumu veidi");
+  SString(1001696,"Pārrēķins");
+  SString(1001697,"MWh daudzums:");
+  SString(1001698,"Īrnieka maksājamā daļa tekošajā mēnesī: ");
+  SString(1001699,"Jūrmalas pilsētas pašvaldības maksājamā daļa par siltumenerģiju tekošajā mēnesī (75%): ");
+  SString(1001700,"Izlīgums");
+  SString(1001701,"Soda %");
+  SString(1001702,"LIK %");
+
+  SString(1001703,"janvārim");
+  SString(1001704,"februārim");
+  SString(1001705,"martam");
+  SString(1001706,"aprīlim");
+  SString(1001707,"maijam");
+  SString(1001708,"jūnijam");
+  SString(1001709,"jūlijam");
+  SString(1001710,"augustam");
+  SString(1001711,"septembrim");
+  SString(1001712,"oktobrim");
+  SString(1001713,"novembrim");
+  SString(1001714,"decembrim");
+  SString(1001715,"Līdz ");
+  SString(1001716," ir apturēts kavējuma naudas aprēķins.");
+  SString(1001717,"Apturētie soda %");
+  SString(1001718,"Rād.");
+  SString(1001719,"KU sk.");
+  SString(1001720,"Norm.");
+  SString(1001721,"Cirk.");
+  SString(1001722,"Apk.");
+  SString(1001723,"Rēķ.");
+  SString(1001724,"Plat.");
+  SString(1001725,"PVN dekl.");
+  SString(1001726,"Veidot Conventus lietas");
+  SString(1001727,"Veidot Creditreform lietu");
+  SString(1001728,"Tekošais");
+  SString(1001729,"Jums nav tiesības mainīt/dzēst šo ierakstu");
+  SString(1001730,"SIA Jūrmalas siltums debitoru apgrozījums EUR");
+  SString(1001731,"Sākuma atlikums");
+  SString(1001732,"Maksājums");
+  SString(1001733,"Beigu atlikums");
+  SString(1001734,"pēc pilnvaras: ");
+  SString(1001735,"personas kods: ");
+  SString(1001736,"2017 parāds");
+  SString(1001737,"2018 parāds");
+  SString(1001738,"Apmaksas");
+  SString(1001739,"Tarifi pa rajoniem");
+  
+  SString(1001740,"Apkurināmā");
+  SString(1001741,"platība");
+  SString(1001742,"MWH kopā");
+  SString(1001743,"MWH par");
+  SString(1001744,"karsto ūdeni");
+
+
+  SString(1001745,"bez ind.skait.");
+  SString(1001746,"ar indiv.skait.");
+  SString(1001747,"Kastā ūdens");
+  SString(1001748,"piegāde");
+  
+  SString(1001749,"Labprātīga izpilde");
+  SString(1001750,"Īpašnieks");
+  SString(1001751,"Īrnieks");
+  
+  SString(1001752,"Tiesvedību pārskats");
+  SString(1001753,"Atb. persona: ");
+  SString(1001754,"Izpildu lieta izpildīta");
+  SString(1001755,"Izpildu lieta apturēta");
+  SString(1001756,"Izpildu lieta izbeigta bez izpildes");
+  SString(1001757,"Izpildu dokuments izsniegts atpakaļ piedz.");
+  SString(1001758,"Tiesas datums");
+  SString(1001759,"Parāda periods");
+  SString(1001760,"Valsts nodeva");
+  SString(1001761,"Pārējie izdevumi");
+  SString(1001762,"1.Instance");
+  SString(1001763,"Apelācija");
+  SString(1001764,"Kasācija");
+  SString(1001765,"ZTI");
+  SString(1001766,"Nodošanas datums");
+  SString(1001767,"Piedzīts/samaksāts");
+  SString(1001768,"Izpildu lietas statija");
+  SString(1001769,"Sprieduma izpildes veids");
+  SString(1001770,"Tiesvedības statija");
+  SString(1001771,"Lietas sagatavotājs");
+  SString(1001772,"Parāda/priekšapmaksas pārbaude");
+  SString(1001773,"rindas nr.");
+  SString(1001774,"Zv.advokāte E.Stankēviča");
+  SString(1001775,"Zv.adv. E.Stankēviča lieta");
+  SString(1001776,"Veidot zv.adv. E.Stankēviča lietas");
+  SString(1001777,"Tiesvedības statuss");
+  
+  SString(1001778,"Līgumu aprēķins/apmaksa");
+  SString(1001779,"Periods no ");
+  SString(1001780," līdz ");
+  SString(1001781,"Apmaksa");
+  SString(1001782,"Klienta Vārds Uzvārds");
+  SString(1001783,"Nokavējuma %");
+  SString(1001784,"Klienti ar vienādiem nos.");
+  SString(1001785,"Īpašn.skaits.");
+  SString(1001786,"Reģ.");
+  SString(1001787,"Negatīvu rādījumu pārveidošana");
+  SString(1001788,"Apsaimniekotāja nosaukums");
+  SString(1001789,"Apsaimniekotājs");
+  SString(1001790,"Jānorāda vesels gads");
+  SString(1001791,"Debitoru inventarizācijas salīdzināšana");
+  SString(1001792,"Statuss per. sākumā");
+  SString(1001793,"Statuss per. beigās");
+  SString(1001794,"Per. samaksāts par iepr. per.");
+  SString(1001795,"Parāda pieaugums par per.");
+  SString(1001796,"Parāds per. beigās");
+  SString(1001797,"Sadaļa: ");
+  SString(1001798,"Dok. veida kods");
+  SString(1001799,"Jur/Fiz");
+  SString(1001800,"Sākuma atlikums pamatparāds");
+  SString(1001801,"Sākuma atlikums līgumsods");
+  SString(1001802,"Beigu atlikums pamatparāds");
+  SString(1001803,"Beigu atlikums līgumsods");
+  SString(1001804,"Brīdinājums");
+  SString(1001805,"GG salīdzināšana ar realizāciju");
+  SString(1001806,"Pārrēķinu summas");
+  SString(1001807,"UIN atskaite");
+  SString(1001808,"UIN rēķinu apmaksa");
+  
+  SString(1001809,"Kopā Apgrozījums");
+  SString(1001810,"Kopā Pamatsumma apgrozījums");
+  SString(1001811,"Kopā Kavējuma nauda apgrozījums");
+  SString(1001812,"Parādu vecuma analītika");
+  SString(1001813,"Apr. līgumsods");
+  SString(1001814,"+36 mēn.");
+  SString(1001815,"Kav.N.");
+  SString(1001816,"Tiesašanas izdevumi");
+  SString(1001817,"ZTI nodošanas datums");
+  SString(1001818,"ZTI summa");
+  SString(1001819,"Tiesvedības stadija");
+  SString(1001820,"Atbildīgā persona");
+  SString(1001821,"Sprieduma izpildes veids");
+  SString(1001822,"Izpildu lietas stadija");
+  SString(1001823,"Labprātīgā izpilde");
+  SString(1001824,"Apvienotie rēķini");
+  SString(1001825,"Kreditoru pieteikums");
+  SString(1001826,"Pamatparāda rašanās periods");
+  SString(1001827,"Jāiesniedz līdz");
+  SString(1001828,"Iesniegts");
+  SString(1001829,"KP veids");
+  SString(1001830,"Admin/notārs");
+  SString(1001831,"Nokavējuma procenti");
+  SString(1001832,"JPD dzīvokļi");
+  SString(1001833,"NAV ĪPAŠUMĀ");
+  SString(1001834,"Parāds/pārmaksa");
+  SString(1001835,"Līguma slēdzēja nosaukums");
+  SString(1001836,"Ieraksta veids");
+  SString(1001837,"Telpu grupa");
+  SString(1001838,"P/p");
+  SString(1001840,"2017. gada parāds");
+  SString(1001841,"Samaksāts periodā par 2017.");
+  SString(1001842,"Beigu atlikums par 2017.");
+  SString(1001843,"Melnā lapa");
+  SString(1001844,"Veidot melnās lapas lietas");
+  SString(1001845,"Melnā lapa lieta");
+  SString(1001846,"Melnā");
+  SString(1001847,"Civillietā Nr. ");
+  SString(1001848," iztiesātā parāda atlikums ir ");
+  SString(1001849,"Iztiesātā parāda apmaksa jāveic atsevišķā maksājumā, norādot civillietas numuru, pretējā gadījumā");
+  SString(1001850,"maksājums var tikt ieskaitīts kārtējo rēķinu apmaksai.");
+  SString(1001851,"Veicot kārtējo rēķinu apmaksu, lūgums norādīt KLIENTA NUMURU");
+  SString(1001852,"2017. fiksēts parāds");
+  SString(1001853,"Tiesāšanās izdevumi");
+  SString(1001854,"Beigu atlikums par 2018");
+  SString(1001855,"Tekošā gada neapmaksāto rēķinu atlikums");
+  SString(1001856,"UIN rēķinu atskaite");
+  SString(1001857,"Klienta Vārds");
+  SString(1001858,"Klienta Uzvārds");
+  SString(1001859,"Neapmaksātais pamatparāds,EUR");
+  SString(1001860,"Neapmaksātais līgumsods,EUR");
+  SString(1001861,"2 Tarifu atskaite");
+  SString(1001862,"Ēku grupa");
+  SString(1001863,"E/TG kods");
+  SString(1001864,"Samazinātais tarifs");
+  SString(1001865,"JS jurid tarifs");
+  SString(1001866,"Ēkas kopējais siltumskaitītājs");
+  SString(1001867,"Apkures skaitītājs");
+  SString(1001868,"Kopējais sitluma daudzums uz ūdeni MWh");
+  SString(1001869,"Kopējais apkures daudzums MWh");
+  SString(1001870,"Ēkas skaitītājs * tarifs");
+  SString(1001871,"Apkure FIZ");
+  SString(1001872,"KU FIZ");
+  SString(1001873,"KU pers FIZ");
+  SString(1001874,"Cirk FIZ");
+  SString(1001875,"Kopā FIZ");
+  SString(1001876,"Apkure JUR");
+  SString(1001877,"KU JUR");
+  SString(1001878,"Cirk JUR");
+  SString(1001879,"Kopā JUR");
+  SString(1001880,"KS1 Biedr");
+  SString(1001881,"S14 Apr MWh");
+  SString(1001882,"S12 Apr MWh");
+  SString(1001883,"Pamatparāda atlikums par ");
+  SString(1001884,". gadu");
+  SString(1001885,"Atlikums uz gada sākumu");
+  SString(1001886,"Tiesvedības izdevumi");
+  SString(1001887,"Korekcijas");
+  
+  
+  
+  
+  return;
+end;

@@ -1,0 +1,58 @@
+
+global
+updating procedure GoodsReceiptFromOPDsm()
+begin
+  Integer wn,nwn,rwcnt,rwcnt2,i,j;
+  Integer normalmode,rownr;
+  record CUVc CUr;
+  record INVc INr;
+  record OPVc OPr;
+  row OPVc OPrw;
+  LongInt ivnr;
+  record VIVc VIr;
+  row VIVc VIrw;
+  record PUVc PUr;
+  row PUVc PUrw;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,OPr);
+  rwcnt = MatRowCnt(OPr);
+  if (OPr.DoneFlag==1) then begin
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(OPr,i,OPrw);
+    RecordNew(PUr);
+    PUr.SerNr = NextSerNr("PUVc",CurrentDate,-1,false,"");
+    PUr.VECode = OPrw.VECode;
+
+    CUr.Code = PUr.VECode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      PUr.VEName = CUr.Name;
+    end;    
+
+    PUr.TransDate = CurrentDate;
+    PUr.PayVal = 0; 
+    PUr.SumQuant = 0;
+    VIr.SerNr = OPrw.VISerNr;
+    if (ReadFirstMain(VIr,1,true)) then begin
+        rwcnt2 = MatRowCnt(VIr);
+        for (j=0;j<rwcnt2;j=j+1) begin //g
+          MatRowGet(VIr,j,VIrw);
+          PUrw.ArtCode = VIrw.Item ;
+          PUrw.Quant = VIrw.qty;
+          PUrw.Sum = VIrw.Sum;
+          INr.Code = PUrw.ArtCode;
+          if (ReadFirstMain(INr,1,true)) then begin
+            PUrw.CostPrice = INr.InPrice; // costprice
+            PUrw.Spec = INr.Name;
+            PUrw.UnitCode = INr.Unittext;
+          end;
+          PUr.SumQuant = PUrw.Quant + PUrw.Quant;
+          PUr.PayVal = PUrw.Sum + PUr.PayVal;
+          MatRowPut(PUr,j,PUrw);
+        end;
+    end;
+      nwn = OpenWindow("PUDClass",1,0,"","",PUr);
+  END;
+  End;
+  return;
+end;

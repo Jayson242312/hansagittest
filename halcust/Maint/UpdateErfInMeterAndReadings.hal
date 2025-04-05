@@ -1,0 +1,116 @@
+
+function string 255 GetServiceItem(record NAContractVc NAContractr)
+BEGIN
+  record INVc INr;
+  row NAContractVc NAContractrw;
+  integer i , rwcnt;
+  string 255 res;
+
+  res = "";
+
+  i = 0; rwcnt = 0;
+  rwcnt = MatRowCnt(NAContractr);
+  while (i<rwcnt) begin
+    MatRowGet(NAContractr,i,NAContractrw);
+    INr.Code = NAContractrw.ArtCode;
+    if(ReadFirstMain(INr,1,true)) then begin
+      if(INr.ServQuantInCalc == 2) then begin
+        res = INr.Code;
+        goto Lbreak;
+      end;
+      end;
+      i = i + 1;
+  end;
+Lbreak:;
+  GetServiceItem = res;
+return;
+END;
+
+
+updating procedure UpdateErfAndPremiseMeter(string Erf , string Premise, record FlatCountersVc FlatCountersr, record NAContractVc NAContractr)
+BEGIN
+  record FlatCountersVc oldFlatCounters;
+  integer rwcnt,i;
+
+  RecordCopy(oldFlatCounters,FlatCountersr);
+  FlatCountersr.FlatCode = Premise;
+  FlatCountersr.Code = Erf;
+  FlatCountersr.CounterType = GetServiceItem(NAContractr);
+  // if Blank(FlatCountersr.CounterType) then begin logText(0,"Blank Meter.No: " & FlatCountersr.CounterNo); end;   
+  RecordUpdate(oldFlatCounters,FlatCountersr,false);
+END;
+
+
+updating procedure UpdateErfAndPremiseReadings(string Erf , string Premise, record CountResVc CountResr,record NAContractVc NAContractr)
+BEGIN
+  record CountResVc oldCountResr;
+  boolean testf;
+
+  RecordCopy(oldCountResr,CountResr);
+  CountResr.FlatCode = Premise;               
+  CountResr.BuildCode = Erf;
+  CountResr.CounterType = GetServiceItem(NAContractr);
+  // if Blank(CountResr.CounterType) then begin logText(0,"Blank Reading ID:" & CountResr.SerNr); end;   
+  RecordUpdate(oldCountResr,CountResr,false);
+END;
+
+
+
+updating procedure UpdateErfAndPremiseMhistory(string Erf , string Premise, record MhistoryVc MHistoryr)
+BEGIN
+  record MhistoryVc oldMHistoryr;
+  RecordCopy(oldMHistoryr,MHistoryr);
+  MHistoryr.FlatCode = Premise;
+  MHistoryr.BuildCode = Erf;
+  RecordUpdate(oldMHistoryr,MHistoryr,false);
+END;
+
+
+
+global 
+updating procedure UpdateErfInMeterAndReadings()
+BEGIN
+  record NAContractVc NAContractr;
+  record FlatCountersVc FlatCountersr;
+  record MhistoryVc MHistoryr;
+  record CountResVc CountResr;
+
+  string 255 Erf , Premise;
+  
+  while (loopkey("SerNr",FlatCountersr,1,true)) begin
+   NAContractr.SerNr = FlatCountersr.Contract ;
+   if ReadFirstMain(NAContractr,1,true) then begin 
+      Erf = NAContractr.BuildCode;
+      Premise = NAContractr.FlatCode;
+      // if  (FlatCountersr.FlatCode <> Premise AND FlatCountersr.Code <> Erf ) then begin
+      UpdateErfAndPremiseMeter(Erf,Premise,FlatCountersr,NAContractr);   
+      // end;
+   end;   
+  end;
+
+
+  while (loopkey("SerNr",CountResr,1,true)) begin
+   NAContractr.SerNr = CountResr.ContractNr ;
+   if ReadFirstMain(NAContractr,1,true) then begin 
+      Erf = NAContractr.BuildCode;
+      Premise = NAContractr.FlatCode;
+      // if  (CountResr.FlatCode <> Premise AND CountResr.BuildCode <> Erf ) then begin
+      UpdateErfAndPremiseReadings(Erf,Premise,CountResr,NAContractr);
+      // end;   
+   end;   
+  end;
+
+  while (loopkey("FlatCounterSerNr",MHistoryr,1,true)) begin
+   NAContractr.SerNr = MHistoryr.ContractNr ;
+   if ReadFirstMain(NAContractr,1,true) then begin 
+      Erf = NAContractr.BuildCode;
+      Premise = NAContractr.FlatCode;  
+      // if  (MHistoryr.FlatCode <> Premise AND MHistoryr.BuildCode <> Erf ) then begin
+      UpdateErfAndPremiseMhistory(Erf,Premise,MHistoryr);
+      // end;   
+   end;   
+  end;
+
+
+return;
+END;

@@ -1,0 +1,25 @@
+global
+updating procedure CustInvoiceOkayIn()
+begin
+  record IVVc IVr,IV2r;
+  String 255 InvNumber;
+  Boolean testf;
+  Integer rwcnt;
+  rwcnt = 0;
+
+  while (NextImportLine(false)) begin
+    InvNumber = ImportField;
+    
+    IVr.SerNr = InvNumber;
+    if (ReadFirstMain(IVr,1,true)) then begin
+      if (IVr.OKFlag == 0) then begin  
+        RecordCopy(IV2r, IVr);
+        IV2r.OKFlag = 1;
+        RecordUpdate(IVr,IV2r,true);
+      end;
+    end;
+  end;
+
+  return;
+end;
+

@@ -1,0 +1,62 @@
+global
+updating procedure PremiseIn()
+begin
+  record FlatsVc Premr;
+  String 255 AccNum,
+  ExtensionNo, LotNo, DivisionNo, UnitNo,
+  Street, Surname, Name, Address1, Address2, Address3, PostCode,
+  CellNum, IdNum, Email, MaritalStatusCode, AccStatusCode, AccType, OwnerTypeCode,
+  NextKin, NextKinNum, NextKinRel,
+  Notes1, IsConsolidated, Notes2, SuburbCode, Suburb,
+  PropCatCode, MarketValue, Outstanding, LandArea, Unassigned, DateOpened, DateClosed;
+
+  // loop through txt file
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    ExtensionNo = ImportField;
+    LotNo = ImportField;
+    DivisionNo = ImportField;
+    UnitNo = ImportField;
+    Street = ImportField;
+    Surname = ImportField;
+    Name = ImportField;
+    Address1 = ImportField; // po.box
+    Address2 = ImportField; // suburb
+    Address3 = ImportField; // town
+    PostCode = ImportField;
+    CellNum = ImportField;
+    IdNum = ImportField;
+    Email = ImportField;
+    MaritalStatusCode = ImportField;
+    AccStatusCode = ImportField;
+    AccType = ImportField;
+    OwnerTypeCode = ImportField;
+    NextKin = ImportField;
+    NextKinNum = ImportField;
+    NextKinRel = ImportField;
+    Notes1 = ImportField;
+    IsConsolidated = ImportField;
+    Notes2 = ImportField;
+    SuburbCode = ImportField;
+    Suburb = ImportField;
+    PropCatCode = ImportField; // zoning
+    MarketValue = ImportField;
+    Outstanding = ImportField;
+    LandArea = ImportField;
+    Unassigned = ImportField;
+    Unassigned = ImportField;
+    DateOpened = ImportField;
+    DateClosed = ImportField;
+
+    // if((Notes1 != "(DELETED)") and (IsConsolidated != "CONSOLIDATED")) then begin
+      RecordNew(Premr);
+      Premr.FlatCode = "P" & ExtensionNo & LotNo; // key
+      Premr.Code = "E" & ExtensionNo & LotNo;
+      Premr.Address = Street;
+      
+      RecordImportStore(Premr,false);
+    // end;
+  end;
+
+  return;
+end;

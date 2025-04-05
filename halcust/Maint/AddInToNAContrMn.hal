@@ -1,0 +1,114 @@
+global 
+updating procedure AddItemsToContract(record NAContractVc NAContractr,record INVc INr,var integer count)
+BEGIN
+  record NAContractVc oldNAContractr;
+  row NAContractVc NAContractrw;
+  Record INVc IN2r;
+  boolean testf;
+  integer i,j,rwcnt;
+  testf = true;
+
+  RecordCopy(oldNAContractr,NAContractr);
+  rwcnt = MatRowCnt(NAContractr);
+  for (i=0;i<rwcnt;i=i+1) begin // This is to check if the item is already in the row. so we loop through all the rows compare each item and check
+    MatRowGet(NAContractr,i,NAContractrw);
+    if (NAContractrw.ArtCode == INr.Code) then begin testf = false; end;
+    //
+    IN2r.Code = NAContractrw.ArtCode;
+    if (Readfirstmain(IN2r,1,true)) then begin
+      if (IN2r.FlatFieldCode == "TRTOY") then begin testf = false; end;
+    end;
+  end;
+
+  if (testf) then begin  // After looping through rows if item is not in the rows we add it
+    NAContractrw.ArtCode = INr.Code;
+    NAContractrw.Spec = INr.Name;
+    NAContractrw.Price = INr.UPrice1;
+    NAContractrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+    count = count + 1;
+    MatRowPut(NAContractr,rwcnt,NAContractrw);
+  end;
+  RecordUpdate(oldNAContractr,NAContractr,false);
+  return;
+End;
+
+
+global 
+updating procedure RemoveItemsFromContract(record NAContractVc NAContractr,record INVc INr,var integer count)
+BEGIN
+  record NAContractVc oldNAContractr;
+  row NAContractVc NAContractrw;
+  boolean testf,deleted;
+  integer i,j,rwcnt;
+
+  RecordCopy(oldNAContractr,NAContractr);
+  rwcnt = MatRowCnt(NAContractr);
+  for (i=0;i<rwcnt;i=i+1) begin //Loop through each 
+    testf = false;
+    MatRowGet(NAContractr,i,NAContractrw);
+    if (NAContractrw.ArtCode == INr.Code) then begin testf = true; end;
+    if (testf) then begin   
+      MatRowDelete(NAContractr,i);
+      count = count + 1 ; 
+    end;
+  end;
+  RecordUpdate(oldNAContractr,NAContractr,false);
+  return;
+End;
+
+global 
+updating procedure AddInToNAContrMn(record RcVc RepSpec)
+BEGIN
+  Record NAContractVc NAContractr;
+  Record INVc INr;
+  boolean testf,testp,islevy,addition,removal;
+  string 255 zoningCode;
+  string 255 itemCode;
+  integer count, noOfZoningContract;
+  
+ if UserCanAction("OBSAllowNAContrRowChange",false)==true then begin
+
+  if NonBlank(RepSpec.f1) then begin itemCode = RepSpec.f1; end;
+  if NonBlank(RepSpec.f2) then begin zoningCode = RepSpec.f2; end;
+
+  // make sure item is levy charge
+  INr.Code = itemCode;
+
+  if (Readfirstmain(INr,1,true)) then begin   // checking if item is a levy item or not
+    if(INr.DispGroups == "LEVY") then begin islevy = true;end;
+    if(INr.DispGroups <> "LEVY") then begin islevy = false;MessageBox(0,"Not a levy item");end;
+  end else begin
+    MessageBox(0,"Item with code:"&INr.Code & " Does not exist");
+    islevy = false;
+  end;
+  
+
+  if islevy then begin  
+    if RepSpec.flags[1] == 0 then begin addition =  true; end; // if addtion flag is checked we add
+    if RepSpec.flags[1] == 1 then begin removal = true; end; // if removal flag is check we remove
+    testf = true;
+    NAContractr.ZoningCode = zoningCode;
+    while loopkey("ZoningCode",NAContractr,1,testf) begin    // loop through contracts using zoning
+      if (NAContractr.ZoningCode<>zoningCode) then begin testf = false;end;
+      if (testf) then begin
+        noOfZoningContract = noOfZoningContract + 1;
+        if(addition) then begin AddItemsToContract(NAContractr,INr,count); end;
+        if(removal) then begin RemoveItemsFromContract(NAContractr,INr,count); end;
+      end; 
+    end;
+  end;
+
+  if (islevy) then begin
+     MessageBox(0,noOfZoningContract & " Contracts with Zoning " & zoningCode);
+  end;
+  if (addition) then begin
+    MessageBox(0,"Item " & INr.Code & " was added to "& count & " " & zoningCode & " Contracts");
+  end;
+
+  if (removal) then begin
+  MessageBox(0,"Item "& INr.Code & " was removed from "& count & " " & zoningCode & " Contracts"); // count is not per invoice its per items in the rows. so if there are multiple items with same code in one contract the count will be higher  
+  end;
+ end else begin
+   MessageBox(0,"User does not have permission");
+ end;
+END;

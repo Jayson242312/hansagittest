@@ -1,0 +1,155 @@
+global
+updating procedure CustContactIn()
+begin
+  record CUVc CUr;
+  String 255 AccNum, Name, Address1, Address2, Address3, PostCode, CellNum, IdNum, Email;
+
+  // loop through txt file
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    Name = ImportField;
+    Address1 = ImportField; // po.box
+    Address2 = ImportField; // suburb
+    Address3 = ImportField; // town
+    PostCode = ImportField;
+    CellNum = ImportField;
+    IdNum = ImportField;
+
+    if(nonblank(AccNum) AND nonblank(Name)) then begin
+      RecordNew(CUr);
+      CUr.Code = AccNum; // key
+      CUr.Name = Name;
+      CUr.FirstName = Name;
+      CUr.InvAddr0 = Address1;
+      CUr.InvAddr1 = Address2;
+      CUr.InvAddr2 = Address3;
+      CUr.InvAddr4 = PostCode;
+      CUr.Phone = CellNum;
+      CUr.Mobile = CellNum;
+      CUr.PassportNr = IdNum;
+      // CUr.eMail = Email;
+      
+      // default values
+      CUr.CUType = 1;
+      CUr.VEType = 1;
+      CUr.OnAccount = 1;
+      CUr.CustCat = "ONACC";
+      CUr.Classification = "ONACC";
+      CUr.CountryCode = "NA";
+      CUr.PayDeal = "30";
+      CUr.VEPayDeal = blankval;
+      CUr.CreditLimit = blankval;
+      CUr.CreditLimitDays = blankval;
+      RecordImportStore(CUr,false);
+    end;  
+  end;
+
+  return;
+end;
+
+// global
+// updating procedure CustContactIn()
+// begin
+//   record CUVc CUr;
+//   String 255 AccNum,
+//   ExtensionNo, LotNo, DivisionNo, UnitNo,
+//   Street, Surname, Name, Address1, Address2, Address3, PostCode,
+//   CellNum, IdNum, Email, MaritalStatusCode, AccStatusCode, AccType, OwnerTypeCode,
+//   NextKin, NextKinNum, NextKinRel,
+//   Notes1, IsConsolidated, Notes2, SuburbCode, Suburb,
+//   PropCatCode, MarketValue, Outstanding, LandArea, Unassigned, DateOpened, DateClosed;
+
+//   // loop through txt file
+//   while (NextImportLine(false)) begin
+//     AccNum = ImportField;
+//     ExtensionNo = ImportField;
+//     LotNo = ImportField;
+//     DivisionNo = ImportField;
+//     UnitNo = ImportField;
+//     Street = ImportField;
+//     Surname = ImportField;
+//     Name = ImportField;
+//     Address1 = ImportField; // po.box
+//     Address2 = ImportField; // suburb
+//     Address3 = ImportField; // town
+//     PostCode = ImportField;
+//     CellNum = ImportField;
+//     IdNum = ImportField;
+//     Email = ImportField;
+//     MaritalStatusCode = ImportField;
+//     AccStatusCode = ImportField;
+//     AccType = ImportField;
+//     OwnerTypeCode = ImportField;
+//     NextKin = ImportField;
+//     NextKinNum = ImportField;
+//     NextKinRel = ImportField;
+//     Notes1 = ImportField;
+//     IsConsolidated = ImportField;
+//     Notes2 = ImportField;
+//     SuburbCode = ImportField;
+//     Suburb = ImportField;
+//     PropCatCode = ImportField; // zoning
+//     MarketValue = ImportField;
+//     Outstanding = ImportField;
+//     LandArea = ImportField;
+//     Unassigned = ImportField;
+//     Unassigned = ImportField;
+//     DateOpened = ImportField;
+//     DateClosed = ImportField;
+
+//     // if((Notes1 != "(DELETED)")) then begin
+//       RecordNew(CUr);
+//       CUr.Code = AccNum; // key
+//       CUr.Name = Name &" "& Surname;
+//       CUr.FirstName = Name;
+
+//       CUr.InvAddr0 = Address1;
+//       CUr.InvAddr1 = Address2;
+//       CUr.InvAddr2 = Address3;
+
+//       CUr.InvAddr4 = PostCode;
+
+//       if (nonblank(CellNum)) then begin
+//         CUr.Phone = "0" & CellNum; // phone
+//         CUr.Mobile = "0" & CellNum; // cell
+//       end;
+
+//       CUr.PassportNr = IdNum;
+//       CUr.eMail = Email;
+//       switch (MaritalStatusCode) begin
+//         case "": CUr.MarStatus = 0;
+//         case "S": CUr.MarStatus = 0;
+//         case "M": CUr.MarStatus = 1;
+//         case "D": CUr.MarStatus = 2;
+//       end;
+      
+//       // if next of kin
+//       if (nonblank(NextKin)) then begin
+//         CUr.Person = NextKin & " (" & NextKinRel & ")";
+
+//         if (nonblank(NextKinNum)) then begin
+//           CUr.AltPhone = "0" & NextKinNum;
+//         end;
+//       end;
+
+//       CUr.Comment0 = Notes1;
+//       CUr.Comment1 = Notes2;
+      
+//       // default values
+//       CUr.CUType = 1;
+//       CUr.VEType = 1;
+//       CUr.OnAccount = 1;
+//       CUr.CustCat = "100";
+//       CUr.CountryCode = "NAM";
+//       CUr.PayDeal = "30";
+//       // CUr.CurncyCode = "NAD";
+//       CUr.VEPayDeal = blankval;
+//       CUr.CreditLimit = blankval;
+//       CUr.CreditLimitDays = blankval;
+      
+//       RecordImportStore(CUr,false);
+//     // end;
+//   end;
+
+//   return;
+// end;

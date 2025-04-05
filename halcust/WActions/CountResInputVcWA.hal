@@ -1,0 +1,574 @@
+remote procedure GetFlatCounters(var record CountResInputVc);
+remote updating procedure CreateCountResFromCRI(var record CountResInputVc,var boolean,var integer);
+remote function boolean GetLastCounterResData(Record FlatCountersVc,var val,var date,date,string);
+remote function longint CheckCountResInput(record CountResInputVc);
+remote function boolean FindAnotherCountResInputWithType(record CountResInputVc,string);
+remote function boolean IsTwoTypeFlatCounter(longint);
+remote updating function Integer CreateMailFromCRI(record CountResInputVc,var record MailVc,var string,string,record RcVc);
+remote updating procedure CreateAndAttachCRIPdf(record MailVc,record CountResInputVc,string,string);
+remote procedure CreateXlsCRI(var record CountResInputVc,record IVVc);
+remote procedure CalcCRITotInput(record CountResInputVc,var val);
+remote updating procedure DeleteCRICountRes(var record CountResInputVc);
+remote updating function boolean StoreCountResImportRemote(var record CountResInputVc);
+
+procedure RecalcInputTotSum(integer wn,record CountResInputVc CRIr)
+begin
+  val totsum;
+
+  CalcCRITotInput(CRIr,totsum);
+  PutWindowString(wn,"InputTotSum",ValToString(totsum,M45Val,"",".",0));
+  
+  return;
+end;
+
+global updating
+procedure CountResInputMailSm()
+begin
+  record CountResInputVc CRIr;
+  record MailVc Mailr;
+  Record RcVc RepSpec;
+  integer wn,err,nwn;
+  longint errcode;
+  string 255 docname,textcode,tstr;
+  boolean testf;
+  
+  wn = CurWindow;
+  if (WindowState(wn)==0) then begin//normalstate
+    testf = true;
+    GetWindowRecord(wn,CRIr);
+    if blank(CRIr.BuildCode) or blankdate(CRIr.StartDate) or blankdate(CRIr.EndDate) then begin
+      testf=false;
+    end;
+    if testf then begin
+      RecordNew(Mailr);
+      RepSpec.sStartDate=CRIr.StartDate;
+      RepSpec.sEndDate=CRIr.EndDate;
+      err = CreateMailFromCRI(CRIr,Mailr,tstr,textcode,RepSpec);
+      if err==0 then begin
+        CreateAndAttachCRIPdf(Mailr,CRIr,CRIr.SerNr & ".pdf",textcode);
+        nwn = OpenWindow("MailDClass",1,0,"","",Mailr);
+      end else begin
+        errcode=err;
+      end;
+    end else begin
+      errcode = 1001380;
+    end;
+  end else begin
+    errcode = 1000763;
+  end;
+  if (errcode!=-1) then begin
+    MessageBox(errcode,": " & tstr);
+  end;
+  
+  return;
+end;
+
+global updating
+procedure CreateCountResSm()
+begin
+  record CountResInputVc CRIr;
+  integer wn,cnt;
+  boolean update;
+  longint errcode;
+  
+  wn=CurWindow;
+  if windowstate(wn)==0 then begin
+    WindowFieldGoto(wn,CRIr,-1,"BuildCode",false);
+    GetWindowRecord(wn,CRIr);
+    errcode = CheckCountResInput(CRIr);
+    if errcode==0 then begin
+      CreateCountResFromCRI(CRIr,update,cnt);
+      PutWindowRecord(wn,CRIr);
+      if update then begin
+        if (WindowDoOK(wn,0)) then begin end;
+      end;
+      MessageBox(0,USetStr(1000916) & " (" & cnt & ")");
+    end else begin
+      MessageBox(errcode,"");
+    end;
+  end else begin
+    Beep;
+  end;
+  
+  return;
+end;
+
+global
+procedure InsertFlatCountersSm()
+begin
+  record CountResInputVc CRIr;
+  integer wn;
+  
+  wn=CurWindow;
+  if windowstate(wn)==0 then begin
+    GetWindowRecord(wn,CRIr);
+    if nonblank(CRIr.BuildCode) then begin
+      GetFlatCounters(CRIr);
+      PutWindowRecord(wn,CRIr);
+    end else begin
+      Beep;
+      MessageBox(1000398,"");
+    end;
+  end else begin
+    Beep;
+    MessageBox(1000763,"");
+  end;
+  
+  return;
+end;
+
+function boolean CountResInputDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record CountResInputVc CRIr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CRIr);
+  Buildr.Code = CRIr.BuildCode;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    CRIr.Address = Buildr.Address;
+  end;
+  PutWindowRecord(wn,CRIr);
+  CountResInputDClassBuildCodeEFAfter = res;
+return;
+end;
+
+function boolean CountResInputDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResInputVc CRIr;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CRIr);
+  td=CRIr.StartDate;
+  td.day=DaysInMonth(getyear(td),getmonth(td));
+  CRIr.EndDate=td;
+  PutWindowRecord(wn,CRIr);
+  
+  CountResInputDClassStartDateEFAfter = res;
+return;
+end;
+
+//Check for duplicate rows
+//this function returns true if counterno is eneterd twice in same record,
+//however if different flatcodes are specified then it is ok to enter same counterno twice
+function boolean DuplicateRowExists(record CountResInputVc CRIr,integer rownr,row CountResInputVc CRIrw) begin
+  boolean res;
+  integer i,rwc;
+  row CountResInputVc CRI2rw
+  
+  rwc = MatRowCnt(CRIr);
+  for(i=0;i<rwc;i=i+1)begin
+    if rownr!=i then begin
+      MatRowGet(CRIr,i,CRI2rw);
+      if CRIrw.CounterNo == CRI2rw.CounterNo and blank(CRIrw.FlatCode) then begin
+        res = true;
+      end;
+      if CRIrw.CounterNo == CRI2rw.CounterNo and nonblank(CRIrw.FlatCode) and CRIrw.FlatCode==CRI2rw.FlatCode then begin
+        res = true;
+      end;
+    end;
+  end;
+  
+  DuplicateRowExists = res;
+return;
+end;
+
+function boolean CountResDClassFlatCodeEFAfter(Integer wn,Integer rownr)
+begin
+  record CountResInputVc CRIr;
+  row CountResInputVc CRIrw;
+  record FlatCountersVc FlatCountersr;
+  boolean res,duplicatef,testf;
+  val prevcr;
+  date prevdate;
+  string 50 prevflatcode;
+
+  res = true;
+  if rownr>=0 then begin
+    prevflatcode = WindEFStr(wn);
+    GetWindowRecord(wn,CRIr);
+    MatRowGet(CRIr,rownr,CRIrw);
+    testf = true;
+    if blank(CRIrw.FlatCode) then begin
+      testf = false;
+    end;
+    if blank(CRIr.BuildCode) then begin
+      testf = false;
+    end;
+    if blankdate(CRIr.StartDate) then begin
+      testf = false;
+    end;
+    if blankdate(CRIr.EndDate) then begin
+      testf = false;
+    end;
+    if blank(CRIrw.CounterNo) then begin
+      testf = false;
+    end;
+    if testf then begin
+      if DuplicateRowExists(CRIr,rownr,CRIrw) then begin
+        testf = false;
+        MessageBox(1000066,"");
+      end;
+    end;
+    if testf then begin
+      FlatCountersr.CounterNo=CRIrw.CounterNo;
+      FlatCountersr.FlatCode=CRIrw.FlatCode;
+      if !ReadLastKey("CounterNo",FlatCountersr,2,true) then begin
+        testf = false;
+        CRIrw.CurAmount=blankval;
+        CRIrw.PrevAmount=blankval;
+        MatRowPut(CRIr,rownr,CRIrw);
+        PutWindowRecord(wn,CRIr);
+      end;
+    end;
+    if testf then begin
+      if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+        if blank(CRIrw.CountResType) then begin
+          testf = false;
+        end;
+      end else begin
+        if nonblank(CRIrw.CountResType) then begin
+          testf = false;
+        end;
+      end;
+    end;
+    if testf then begin
+      if GetLastCounterResData(FlatCountersr,prevcr,prevdate,Crir.StartDate,CRIrw.CountResType) then begin
+        Crirw.PrevDate=prevdate;
+        Crirw.PrevAmount=prevcr;
+        Crirw.RowAddress=FlatCountersr.FlatNo;
+        Crirw.FlatCounterSerNr = FlatCountersr.SerNr;
+        Crirw.CounterType = FlatCountersr.CounterType;
+        if (nonblank(CRIr.InputCTypes) and nonblank(Crirw.CounterType) and !SetInSet(Crirw.CounterType,CRIr.InputCTypes)) then begin
+          MessageBox(1000202,"");
+          Beep;
+        end;
+        MatRowPut(CRIr,rownr,CRIrw);
+        PutWindowRecord(wn,CRIr);
+      end;
+    end;
+  end;
+  
+  CountResDClassFlatCodeEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCounterNoEFAfter(Integer wn,Integer rownr)
+begin
+  record CountResInputVc CRIr;
+  row CountResInputVc CRIrw;
+  record FlatCountersVc FlatCountersr,FCr,FC2r;
+  boolean res,wloop,Duplicatef,testf;
+  val prevcr;
+  date prevdate;
+  string 20 flatcode,prevcounterno;
+  integer cnt;
+
+  res = true;
+  if rownr>=0 then begin
+    prevcounterno = WindEFStr(wn);
+    GetWindowRecord(wn,CRIr);
+    MatRowGet(CRIr,rownr,CRIrw);
+    testf = true;
+    if blank(CRIr.BuildCode) then begin
+      testf = false;
+    end;
+    if blankdate(CRIr.StartDate) then begin
+      testf = false;
+    end;
+    if blankdate(CRIr.EndDate) then begin
+      testf = false;
+    end;
+    if blank(CRIrw.CounterNo) then begin
+      testf = false;
+    end;
+    if testf then begin
+      if DuplicateRowExists(CRIr,rownr,CRIrw) then begin
+        testf = false;
+        MessageBox(1000066,"");
+      end;
+    end;
+    if testf and blank(CRIrw.FlatCode) then begin
+      FCr.CounterNo=CRIrw.CounterNo;
+      if !ReadLastKey("CounterNo",FCr,1,true) then begin
+        testf = false;
+      end;
+      FC2r.CounterNo=CRIrw.CounterNo;
+      if !ReadFirstKey("CounterNo",FC2r,1,true) then begin
+        testf = false;
+      end;
+      if testf then begin
+        if FCr.SerNr!=FC2r.SerNr then begin
+          testf = false;
+        end else begin
+          CRIrw.FlatCode = FCr.FlatCode;
+          MatRowPut(CRIr,rownr,CRIrw);
+        end;
+      end;
+    end;
+    if testf then begin
+      FlatCountersr.CounterNo=CRIrw.CounterNo;
+      FlatCountersr.FlatCode=CRIrw.FlatCode;
+      if !ReadLastKey("CounterNo",FlatCountersr,2,true) then begin
+        testf = false;
+        CRIrw.CurAmount=blankval;
+        CRIrw.PrevAmount=blankval;
+        MatRowPut(CRIr,rownr,CRIrw);
+        PutWindowRecord(wn,CRIr);
+      end;
+    end;
+    if testf then begin
+      if IsTwoTypeFlatCounter(FlatCountersr.SerNr) then begin
+        if blank(CRIrw.CountResType) then begin
+          testf = false;
+        end;
+      end else begin
+        if nonblank(CRIrw.CountResType) then begin
+          testf = false;
+        end;
+      end;
+    end;
+    if testf then begin
+      if GetLastCounterResData(FlatCountersr,prevcr,prevdate,Crir.StartDate,CRIrw.CountResType) then begin
+        Crirw.PrevDate=prevdate;
+        Crirw.PrevAmount=prevcr;
+        Crirw.RowAddress=FlatCountersr.FlatNo;
+        Crirw.FlatCounterSerNr = FlatCountersr.SerNr;
+        Crirw.CounterType = FlatCountersr.CounterType;
+        if (nonblank(CRIr.InputCTypes) and nonblank(Crirw.CounterType) and !SetInSet(Crirw.CounterType,CRIr.InputCTypes)) then begin
+          MessageBox(1000202,"");
+          Beep;
+        end;
+        MatRowPut(CRIr,rownr,CRIrw);
+        PutWindowRecord(wn,CRIr);
+      end;
+    end;
+  end;
+  
+  CountResDClassCounterNoEFAfter=res;
+return;
+end;
+
+function boolean CountResDClassCurAmountEFAfter(Integer wn,Integer rownr)
+begin
+  record CountResInputVc CRIr;
+  row CountResInputVc CRIrw;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CRIr);
+  if rownr>=0 then begin
+    MatRowGet(CRIr,rownr,CRIrw);
+    CRIrw.SumAmount = CRIrw.CurAmount - CRIrw.PrevAmount;
+    MatRowPut(CRIr,rownr,CRIrw);
+    RecalcInputTotSum(wn,CRIr);
+    PutWindowRecord(wn,CRIr);
+  end;
+  
+  CountResDClassCurAmountEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassSumAmountEFAfter(Integer wn,Integer rownr)
+begin
+  record CountResInputVc CRIr;
+  row CountResInputVc CRIrw;
+  date td;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CRIr);
+  if rownr>=0 then begin
+    MatRowGet(CRIr,rownr,CRIrw);
+    CRIrw.CurAmount = CRIrw.SumAmount + CRIrw.PrevAmount;
+    MatRowPut(CRIr,rownr,CRIrw);
+    PutWindowRecord(wn,CRIr);
+  end;
+  
+  CountResDClassSumAmountEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCounterTypeEFAfter(integer wn,integer rownr)
+begin
+  boolean res;
+  record CountResInputVc CRIr;
+  row CountResInputVc CRIrw;
+
+  res = true;
+
+  GetWindowRecord(wn,CRIr);
+  if (rownr >= 0) then begin
+    MatRowGet(CRIr,rownr,CRIrw);
+    if (nonblank(CRIr.InputCTypes) and nonblank(Crirw.CounterType) and !SetInSet(Crirw.CounterType,CRIr.InputCTypes)) then begin
+      MessageBox(1000202,"");
+      Beep;
+    end;
+  end;
+
+  CountResDClassCounterTypeEFAfter = res;
+  return;
+end;
+
+function boolean CountResDClassInputCTypesEFAfter(integer wn)
+begin
+  record CountResInputVc CountResInputr;
+  boolean res;
+  longint pos;
+  string 20 ctype;
+  string 100 overctypes;
+  
+  res = true;
+  GetWindowRecord(wn,CountResInputr);
+  if (nonblank(CountResInputr.InputCTypes)) then begin
+    pos = 0;
+    while (GetNextSubstring(CountResInputr.InputCTypes,pos,",",ctype)) begin
+      if (FindAnotherCountResInputWithType(CountResInputr,ctype)) then begin
+        if (blank(overctypes)) then begin
+          overctypes = ctype;
+        end else begin
+          overctypes = overctypes & ", " & ctype;
+        end;
+      end;
+    end;
+    if (nonblank(overctypes)) then begin
+      MessageBox(1000201,overctypes);
+      beep;
+    end;
+  end;
+  
+  CountResDClassInputCTypesEFAfter = res;
+  return;
+end;
+
+global
+function boolean CountResInputDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "BuildCode": res = CountResInputDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+      case "StartDate": res = CountResInputDClassStartDateEFAfter(wn,fn,rownr,changed);
+      case "FlatCode": res = CountResDClassFlatCodeEFAfter(wn,rownr);
+      case "CounterNo": res = CountResDClassCounterNoEFAfter(wn,rownr);
+      case "CurAmount": res = CountResDClassCurAmountEFAfter(wn,rownr);
+      case "SumAmount": res = CountResDClassSumAmountEFAfter(wn,rownr);
+       case "InputCTypes": res = CountResDClassInputCTypesEFAfter(wn);
+      case "CounterType": res = CountResDClassCounterTypeEFAfter(wn,rownr);
+    end;
+  end;
+  
+  CountResInputDClassAfterEditField = res;
+  return;
+end;
+
+global
+function Boolean CountResInputDClassPrint(Integer wn,Boolean previewf)
+begin
+  boolean res;
+  record CountResInputVc CountResInputr;
+  
+  DeselectWindow(wn,false);
+  if WindowState(wn) == Rs_normal then begin
+    res = true;
+    GetWindowRecord(wn,CountResInputr);
+    PrintDocument(CountResInputr,"CountResInputForm",previewf);
+  end;
+  
+  CountResInputDClassPrint = res;
+  return;
+end;
+
+global updating 
+procedure XlsIn_CountResInputLsm()
+begin
+  record IVVc IVr;
+  integer nwn;
+  
+  nwn = OpenWindow("CRIXlsInputWClass",1,0,"","",IVr);
+
+  return;
+end;
+
+global updating
+procedure CreateXlsCRIbtn()
+begin
+  record IVVc IVr;
+  Record CountResInputVc CRIr;
+  integer wn,nwn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,IVr);
+  DeselectWindow(wn,false);
+  if MatRowCnt(IVr)!=0 then begin
+    CreateXlsCRI(CRIr,IVr);
+    CloseWindow(wn);
+    nwn=OpenWindow("CountResInputDClass",1,0,"","",CRIr);
+  end;
+
+  return;
+end;
+
+global
+function boolean CountResInputDClassOnOpenWindow(integer wn)
+begin
+  Record CountResInputVc CRIr;
+  boolean res;
+
+  GetWindowRecord(wn,CRIr);
+  RecalcInputTotSum(wn,CRIr);
+  
+  CountResInputDClassOnOpenWindow = res;
+  return;
+end;
+
+global
+procedure CountResInputDClassOnWindowRecordChange(integer wn)
+begin
+  Record CountResInputVc CRIr;
+  
+  GetWindowRecord(wn,CRIr);
+  RecalcInputTotSum(wn,CRIr);
+
+  return;
+end;
+
+global updating
+procedure DeleteCountResSm()
+begin
+  record IVVc IVr;
+  Record CountResInputVc CRIr;
+  integer wn,nwn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,CRIr);
+  // DeselectWindow(wn,false);
+  DeleteCRICountRes(CRIr);
+  PutWindowRecord(wn,CRIr)
+  WindowDoOK(wn,0);
+  
+  return;
+end;
+
+global updating
+procedure MSCRIYesbtn()
+begin
+  record CountResInputVc CRIr;
+  integer wn,mwn;
+  
+  wn = CurWindow;
+  mwn = MotherWindow(wn);
+  GetWindowRecord(mwn,CRIr);
+  if StoreCountResImportRemote(CRIr) then begin
+    PutWindowRecord(mwn,CRIr);
+    SetWindowState(mwn,Rs_Normal);
+    CloseWindow(wn);
+  end;
+  
+  return;
+end;

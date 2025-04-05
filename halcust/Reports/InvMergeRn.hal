@@ -1,0 +1,142 @@
+external inner procedure HT2Per(Date,Date,var string);
+
+global
+procedure GetInvMergeArray(string custcode,date sd,date ed,var array longint arrIVSerNr)
+begin
+  record CUVc CUr;
+  record IVVc IVr;
+  boolean TrHs,TrHs2,firstf,testf;
+  string 20 regnr;
+  
+  CUr.Code=custcode;
+  if ReadFirstMain(CUr,1,true) then begin
+    regnr=CUr.RegNr1;
+  end;
+  
+  if blank(regnr) then begin
+    GoTo LGetInvMergeArray;
+  end;
+
+  ClearArray(arrIVSerNr);
+  
+  ResetLoop(CUr);
+  TrHs=true;
+  CUr.RegNr1=regnr;
+  While LoopKey("RegNr1",CUr,1,TrHs) begin
+    if CUr.RegNr1!=regnr then begin
+      TrHs=false;
+    end else begin
+      TrHs2=true;
+      ResetLoop(IVr);
+      IVr.CustCode=CUr.Code;
+      IVr.InvDate=sd;
+      While LoopKey("CustDate",IVr,2,TrHs2) begin
+        if (IVr.CustCode!=CUr.Code) or (IVr.InvDate>ed) then begin
+          TrHs2=false;
+        end else begin
+          testf=true;
+          if IVr.OKFlag!=1 then begin
+            testf=false;
+          end;
+          if IVr.InvType!=kInvoiceTypeNormal then begin
+            testf=false;
+          end;
+          if IVr.Invalid!=0 then begin
+            testf=false;
+          end;
+          if IVr.ServInvf!=1 then begin
+            testf=false;
+          end;
+          if testf then begin
+            arrIVSerNr[arrIVSerNr.length]=IVr.SerNr;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+LGetInvMergeArray:;  
+  return;
+end;
+
+global
+procedure InvMergeRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record IVVc IVr;
+  integer rw,i;
+  string 255 tstr;
+  array longint arrIVSerNr;
+  boolean firstf;
+  val total;
+  
+  StartReportJob(USetStr(1001485));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  Header(rw,USetStr(1000411) & RepSpec.f1,1);
+  EndHeader;
+  
+  if blank(RepSpec.f1) then begin
+    GoTo LInvMergeRn;
+  end;
+  
+  GetInvMergeArray(RepSpec.f1,RepSpec.sStartDate,RepSpec.sEndDate,arrIVSerNr)
+  for (i=0;i<arrIVSerNr.length;i=i+1) begin
+    IVr.SerNr=arrIVSerNr[i];
+    if ReadFirstMain(IVr,1,true) then begin
+      if !firstf then begin
+        StartFormat(15);
+        OutStringId(1,"DblInvMerge",USetStr(1001649),true,IVr.SerNr);
+        EndFormat;
+        Black_Divider(0,1);
+        StartFormat(15);
+        OutString(0,0,USetStr(1000182),false);
+        OutString(40,0,USetStr(1000183),false);
+        OutString(190,0,USetStr(1000541),false);
+        OutString(240,0,USetStr(1000181),false);
+        OutString(400,0,USetStr(1000134),false);
+        OutString(1,0,USetStr(1000136),true);
+        EndFormat;
+        Black_Divider(0,1);
+        firstf=true;
+      end;
+      StartFormat(15);
+      OutString(0,0,IVr.CustCode,false);
+      OutString(40,0,IVr.Addr0,false);
+      if IVr.Contract!=-1 then begin
+        OutString(190,"DblNAContractVc",IVr.Contract,false);
+      end else begin
+        OutString(190,0,"",false);
+      end;
+      tstr = IVr.Addr1;
+      if IVr.Contract!=-1 then begin
+        NAContractr.SerNr=IVr.Contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          tstr = NAContractr.FlatAddress;
+        end;
+      end;
+      OutString(240,0,tstr,false);
+      OutString(400,"DblIVVc",IVr.SerNr,false);
+      OutVal(1,0,IVr.Sum4,M4Val,true);
+      EndFormat;
+      total = total + IVr.Sum4;
+    end;
+  end;
+  if firstf then begin
+    Black_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(40,0,"",false);
+    OutString(190,0,"",false);
+    OutString(240,0,"",false);
+    OutString(400,0,"",false);
+    OutVal(1,0,total,M4Val,true);
+    EndFormat;
+  end;
+  
+LInvMergeRn:;  
+  EndJob;
+  return;
+end;

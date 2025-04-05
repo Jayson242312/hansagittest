@@ -1,0 +1,35 @@
+global updating
+procedure updateTarrifInContractMn(record RcVc RepSpec)
+begin
+  record NAContractVc NaContractr,oldNaContractr;
+  row NAContractVc NaContractrw;
+  record INVc INr; 
+  integer i, rwcnt;
+  boolean testf,testj;
+
+  if UserCanAction("OBSAllowNAContrRowChange",false)==true then begin
+    if NonBlank(RepSpec.f1) then begin
+      while loopmain(NaContractr,1,true) begin
+        RecordCopy(oldNaContractr,NaContractr);
+        rwcnt = MatRowCnt(NaContractr);
+        for (i=0; i<rwcnt; i=i+1) begin
+          MatRowGet(NaContractr,i,NaContractrw);//
+          if (RepSpec.f1 == NaContractrw.ArtCode) then begin
+            INr.Code = RepSpec.f1;
+            if (ReadFirstMain(INr,1,true)) then begin
+              if (INr.CalcOnLandOrImp == 1) then begin
+                NAContractrw.QtyCoef =  StringToVal(INr.UserStr2,M45Val);
+              end else begin
+                NAContractrw.Price = INr.UPrice1;
+              end;
+              MatRowPut(NaContractr,i,NaContractrw); //f
+            end;
+          end;
+        end;
+        RecordUpdate(oldNaContractr,NaContractr,false);
+      end;
+    end;
+  end else begin
+    MessageBox(0,"User does not have permission");
+  end;
+End;

@@ -1,0 +1,53 @@
+global
+updating procedure ItemGroupsIn()
+BEGIN
+  string 255 InLine;
+  record ITVc oldITr;
+  record ITVc ITr;
+  record RcVc RepSpec;
+  string 255 tstr,t2;
+  Boolean testf,opt;
+
+  while (TestEOF()==false) begin
+    InLine = ImportField();
+    if(nonblank(InLine)) then begin
+      opt = true; // load
+      ITr.Code = InLine;
+      if (ReadFirstMain(ITr,1,true)) then begin
+        opt = false;  // amend
+        goto LSKIP;
+        RecordCopy(oldITr,ITr);
+      end
+      else begin
+        RecordNew(ITr);
+        ITr.Code = InLine; // ItemGroup Code 
+      end;
+
+      InLine = ImportField(); // ItemGroup description
+      ITr.Comment = InLine;
+      // InLine = ImportField(); // ItemGroup Class.Types
+      // ITr.ClassType = InLine; 
+      // InLine = ImportField(); // Item Classification
+      // ITr.DispGroups = InLine;
+      InLine = ImportField(); // Sales  Account
+      ITr.SalesAcc = InLine;
+     
+      if (opt==true) then begin    // load
+        if (RecordStore(ITr,true)) then begin
+        end;
+      end
+      else begin                   // amend
+        if (RecordUpdate(oldITr,ITr,true)==0) then begin
+        end;
+      end;
+
+    end;
+    UserTrace(ITr.Code,M4Str);
+
+    LSKIP:;
+
+    testf = NextImportLine(true);
+  end;
+//  SetDOSFlag(false);
+  RETURN;
+END;

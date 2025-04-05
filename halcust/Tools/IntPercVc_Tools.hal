@@ -1,0 +1,205 @@
+external function boolean GetActualCustCO(string,date,var record NAContractVc,boolean,boolean);
+
+function string 20 GetIntPercItem(Record NAContractVc NAContractr) begin
+  Record IntPercVc IntPercr;
+  string 20 res,IntPercCode;
+
+  res = "";
+  IntPercCode="";
+  if nonblank(NAContractr.IntPercCode) then begin
+    IntPercCode=NAContractr.IntPercCode;
+  end;
+  IntPercr.Code=IntPercCode;
+  if ReadFirstMain(IntPercr,1,true) then begin
+    res = IntPercr.IntItem;
+  end;
+  
+  GetIntPercItem = res;
+return;
+end;
+
+global
+function string 20 GetIntPercItemNAContractCU(Record NAContractVc NAContractr,Record CUVc CUr) begin
+  
+  GetIntPercItemNAContractCU = GetIntPercItem(NAContractr);
+return;
+end;
+
+global
+function string 20 GetIntPercItemNAContract(Record NAContractVc NAContractr) begin
+  // Record CUVc CUr;
+  
+  GetIntPercItemNAContract = GetIntPercItem(NAContractr);
+return;
+end;
+
+global
+function string 20 GetCustIntPercItemOnDate(Record CUVc CUr,date ondate) begin
+  Record NAContractVc NAContractr
+  
+  if !GetActualCustCO(CUr.Code,ondate,NAContractr,true,false) then begin
+    NAContractr.IntPercCode = "";
+  end;
+  
+  GetCustIntPercItemOnDate = GetIntPercItem(NAContractr);
+return;
+end;
+
+global
+function boolean GetMSIntPercRec(longint contract,var Record IntPercVc IntPercr,string IntPercCode) begin
+  Record NAContractVc COr;
+  Record CUVc CUr;
+  boolean res;
+  
+  if nonblank(IntPercCode) then begin
+    IntPercr.Code = IntPercCode;
+    if ReadFirstMain(IntPercr,1,true) then begin
+      res = true;
+      goto LGetMSIntPercRec;
+    end;
+  end;
+  
+  COr.SerNr = contract;
+  if ReadFirstMain(COr,1,true) then begin
+    if nonblank(COr.IntPercCode) then begin
+      IntPercr.Code = COr.IntPercCode;
+      if ReadFirstMain(IntPercr,1,true) then begin
+        res = true;
+        goto LGetMSIntPercRec;
+      end;
+    end;
+    
+    // CUr.Code = COr.CustCode;
+    // if ReadFirstMain(CUr,1,true) then begin
+    //   IntPercr.Code = CUr.UserStr5;
+    //   if ReadFirstMain(IntPercr,1,true) then begin
+    //     res = true;
+    //     goto LGetMSIntPercRec;
+    //   end;
+    // end;
+  end;
+  
+LGetMSIntPercRec:;
+  GetMSIntPercRec = res;
+return;
+end;
+
+global
+procedure GetIntPercDataOnDate2(Record IntPercVc IntPercr,date ondate,var Row IntPercVc pIntPercrw) begin
+  val res;
+  Row IntPercVc IntPercrw;
+  integer i,rwc;
+  boolean testf,rowfoundf;
+  date sd,ed;
+  
+  rwc=MatRowCnt(IntPercr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IntPercr,i,IntPercrw);
+    testf=true;
+    if nonblankdate(IntPercrw.StartDate) then begin 
+      sd=AddDay(IntPercrw.StartDate,-1);
+      if sd>ondate then begin
+        testf=false;
+      end;
+    end;
+    if nonblankdate(IntPercrw.EndDate) then begin
+      ed=AddDay(IntPercrw.EndDate,-1);
+      if ed<ondate then begin
+        testf=false;
+      end;
+    end;
+    //nerēķināt neņem vērā, jo tālāk tiek tas tiek atņemts no apr. dienām!
+    //+ lai tiktu korekti % paņemti.
+    if IntPercrw.CalcWay==2 then begin  
+      testf=false;
+    end;
+    if testf then begin
+      rowfoundf = true;
+      i=rwc;
+      CopyRow(IntPercr,IntPercrw,pIntPercrw);
+      pIntPercrw.ArtCode = IntPercr.IntItem;
+    end;
+  end;
+
+  if !rowfoundf then begin
+    ClearRow(IntPercr,pIntPercrw,1);
+    pIntPercrw.CalcWay = IntPercr.Calcf;
+    pIntPercrw.IntPrc = IntPercr.DefIntPrc;
+    pIntPercrw.ArtCode = IntPercr.IntItem;
+  end;
+  
+  //0 - likumiskie, 1 - līgumsods
+  if pIntPercrw.CalcWay==0 or pIntPercrw.CalcWay==1 then begin
+    if pIntPercrw.IntPrc==blankval then begin
+      pIntPercrw.IntPrc = IntPercr.DefIntPrc;
+    end;
+  end;
+  
+return;
+end;
+
+global
+procedure GetIntPercDataOnDate(Record IntPercVc IntPercr,date ondate,var Row IntPercVc pIntPercrw) begin
+  val res;
+  Row IntPercVc IntPercrw;
+  integer i,rwc;
+  boolean testf,rowfoundf;
+
+  rwc=MatRowCnt(IntPercr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IntPercr,i,IntPercrw);
+    testf=true;
+    if nonblankdate(IntPercrw.StartDate) and IntPercrw.StartDate>ondate then begin
+      testf=false;
+    end;
+    if nonblankdate(IntPercrw.EndDate) and IntPercrw.EndDate<ondate then begin
+      testf=false;
+    end;
+    if testf then begin
+      rowfoundf = true;
+      i=rwc;
+      CopyRow(IntPercr,IntPercrw,pIntPercrw);
+      pIntPercrw.ArtCode = IntPercr.IntItem;
+    end;
+  end;
+
+  if !rowfoundf then begin
+    ClearRow(IntPercr,pIntPercrw,1);
+    pIntPercrw.CalcWay = IntPercr.Calcf;
+    pIntPercrw.IntPrc = IntPercr.DefIntPrc;
+    pIntPercrw.ArtCode = IntPercr.IntItem;
+  end;
+  
+  if pIntPercrw.CalcWay==0 or pIntPercrw.CalcWay==1 then begin
+    if pIntPercrw.IntPrc==blankval then begin
+      pIntPercrw.IntPrc = IntPercr.DefIntPrc;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure GetIntPercArtCode(var string IntPercArtCodes)
+begin
+  record IntPercVc IntPercr;
+  string 255 res;
+  boolean TrHs;
+
+  IntPercArtCodes="";
+
+  TrHs=true;
+  IntPercr.Code = "";
+  While LoopMain(IntPercr,1,TrHs) begin
+    if nonblank(IntPercr.IntItem) and !SetInSet(IntPercr.IntItem,res) then begin
+      if res!="" then begin
+        res = res & "," & IntPercr.IntItem;
+      end else begin
+        res = IntPercr.IntItem;
+      end;
+    end;
+  end;
+  
+  IntPercArtCodes=res;
+  return;
+end;

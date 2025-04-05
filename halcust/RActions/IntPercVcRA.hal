@@ -1,0 +1,119 @@
+
+/*soda procenti */
+
+global
+function longint IntPercVcRecordDefaults(var record IntPercVc IntPercr,record IntPercVc IntPerc2r,longint a,longint b)
+begin
+  longint res;
+
+  IntPercr.DefIntPrc=0.0164;
+  IntPercr.IntItem="LS";
+
+  IntPercVcRecordDefaults = res;
+  return;
+end;
+
+function boolean HasMainIntPercAndNoPerm(string code)
+begin
+  boolean res;
+  
+  if nonblank(code) and SetInSet(code,"0,1") then begin
+    if (!UserCanAction("OBSAllowChgMainIntPerc",false)) then begin
+      res = true;
+    end;
+  end;
+  
+  HasMainIntPercAndNoPerm = res;
+  return;
+end;
+
+global
+function longint IntPercVcRecordCheck(var record IntPercVc IntPercr,record IntPercVc IntPercr2,longint a,longint b)
+begin
+  longint res;
+  Record CUVc CUr;
+  Record NAContractVc NAContractr;
+  row IntPercVc IntPercrw;
+  integer i,rwc;
+  date sd,td;
+  
+  res = 0;
+  if IntPercr.Code == "" then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+  
+  if HasMainIntPercAndNoPerm(IntPercr.Code) then begin
+    RecordCheckError(1001729,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+  
+  if a==Rs_update then begin
+    if HasMainIntPercAndNoPerm(IntPercr2.Code) then begin
+      RecordCheckError(1001729,"",-1,"Code");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  
+  if IntPercr.Code!=IntPercr2.Code and nonblank(IntPercr2.Code) then begin
+    //MessageBox(0,"Kods mainits " & IntPercr.Code & " " & IntPercr2.Code);
+    
+    NAContractr.IntPercCode=IntPercr2.Code;
+    if ReadFirstKey("IntPercCode",NAContractr,1,true) then begin
+      RecordCheckError(1000992,NAContractr.SerNr,-1,"Code");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  
+  rwc = MatRowCnt(IntPercr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IntPercr,i,IntPercrw);
+    if NonBlankDate(IntPercrw.EndDate) and nonblankdate(IntPercrw.StartDate) and (IntPercrw.StartDate > IntPercrw.EndDate) then begin
+      RecordCheckError(1001260,"",i,"StartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    if NonBlankDate(IntPercrw.StartDate) then begin
+      sd = IntPercrw.StartDate;
+      if sd.day!=1 then begin
+        RecordCheckError(1001261,"",i,"StartDate");
+        res = -1;
+        goto LExitCheck;
+      end;
+    end;
+    if NonBlankDate(IntPercrw.EndDate) then begin
+      td = IntPercrw.EndDate;
+      td.day = DaysInMonth(GetYear(td),GetMonth(td));
+      if IntPercrw.EndDate!=td then begin
+        RecordCheckError(1001262,"",i,"EndDate");
+        res = -1;
+        goto LExitCheck;
+      end;
+    end;
+  end;
+  
+LExitCheck:;
+  IntPercVcRecordCheck = res;
+return;
+end;
+
+//return 0 if not allowed to delete
+//return 1 if delete is allowed
+global
+function LongInt IntPercVcRecordRemoveTest(var Record IntPercVc IntPercr,Record IntPercVc IntPerc2r,LongInt stat,LongInt check)
+begin
+  LongInt res;
+
+  res = 1;
+  if HasMainIntPercAndNoPerm(IntPercr.Code) then begin
+    MessageBox(1001729,"");
+    res = 0;
+  end;
+
+  IntPercVcRecordRemoveTest = res;
+  return;
+end;

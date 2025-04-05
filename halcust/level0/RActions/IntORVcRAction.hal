@@ -1,0 +1,190 @@
+external function LongInt ReadLocation(string,var record LocationVc);
+external updating procedure FindAcptRulesAndCreateAcceptanceAlert(Integer,Integer,string,string,string,val,string,string,string,string);
+external updating procedure CancelApprovalRequestActivities(Integer,string,string,string);
+external function Boolean AcceptanceRulesExists(Integer,string);
+external function val GetIntORRowReserv(LongInt,string,string,var val,var string,var string,var string,Boolean);
+//external updating procedure UpdateAcceptRec(LongInt,string,Integer);
+external function Date ConvertPlanShipString(string);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+//external updating procedure GenerateAcceptRec(string,LongInt,string,string,val);
+external procedure SetIntORFlags(record IntORVc);
+external function Boolean SerNrTestIntORVc(LongInt,Date,var Boolean);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure B1ToB2Val(val,val,val,var val);
+external procedure GetCurUser(var record UserVc);
+external updating function Boolean DoReleaseIntORRsrvAll(record IntORVc,Integer);
+external procedure BlockLoadLocking(var record DBLockBlock);
+
+global
+function LongInt IntORVcRecordCheck(record IntORVc IntORr,record IntORVc IntOR2r,LongInt stat,LongInt check)
+BEGIN
+  LongInt res,err;
+  Integer insertmode,updatemode;
+  record IntORVc lIntORr;
+  record LocationVc Locr;
+  Boolean gentrans;
+  Integer i,rwcnt;
+  record INVc INr;
+  row IntORVc IntORrw;
+  row IntORVc IntOR2rw;
+  string 5 itgroup,itgroup2,tstr,comment;
+  record IntORClassVc IntORClassr;
+  record IntORSettingBlock IntORRec;
+  val rsrvd,ordqty;
+  
+  BlockLoad(IntORRec);
+  res = 0;
+  insertmode = 1;
+  updatemode = 2;
+  if (IntORr.SerNr<=0) then begin
+    IntORr.SerNr = NextSerNr("IntORVc",IntORr.TransDate,-1,false,"");
+  end;
+  if ((stat==insertmode) or (IntORr.SerNr!=IntOR2r.SerNr)) then begin
+    lIntORr.SerNr = IntORr.SerNr;
+    if (ReadFirstMain(lIntORr,1,true)) then begin
+      RecordCheckError(1547,"",-1,"SerNr");      
+      res = -1;
+      goto LIntORVcRecordCheck;
+    end;
+    if (SerNrTestIntORVc(IntORr.SerNr,IntORr.TransDate,gentrans)==false) then begin
+      RecordCheckError(1557,"",-1,"SerNr");      
+      res = -1;
+      goto LIntORVcRecordCheck;
+    end;
+  end;  
+  if (blank(IntORr.Department)) then begin
+    RecordCheckError(1001807,"",-1,"Department");      
+    res = -1; 
+    goto LIntORVcRecordCheck;
+  end;
+
+  if (blank(IntORr.Location)) then begin
+    RecordCheckError(1058,"",-1,"Location");      
+    res = -1; 
+    goto LIntORVcRecordCheck;
+  end;
+
+  if ((IntORRec.ReqIntORClass==1) and blank(IntORr.IntORClass)) then begin
+    RecordCheckError(20089,"",-1,"IntORClass");      
+    res = -1; 
+    goto LIntORVcRecordCheck;
+  end;
+  err = ReadLocation(IntORr.Location,Locr);
+  if (err!=0) then begin
+    RecordCheckError(err,IntORr.Location,-1,"Location");
+    res = -1;
+    goto LIntORVcRecordCheck;
+  end;
+  
+  if (nonblank(IntORr.FrLocation)) then begin
+    Locr.Code = IntORr.FrLocation;
+    if (ReadFirstMain(Locr,1,true)==false) then begin
+      RecordCheckError(1120,IntORr.FrLocation,-1,"FrLocation");
+      res = -1;
+      goto LIntORVcRecordCheck;
+    end;
+    
+    if (IntORr.FrLocation==IntORr.Location) then begin
+      if (Locr.RequirePos==0) then begin
+        RecordCheckError(1769,"",-1,"Location");
+        res = -1;
+        goto LIntORVcRecordCheck;
+      end;
+    end;
+  end;
+  
+  if ((stat==insertmode) or (IntORr.IntORClass!=IntOR2r.IntORClass)) then begin
+    if (nonblank(IntORr.IntORClass)) then begin
+      IntORClassr.Code = IntORr.IntORClass;
+      if (ReadFirstMain(IntORClassr,1,true)==false) then begin
+        RecordCheckError(20090,IntORr.IntORClass,-1,"IntORClass");      
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+    end;
+  end; 
+  rwcnt = MatRowCnt(IntORr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IntORr,i,IntORrw);
+    if (nonblank(IntORrw.ArtCode)) then begin
+      if (ReadFirstItem(IntORrw.ArtCode,INr,true,false)==false) then begin
+        RecordCheckError(1120,IntORrw.ArtCode,i,"ArtCode");      
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+      if (INr.Terminated!=0) then begin
+        RecordCheckError(1266,IntORrw.ArtCode,i,"ArtCode");      
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+      if (INr.ItemType==2) then begin
+        RecordCheckError(1826,IntORrw.ArtCode,i,"ArtCode");      
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+      if (IntORrw.Quant<IntORrw.Shipd1) then begin
+        RecordCheckError(22076,"",i,"Quant"); 
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+    end;
+
+    if (i<MatRowCnt(IntOR2r)) then begin
+      MatRowGet(IntOR2r,i,IntOR2rw);
+      rsrvd = GetIntORRowReserv(IntORr.SerNr,IntOR2rw.ArtCode,IntOR2rw.SerialNr,ordqty,comment,tstr,tstr,true);
+      if (IntOR2rw.ArtCode!=IntORrw.ArtCode) then begin
+        if (rsrvd>0) then begin
+          RecordCheckError(20564,"",i,"ArtCode"); 
+          res = -1; 
+          goto LIntORVcRecordCheck;
+        end;
+      end;
+      if (rsrvd>IntORrw.Quant-IntORrw.Shipd1) then begin
+        RecordCheckError(22067,"",i,"ArtCode"); 
+        res = -1; 
+        goto LIntORVcRecordCheck;
+      end;
+    end;
+        
+  end;
+  //need more
+LIntORVcRecordCheck:;  
+  IntORVcRecordCheck = res; 
+  RETURN;
+END;
+
+
+
+global
+function LongInt IntORVcRecordDefaults(var record IntORVc IntORr,record IntORVc IntOR2r,LongInt long3,LongInt long4)
+begin
+  record DepVc Depr;
+  record UserVc USr;
+  LongInt res;
+
+  IntORr.SerNr = -1;
+  IntORr.TransDate = CurrentDate;
+  IntORr.StatusFlag = 0;
+  GetCurUser(USr);
+  IntORr.OurUser = USr.Code;
+  IntORr.Name = USr.Name;
+  IntORr.Department = USr.Department;
+  IntORr.Location = "TRAN"; // JH This changed to TRAN
+  IntORr.Phone = USr.Phone1;
+  IntORr.Fax = USr.Fax1;
+  IntORr.emailAddr = USr.emailAddr;
+  Depr.Code = IntORr.Department;
+  if (ReadFirstMain(Depr,1,true)) then begin
+    IntORr.ShipAddr0 = Depr.Addr0;
+    IntORr.ShipAddr1 = Depr.Addr1;
+    IntORr.ShipAddr2 = Depr.Addr2;
+    IntORr.ShipAddr3 = Depr.Addr3;
+    IntORr.DelAddr3 = Depr.Addr4;
+    IntORr.DelAddr4 = Depr.Addr5;
+  end;
+  if (SingleUserMode) then begin
+    IntORr.SerNr = NextSerNr("IntORVc",IntORr.TransDate,-1,false,"");
+  end;
+  IntORVcRecordDefaults = res;  
+  RETURN;
+END;

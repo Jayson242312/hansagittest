@@ -1,0 +1,124 @@
+
+procedure UpdateCodeAndTypeFields(Var Record ServCalcValueVc ServCalcValuer) begin
+  
+  if nonblank(ServCalcValuer.BuildCode) then begin
+    ServCalcValuer.Code = ServCalcValuer.BuildCode;
+    ServCalcValuer.Type = 1;
+    GoTo LUpdateFieldsEnd;
+  end;
+  if nonblank(ServCalcValuer.BuildGroupCode) then begin
+    ServCalcValuer.Code = ServCalcValuer.BuildGroupCode;
+    ServCalcValuer.Type = 2;
+    GoTo LUpdateFieldsEnd;
+  end;
+  if nonblank(ServCalcValuer.FlatGroupCode) then begin
+    ServCalcValuer.Code = ServCalcValuer.FlatGroupCode;
+    ServCalcValuer.Type = 3;
+    GoTo LUpdateFieldsEnd;
+  end;
+  
+LUpdateFieldsEnd:;
+return;
+end;
+
+global
+function LongInt ServCalcValueVcRecordCheck(Var Record ServCalcValueVc ServCalcValuer, Record ServCalcValueVc ServCalcValue2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  integer codecnt;
+  Record ServCalcValueVc cServCalcValuer;
+  boolean errorf;
+
+  res = 0;
+  if ServCalcValuer.SerNr==-1 then begin
+    ServCalcValuer.SerNr = NextSerNr("ServCalcValueVc",CurrentDate,-1,false,"");
+  end;
+  if ServCalcValuer.SerNr==-1 then begin
+    RecordCheckError(1058,"",-1,"SerNr"); 
+    res=-1;
+    GoTo EndServCalcValueVcRecordCheck;
+  end;
+  
+  if blankdate(ServCalcValuer.TransDate) then begin
+    ServCalcValuer.TransDate = CurrentDate;
+  end;
+  
+  codecnt = 0;
+  if nonblank(ServCalcValuer.BuildCode) then begin
+    codecnt = codecnt + 1;
+  end;
+  if nonblank(ServCalcValuer.BuildGroupCode) then begin
+    codecnt = codecnt + 1;
+  end;
+  if nonblank(ServCalcValuer.FlatGroupCode) then begin
+    codecnt = codecnt + 1;
+  end;
+  if codecnt!=1 then begin
+    RecordCheckError(1000937,"",-1,"BuildCode");
+    res = -1;
+    goto EndServCalcValueVcRecordCheck;
+  end;
+  
+  UpdateCodeAndTypeFields(ServCalcValuer);
+  cServCalcValuer.Code = ServCalcValuer.Code;
+  cServCalcValuer.Type = ServCalcValuer.Type;
+  cServCalcValuer.FieldCode = ServCalcValuer.FieldCode;
+  cServCalcValuer.StartDate = ServCalcValuer.StartDate;
+  cServCalcValuer.EndDate = ServCalcValuer.EndDate;
+  //cServCalcValuer.CalcFormula = ServCalcValuer.CalcFormula;
+  if ReadFirstKey("Code",cServCalcValuer,5,true) then begin
+    if ServCalcValuer.SerNr!=cServCalcValuer.SerNr then begin
+      errorf = true;
+    end else begin
+      cServCalcValuer.Code = ServCalcValuer.Code;
+      cServCalcValuer.Type = ServCalcValuer.Type;
+      cServCalcValuer.FieldCode = ServCalcValuer.FieldCode;
+      cServCalcValuer.StartDate = ServCalcValuer.StartDate;
+      cServCalcValuer.EndDate = ServCalcValuer.EndDate;
+      if ReadLastKey("Code",cServCalcValuer,5,true) then begin
+        if ServCalcValuer.SerNr!=cServCalcValuer.SerNr then begin
+          errorf = true;
+        end;
+      end;
+    end;
+    if errorf then begin
+      RecordCheckError(20010,"",-1,"FieldCode");
+      res = -1;
+      goto EndServCalcValueVcRecordCheck;
+    end;
+  end;
+  
+EndServCalcValueVcRecordCheck:;
+  ServCalcValueVcRecordCheck = res;
+  return;
+end;
+
+global
+function LongInt ServCalcValueVcRecordDefaults(Var Record ServCalcValueVc ServCalcValuer, Record ServCalcValueVc ServCalcValue2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  
+  res = -1;
+  if (SingleUserMode) then begin
+    ServCalcValuer.SerNr = NextSerNr("ServCalcValueVc",CurrentDate,-1,false,"");
+  end;
+  
+  ServCalcValueVcRecordDefaults = res;
+  return;
+end;
+
+global
+function LongInt ServCalcValueVcRecordDuplicate(Var Record ServCalcValueVc ServCalcValuer, Record ServCalcValueVc ServCalcValue2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+  
+  ServCalcValuer.SerNr = -1;
+  if (SingleUserMode) then begin
+    ServCalcValuer.SerNr = NextSerNr("ServCalcValueVc",CurrentDate,-1,false,"");
+  end;
+  ServCalcValuer.TransDate = CurrentDate;
+  
+  ServCalcValueVcRecordDuplicate = res;
+  return;
+end;

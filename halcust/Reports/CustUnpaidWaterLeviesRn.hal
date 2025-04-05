@@ -1,0 +1,211 @@
+external inner function string 255 MonthName(Date);
+
+//
+global
+procedure CustUnpaidWaterLeviesRn(record RcVc RepSpec)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record IVVc IVr;
+  row IVVc IVrw;
+  record INVc INr;
+  record CUVc CUr; String 25 CustCode,CustName;
+  //
+  boolean wloop,testf;
+  Integer arr_size,count,rwcnt,i,v;
+  string 255 prevCode;
+  array String 225 arr_custcode;
+  array String 225 arr_itemcode;
+  array String 225 arr_itemname;
+ 
+  array val arr_receipt;
+  array val arr_invoice;
+
+  array val arr_receipt_monthSum;
+  array val arr_receipt_itemSum;
+  array val arr_invoice_monthSum;
+  array val arr_invoice_itemSum;
+
+
+  // start report job
+  StartReportJob("Unpaid Water Levies");
+
+  // get cust.name
+  if(blank(RepSpec.f1)) then begin
+    CustName = "";
+  end else begin
+    ItemPayHistr.CustCode = RepSpec.f1;
+    CustCode = RepSpec.f1;
+    CUr.Code = CustCode;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      CustName = CUr.Name;
+    end;
+  end;
+
+
+  // loop item-payment-history
+  wloop = true;
+  ItemPayHistr.CustCode = CustCode;
+  While LoopKey("CustCode",ItemPayHistr,1,wloop) begin
+
+    // stop loop if..
+    if (nonblank(RepSpec.f1) AND ItemPayHistr.CustCode!=RepSpec.f1) then begin
+      wloop = false;
+    end else begin
+    
+      // ====================================== INVOICES ======================================
+
+      // get type invoice / credit note invoice
+      if (ItemPayHistr.FileName == 1 OR ItemPayHistr.FileName == 2) then begin
+        testf = true;
+
+        // if item code selected
+        if(nonblank(RepSpec.f2) AND RepSpec.f2 != ItemPayHistr.ArtCode) then begin
+          testf = false;
+        end;
+
+        if(testf) then begin
+          // find in item register
+          INr.Code = ItemPayHistr.ArtCode;
+          if(ReadFirstMain(INr,1,true)) then begin
+            if (INr.ServQuantInCalc == 2) then begin
+              //
+              // set code on initial loop
+              if(count == 0) then begin
+                prevCode = ItemPayHistr.CustCode;
+              end;
+              count = count + 1;
+              // increase arr.subscript
+              if(ItemPayHistr.CustCode != prevCode) then begin
+                arr_size = arr_size + 1;
+                prevCode = ItemPayHistr.CustCode;
+              end;
+              // ->
+              arr_custcode[arr_size] = ItemPayHistr.CustCode; // cust.code
+              arr_itemcode[arr_size] = INr.Code; // item.code
+              arr_itemname[arr_size] = INr.Name; // item.name
+              //
+              if(ItemPayHistr.FileName == 2) then begin // if credit note
+                arr_invoice[arr_size] = arr_invoice[arr_size] - ItemPayHistr.AmtVal;
+              end else begin
+                arr_invoice[arr_size] = arr_invoice[arr_size] + ItemPayHistr.AmtVal;
+              end;
+            end;
+          end;
+        end;
+      end;
+
+      // ====================================== PAYMENTS ======================================
+
+      // get type receipt
+      if (ItemPayHistr.FileName == 3) then begin
+        
+        testf = true;
+        // if item code selected
+        if(nonblank(RepSpec.f2) AND RepSpec.f2 != ItemPayHistr.ArtCode) then begin
+          testf = false;
+        end;
+
+        if(testf) then begin
+          // find in item register
+          INr.Code = ItemPayHistr.ArtCode;
+          if(ReadFirstMain(INr,1,true)) then begin
+            if (INr.ServQuantInCalc == 2) then begin
+              //
+              // set code on initial loop
+              if(count == 0) then begin
+                prevCode = ItemPayHistr.CustCode;
+              end;
+              count = count + 1;
+              // increase arr.subscript
+              if(ItemPayHistr.CustCode != prevCode) then begin
+                arr_size = arr_size + 1;
+                prevCode = ItemPayHistr.CustCode;
+              end;
+              // ->
+              arr_custcode[arr_size] = ItemPayHistr.CustCode; // cust.code
+              arr_itemcode[arr_size] = INr.Code; // item.code
+              arr_itemname[arr_size] = INr.Name; // item.name
+              arr_receipt[arr_size] = arr_receipt[arr_size] + ItemPayHistr.AmtVal;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  BreakL:;
+
+
+  if(nonblank(RepSpec.f2)) then begin
+    INr.Code = RepSpec.f2;
+    if(ReadFirstMain(INr,1,true)) then begin
+      StartFormat(15);
+        OutString(1,0,CustName & " Unpaid Levy: " & INr.Name,true);
+      EndHeader;
+      EndFormat;
+    end;
+  end else begin
+    
+    StartFormat(15);
+      OutString(1,0,CustName & " Unpaid Water Levies",true);
+    EndHeader;
+    EndFormat;
+  end;
+
+  StartFormat(15); // -> show heading
+    OutString(0,0,"",false);
+    OutString(5,0,"Code",false);
+    OutString(40,0,"Customer",false);
+    OutString(210,0,"Serv. Code",false);
+    OutString(280,0,"Service",false);
+    OutString(1,0,"Outstanding",true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+
+  for(i=0; i<=arr_custcode.length; i=i+1) begin
+  StartFormat(15); // -> show data
+    // show only in arrears
+    if((arr_invoice[i] - arr_receipt[i]) > 0) then begin
+      OutString(0,0,"",false);
+      OutString(5,"DblCUVc",arr_custcode[i],false);
+      // -> no cust.code
+      if(blank(arr_custcode[i])) then begin
+        OutString(40,0,"",false);
+      end else begin
+        // -> item description
+        CUr.Code = arr_custcode[i];
+        if(ReadFirstMain(CUr,1,true)) then begin
+          OutString(40,0,CUr.Name,false);
+        end;
+      end;
+      OutString(210,0,arr_itemcode[i],false);
+      OutString(280,0,arr_itemname[i],false);
+      OutString(1,0,(arr_invoice[i] - arr_receipt[i]),true);
+
+      // LogText(0,"=======> " & arr_invoice[i] &" <====> "& arr_receipt[i] &" <====> = "& arr_invoice[i] - arr_receipt[i]);
+
+      // -> payment, invoice total
+      arr_receipt_monthSum[0] = arr_receipt_monthSum[0] + arr_receipt[i];
+      arr_invoice_monthSum[0] = arr_invoice_monthSum[0] + arr_invoice[i];
+    end;
+  EndFormat;
+  end;
+
+  Gray_Divider(0,1);
+
+  StartFormat(15); // show sum by period
+    OutString(0,0,"",false);
+    OutString(5,0,"",false);
+    OutString(40,0,"Total Unpaid:",false); 
+    OutString(210,0,"",false);
+    OutString(280,0,"",false);
+    OutString(1,0,(arr_invoice_monthSum[0] - arr_receipt_monthSum[0]),true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  
+  EndJob;
+
+end;

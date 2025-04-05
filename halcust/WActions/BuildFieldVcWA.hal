@@ -1,0 +1,76 @@
+remote procedure CalcBuildFields(string,var array val);
+
+global
+procedure RecalcBuildFields(integer wn,record BuildVc Buildr)
+begin
+  array val BuildFieldValueMas;
+  integer i,rw;
+
+  CalcBuildFields(Buildr.Code,BuildFieldValueMas);
+  rw = BuildFieldValueMas[0];
+  for(i=1;i<=rw;i=i+1)begin
+    PutWindowString(wn,"FF_" & i,BuildFieldValueMas[i]);
+  end;
+  
+  return;
+end;
+
+procedure OpenBuildFieldCode(string BuildCode,string FieldCode)
+begin
+  record BuildFieldVc BuildFieldr;
+
+  BuildFieldr.BuildCode = BuildCode;
+  BuildFieldr.FieldCode = FieldCode;
+  if !ReadFirstMain(BuildFieldr,2,true) then begin
+    RecordNew(BuildFieldr);
+    BuildFieldr.FieldCode = FieldCode;
+    BuildFieldr.BuildCode = BuildCode;
+  end;
+  OpenWindow("BuildFieldDClass",1,0,"","",BuildFieldr);
+end;
+
+global
+procedure OpenChBuildFieldSm()
+begin
+  record BuildVc Buildr;
+  record BuildFieldSetBlock BuildFieldSetBlr;
+  row BuildFieldSetBlock BuildFieldSetBlrw;
+  record RcVc RepSpec;
+  string 20 FieldName;
+  integer wn,nwn,rownr;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Buildr);
+  FieldName = WindowActiveField(wn);
+  LogText(0,"FieldName: " & FieldName);
+  if Left(FieldName,3)<>"FF_" then begin
+    RepSpec.f1 = Buildr.Code;
+    nwn = OpenWindow("ChBuildFieldWClass",1,0,"","",RepSpec);
+  end else begin
+    BlockLoad(BuildFieldSetBlr);
+    rownr = StringToInt(Right(FieldName,Len(FieldName)-3));
+    if MatRowCnt(BuildFieldSetBlr)>=rownr then begin
+      MatRowGet(BuildFieldSetBlr,rownr-1,BuildFieldSetBlrw);
+      OpenBuildFieldCode(Buildr.Code,BuildFieldSetBlrw.FieldCode);
+    end;
+  end;
+  return;
+end;
+
+global
+procedure OpenBuildField()
+begin
+  record RcVc RepSpec;
+  integer wn,nwn;
+
+  wn = CurWindow;
+  DeselectWindow(wn,true);
+  GetWindowRecord(wn,RepSpec);
+  if nonblank(RepSpec.f2) then begin
+    OpenBuildFieldCode(RepSpec.f1,RepSpec.f2);
+    CloseWindow(wn);
+  end else begin
+    MessageBox(1001117,"");
+  end;
+  return;
+end;

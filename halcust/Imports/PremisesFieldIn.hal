@@ -1,0 +1,113 @@
+global
+updating procedure PremisesFieldIn()
+begin
+  record FlatFieldVc FltFldr; // record -> Premises field values
+  row FlatFieldVc FltFldrw; // row -> Premises field values
+  String 255 AccNum,ExtNumber,LotNumber,DivisionNumber,UnitNumber,LandValue,ImpValue;
+ 
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    ExtNumber = ImportField;
+    LotNumber = ImportField;
+    DivisionNumber = ImportField;
+    UnitNumber = ImportField;
+    LandValue = ImportField;
+    ImpValue = ImportField;
+
+    // -> Land Value
+    if (nonblank(LandValue)) then begin
+      RecordNew(FltFldr);
+      FltFldr.FieldCode = "TRLAND";
+      FltFldr.FlatCode = "P" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      FltFldr.BuildCode = "E" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      FltFldrw.StartDate = StringToDate("01/01/2001");
+      FltFldrw.Value = StringToVal(LandValue,M45Val);
+      FltFldrw.Comment = "Land Value";
+      MatRowPut(FltFldr,0,FltFldrw);
+      RecordImportStore(FltFldr,false);
+    end;
+
+    // -> Improvement Value
+    if (nonblank(ImpValue)) then begin
+      RecordNew(FltFldr);
+      FltFldr.FieldCode = "TRIMP";
+      FltFldr.FlatCode = "P" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      FltFldr.BuildCode = "E" & ExtNumber & LotNumber & StringToInt(StripNonDigits(DivisionNumber)) & StringToInt(StripNonDigits(UnitNumber));
+      FltFldrw.StartDate = StringToDate("01/01/2001");
+      FltFldrw.Value = StringToVal(ImpValue,M45Val);
+      FltFldrw.Comment = "Improvement/Building Value";
+      MatRowPut(FltFldr,0,FltFldrw);
+      RecordImportStore(FltFldr,false);
+    end;
+  end;
+
+  return;
+end;
+
+// global
+// updating procedure PremisesFieldIn()
+// begin
+//   record FlatFieldVc FltFldr; // record->Premises field values
+//   row FlatFieldVc FltFldrw; // row->Premises field values
+//   String 255 Unassigned;
+//   String 255 ExtensionNo1, LotNo1, LandArea;
+//   String 255  ExtensionNo2, LotNo2, LandValue, ImpValue;
+
+//   // loop through txt file
+//   while (NextImportLine(false)) begin
+//     Unassigned = ImportField;
+//     Unassigned = ImportField;
+//     ExtensionNo1 = ImportField;
+//     LotNo1 = ImportField;
+//     LandArea = ImportField;
+//     Unassigned = ImportField;
+
+//     Unassigned = ImportField;
+//     Unassigned = ImportField;
+//     ExtensionNo2 = ImportField;
+//     LotNo2 = ImportField;
+//     LandValue = ImportField;
+//     ImpValue = ImportField;
+
+//     // -> Land Size
+//     if (nonblank(LandArea)) then begin
+//       RecordNew(FltFldr);
+//       FltFldr.FieldCode = "TAREA";
+//       FltFldr.FlatCode = "P" & ExtensionNo1 & LotNo1;
+//       FltFldr.BuildCode = "E" & ExtensionNo1 & LotNo1;
+//       FltFldrw.StartDate = StringToDate("01/01/2001");
+//       FltFldrw.Value = StringToVal(LandArea,M45Val);
+//       FltFldrw.Comment = "Land Size";
+//       MatRowPut(FltFldr,0,FltFldrw);
+//       RecordImportStore(FltFldr,false);
+//     end;
+
+//     // -> Land Value
+//     if (nonblank(LandValue)) then begin
+//       RecordNew(FltFldr);
+//       FltFldr.FieldCode = "TRLAND";
+//       FltFldr.FlatCode = "P" & ExtensionNo2 & LotNo2;
+//       FltFldr.BuildCode = "E" & ExtensionNo2 & LotNo2;
+//       FltFldrw.StartDate = StringToDate("01/01/2001");
+//       FltFldrw.Value = StringToVal(LandValue,M45Val);
+//       FltFldrw.Comment = "Land Value";
+//       MatRowPut(FltFldr,0,FltFldrw);
+//       RecordImportStore(FltFldr,false);
+//     end;
+
+//     // -> Improvement Value
+//     if (nonblank(ImpValue)) then begin
+//       RecordNew(FltFldr);
+//       FltFldr.FieldCode = "TRIMP";
+//       FltFldr.FlatCode = "P" & ExtensionNo2 & LotNo2;
+//       FltFldr.BuildCode = "E" & ExtensionNo2 & LotNo2;
+//       FltFldrw.StartDate = StringToDate("01/01/2001");
+//       FltFldrw.Value = StringToVal(ImpValue,M45Val);
+//       FltFldrw.Comment = "Improvement Value";
+//       MatRowPut(FltFldr,0,FltFldrw);
+//       RecordImportStore(FltFldr,false);
+//     end;
+//   end;
+
+//   return;
+// end;

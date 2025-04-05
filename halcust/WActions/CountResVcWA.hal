@@ -1,0 +1,632 @@
+/* Skait�t�ju r�d�jumu window actioni */
+// remote function val GetMissingQty(longint,date,var boolean);
+remote function boolean PrevCounterRes(record CountResVc,var record CountResVc);
+remote function integer FlatCountersWithNumber(string,boolean,boolean);
+remote function boolean OBSFlatCountInFlatPer(longint,date,date);
+remote function boolean IsTwoTypeFlatCounter(longint);
+remote procedure CRGetFlatCountRec(record CountResVc,var record FlatCountersVc);
+
+global
+procedure SumUpCountResVc(var Record CountResVc CountResr,val ColdLeakAmt,val HotLeakAmt) begin
+
+  CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+  CountResr.InvAmount = CountResr.Amount + CountResr.CorAmount;
+  if (CountResr.Coef<>0) then begin
+    CountResr.InvAmount = CountResr.InvAmount*CountResr.Coef;
+  end;
+
+  // CountResr.ColdWaterLeak = CountResr.ColdWaterLeakCnt * ColdLeakAmt;
+  // CountResr.HotWaterLeak = CountResr.HotWaterLeakCnt * HotLeakAmt;
+  // CountResr.TotalLeak = CountResr.ColdWaterLeak + CountResr.HotWaterLeak + CountResr.PreventiveLeak + CountResr.CommWaterLeak;
+  // CountResr.InvAmount = CountResr.InvAmount - CountResr.TotalLeak;
+
+return;
+end;
+
+
+
+global
+procedure PasteFlatCounterInCountRes(Record FlatCountersVc FlatCountersr,var Record CountResVc CountResr) begin
+  Record CountResVc PrevCountResr;
+  // record NApsSetBlock NApsSetbl;
+
+  // BlockLoad(NApsSetbl);
+  CountResr.Coef = FlatCountersr.Coef;
+  CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  CountResr.CounterNo = FlatCountersr.CounterNo;
+  CountResr.CounterAddr = FlatCountersr.Address;
+  CountResr.CounterFlat = FlatCountersr.FlatNo;
+  CountResr.CounterType = FlatCountersr.CounterType;
+  // CountResr.MainCounter = FlatCountersr.MainCounter;
+  CountResr.BuildCode = FlatCountersr.Code;
+  CountResr.FlatCode = FlatCountersr.FlatCode;
+  CountResr.FlatGroupCode = FlatCountersr.FlatGroupCode;
+  CountResr.BuildGroupCode = FlatCountersr.BuildGroupCode;
+  CountResr.Location = FlatCountersr.Location;
+  if (nonblank(CountResr.StartDate)) then begin
+    CountResr.EndDate = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + DaysInMonth(GetYear(CountResr.StartDate),GetMonth(CountResr.StartDate)));
+    if (prevCounterRes(CountResr,PrevCountResr)) then begin
+      CountResr.StartVal = PrevCountResr.EndVal;
+      CountResr.EndVal = CountResr.StartVal;
+      CountResr.Amount = 0;
+      CountResr.ResAmount = PrevCountResr.NextResAmount;
+      // if NApsSetbl.AllowNegAmount != 1 then begin
+        if (CountResr.ResAmount < 0) then begin
+          CountResr.ResAmount=0;
+        end;
+        if (CountResr.EndVal <=0) then begin
+          CountResr.EndVal = CountResr.StartVal;
+        end;
+      // end;
+    end else begin
+      if Blank(CountResr.CountResType) or CountResr.CountResType=="MWH" then begin
+        CountResr.StartVal=FlatCountersr.InitAmount;
+      end else begin
+        CountResr.StartVal=FlatCountersr.InitAmount2;
+      end;
+      // CountResr.StartVal = FlatCountersr.InitAmount;
+      CountResr.EndVal = CountResr.StartVal;
+      CountResr.Amount = 0;
+    end;
+  end;
+
+return;
+end;
+
+function boolean CountResDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatCountersVc FlatCounterr;
+  record CountResVc CountResr,PrevCountResr;
+  boolean res;
+  // record NApsSetBlock NApsSetbl;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  // BlockLoad(NApsSetbl);
+  CountResr.EndDate = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + DaysInMonth(GetYear(CountResr.StartDate),GetMonth(CountResr.StartDate)));
+  if (prevCounterRes(CountResr,PrevCountResr)) then begin
+    CountResr.StartVal = PrevCountResr.EndVal;
+    CountResr.ResAmount = PrevCountResr.NextResAmount;
+    // if NApsSetbl.AllowNegAmount != 1 then begin
+      if (CountResr.ResAmount < 0) then begin
+        CountResr.ResAmount=0;
+      end;
+      if (CountResr.EndVal <=0) then begin
+        CountResr.EndVal = CountResr.StartVal;
+      end;
+    // end;
+  end else begin
+    FlatCounterr.SerNr = CountResr.FlatCounterSerNr;
+    if (ReadFirstMain(FlatCounterr,1,true)) then begin
+      CountResr.StartVal = FlatCounterr.InitAmount;
+      CountResr.EndVal = CountResr.StartVal;
+      CountResr.Amount = 0;
+    end;
+  end;
+  if NonBlankDate(Countresr.StartDate) and NonBlankDate(CountResr.EndDate) and NonBlank(CountResr.CounterNo) and NonBlank(CountResr.FlatCode) and
+      !OBSFlatCountInFlatPer(CountResr.FlatCounterSerNr,Countresr.StartDate,CountResr.EndDate) then begin
+    MessageBox(1000004,"");
+    Beep;
+  end;
+  PutWindowRecord(wn,CountResr);
+  CountResDClassStartDateEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassEndDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  if NonBlankDate(Countresr.StartDate) and NonBlankDate(CountResr.EndDate) and NonBlank(CountResr.CounterNo) and NonBlank(CountResr.FlatCode) and
+      !OBSFlatCountInFlatPer(CountResr.FlatCounterSerNr,Countresr.StartDate,CountResr.EndDate) then begin
+    MessageBox(1000004,"");
+    Beep;
+  end;
+
+  CountResDClassEndDateEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassEndValEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  // BlockLoad(NSr);
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassEndValEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCorAmountEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassCorAmountEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassAmountEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  // SumUpCountResVc(CountResr,0,0);
+  CountResr.EndVal = CountResr.Amount + CountResr.StartVal;
+  CountResr.InvAmount = CountResr.Amount + CountResr.CorAmount;
+  if (CountResr.Coef<>0) then begin
+    CountResr.InvAmount = CountResr.InvAmount*CountResr.Coef;
+  end;
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassAmountEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassStartValEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  // BlockLoad(NSr);
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassStartValEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCounterNoEFAfter(Integer wn)
+begin
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr,prevCountResr;
+  boolean res;
+  integer cnt;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  FlatCountersr.CounterNo = CountResr.CounterNo;
+  cnt = FlatCountersWithNumber(CountResr.CounterNo,true,true);
+  if cnt<=1 then begin
+    //Only one or no counters with this number
+    if (ReadLastKey("CounterNo",FlatCountersr,1,true)) then begin
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      PutWindowRecord(wn,CountResr);
+    end else begin
+      beep;
+    end;
+  end else begin
+    //More than one counter with specified number
+    if nonblank(CountResr.FlatCode) then begin
+      FlatCountersr.FlatCode = CountResr.FlatCode;
+      if (ReadLastKey("CounterNo",FlatCountersr,2,true)) then begin
+        PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+        PutWindowRecord(wn,CountResr);
+      end else begin
+        beep;
+      end;
+    end;
+  end;
+  CountResDClassCounterNoEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  Buildr.Code = CountResr.BuildCode;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    CountResr.CounterAddr = Buildr.Address;
+  end;
+  PutWindowRecord(wn,CountResr);
+  CountResDClassBuildCodeEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassFlatGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatGroupVc FlatGroupr;
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  FlatGroupr.Code = CountResr.FlatGroupCode;
+  if (ReadFirstMain(FlatGroupr,1,true)) then begin
+    CountResr.CounterAddr = FlatGroupr.Comment;
+  end;
+  PutWindowRecord(wn,CountResr);
+  CountResDClassFlatGroupCodeEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassBuildGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildGroupVc BuildGroupr;
+  record CountResVc CountResr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,CountResr);
+  BuildGroupr.Code = CountResr.BuildGroupCode;
+  if (ReadFirstMain(BuildGroupr,1,true)) then begin
+    CountResr.CounterAddr = BuildGroupr.Comment;
+  end;
+  PutWindowRecord(wn,CountResr);
+  CountResDClassBuildGroupCodeEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassFlatCodeEFAfter(Integer wn)
+begin
+  record CountResVc CountResr;
+  record FlatCountersVc FlatCountersr;
+  // record NApsSetBlock NApsSetr;
+
+  // blockload(NApsSetr);
+  GetWindowRecord(wn,CountResr);
+  FlatCountersr.FlatCode = CountResr.FlatCode;
+  if nonblank(CountResr.CounterNo) then begin
+    FlatCountersr.CounterNo = CountResr.CounterNo;
+    if ReadLastKey("CounterNo",FlatCountersr,2,true) then begin
+      // if blankdate(CountResr.StartDate) then begin
+      //   CountResr.StartDate = NApsSetr.d1;
+      // end;
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      PutWindowRecord(wn,CountResr);
+    end;
+  end else begin
+    if ReadLastKey("FlatCode",FlatCountersr,1,true) then begin end;
+    CountResr.CounterNo = FlatCountersr.CounterNo;
+    // CountResr.StartDate = NApsSetr.d1;
+    // CountResr.EndDate = NApsSetr.d2;
+    PutWindowRecord(wn,CountResr);
+    if CountResDClassCounterNoEFAfter(wn) then begin end;
+  end;
+
+  CountResDClassFlatCodeEFAfter = true;
+  return;
+end;
+
+function boolean CountResDClassCoefEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  res = true;
+  // BlockLoad(NSr);
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassCoefEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassColdWaterLeakCntEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  res = true;
+  // BlockLoad(NSr);
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassColdWaterLeakCntEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassHotWaterLeakCntEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  res = true;
+  // BlockLoad(NSr);
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassHotWaterLeakCntEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassPreventiveLeakEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  res = true;
+  // BlockLoad(NSr);
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassPreventiveLeakEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCommWaterLeakEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  // record NApsSetBlock NSr;
+  boolean res;
+
+  res = true;
+  // BlockLoad(NSr);
+  GetWindowRecord(wn,CountResr);
+  SumUpCountResVc(CountResr,0,0);
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassCommWaterLeakEFAfter = res;
+return;
+end;
+
+function boolean CountResDClassCountResTypeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr;
+  record CountResTypBlock CountResTypr;
+  row CountResTypBlock CountResTyprw;
+  integer rwc,i;
+  boolean res;
+
+  res = true;
+  BlockLoad(CountResTypr);
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,CountResr);
+  rwc=MatRowCnt(CountResTypr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(CountResTypr,i,CountResTyprw);
+    if CountResTyprw.Code==CountResr.CountResType then begin
+      CountResr.CountResTypeName = CountResTyprw.Name;
+      i=rwc;
+    end;
+  end;
+  PutWindowRecord(wn,CountResr);
+
+  CountResDClassCountResTypeEFAfter = res;
+  return;
+end;
+
+// ============================= CUSTOM CODE ===========================================
+function boolean CountResDClassFlatCounterSerNrEFAfter(Integer wn)
+begin
+  record CountResVc CountResr;
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,CountResr);
+  FlatCountersr.SerNr = CountResr.FlatCounterSerNr;
+  if (ReadFirstMain(FlatCountersr,1,true)) then begin
+    CountResr.CounterNo = FlatCountersr.CounterNo; // meter.no
+    CountResr.ContractNr = FlatCountersr.Contract;
+    CountResr.FlatCode = FlatCountersr.FlatCode; // premise
+    CountResr.BuildCode = FlatCountersr.Code; // erf
+    CountResr.CounterAddr = FlatCountersr.Address;
+    CountResr.CounterType = FlatCountersr.CounterType; // serv.item
+    PutWindowRecord(wn,CountResr);
+  end else begin
+    beep;
+  end;
+  CountResDClassFlatCounterSerNrEFAfter = res;
+return;
+end;
+// ============================= END OF CUSTOM CODE ===========================================
+
+
+global
+function boolean CountResDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res; 
+
+  // LogText(0,"fieldname: " & fieldname);
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "FlatCounterSerNr": res = CountResDClassFlatCounterSerNrEFAfter(wn); /// meter id
+      case "CounterNo": res = CountResDClassCounterNoEFAfter(wn);
+      case "BuildCode": res = CountResDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+      case "BuildGroupCode": res = CountResDClassBuildGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatGroupCode": res = CountResDClassFlatGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "StartDate": res = CountResDClassStartDateEFAfter(wn,fn,rownr,changed);
+      case "StartVal": res = CountresDClassStartValEFAfter(wn,fn,rownr,changed);
+      case "EndVal": res = CountResDClassEndValEFAfter(wn,fn,rownr,changed);
+      case "CorAmount": res = CountResDClassCorAmountEFAfter(wn,fn,rownr,changed);
+      case "Amount": res = CountResDClassAmountEFAfter(wn,fn,rownr,changed);
+      case "FlatCode": res = CountResDClassFlatCodeEFAfter(wn);
+      case "Coef": res = CountResDClassCoefEFAfter(wn,fn,rownr,changed);
+      case "ColdWaterLeakCnt": res = CountResDClassColdWaterLeakCntEFAfter(wn,fn,rownr,changed);
+      case "HotWaterLeakCnt": res = CountResDClassHotWaterLeakCntEFAfter(wn,fn,rownr,changed);
+      case "PreventiveLeak": res = CountResDClassPreventiveLeakEFAfter(wn,fn,rownr,changed);
+      case "CommWaterLeak": res = CountResDClassCommWaterLeakEFAfter(wn,fn,rownr,changed);
+      case "EndDate": res = CountResDClassEndDateEFAfter(wn,fn,rownr,changed);
+      case "CountResType": res = CountResDClassCountResTypeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  CountResDClassAfterEditField = res;
+return;
+end;
+
+global
+function Boolean CountResDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+  record CountResVc CountResr,prevCountResr;
+  boolean res;
+
+  GetWindowRecord(wn,CountResr);
+  res = true;
+  switch fieldname begin
+    case "BuildCode":
+      if (CountResr.CounterNo <>"") then begin
+        res = false;
+      end;
+    case "BuildGroupCode":
+      if (CountResr.CounterNo <>"") then begin
+        res = false;
+      end;
+    case "FlatGroupCode":
+      if (CountResr.CounterNo <>"") then begin
+        res = false;
+      end;
+    case "FlatCode":
+      if (CountResr.CounterNo <>"") then begin
+        if FlatCountersWithNumber(CountResr.CounterNo,true,true)<2 then begin
+          res = false;
+        end;
+      end;
+    case "StartVal":
+      if (prevCounterRes(CountResr,PrevCountResr)) then begin
+        res = false;
+      end;
+    case "CountResType":
+      if (CountResr.CounterNo <>"") and (CountResr.FlatCounterSerNr!=-1) then begin
+        if !IsTwoTypeFlatCounter(CountResr.FlatCounterSerNr) begin
+          res = false;
+        end;
+      end;
+  end;
+  CountResDClassActiveEditField = res;
+return;
+end;
+
+
+// // Latvia Procedure to calculate average
+// global
+// procedure PutMissingQtySm()
+// begin
+//   record CountResVc Countresr; // Meter readings
+//   integer wn;
+//   record INVc INr; // items
+//   Record FlatCountersVc FlatCountersr; // Meters
+//   boolean createavgres;
+
+//   wn = CurWindow;
+//   DeselectWindow(wn,false);
+//   GetWindowRecord(wn,CountResr);
+//   if (nonblankdate(CountResr.StartDate)) and nonblank(CountResr.CounterNo) and nonblank(CountResr.FlatCode) then begin
+//     FlatCountersr.SerNr = CountResr.FlatCounterSerNr;
+//     ReadFirstMain(FlatCountersr,1,true);
+//     INr.Code=CountResr.CounterType;
+//     ReadFirstMain(INr,1,true);
+//     if /*INr.DontCalcAvgCountRes==0 and*/ FlatCountersr.DontCalcAvgCountRes==0 then begin
+//       CountResr.InvAmount = GetMissingQty(CountResr.FlatCounterSerNr,CountResr.StartDate,createavgres);
+//       CountResr.RecalcAmount = CountResr.InvAmount;
+//       CountResr.RecalcAmount2 = CountResr.InvAmount;
+//       CountResr.EndVal = CountResr.StartVal + CountResr.InvAmount;
+//       Countresr.Amount = CountResr.InvAmount;
+//       Countresr.AverageFlag = 1;
+//       PutWindowRecord(wn,CountResr);
+//     end else begin
+//       MessageBox(1000946,"");
+//     end;
+//   end else begin
+//     if blank(CountResr.CounterNo) then begin
+//       MessageBox(1000767,"");
+//     end;
+//     if blankdate(CountResr.StartDate) then begin
+//       MessageBox(1000768,"");
+//     end;
+//     if blank(CountResr.FlatCode) then begin
+//       MessageBox(1000769,"");
+//     end;
+//   end;
+// return;
+// end;
+
+
+function string 40 CountResDClassFlatCodePasteName(Record CountResVc CountResr,string defpsname) begin
+  string 40 res;
+
+  res = defpsname;
+  if nonblank(CountResr.CounterNo) then begin
+    res = "CountResFlatsSClass";
+  end;
+
+  CountResDClassFlatCodePasteName = res;
+  return;
+end;
+
+global
+function string 40 CountResDClassSpecPasteName(Integer wn,string defpsname)
+begin
+  string 40 psname;
+  Record CountResVc CountResr;
+
+  psname = defpsname;
+  switch (WindowActiveField(wn)) begin
+    case "FlatCode":
+      GetWindowRecord(wn,CountResr);
+      psname = CountResDClassFlatCodePasteName(CountResr,defpsname);
+  end;
+
+  CountResDClassSpecPasteName = psname;
+  return;
+end;
+
+global
+updating function Boolean CountResDClassOnEnterKey(Integer wn,string fieldname,Integer fn,Integer rownr)
+BEGIN
+  Boolean res;
+
+  if fieldname=="EndVal" and ((WindowState(wn)==2) or (WindowState(wn)==1)) and GetWindowString(wn,"FromReportFlag") == "FromReportFlag" then begin
+    if WindowDoOk(wn,0) then begin
+      closewindow(wn);
+    end;
+  end;
+
+  CountResDClassOnEnterKey = res;
+  RETURN;
+END;
+
+global
+function Boolean CountResDClassOpenRecord(Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  record CountResVc CountResr;
+  record FlatCountersVc FlatCountersr;
+
+  if fieldname=="CounterNo" then begin
+    GetWindowRecord(wn,CountResr);
+    CRGetFlatCountRec(CountResr,FlatCountersr);
+    if FlatCountersr.SerNr!=-1 then begin
+      OpenWindow("FlatCountersDClass",0,0,"","",FlatCountersr);
+      res = true;
+    end;
+  end;
+
+  CountResDClassOpenRecord = res;
+  return;
+end;

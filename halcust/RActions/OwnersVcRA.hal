@@ -1,0 +1,56 @@
+external procedure OBS_ConvCustOwnersVc(var record OwnersVc);
+
+global
+updating function longint OwnersVcRecordCheck(var record OwnersVc Ownersr,record OwnersVc Ownersr2,longint a,longint b)
+begin
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;
+  row OwnersVc Ownersrw;
+  record CUVc CUr;
+  longint res;
+  Integer rw,i;
+  Date prevStartDate,prevEndDate;
+  
+  res = 0;
+  
+  if Ownersr.Code=="" then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+  Buildr.Code=Ownersr.Code;
+  Flatsr.FlatCode=Ownersr.Code;
+  if !ReadFirstMain(Flatsr,1,True) and !ReadFirstMain(Buildr,1,True) then begin
+    RecordCheckError(1000764,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  // rw = MatRowCnt(Ownersr);
+  // for(i=0;i<rw;i=i+1)begin
+  //   MatRowGet(Ownersr,i,Ownersrw);
+  //   if Ownersrw.StartDate>Ownersrw.StartDate then begin
+  //     RecordCheckError(1000810,"",i,"StartDate");
+  //     res = -1;
+  //     goto LExitCheck;
+  //   end;
+  // end;
+   
+LExitCheck:;
+  OwnersVcRecordCheck = res;
+return;
+end;
+
+global
+updating function LongInt OwnersVcRecordImport(Var Record OwnersVc Ownersr,Record OwnersVc Owners2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 0;  
+  
+  OBS_ConvCustOwnersVc(Ownersr);
+  
+  OwnersVcRecordImport = res;
+  return;
+end;
+

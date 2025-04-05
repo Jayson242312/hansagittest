@@ -1,0 +1,2205 @@
+
+procedure XXSERBLOCK
+begin
+
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(TSerStart,M4Long,0,0);
+  ArrayField(TSerEnd,M4Long,0,0);
+  ArrayField(StartDate,M4Date,0,0);
+  ArrayField(EndDate,M4Date,0,0);
+  ArrayField(TSerCom,M4Str,20,0);
+  ArrayField(DonotGenTrans,M4Set,32,0);
+  EndArray;
+
+  return;
+end;
+
+begin
+
+  BlockBegin(NAContractSerBlock,-,"");
+    XXSERBLOCK;
+  EndBlock;
+
+  BlockBegin(CountResSerBlock,-,"");
+    XXSERBLOCK;
+  EndBlock;
+
+  //klases
+  RecordBegin(MSClassVc,-,"");
+    RecordField(Code,M4Code,20,0);
+    RecordField(Description,M4Str,200,0);
+    RecordField(CTypeCode,M4Code,10,CTypeVc);
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+    KeyBegin(Description);
+    KeySegment(Description);
+    KeySegment(Code);
+    KeyBegin(CTypeCode);
+    KeySegment(CTypeCode);
+    KeySegment(Code);
+  EndRecord;
+
+  BlockBegin(FlatFieldSetBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(FieldCode,M4Code,10,0);
+    ArrayField(Name,M4Str,60,0);
+    EndArray;
+  EndBlock;
+
+  RecordBegin(FlatFieldVc,-,"");
+    RecordField(FlatCode,M4Code,20,0);
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(BuildCode,M4Code,50,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Value,M45Val,0,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(Comment,M4Str,100,0);
+    EndArray;
+    MainKeyBegin(FlatCode,0);
+    KeySegment(FlatCode);
+    KeySegment(FieldCode);
+    KeyBegin(FieldCode);
+    KeySegment(FieldCode);
+    KeySegment(FlatCode);
+    KeyBegin(BuildFieldCode);
+    KeySegment(BuildCode);
+    KeySegment(FieldCode);
+    KeySegment(FlatCode);
+  EndRecord;
+//New
+  RecordBegin(FlatFieldCodeVc,-,"");
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(Name,M4Str,60,0);
+    RecordField(ShortName,M4Str,10,0);
+    RecordField(FieldType,M4Set,1025,0);
+    RecordField(CalcAvg,M4Int,0,0);
+    RecordField(Minimum,M4Val,0,0);
+    RecordField(CalcYearly,M4Int,0,0); //Added to calculate yearly charge
+
+    MainKeyBegin(FieldCode,0);
+    KeySegment(FieldCode);
+    KeyBegin(Name);
+    KeySegment(Name);
+    KeySegment(FieldCode);
+    KeyBegin(ShortName);
+    KeySegment(ShortName);
+    KeySegment(FieldCode);
+    KeyBegin(FieldType);
+    KeySegment(FieldType);
+    KeySegment(FieldCode);
+  EndRecord;
+
+  // telpas
+  RecordBegin(FlatsVc,-,"");
+    RecordField(FlatCode,M4Code,20,0);
+    RecordField(Code,M4Code,50,0);
+    RecordField(Address,M4Str,200,0);
+    RecordField(FlatNo,M4Str,20,0);
+    RecordField(OldFlatID,M4Str,20,0);
+    RecordField(NIPCode,M4Code,10,0);
+    RecordField(PrivStat,M4Set,1003,0);
+    RecordField(RoomType,M4Set,1004,0);//room types 122
+    RecordField(RoomLevel,M4Set,1005,0);//room level 123
+    RecordField(InvSer,M4Str,200,0);
+    RecordField(Floor,M4Int,0,0);
+    RecordField(RegisterNo,M4Str,200,0);
+    RecordField(InvoiceAmount,M4Val,0,0);
+    RecordField(LateInterest,M4Val,0,0);
+    RecordField(ContractInterest,M4Val,0,0);
+    RecordField(Comment,M4Str,200,0);
+    RecordField(CONr,M4Long,0,0);
+    RecordField(CustCode,M4Code,20,0);
+    recordField(CustName,M4Str,200,0);
+    RecordField(Classification,M4UStr,255,0);
+    RecordField(Objects,M4UStr,255,0);
+    RecordField(ServiceCode,M4Code,20,0);
+    RecordField(InvComment,M4Str,200,0);
+    RecordField(AltHeatType,M4Code,20,0);
+    RecordField(AltHeatArea,M4Val,0,0);
+    RecordField(xOffRegDate,M4Date,0,0);
+    RecordField(COStartDate,M4Date,0,0);
+    RecordField(NoOfBalc2,M4Int,0,0);
+    RecordField(OldNr,M4Str,100,0); //BBS VG 2007/12/10
+    RecordField(BatNr,M4Int,0,0); //BBS VG 2007/12/16
+    RecordField(IntFlatNo,M4Int,0,0); //BBS VG 2009/01/26
+    RecordField(UserVal1,M45Val,0,0);
+    RecordField(UserVal2,M45Val,0,0);
+    RecordField(UserVal3,M45Val,0,0);
+    RecordField(UserVal4,M45Val,0,0);
+    RecordField(UserVal5,M45Val,0,0);
+    RecordField(UserStr1,M4Str,255,0);
+    RecordField(UserStr2,M4Str,255,0);
+    RecordField(UserStr3,M4Str,255,0);
+    RecordField(UserDate1,M4Date,0,0);
+    RecordField(UserDate2,M4Date,0,0);
+    RecordField(UserDate3,M4Date,0,0);
+    RecordField(OverseerType,M4Set,1021,0);
+    RecordField(Signature,M4Code,10,UserVc);  // DB 2012.08.22
+    RecordField(FlatName,M4Str,255,0);
+    RecordField(ISPController,M4Str,10,0);
+    RecordField(Partition,M4Str,50,0);
+    RecordField(NIPContract,M4Str,20,0);
+    RecordField(ARISCode,M4Code,50,0);
+
+    MainKeyBegin(FlatCode,0);
+    KeySegment(FlatCode);
+
+    KeyBegin(Code);
+    KeySegment(Code);
+    KeySegment(FlatCode);
+
+    KeyBegin(FlatNo);
+    KeySegment(FlatNo);
+    KeySegment(FlatCode);
+
+    KeyBegin(NIPCode);
+    KeySegment(NIPCode);
+    KeySegment(FlatCode);
+
+    KeyBegin(Address);
+    KeySegment(Address);
+    KeySegment(IntFlatNo);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(FlatNoCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(AddressCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(Address);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(BuildCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(FlatCodeClass);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(CustCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName("CustCode");
+    KeySegment(Code);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(CustAddress);
+    StoreInBaseKey;
+    AppendFieldToKeyName("CustCode");
+    KeySegment(Address);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(CustFlatCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName("CustCode");
+    KeySegment(FlatCode);
+
+    KeyBegin(CustCodeSimple);
+    KeySegment(CustCode);
+    KeySegment(FlatCode);
+
+    SubSetKeyBegin2(BuildCodeIntFlatNo);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(IntFlatNo);
+    KeySegment(FlatCode);
+
+    KeyBegin(CodeIntFlatNoSimple);
+    KeySegment(Code);
+    KeySegment(IntFlatNo);
+    KeySegment(FlatCode);
+
+    KeyBegin(OldFlatID);
+    KeySegment(OldFlatID);
+    KeySegment(FlatCode);
+
+    KeyBegin(FlatName);
+    KeySegment(FlatName);
+    KeySegment(FlatCode);
+
+    KeyBegin(ARISCode);
+    KeySegment(ARISCode);
+    KeySegment(FlatCode);
+  EndRecord;
+
+  //ēkas
+  RecordBegin(BuildVc,-,"");
+    ImpExpLevel(1);
+    RecordField(Code,M4Code,50,0);
+
+    // Custom
+    RecordField(LotNo,M4Code,15,0);
+    RecordField(ExtensionNo,M4Code,15,0);
+    RecordField(DivisionNo,M4Code,15,0);
+    RecordField(UnitNo,M4Code,15,0);
+    RecordField(Erf,M4Str,50,0);
+    RecordField(LandDimensions,M4Val,0,0);
+    RecordField(ZoningCode,M4Code,20,ZoneVc);
+    // End of Custom
+
+    RecordField(Address,M4Str,255,0);
+    RecordField(OwnerType,M4Set,1002,0);//owner type - 120
+    RecordField(RegisterNo,M4Str,30,0);
+    RecordField(BlockNo,M4Str,20,0);
+    RecordFIeld(PrivStat,M4Set,1003,0);//privatization type 121
+    RecordField(HouseType,M4Str,20,0);//house type - setting
+    RecordField(Floors,M4Int,0,0);
+    // RecordField(NoOfRooms,M4Int,0,0);
+    RecordField(TotArea,M4UVal,0,0);
+    RecordField(LivingArea,M4UVal,0,0);
+    RecordField(HeatArea,M4UVal,0,0);
+    RecordField(OutArea,M4UVal,0,0);
+    RecordField(CommonArea,M4UVal,0,0);
+    RecordField(TotalOwnerArea,M4UVal,0,0);
+    RecordField(LandArea,M4UVal,0,0);
+    RecordField(GreenLandArea,M4UVal,0,0);
+    RecordField(ParkingLandArea,M4UVal,0,0);
+    RecordField(OtherLandArea,M4UVal,0,0);
+    RecordField(BuildYear,M4Long,0,0);
+    RecordField(PostCode,M4Str,20,0);
+    RecordField(Owner,M4Str,200,0);
+    RecordField(ServiceTypes,M4Str,200,0);
+    RecordField(ContractTypes,M4Str,200,0);
+    RecordField(Income,M4Val,0,0);
+    RecordField(LandOwner,M4Set,1006,0);//owner type - 120
+    RecordField(Classification,M4UStr,255,0);
+    RecordField(Objects,M4UStr,255,0);
+    RecordFIeld(NonLivingArea,M4Val,0,0);
+    RecordField(BaseArea,M4Val,0,0);
+    RecordField(InvComment,M4Str,200,0);
+    // RecordField(Math2,M4TextField,0,0);
+    RecordField(InvComment2,M4Str,200,0);
+    RecordField(InvComment3,M4Str,200,0);
+    RecordField(OldBuildCode,M4Str,255,0);
+    RecordField(Closedf,M4Int,0,0);
+    RecordField(MSIntAddDays,M4Int,0,0);
+    RecordField(Street,M4Str,200,0);
+    RecordField(BuildNr,M4Str,200,0);
+    RecordField(City,M4Str,200,0);
+    RecordField(RuralTer,M4Str,200,0);  //Pagasts
+    RecordField(Municipality,M4Str,200,0);  //Novads
+    RecordField(PostalCode,M4Str,200,0);
+    RecordField(Contry,M4Str,60,0); //Valsts
+    RecordField(BuildName,M4Str,200,0);
+    RecordField(BuildManager,M4Code,20,0);  //not using
+    RecordField(BuildManagerName,M4Str,60,0); //not using
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(InvToBuild,M4Int,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(NIPCode,M4Code,10,0);
+    RecordField(ContractNr,M4Str,50,0); //Not using
+    RecordField(ISPController,M4Str,10,0);
+    RecordField(ContrSplitCosumRn,M4Int,0,0);
+    RecordField(NoCalcValCosumRn,M4Int,0,0);
+    RecordField(Base,M4Str,10,0);
+    RecordField(CountResInpEmail,M4Str,100,0);
+    RecordField(IntBuildNo,M4Int,0,0);
+    RecordField(IntBuildChr,M4Str,5,0);
+    RecordField(BDate,M4Date,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(EndDate,M4Date,0,0);
+    EndArray;
+
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+
+    SubSetKeyBegin2(Address);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(Address);
+    KeySegment(Code);
+
+    KeyBegin(RegisterNo);
+    KeySegment(RegisterNo);
+    KeySegment(Code);
+
+    KeyBegin(LotNo);
+    KeySegment(LotNo);
+    KeySegment(Code);
+
+    KeyBegin(ExtensionNo);
+    KeySegment(ExtensionNo);
+    KeySegment(Code);
+
+    SubSetKeyBegin2(CodeClass);
+    StoreInBaseKey;
+    AppendlistFieldToKeyName(Classification);
+    KeySegment(Code);
+
+    KeyBegin(OldBuildCode);
+    KeySegment(OldBuildCode);
+    KeySegment(Code);
+
+    KeyBegin(ClassAddress);
+    KeySegment(Classification);
+    KeySegment(Address);
+    KeySegment(Code);
+
+    KeyBegin(BuildName);
+    KeySegment(BuildName);
+    KeySegment(Code);
+
+    KeyBegin(BuildManager);
+    KeySegment(BuildManager);
+    KeySegment(Code);
+
+    KeyBegin(NIPCode);
+    KeySegment(NIPCode);
+    KeySegment(Code);
+
+    KeyBegin(ContractNr);
+    KeySegment(ContractNr);
+    KeySegment(Code);
+
+    KeyBegin(StreetBuildNr);
+    KeySegment(Street);
+    KeySegment(BuildNr);
+    KeySegment(Code);
+
+    KeyBegin(ZoningCode);
+    KeySegment(ZoningCode);
+    KeySegment(Code);
+  Endrecord;
+
+  BlockBegin(BFlatFieldSetBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(FieldCode,M4Code,10,0);
+    ArrayField(Name,M4Str,60,0);
+    EndArray;
+  EndBlock;
+
+
+  RecordBegin(NAContractVc,-,"");
+    SerialNoBlock(NAContractSerBlock);
+    RecordField(SerNr,M4Long,0,0);
+    // Custom Code
+    RecordField(AccStatus,M4Code,10,0);
+    // Jh added fields for owner type and zoning
+    RecordField(ZoningCode,M4Code,20,ZoneVc);
+    RecordField(OwnerType,M4Code,20,OwnerTypeVc);
+    RecordField(AccountType,M4Code,20,AccountTypeVc);
+    // End of custom
+    // End of Custom Code 
+    RecordField(CustCode,M4Code,20,CUVc);
+    RecordField(CODate,M4Date,0,0);
+    FieldIsTransDate(CODate);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(ContractNr,M4Str,50,0);
+    RecordField(FlatCode,M4Code,50,FlatsVc);
+    RecordField(CustName,M4Str,255,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(LastInvDate,M4Date,0,0);
+    RecordField(Classification,M4List,200,0);
+    RecordField(ContractClass,M4Code,5,0);
+    RecordField(INPayPriority,M4Long,0,0);
+    RecordField(EInvSWG,M4Int,0,0); //edited from xInvDtype
+    RecordField(OKFlag,M4Int,0,0);
+    RecordField(OwnerDocument,M4Str,50,0);
+    RecordField(OwnerDocDate,M4Date,0,0);
+    RecordField(DealType,M4Str,30,0);
+    RecordField(DealDate,M4Date,0,0)
+    RecordField(OrderDate,M4Date,0,0);
+    RecordField(OrderNr,M4Str,30,0);
+    RecordField(RightsToPriv,M4Set,1032,0);
+    RecordField(IssuedToMunDate,M4Date,0,0);
+    RecordField(FreeDate,M4Date,0,0);
+    RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+    RecordField(ToRateB1,M4Rate,0,0);
+    RecordField(FrRate,M4Rate,0,0);
+    RecordField(ToRateB2,M4Rate,0,0);
+    RecordField(BaseRate1,M4Rate,0,0);
+    RecordField(BaseRate2,M4Rate,0,0);
+    RecordField(TotQuant,M4Qty,0,0);
+    RecordField(FrPrice,M4Val,0,0);
+    RecordField(Sum1,M4Val,0,0);
+    RecordField(Sum3,M4Val,0,0);
+    RecordField(Sum4,M4Val,0,0);
+    RecordField(xPayDeal,M4Code,2,0);
+    RecordField(IntPercCode,M4Code,10,0);
+    RecordField(SalesMan,M4Code,10,UserVc);
+    RecordField(Comment1,M4Str,255,0);
+    RecordField(Comment2,M4Str,255,0);
+    RecordField(Comment3,M4Str,255,0);
+    RecordField(Comment4,M4Str,255,0);
+    RecordField(Comment5,M4Str,255,0);
+    RecordField(IssuedToAmt,M4Int,0,0);
+    RecordField(COTillInfo,M4Date,0,0);
+    RecordField(MSIntAddDays,M4Int,0,0);
+    RecordField(xReactTime,M4UVal,0,0);
+    RecordField(LastDate,M4Date,0,0); //edit from xManContractDate
+    RecordField(xManContractf,M4Int,0,0);
+    RecordField(BuildCode,M4Code,50,BuildVc);
+    RecordField(Objects,M4UStr,255,0);
+    RecordField(FlatAddress,M4Str,255,0);
+    RecordField(MergedInvFlag,M4Int,0,0);
+    RecordField(InvToEmail,M4Int,0,0);
+    RecordField(DoNotPrintInv,M4Int,0,0);
+    RecordField(eMail,M4Str,100,0);
+    RecordField(OBS_eMail1,M4Str,100,0);
+    RecordField(OBS_eMail2,M4Str,100,0);
+    RecordField(OBS_eMail3,M4Str,100,0);
+    RecordField(OBS_eMail4,M4Str,100,0);
+    RecordField(OBS_eMail5,M4Str,100,0);
+    RecordField(InvDelAddress,M4Str,255,0);
+    RecordField(OldCode,M4Code,20,0);
+    RecordField(LangCode,M4Code,5,0);
+    RecordField(AccOperator,M4Str,60,0);
+    RecordField(BankAccount,M4Str,60,0);
+    RecordField(NIPCode,M4Code,10,0);
+    RecordField(AttachNr,M4Str,100,0);
+    RecordField(CustCode2,M4Code,20,0);
+    RecordField(CustName2,M4Str,255,0);
+    RecordField(MailDate,M4Date,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(stp,M4Int,0,0);
+    ArrayField(ovst,M4Int,0,0);
+    ArrayField(ArtCode,M4Code,20,INVc);
+    ArrayField(ServStartDate,M4Date,0,0);
+    // ArrayField(ServCycle,M4Int,0,0);
+    ArrayField(Spec,M4Str,100,0);
+    ArrayField(Price,M45Val,0,0);
+    ArrayField(vRebate,M41Val,0,0);
+    ArrayField(Statuss,M4Code,20,INVc);
+    ArrayField(ServEndDate,M4Date,0,0);
+    ArrayField(Quant,M4UVal,0,0);
+    ArrayField(QtyCoef,M45Val,0,0);
+    ArrayField(PeriodCode,M4Code,10,0);
+    ArrayField(FieldCode,M4Code,10,0);
+    EndArray;
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCode);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+
+    KeyBegin(OKFlag);
+    KeySegment(OKFlag);
+    KeySegment(SerNr);
+
+    KeyBegin(ContractClass);
+    KeySegment(ContractClass);
+    KeySegment(SerNr);
+
+    KeyBegin(CustCode);
+    KeySegment(CustCode);
+    KeySegment(SerNr);
+
+    KeyBegin(CustName);
+    KeySegment(CustName);
+    KeySegment(SerNr);
+
+    KeyBegin(LastInvDate);
+    KeySegment(LastInvDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CODate);
+    KeySegment(CODate);
+    KeySegment(SerNr);
+
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(IntPercCode);
+    KeySegment(IntPercCode);
+    KeySegment(SerNr);
+
+    KeyBegin(ActualLegalCO);
+    KeySegment(CustCode);
+    KeySegment(OKFlag);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(LastFlatCO);
+    KeySegment(FlatCode);
+    KeySegment(OKFlag);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatAddress);
+    KeySegment(FlatAddress);
+    KeySegment(SerNr);
+
+    KeyBegin(ContractNr);
+    KeySegment(ContractNr);
+    KeySegment(SerNr);
+
+    KeyBegin(OldCode);
+    KeySegment(OldCode);
+    KeySegment(SerNr);
+
+    KeyBegin(NIPCode);
+    KeySegment(NIPCode);
+    KeySegment(SerNr);
+
+    KeyBegin(ZoningCode);
+    KeySegment(ZoningCode);
+    KeySegment(SerNr);
+
+
+  EndRecord;
+
+  RecordBegin(COFieldVc,-,"");
+    RecordField(COSer,M4Long,0,0);
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Value,M4Val,0,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(Comment,M4Str,100,0);
+    EndArray;
+    MainKeyBegin(COSer,0);
+    KeySegment(COSer);
+    KeySegment(FieldCode);
+    KeyBegin(FieldCode);
+    KeySegment(FieldCode);
+    KeySegment(COSer);
+  EndRecord;
+
+  RecordBegin(COFieldCodeVc,-,"");
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(Name,M4Str,60,0);
+    RecordField(ShortName,M4Str,10,0);
+    RecordField(FieldType,M4Set,1025,0);
+    RecordField(CalcAvg,M4Int,0,0);
+    RecordField(Minimum,M4Val,0,0);
+    MainKeyBegin(FieldCode,0);
+    KeySegment(FieldCode);
+    KeyBegin(Name);
+    KeySegment(Name);
+    KeySegment(FieldCode);
+    KeyBegin(ShortName);
+    KeySegment(ShortName);
+    KeySegment(FieldCode);
+    KeyBegin(FieldType);
+    KeySegment(FieldType);
+    KeySegment(FieldCode);
+  EndRecord;
+
+  BlockBegin(COFieldSetBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(FieldCode,M4Code,10,0);
+    ArrayField(Name,M4Str,60,0);
+    EndArray;
+  EndBlock;
+
+  RecordBegin(IntPercVc,-,"");
+    RecordFIeld(Code,M4Code,20,0);
+    RecordFIeld(Description,M4Str,200,0);
+    RecordFIeld(DefIntPrc,M45Val,0,0);
+    RecordFIeld(IntItem,M4Code,20,INVc);
+    RecordFIeld(Calcf,M4Int,0,0);
+    RecordFIeld(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(ArtCode,M4Code,20,INVc);
+    ArrayField(IntPrc,M45Val,0,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(EndDate,M4Date,0,0);
+    ArrayField(CalcWay,M4Set,1068,0);
+    EndArray;
+
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+    KeyBegin(Description);
+    KeySegment(Description);
+    KeySegment(Code);
+    KeyBegin(IntItem);
+    KeySegment(IntItem);
+    KeySegment(Code);
+  Endrecord;
+
+  RecordBegin(BuildTypeVc,-,"");
+    RecordField(Code,M4Code,20,0);
+    RecordField(Description,M4Str,200,0);
+    RecordField(WorkYears,M4Int,0,0);
+    RecordField(Comment,M4Str,255,0);
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+    KeyBegin(Description);
+    KeySegment(Description);
+    KeySegment(Code);
+  EndRecord;
+
+  RecordBegin(FlatGroupVc,-,"");
+    RecordField(Code,M4Code,50,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(Classification,M4Str,200,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(LinkBuildCode,M4Code,50,BuildVc);
+    RecordField(ColdWaterDiffCalc,M4Int,0,0);
+    RecordField(HotWaterDiffCalc,M4Int,0,0);
+    RecordField(Address,M4Str,200,0);
+    RecordField(NIPCode,M4Code,10,0);
+    RecordField(ISPController,M4Str,10,0);
+    RecordField(Base,M4Str,10,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(RowCode,M4Code,50,0);
+    ArrayField(RowComment,M4Str,255,0);
+    EndArray;
+
+    MainKeyBegin(Code,1);
+    StoreInBasekey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(Code);
+
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    KeyBegin(Classification);
+    KeySegment(Classification);
+    KeySegment(Code);
+
+    KeyBegin(LinkBuildCode);
+    KeySegment(LinkBuildCode);
+    KeySegment(Code);
+
+    KeyBegin(Address);
+    KeySegment(Address);
+    KeySegment(Code);
+
+    SubSetKeyBegin2(ClassComment);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    //this index has function in recordinindex ra
+    KeyBegin(CommentWithoutSpecClass);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    KeyBegin(NIPCode);
+    KeySegment(NIPCode);
+    KeySegment(Code);
+
+  EndRecord;
+
+  RecordBegin(FlatGroupSuppVc,-,"");
+    ImpExpLevel(0);
+    RecordField(HeadCode,M4Code,50,0);
+    RecordField(RowCode,M4Code,50,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    MainKeyBegin(Code,0);
+    KeySegment(HeadCode);
+    KeySegment(RowCode);
+
+    KeyBegin(RowCode);
+    KeySegment(RowCode);
+    KeySegment(HeadCode);
+
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(HeadCode);
+    KeySegment(RowCode);
+  EndRecord;
+
+  RecordBegin(BuildGroupVc,-,"");
+    RecordField(Code,M4Code,50,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(Classification,M4Str,200,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(ColdWaterDiffCalc,M4Int,0,0);
+    RecordField(HotWaterDiffCalc,M4Int,0,0);
+    RecordField(NIPCode,M4Code,10,0);
+    RecordField(ISPController,M4Str,10,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(RowCode,M4Code,50,0);
+    ArrayField(RowComment,M4Str,255,0);
+    EndArray;
+
+    MainKeyBegin(Code,1);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(Code);
+
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    KeyBegin(Classification);
+    KeySegment(Classification);
+    KeySegment(Code);
+
+    SubSetKeyBegin2(ClassComment);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(Classification);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    //this index has function in recordinindex ra
+    KeyBegin(CommentWithoutSpecClass);
+    KeySegment(Comment);
+    KeySegment(Code);
+
+    KeyBegin(NIPCode);
+    KeySegment(NIPCode);
+    KeySegment(Code);
+
+  EndRecord;
+
+  RecordBegin(BuildGroupSuppVc,-,"");
+    ImpExpLevel(0);
+    RecordField(HeadCode,M4Code,50,0);
+    RecordField(RowCode,M4Code,50,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    MainKeyBegin(Code,0);
+    KeySegment(HeadCode);
+    KeySegment(RowCode);
+
+    KeyBegin(RowCode);
+    KeySegment(RowCode);
+    KeySegment(HeadCode);
+
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(HeadCode);
+    KeySegment(RowCode);
+  EndRecord;
+
+  //Konstantes
+  BlockBegin(MSConstBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Code,M4UStr,10,0);
+    ArrayField(Sum,M45Val,0,0);
+    ArrayField(SDate,M4Date,0,0);
+    ArrayField(EDate,M4Date,0,0);
+    ArrayField(Comment,M4Str,60,0);
+    EndArray;
+  EndBlock;
+
+  BlockBegin(CountManBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Name,M4Str,255,0);
+    EndArray;
+  EndBlock;
+
+ 
+  RecordBegin(CountResVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    SerialNoBlock(CountResSerBlock);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(StartVal,M4Val,0,0);
+    RecordField(EndVal,M4Val,0,0);
+    RecordField(Amount,M4Val,0,0);
+    RecordField(CounterNo,M4Str,30,0);
+    RecordField(CounterAddr,M4Str,200,0);
+    RecordField(CounterType,M4Str,20,0);
+    RecordField(CounterFlat,M4Str,20,0);
+    RecordField(MainCounter,M4Str,30,0);
+    RecordField(OKFlag,M4Int,0,0);
+    RecordField(RegDate,M4Date,0,0);
+    FieldIsTransDate(RegDate);
+    RecordField(BuildCode,M4Code,20,0);
+    RecordField(CorAmount,M45Val,0,0);
+    RecordField(InvAmount,M4Val,0,0);// M4ValFDSAF
+
+    RecordField(ResAmount,M45Val,0,0);
+    RecordField(Coef,M45Val,0,0);
+    RecordField(DaughterAmount,M4Val,0,0);
+    RecordField(RecalcAmount2,M4Val,0,0);
+    RecordField(NextResAmount,M4Val,0,0);
+    RecordField(ToInvAmount,M4Int,0,0);
+    RecordField(FlatCode,M4Code,20,0);
+    RecordField(Location,M4Str,100,0);
+    RecordField(TotalNoCounters,M4Val,0,0);
+    RecordField(xMainCounterf,M4Int,0,0); //not used anymore, old record could have value 1
+    RecordField(CorrAmount,M4UVal,0,0);//not used
+    RecordField(AverageFlag,M4Int,0,0);
+    RecordField(WebFlag,M4Int,0,0);
+    RecordField(BuildGroupCode,M4Code,50,0);
+    RecordField(FlatGroupCode,M4Code,50,0);
+    RecordField(CodeField,M4Code,50,0);
+    RecordField(RecType,M4Int,0,0);
+    RecordField(ControlFlag,M4Int,0,0);
+    
+
+    //jh actual and estimate
+    RecordField(Itype,M4Int,0,0);
+    //
+
+    RecordField(RepFlag,M4Int,0,0);
+    RecordField(VacFlag,M4Int,0,0);
+    RecordField(ColdWaterLeakCnt,M4UVal,0,0);
+    RecordField(HotWaterLeakCnt,M4UVal,0,0);
+    RecordField(ColdWaterLeak,M4UVal,0,0);
+    RecordField(HotWaterLeak,M4UVal,0,0);
+    RecordField(PreventiveLeak,M4UVal,0,0);
+    RecordField(CommWaterLeak,M4UVal,0,0);
+    RecordField(TotalLeak,M4UVal,0,0);
+    RecordField(FlatCounterSerNr,M4Long,0,0);
+    RecordField(PhoneFlag,M4Int,0,0);
+    RecordField(CountResType,M4Code,10,0);
+    RecordField(CountResTypeName,M4Str,60,0);
+    RecordField(DelivDate,M4Date,0,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(ContractNr,M4Long,0,0);
+    RecordField(FileName,M4Str,255,0);
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(CounterNo);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CounterNoDate);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(CounterType);
+    KeySegment(CounterType);
+    KeySegment(SerNr);
+
+    KeyBegin(OKFlag);
+    KeySegment(OKFlag);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(CounterNo);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCode);
+    KeySegment(FlatCode);
+    KeySegment(CounterNo);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CounterAddr);
+    KeySegment(CounterAddr);
+    KeySegment(CounterNo);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(TypeStartDate);
+    KeySegment(CounterType);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(MCounterDate)
+    StoreInBaseKey;
+    AppendFieldToKeyName("MainCounter");
+    KeySegment(StartDate);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(CounterDate)
+    StoreInBaseKey;
+    AppendFieldToKeyName("CounterNo");
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    //jh
+    KeyBegin(StartDate2);
+    KeySegment(StartDate);
+    KeySegment(FlatCounterSerNr);
+    KeySegment(SerNr);
+    //
+
+    // KeyBegin(StartDate3);
+    // KeySegment(StartDate);
+    // KeySegment(FlatCounterSerNr);
+    // KeySegment(SerNr);
+    // //
+
+
+    KeyBegin(FlatCounterType);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildFlatCounterType);
+    KeySegment(BuildCode);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndex);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndexCType);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(CounterType);
+    KeySegment(SerNr);
+
+    KeyBegin(StartEndDate);
+    KeySegment(CounterNo);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCounterSerNr);
+    KeySegment(FlatCounterSerNr);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCounterSerNrDate);
+    KeySegment(FlatCounterSerNr);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCountStartEndDate);
+    KeySegment(FlatCounterSerNr);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FCCTSDED);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(FCCTCNSN);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(BCFCSDEDCTCN);
+    KeySegment(BuildCode);
+    KeySegment(FlatCode);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(FGFCSDEDCTCN);
+    KeySegment(FlatGroupCode);
+    KeySegment(FlatCode);
+    KeySegment(StartDate);
+    KeySegment(EndDate); //OBS from LIT
+    KeySegment(CounterType); //OBS  from LIT
+    KeySegment(CounterNo); //OBS  from LIT
+    KeySegment(SerNr);
+
+    KeyBegin(BGFCSDEDCTCN);
+    KeySegment(BuildGroupCode);
+    KeySegment(FlatCode);
+    KeySegment(StartDate);
+    KeySegment(EndDate); //OBS from LIT
+    KeySegment(CounterType); //OBS from LIT
+    KeySegment(CounterNo); //OBS from LIT
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndexCTypeSD);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(CounterType);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndexFlat);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(FlatCode);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CountResType);
+    KeySegment(CountResType);
+    KeySegment(FlatCounterSerNr);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeTypeSd);
+    KeySegment(CodeField);
+    KeySegment(CounterType);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(ContractNr);
+    KeySegment(ContractNr);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(Amount);
+    KeySegment(Amount);
+    KeySegment(SerNr);
+  EndRecord;
+
+
+  BlockBegin(CountInstOrgBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Name,M4Str,255,0);
+    EndArray;
+  EndBlock;
+
+  RecordBegin(CalcServicePlanVc,-,"");
+    RecordField(Code,M4Code,10,0);
+    RecordField(Name,M4Str,100,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(Delimiter,M4Str,1,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(FType,M4Set,1014,0);
+    ArrayField(FCode,M4Code,10,0);
+    ArrayField(Formula,M4Str,100,0);
+    ArrayField(Comment,M4Str,100,0);
+    ArrayField(FormatStr,M4Str,60,0);
+    EndArray;
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+  EndRecord;
+
+  RecordBegin(ServCalcValueVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(TransDate,M4Date,0,0);
+    RecordField(Code,M4Code,50,0);
+    RecordField(Type,M4Int,0,0); //1 - Erf 2 - Erf group 3 - flatgroup
+    RecordField(BuildCode,M4Code,50,0);
+    RecordField(BuildGroupCode,M4Code,50,0);
+    RecordField(FlatGroupCode,M4Code,50,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(CallDescription,M4Str,255,0);
+    RecordField(CalcFormula,M4Code,50,0);
+    RecordField(FieldCode,M4Code,50,0);
+    RecordField(CalcVal,M45Val,0,0);
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(Code);
+    KeySegment(Code);
+    KeySegment(Type);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(FieldCode);
+    KeySegment(CalcFormula);
+    KeySegment(SerNr);
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(SerNr);
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+    KeyBegin(CalcFormula);
+    KeySegment(CalcFormula);
+    KeySegment(SerNr);
+    KeyBegin(FieldCode);
+    KeySegment(FieldCode);
+    KeySegment(SerNr);
+    KeyBegin(CalcVal);
+    KeySegment(CalcVal);
+    KeySegment(SerNr);
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(CodeFieldCodeSD);
+    KeySegment(Code);
+    KeySegment(Type);
+    KeySegment(FieldCode);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+  EndRecord;
+
+
+  RecordBegin(FlatCountersVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(Code,M4Code,50,0);
+    RecordField(Address,M4Str,200,0);
+    RecordField(FlatNo,M4Str,20,0);
+    RecordField(OldCounterID,M4Str,30,0);
+    RecordField(CounterNo,M4Str,30,0);
+    RecordField(CounterType,M4Str,20,0);//counter type
+    RecordField(SealNo,M4Str,100,0);
+    RecordField(Location,M4Str,100,0);
+    RecordField(ServiceType,M4Str,20,0);//service type
+    RecordField(InitAmount,M4UVal,0,0);
+    RecordField(MaxAmount,M4UVal,0,0);
+    RecordField(InstallDate,M4Date,0,0);
+    RecordField(InstallOrg,M4Str,100,0);
+    RecordField(ValidUntil,M4Date,0,0);
+    RecordField(WarningDate,M4Date,0,0);
+    RecordField(InternalWarnDate,M4Date,0,0);
+    RecordField(LastCheckDate,M4Date,0,0);
+    RecordField(OrgChecked,M4Str,100,0);
+    RecordField(RemoveDate,M4Date,0,0);
+    RecordField(OrgRemoved,M4Str,100,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(Coef,M45Val,0,0);
+    RecordField(UserStr1,M4Str,20,0);
+    RecordField(UserStr2,M4Str,20,0);
+    RecordField(UserStr3,M4Str,20,0);
+    RecordField(UserStr4,M4Str,20,0);
+    RecordField(UserStr5,M4Str,20,0);
+    RecordField(UserVal1,M4Str,20,0);
+    RecordField(UserVal2,M4Str,20,0);
+    RecordField(UserVal3,M4Str,20,0);
+    RecordField(UserDate1,M4Str,20,0);
+    RecordField(UserDate2,M4Str,20,0);
+    RecordField(UserDate3,M4Str,20,0);
+    RecordField(Closedf,M4Mark,0,0);
+    // Jh Added field for inactive
+    RecordField(Inactivef,M4Mark,0,0);
+    //
+    RecordField(FlatCode,M4Str,20,0);
+    RecordField(CountTypef,M4Int,0,0);
+    RecordField(AMRReg,M4Int,0,0);
+    RecordField(PrevCounterNo,M4Code,50,0);
+    RecordField(CorrAmount,M4UVal,0,0);//correction amount
+    RecordField(Changed,M4Int,0,0);
+    RecordField(BuildGroupCode,M4Code,50,0);
+    RecordField(FlatGroupCode,M4Code,50,0);
+    RecordField(CodeField,M4Code,50,0);
+    RecordField(RecType,M4Int,0,0); // 1 - Erf, 2 - Erf group, 3 - flat group
+    RecordField(DontCalcAvgCountRes,M4Int,0,0);
+    RecordField(Manufacture,M4Str,100,0);
+    RecordField(ExpertCode,M4Code,20,0);
+    RecordField(ExpertName,M4Str,100,0);
+    RecordField(VerificationDate,M4Date,0,0);
+    RecordField(RecTypeForLClassWin,M4Code,5,0); //possible values 1,2,3,4,5 (Flat,Build,BuildGroup,FlatGroup,Closed)
+    RecordField(AvgStartDate,M4Date,0,0);
+    RecordField(AvgEndDate,M4Date,0,0);
+    RecordField(Damagef,M4Int,0,0);
+    RecordField(FlowDevID,M4Code,20,0);
+    RecordField(NomFlow,M4UVal,0,0);
+    RecordField(InitAmount2,M4UVal,0,0);
+    RecordField(LocType,M4Int,0,0);
+    RecordField(ManufactureNo,M4Str,100,0);
+    RecordField(SendToAMRf,M4Int,0,0);
+    RecordField(SendToNIPf,M4Int,0,0);
+    RecordField(AMRChangef,M4Int,0,0);
+    RecordField(ControlCountf,M4Int,0,0);
+    RecordField(MainCounter,M4Long,0,0);
+    RecordField(Contract,M4Long,0,0);
+    RecordField(Classification,M4List,200,0);
+
+    MainKeybegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin("SerNrNoClosed"); //same as main key, but does not include closed Flat Counters
+    KeySegment(SerNr);
+
+    KeyBegin("CounterNo");
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin("UserStr2");  // Making UserStr2(SeqNo) a key
+    KeySegment(UserStr2);
+    // KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(UserStr1);  // JH Making UserStr1(BookNo) a key
+    KeySegment(UserStr1);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildCounterNo);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildSerNr);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(Address);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(Address);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(Code);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(Code);
+    KeySegment(FlatNo);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(FlatCode);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(FlatCode);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(Location);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(Location);
+    KeySegment(Address);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(ServiceType);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    keySegment(ServiceType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(CounterType);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(CounterType);
+    KeySegment(FlatCode);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+    SubSetKeyBegin2(FlatNo);
+    StoreInBaseKey;
+    AppendFieldtoKeyName(Code);
+    KeySegment(FlatNo);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(HeadCounterNo);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(HeadCounterSerNr);
+    StoreInBaseKey;
+    AppendFieldToKeyName("Code");
+    KeySegment(SerNr);
+
+    KeyBegin(HeadCode);
+    KeySegment(Code);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(HeadAddress);
+    KeySegment(Address);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(HeadCounterType);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(HeadCounterCode);
+    KeySegment(CounterType);
+    KeySegment(Code);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(EnterSortOrder);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("Code");
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(Location);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(ClosedSortOrder);
+    KeySegment(FlatCode);
+    KeySegment(Closedf);
+    KeySegment(CounterType);
+    KeySegment(Location);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(Changed);
+    KeySegment(Changed);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(MainCounterCode);
+    KeySegment(Code);
+    KeySegment(FlatCode);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndex);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatCodeType);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildCodeType);
+    KeySegment(Code);
+    KeySegment(FlatCode);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(FlatGroupType);
+    KeySegment(FlatGroupCode);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildGroupType);
+    KeySegment(BuildGroupCode);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(ValidUntil);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(ADDRVUCT);
+    KeySegment(Address);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(FCVUCTCN);
+    KeySegment(FlatCode);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(FGCVUCTCN);
+    KeySegment(FlatGroupCode);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(CFCVUCTCN);
+    KeySegment(Code);
+    KeySegment(FlatCode);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    KeyBegin(BGCVUCTCN);
+    KeySegment(BuildGroupCode);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    KeyBegin(ADFNVUCTCNFC);
+    KeySegment(Address);
+    KeySegment(FlatNo);
+    KeySegment(ValidUntil);
+    KeySegment(CounterType);
+    KeySegment(CounterNo);
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    //Index that starts with "WIN" include closed records
+    SubSetKeyBegin2(WinSerNr);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(WinCounterNo);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(CounterNo);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(WinFlatCode);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(FlatCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(WinCodeIndex);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(WinAddress);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(Address);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(WinCounterType);
+    StoreInBaseKey;
+    AppendFieldtoKeyName("RecTypeForLClassWin");
+    KeySegment(CounterType);
+    KeySegment(SerNr);
+
+    KeyBegin(SendToAMRf);
+    KeySegment(SendToAMRf);
+    KeySegment(SerNr);
+    KeySegment(CounterNo);
+
+    KeyBegin(SendToNIPf);
+    KeySegment(SendToNIPf);
+    KeySegment(SerNr);
+    KeySegment(CounterNo);
+    
+    KeyBegin(Contract);
+    KeySegment(Contract);
+    KeySegment(SerNr);
+  EndRecord;
+
+
+  RecordBegin(ServicePlanVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(BuildCode,M4Code,20,0);
+    RecordField(Address,M4Str,200,0);
+    recordField(TransDate,M4Date,0,0);
+    recordField(ServType,M4Code,20,0);
+    recordField(StartDate,M4Date,0,0);
+    recordField(EndDate,M4Date,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(BuildGroupCode,M4Code,50,0);
+    RecordField(FlatGroupCode,M4Code,50,0);
+    RecordField(GlobalServPlan,M4Mark,0,0);
+    RecordField(CodeField,M4Code,50,0);
+    RecordField(RecType,M4Int,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(MonthNr,M4Set,1010,0);
+    ArrayField(YearNr,M4Long,0,0);
+    ArrayField(PlanPrice,M45Val,0,0);
+    ArrayField(RealPrice,M45Val,0,0);
+    ArrayField(Correction,M45Val,0,0);
+    ArrayField(DoneFlag,M4Set,1011,0);
+    ArrayField(QtyCoef,M45Val,0,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(EndDate,M4Date,0,0);
+    EndArray;
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+    KeyBegin(ServType);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+    KeyBegin(Address);
+    KeySegment(Address);
+    KeySegment(SerNr);
+    KeyBegin(BuildServType);
+    KeySegment(BuildCode);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+    KeyBegin(BuildGroupServType);
+    KeySegment(BuildGroupCode);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+    KeyBegin(FlatGroupServType);
+    KeySegment(FlatGroupCode);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+    KeyBegin(ServTypeGlobal);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+    KeyBegin(GlobalServPlan);
+    KeySegment(GlobalServPlan);
+    KeySegment(SerNr);
+    KeyBegin(CodeIndex);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeServType);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(ServType);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(ServRecPlanVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(CounterType,M4Code,20,0);
+    RecordField(BuildCode,M4Code,20,0);
+    RecordField(FlatList,M4UStr,200,0);
+    RecordField(TransDate,M4Date,0,0);
+    RecordField(Description,M4Str,200,0);
+    RecordField(QtyForm,M4Code,20,0);
+    RecordField(Sum,M4Val,0,0);
+    RecordField(Address,M4Str,200,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(ServPlanMade,M4Int,0,0);
+    RecordFIeld(CalcServPlan,M4Code,20,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(InclVAT,M4Int,0,0);
+    RecordField(UpdateFromVIVc,M4Int,0,0);
+    RecordField(BuildGroupCode,M4Code,50,0);
+    RecordField(FlatGroupCode,M4Code,50,0);
+    RecordField(CodeField,M4Code,50,0);
+    RecordField(RecType,M4Int,0,0);
+    RecordField(DoNotCheckRows,M4Mark,0,0);
+    RecordField(ExclServList,M4List,60,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(SDate,M4Date,0,0);
+    ArrayField(EDate,M4Date,0,0);
+    ArrayField(RowSum,M45Val,0,0);
+    ArrayField(xQFormula,M4Code,20,0);
+    ArrayField(RowSum2,M45Val,0,0);
+    ArrayField(OffDays,M4Int,0,0);
+    EndArray;
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildTransDate);
+    KeySegment(BuildCode);
+    KeySegment(CounterType);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+
+    KeyBegin(Description);
+    KeySegment(Description);
+    KeySegment(SerNr);
+
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildSerNr);
+    StoreInBaseKey;
+    AppendFieldToKeyName(BuildCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildTransDateSub);
+    StoreInBaseKey;
+    AppendFieldToKeyName(BuildCode);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildBuildCode);
+    StoreInBaseKey;
+    AppendFieldToKeyName(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildCalcServPlan);
+    StoreInBaseKey;
+    AppendFieldToKeyName(BuildCode);
+    KeySegment(CalcServPlan);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+
+    SubSetKeyBegin2(BuildDescription);
+    StoreInBaseKey;
+    AppendFieldToKeyName(BuildCode);
+    KeySegment(Description);
+    KeySegment(SerNr);
+
+    KeyBegin(CodeIndex);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(SerNr);
+
+    KeyBegin(CalcServPlan);
+    KeySegment(CalcServPlan);
+    KeySegment(CodeField);
+    KeySegment(RecType);
+    KeySegment(SerNr);
+
+    KeyBegin(DoNotCheckRows);
+    KeySegment(DoNotCheckRows);
+    KeySegment(SerNr);
+
+    KeyBegin(Address);
+    KeySegment(Address);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(AddressFieldVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(Name,M4Str,200,0);
+    RecordField(Type,M4Int,0,0);
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(Name);
+    KeySegment(Name);
+    KeySegment(SerNr);
+
+    KeyBegin(Type);
+    KeySegment(Type);
+    KeySegment(SerNr);
+
+  EndRecord;
+
+  BlockBegin(BuildFieldSetBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(FieldCode,M4Code,10,0);
+    ArrayField(Name,M4Str,60,0);
+    EndArray;
+  EndBlock;
+
+  RecordBegin(BuildFieldVc,-,"");
+    RecordField(BuildCode,M4Code,20,0);
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Value,M45Val,0,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(Comment,M4Str,100,0);
+    EndArray;
+    MainKeyBegin(BuildCode,0);
+    KeySegment(BuildCode);
+    KeySegment(FieldCode);
+    KeyBegin(FieldCode);
+    KeySegment(FieldCode);
+    KeySegment(BuildCode);
+  EndRecord;
+
+  RecordBegin(BuildFieldCodeVc,-,"");
+    RecordField(FieldCode,M4Code,10,0);
+    RecordField(Name,M4Str,60,0);
+    RecordField(ShortName,M4Str,10,0);
+    RecordField(FieldType,M4Set,1025,0);
+    RecordField(CalcAvg,M4Int,0,0);
+    RecordField(Minimum,M4Val,0,0);
+    RecordField(CalcYearlybuild,M4Int,0,0); // added for calculation of yearly charge
+    MainKeyBegin(FieldCode,0);
+    KeySegment(FieldCode);
+    KeyBegin(Name);
+    KeySegment(Name);
+    KeySegment(FieldCode);
+    KeyBegin(ShortName);
+    KeySegment(ShortName);
+    KeySegment(FieldCode);
+    KeyBegin(FieldType);
+    KeySegment(FieldType);
+    KeySegment(FieldCode);
+  EndRecord;
+
+  RecordBegin(OwnersVc,-,"");
+    RecordField(Code,M4Code,20,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(CustCode,M4Code,20,0);
+    ArrayField(CustName,M4Str,200,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(EndDate,M4Date,0,0);
+    ArrayField(RegNr,M4Str,50,0);
+    ArrayField(DeemedPart,M4Str,50,0);
+    EndArray;
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+  EndRecord;
+
+  BlockBegin(CountResTypBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Code,M4Code,10,0);
+    ArrayField(Name,M4Str,60,0);
+    EndArray;
+  EndBlock
+
+  RecordBegin(PeriodicServRecVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(COSerNr,M4Long,0,0);
+    RecordField(CustCode,M4Code,20,CUVc);
+    RecordField(FlatCode,M4Code,50,FlatsVc);
+    RecordField(BuildCode,M4Code,50,BuildVc);
+    RecordField(TransDate,M4Date,0,0);
+    RecordField(AddedToInvoice,M4Mark,0,0);
+    RecordField(Sum,M4Val,0,0);
+    RecordField(CurCode,M4Code,5,0);
+    RecordField(ArtCode,M4Code,20,INVc);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(FileName,M4Set,1037,0);
+    RecordField(TransNr,M4Str,20,0);
+    RecordField(Quant,M4UVal,0,0);
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(COSerNr);
+    KeySegment(COSerNr);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(FileNameTransNr);
+    KeySegment(FileName);
+    KeySegment(TransNr);
+    KeySegment(AddedToInvoice);
+    KeySegment(SerNr);
+    KeyBegin(FNTransNrDate);
+    KeySegment(FileName);
+    KeySegment(TransNr);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(CustCode);
+    KeySegment(CustCode);
+    KeySegment(SerNr);
+  EndRecord;
+
+  //artikulu apmaksas prioritāte reģistrs
+  RecordBegin(INPayPriorityVc,-,"");
+    ImpExpLevel(1);
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(INPayType,M4Int,0,0);
+    RecordField(Comment,M4Str,255,0);
+    RecordField(CustCode,M4Code,20,0);
+    RecordField(BuildCode,M4Code,20,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(ArtCode,M4Code,20,INVc);
+    ArrayField(Comment,M4Str,255,0);
+    ArrayField(Type,M4Set,1013,0);
+    EndArray;
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(SerNr);
+    KeyBegin(CustCode);
+    KeySegment(CustCode);
+    KeySegment(SerNr);
+    KeyBegin(INPayType);
+    KeySegment(INPayType);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(ItemPayHistVc,-,"itempayhist2");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(FileName,M4Int,0,0); //possible values - 1:"IVVc";2:"CredIVVc";3:"IPVc";4:"CLInVc";5:"Prepay";6:"NegItem in IVVc";
+    RecordField(TransNr,M4Long,0,0);
+    RecordField(IVNr,M4Long,0,0);
+    RecordField(TransDate,M4Date,0,0);
+    RecordField(ArtCode,M4Code,20,INVc);
+    RecordField(CustCode,M4Code,20,CUVc);
+    RecordField(ContrSerNr,M4Long,0,0);
+    RecordField(AmtVal,M4Val,0,0);
+    RecordField(VATVal,M4Val,0,0);
+    RecordField(CurCode,M4Code,5,CurncyCodeVc);
+    RecordField(AmtValBaseCur,M4Val,0,0);
+    RecordField(VATValBaseCur,M4Val,0,0);
+    RecordField(BuildCode,M4Code,50,0);
+    RecordField(FlatCode,M4Code,50,0);
+    RecordField(RowNr,M4Int,0,0);
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(TransDate);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(TransNrFN);
+    KeySegment(TransNr);
+    KeySegment(FileName);
+    KeySegment(SerNr);
+    KeyBegin(ArtCode);
+    KeySegment(ArtCode);
+    KeySegment(TransDate);
+    KeySegment(TransNr);
+    KeySegment(FileName);
+    KeySegment(RowNr);
+    KeySegment(SerNr);
+    KeyBegin(CustCode);
+    KeySegment(CustCode);
+    KeySegment(ArtCode);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(IVNr);
+    KeySegment(IVNr);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+    KeyBegin(ContrSerNr);
+    KeySegment(ContrSerNr);
+    KeySegment(ArtCode);
+    KeySegment(TransDate);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(ItemPayStatVc,-,"");
+    RecordField(ContrSerNr,M4Long,0,0);
+    RecordField(ArtCode,M4Code,20,INVc);
+    RecordField(TransDate,M4Date,0,0); //This should always be first date of month
+    RecordField(CustCode,M4Code,20,CUVc);
+    RecordField(BuildCode,M4Code,50,0);
+    RecordField(FlatCode,M4Code,50,0);
+    RecordField(DebtVal,M4Val,0,0); //allways in base cur
+    RecordField(InvVal,M4Val,0,0); //allways in base cur
+    RecordField(CredVal,M4Val,0,0); //allways in base cur
+    RecordField(PayVal,M4Val,0,0); //allways in base cur
+    RecordField(PrePayVal,M4Val,0,0); //allways in base cur
+    RecordField(CashInVal,M4Val,0,0); //allways in base cur
+    RecordField(NegItemVal,M4Val,0,0); //allways in base cur
+
+    MainKeyBegin(MainKey,0);
+    KeySegment(ContrSerNr);
+    KeySegment(ArtCode);
+    KeySegment(TransDate);
+
+    KeyBegin(CustCode);
+    KeySegment(CustCode);
+    KeySegment(ArtCode);
+    KeySegment(TransDate);
+    KeySegment(ContrSerNr);
+
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(TransDate);
+    KeySegment(ContrSerNr);
+    KeySegment(ArtCode);
+
+    KeyBegin(FlatCode);
+    KeySegment(FlatCode);
+    KeySegment(TransDate);
+    KeySegment(ContrSerNr);
+    KeySegment(ArtCode);
+  EndRecord;
+
+  RecordBegin(IntSumCalcVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(SourceIV,M4Long,0,0);
+    RecordField(DestIV,M4Long,0,0);
+    RecordField(IntSum,M45Val,0,0);
+    RecordField(CurCode,M4Code,5,CurncyCodeVc);
+    RecordField(InvDate,M4Date,0,0);
+    RecordField(ControlStr,M4Str,30,0);
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+    KeyBegin(SourceIV);
+    KeySegment(SourceIV);
+    KeySegment(InvDate);
+    KeySegment(SerNr);
+    KeyBegin(DestIV);
+    KeySegment(DestIV);
+    KeySegment(SerNr);
+    KeyBegin(InvDate);
+    KeySegment(InvDate);
+    KeySegment(SerNr);
+    KeyBegin(ControlStr);
+    KeySegment(ControlStr);
+    KeySegment(SerNr);
+  EndRecord;
+
+  //Tiešo norēķinu uzstādījumi
+  BlockBegin(NApsSetBlock,-,"");
+    RecordField(INPayPriority,M4Long,0,0);
+    RecordField(DefaultCountResSDate,M4Date,0,0);
+    RecordField(DefaultCountResEDate,M4Date,0,0);
+    RecordField(PenAccCode,M4Code,10,AccVc);
+    RecordField(AddPDFToInvoice,M4Int,0,0);
+    RecordField(NegValCountResIn,M4Int,0,0);
+    RecordField(SkipPayDateCheck,M4Int,0,0);
+  EndBlock;
+
+  RecordBegin(BBSIVCommentVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(Comment,M4Str,100,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(WarnText,M4Str,255,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(RowText,M4Str,255,0);
+    ArrayField(Classification,M4List,200,0);
+    EndArray;
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(Comment);
+    KeySegment(Comment);
+    KeySegment(SerNr);
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(CountResInputVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(BuildCode,M4Code,50,0);
+    RecordField(Address,M4Str,255,0);
+    RecordField(InputCTypes,M4UStr,100,0);
+    RecordField(Math,M4Matrix,0,0);
+    RecordField(CountResMade,M4Mark,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(CounterNo,M4Code,50,0);
+    ArrayField(FlatCode,M4Code,20,0);
+    ArrayField(RowAddress,M4Str,255,0);
+    ArrayField(PrevDate,M4Date,0,0);
+    ArrayField(PrevAmount,M45Val,0,0);
+    ArrayField(CurAmount,M45Val,0,0);
+    ArrayField(Type,M4Set,1020,0);
+    ArrayField(CountResNr,M4Long,0,0);
+    ArrayField(FlatCounterSerNr,M4Long,0,0);
+    ArrayField(CounterType,M4Str,20,0);
+    ArrayField(SumAmount,M45Val,0,0);
+    ArrayField(CountResType,M4Code,10,0);
+    EndArray;
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(BuildCode);
+    KeySegment(BuildCode);
+    KeySegment(SerNr);
+
+    KeyBegin(Address);
+    KeySegment(Address);
+    KeySegment(SerNr);
+
+    KeyBegin(InputCTypes);
+    KeySegment(InputCTypes);
+    KeySegment(SerNr);
+
+    KeyBegin(CountResMade);
+    KeySegment(CountResMade);
+    KeySegment(SerNr);
+
+    SubsetKeyBegin2(BCStartEndD);
+    StoreInBaseKey;
+    AppendListFieldToKeyName(InputCTypes);
+    KeySegment(BuildCode);
+    KeySegment(StartDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+  EndRecord;
+
+  RecordBegin(BuildCountResInputVc,-,"");
+    RecordField(SerNr,M4Long,0,0);
+    RecordField(StartDate,M4Date,0,0);
+    RecordField(EndDate,M4Date,0,0);
+    RecordField(CountResMade,M4Mark,0,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(CounterNo,M4Code,50,0);
+    ArrayField(CounterType,M4Str,20,0);
+    ArrayField(CodeField,M4Code,20,0);
+    ArrayField(Address,M4Str,255,0);
+    ArrayField(PrevDate,M4Date,0,0);
+    ArrayField(PrevAmount,M45Val,0,0);
+    ArrayField(CurAmount,M45Val,0,0);
+    ArrayField(SumAmount,M45Val,0,0);
+    ArrayField(Type,M4Set,1020,0);
+    ArrayField(CountResSerNr,M4Long,0,0);
+    ArrayField(LastAmount1,M45Val,0,0);
+    ArrayField(LastAmount2,M45Val,0,0);
+    ArrayField(LastAmount3,M45Val,0,0);
+    ArrayField(DelivDate,M4Date,0,0);
+    ArrayField(LastAmount4,M45Val,0,0);
+    ArrayField(LastAmount5,M45Val,0,0);
+    ArrayField(LastAmount6,M45Val,0,0);
+    ArrayField(LastAmount7,M45Val,0,0);
+    ArrayField(LastAmount8,M45Val,0,0);
+    ArrayField(LastAmount9,M45Val,0,0);
+    ArrayField(LastAmount10,M45Val,0,0);
+    ArrayField(LastAmount11,M45Val,0,0);
+    ArrayField(LastAmount12,M45Val,0,0);
+    EndArray;
+
+    MainKeyBegin(SerNr,0);
+    KeySegment(SerNr);
+
+    KeyBegin(StartDate);
+    KeySegment(StartDate);
+    KeySegment(SerNr);
+
+    KeyBegin(EndDate);
+    KeySegment(EndDate);
+    KeySegment(SerNr);
+
+    KeyBegin(CountResMade);
+    KeySegment(CountResMade);
+    KeySegment(SerNr);
+
+  EndRecord;
+
+  BlockBegin(PDFInvTextBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(Code,M4Code,5,0);
+    ArrayField(Name,M4Str,100,0);
+    ArrayField(StartDate,M4Date,0,0);
+    ArrayField(EndDate,M4Date,0,0);
+    ArrayField(Comment,M4Str,255,0);
+    EndArray;
+  EndBlock;
+
+  BlockBegin(NonStopSleepBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(MaintType,M4Set,1018,0);
+    ArrayField(SleepTime,M4Int,0,0);
+    ArrayField(Comment,M4Str,255,0);
+    EndArray;
+  EndBlock;
+
+  BlockBegin(CourtResultSetBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+      ArrayField(Code,M4Code,5,0);
+      ArrayField(Comment,M4Str,100,0);
+    EndArray;
+  EndBlock;
+
+  BlockBegin(PDFInvGenLangBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(OrgLang,M4Code,5,0);
+    ArrayField(PDFLang,M4Code,5,0);
+    ArrayField(intdocnr,M4Long,0,0);
+    ArrayField(GenLang,M4Code,5,0);
+    EndArray;
+  EndBlock;
+
+  RecordBegin(DefaultItemVc,-,"");
+    ImpExpLevel(1);
+    RecordFIeld(Code,M4Code,20,0);
+    RecordFIeld(Description,M4Str,200,0);
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(ArtCode,M4Code,20,0);
+    ArrayField(Spec,M4Str,200,0);
+    ArrayField(UnitText,M4Str,20,0);
+    ArrayField(QtyField,M4Code,10,0);
+    EndArray;
+    MainKeyBegin(Code,0);
+    KeySegment(Code);
+    KeyBegin(Description);
+    KeySegment(Description);
+    KeySegment(Code);
+  Endrecord;
+
+  BlockBegin(InvToEmailTaskBlock,-,"");
+    RecordField(RunFlag,M4Int,0,0);
+    RecordField(Interval,M4Int,0,0);
+    RecordField(Looppos,M4Long,0,0);
+    RecordField(Send,M4Long,0,0);
+    RecordField(Total,M4Long,0,0);
+    RecordField(Parameters,M4Str,255,0);
+    RecordField(OnDate,M4Date,0,0);
+    RecordField(OnTime,M4Time,0,0);
+  EndBlock;
+
+  BlockBegin(LSItemTRBlock,-,"");
+    RecordField(Math,M4Matrix,0,0);
+    ArrayBegin(Math,-,1);
+    ArrayField(ArtCode,M4Code,20,INVc);
+    ArrayField(SLAcc,M4Code,10,AccVc);
+    ArrayField(ARAcc,M4Code,10,AccVc);
+    ArrayField(PayAcc,M4Code,10,AccVc);
+    EndArray;
+  EndBlock;
+
+  //Tiešo norēķinu uzstādījumi
+  BlockBegin(AnnulmentPMBlock,-,"");
+    RecordField(PayModes,M4Str,255,0);
+  EndBlock;
+
+  return;
+end;

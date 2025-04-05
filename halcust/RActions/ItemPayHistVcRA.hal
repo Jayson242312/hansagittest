@@ -1,0 +1,33 @@
+external function boolean OBS_HasConvCust(string,var string,var string);
+
+global
+updating function LongInt ItemPayHistVcRecordImport(Var Record ItemPayHistVc ItemPayHistr, Record ItemPayHistVc ItemPayHist2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  string 255 newcust,newname;
+  res = 0;  
+
+  
+  if OBS_HasConvCust(ItemPayHistr.CustCode,newcust,newname) then begin
+    ItemPayHistr.CustCode=newcust;
+  end;
+  
+  ItemPayHistVcRecordImport = res;
+  return;
+end;
+
+global
+updating function LongInt ItemPayStatVcRecordImport(Var Record ItemPayStatVc ItemPayStatr, Record ItemPayStatVc ItemPayStat2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  string 255 newcust,newname;
+  res = 0;  
+
+  
+  if OBS_HasConvCust(ItemPayStatr.CustCode,newcust,newname) then begin
+    ItemPayStatr.CustCode=newcust;
+  end;
+  
+  ItemPayStatVcRecordImport = res;
+  return;
+end;

@@ -1,0 +1,314 @@
+external inner function Boolean PasteCust2InInv(var record IVVc,record LocalMachineBlock,string,Boolean,var string,var string,var string,var string,var string);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure HT2Per(Date,Date,var string);
+external inner procedure CurValToOtherCur(Date,string,val,string,var val,roundmode);
+external function longint GetIVSerNrFromFlatCode(date,integer,record NAContractVc);
+external procedure GenFlatServCache(date,date,var record SMVc,Boolean,integer,integer,record NAContractVc);
+external procedure GenFlatServCacheIntSum(record NAContractVc,date,var record SMVc,longint,var string,boolean);
+external procedure AddUnUsedPrepaymentToIV(var record IVVc);
+external procedure CalcServInvCorrections(record RcVc,record NAContractVc,var record SMVc);
+
+procedure AddToTotCacher(var record SMVc totCacher,record SMVc Cacher,longint SerNr)
+begin
+  row SMVc Cacherw;
+  integer i,rwc;
+  
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    Cacherw.ExtraComment = sernr;
+    MatRowPut(totCacher,MatRowCnt(totCacher),Cacherw);
+  end;
+  
+  return;
+end;
+
+
+procedure PrintPrepayment(var record SMVc Cacher,string CustCode)
+begin
+  record IVVc IVr;
+  row IVVC IVrw;
+  row SMVc Cacherw;
+  record LocalMachineBlock LMb;
+  val TotalSum;
+  integer i,rw;
+  string 255 warning,errstr,prepstr,invdatewarn,transdatewarn;
+  
+  BlockLoad(LMb);
+  rw = MatRowCnt(Cacher);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    TotalSum = TotalSum + Cacherw.DebVal2;
+  end;
+  RecordNew(IVr);
+  IVr.CustCode = CustCode;
+  PasteCust2InInv(IVr,LMb,"",true,warning,errstr,prepstr,invdatewarn,transdatewarn);
+  IVr.Sum4 = TotalSum;
+  AddUnUsedPrepaymentToIV(IVr);
+  rw = MatRowCnt(IVr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==6 then begin
+      StartFormat(15);
+      OutString(80,0,"",false);
+      OutString(280,0,USetStr(1288) & ": " & IVrw.CUPNr,false);
+      OutString(420,0,"",true);
+      OutString(420,0,"",true);
+      OutString(480,0,IVrw.Sum,true);
+      EndFormat;
+    end;
+  end;
+
+  return;
+end;
+
+
+procedure PrintMergedIVFromServCache(record CUVc CUr,record SMVc Cacher,boolean showprepayf,longint IVSerNr,var string prevCU,var val res)
+begin
+  integer rw,i; 
+  boolean printrowf,firstf;
+  Record INVc INr;
+  Record NAContractVc NAContractr;
+  row SMVc Cacherw;
+  string 255 inwarning,tstr,artname,counterno,oldcontrnr;
+  val Sum,totsum;
+  string 20 prevNA;
+  
+  firstf = true;
+  StartFormat(15);
+  EndFormat;
+  StartFormat(15);
+  OutString(0,"DblCUVc",CUr.Code,false);
+  OutString(80,0,CUr.Name,false);
+  if IVSerNr==-1 then begin
+    OutStringID(1,"dblMSMergegServInvMn",USetStr(1000638),true,tstr);
+  end else begin
+    OutStringID(1,"DblIVVc",USetStr(1000523) & ": " & IVSerNr,true,IVSerNr);
+  end;
+  EndFormat;
+  Black_Divider(0,1);
+  if showprepayf then begin
+    PrintPrepayment(Cacher,CUr.Code);
+  end;
+  rw = MatRowCnt(Cacher);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    printrowf = false;
+    counterno = "";
+    artname = "";
+    Switch (Cacherw.RowSimStat) begin
+      Case 1:
+        printrowf = true;
+        if blank(Cacherw.Comment) then begin
+          INr.Code = Cacherw.AccNumber;
+          if ReadFirstMain(INr,1,true) then begin end;
+          artname = INr.Name;
+        end else begin
+          artname = Cacherw.Comment;
+        end;
+        counterno = Cacherw.Objects;
+      Case 2:
+        printrowf = true;
+        INr.Code = Cacherw.AccNumber;
+        if ReadFirstMain(INr,1,true) then begin end;
+        artname = INr.Name;
+    end;
+    if printrowf then begin
+      if Cacherw.ExtraComment!=prevNA then begin
+        if !firstf then begin
+          Gray_Divider(15,1);
+          StartFormat(15);
+          OutVal(480,0,totsum,M4Val,true);
+          EndFormat;
+        end;
+        res=res+totsum;
+        NAContractr.SerNr=StringToLongInt(Cacherw.ExtraComment);
+        if ReadFirstMain(NAContractr,1,true) then begin
+          if !firstf then begin
+            StartFormat(15);
+            EndFormat;
+          end;
+          firstf = false;
+          Gray_Divider(15,1);
+          StartFormat(15);
+          OutString(15,"DblNAContractVc",NAContractr.SerNr,false);
+          OutString(65,0,NAContractr.FlatAddress,false);
+          OutString(235,0,USetStr(1001323),false);
+          OutString(260,"DblFlatsVc",NAContractr.FlatCode,false);
+          OutString(325,0,USetStr(1000406),false);
+          OutString(345,"DblBuildVc",NAContractr.BuildCode,false);
+          EndFormat;
+          Gray_Divider(15,1);
+          StartFormat(15);
+          OutString(15,0,USetStr(1000488),false);
+          OutString(65,0,USetStr(1000402),false);
+          OutString(260,0,USetStr(1000431),false);
+          OutString(345,0,USetStr(1000491),true);
+          OutString(430,0,USetStr(1000640),true);
+          OutString(480,0,USetStr(1000489),true);
+          EndFormat;
+          Gray_Divider(15,1);
+        end;
+        totsum=0;
+        prevNA=Cacherw.ExtraComment;
+      end;
+      Sum=Round(Cacherw.CredVal*Cacherw.DebVal,SetRoundModeD(2));
+      if Sum<>0 or Cacherw.RowSimStat==3 then begin
+        StartFormat(15);
+        OutString(15,0,Cacherw.AccNumber,false);
+        OutString(65,0,artname,false);
+        OutString(260,0,counterno,false);
+        // OutString(345,0,Cacherw.DebVal,true);
+        OutVal(345,0,Cacherw.DebVal,M4Uval,true);
+        OutVal(420,0,Cacherw.CredVal,M45Val,true);
+        OutVal(480,0,Sum,M4Val,true);
+        totsum=totsum+Sum;
+        EndFormat;
+      end;
+    end;
+  end;
+  Gray_Divider(15,1);
+  StartFormat(15);
+  OutVal(480,0,totsum,M4Val,true);
+  EndFormat;
+  res=res+totsum;
+  return;
+end;
+   
+procedure GetMergedServCacheFromIV(longint IVSerNr,record SMVc Cacher,longint contractnr)
+begin
+  record IVVc IVr;
+  row IVVc IVrw;
+  row SMVc Cacherw;
+  integer i,rw,i2;
+  boolean testf;
+
+  RecordNew(Cacher);
+  IVr.SerNr = IVSerNr;
+  if ReadFirstMain(IVr,1,true) then begin
+    if IVr.MergedInvFlag==1 then begin
+      rw = MatRowCnt(IVr);
+      for(i=0;i<rw;i=i+1)begin
+        MatRowGet(IVr,i,IVrw);
+        if IVrw.stp==6 then begin
+          Cacherw.RowSimStat = IVrw.stp;
+          Cacherw.AccNumber = IVrw.CUPNr;
+          Cacherw.DebVal2 = IVrw.Sum;
+          MatRowPut(Cacher,i2,Cacherw);
+          i2 = i2 + 1;
+        end;
+        if nonblank(IVrw.ArtCode) and IVrw.stp==1 and contractnr==IVrw.ContractNr then begin
+          Cacherw.RowSimStat = IVrw.stp;
+          Cacherw.AccNumber = IVrw.ArtCode;
+          // Cacherw.Objects = IVrw.VARList;
+          Cacherw.Objects = IVrw.CounterSerNr;
+          Cacherw.DebVal = IVrw.Price;
+          Cacherw.CredVal = IVrw.Quant;
+          Cacherw.DebVal2 = IVrw.Sum;
+          Cacherw.CredVal2 = IVrw.QtyCoef;
+          Cacherw.ExtraComment = IVrw.ContractNr;
+          MatRowPut(Cacher,i2,Cacherw);
+          i2 = i2 + 1;
+        end;
+      end;
+    end;
+  end;
+end;
+
+global 
+Procedure MSMergegServInvRn(record RcVc RepSpec)
+begin
+  record CUVc CUr;
+  record NAContractVc NAContractr;
+  boolean wloopCU,wloopNC,testf,res;
+  string 255 tstr;
+  integer rw;
+  record SMVc Cacher,totCacher;
+  longint IVSerNr;
+  string 255 IntFormulaStr;
+  string 20 prevCU;
+  val totalsum;
+    
+  StartReportJob(USetStr(1001346));
+    HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+    Header(1,tstr,1);
+    rw = 2;
+    if NonBlank(RepSpec.f1) then begin
+      tstr=USetStr(1000411) & RepSpec.f1;
+      Header(rw,tstr,1);
+      rw=rw+1;
+    end;
+    if NonBlank(RepSpec.f2) then begin
+      tstr=USetStr(25555) & ": " & RepSpec.f2;
+      Header(rw,tstr,1);
+      rw=rw+1;
+    end;
+  EndHeader;
+  
+  StartFormat(15)
+  OutStringID(1,"dblMSMergegServInvMn",USetStr(1000643),true,"");
+  EndFormat;
+  
+  CUr.Code = RepSpec.f1;
+  wloopCU = true;
+  While LoopMain(CUr,1,wloopCU) begin
+    if nonblank(RepSpec.f1) and RepSpec.f1!=CUr.Code then begin
+      wloopCU = false;
+    end else begin
+      testf = true;
+      if nonblank(RepSpec.f2) and !SetInSet(RepSpec.f2,CUr.Classification) then begin
+        testf = false;
+      end;
+      ResetLoop(NAContractr);
+      NAContractr.CustCode = CUr.Code;
+      wloopNC = testf;
+      While LoopKey("CustCode",NAContractr,1,wloopNC) begin
+        if NAContractr.CustCode != CUr.Code then begin
+          wloopNC = false;
+        end else begin
+          testf = true;
+          if NAContractr.OKFlag==0 then begin
+            testf = false;
+          end;
+          if NAContractr.MergedInvFlag==0 then begin
+            testf = false;
+          end;
+          if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+            testf = false;
+          end;
+          if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+            testf = false;
+          end;
+          if testf then begin
+            if IVSerNr==-1 then begin
+              IVSerNr = GetIVSerNrFromFlatCode(RepSpec.RegDate,0,NAContractr);
+            end;
+            if IVSerNr==-1 or RepSpec.flags[1]==0 then begin
+              GenFlatServCache(RepSpec.sStartDate,RepSpec.sEndDate,Cacher,0,0,RepSpec.flags[29],NAContractr);
+              GenFlatServCacheIntSum(NAContractr,RepSpec.RegDate,Cacher,IVSerNr,IntFormulaStr,true);
+              CalcServInvCorrections(RepSpec,NAContractr,Cacher);
+            end else begin
+              GetMergedServCacheFromIV(IVSerNr,Cacher,NAContractr.SerNr);
+            end;
+            AddToTotCacher(totCacher,Cacher,NAContractr.SerNr);
+          end;
+        end;
+      end;
+      if MatRowCnt(totCacher)>0 then begin
+        PrintMergedIVFromServCache(CUr,totCacher,true,IVSerNr,prevCU,totalsum);
+        RecordClear(Cacher);
+        RecordClear(totCacher);
+      end;
+    end;
+  end;
+  if totalsum!=0 then begin
+    StartFormat(15);
+    EndFormat;
+    Black_Divider(0,1);
+    StartFormat(15);
+    OutVal(480,0,totalsum,M4Val,true);
+    EndFormat;
+  end;
+  EndJob;
+  return;
+end;

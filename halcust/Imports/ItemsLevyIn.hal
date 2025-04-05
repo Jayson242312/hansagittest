@@ -1,0 +1,205 @@
+external inner function string 60 AddObjectToObjectList(string,string);
+
+
+global
+updating procedure ItemsLevyIn()
+begin
+  record INVc INr;
+  String 255 ItemCode, AlternateCode, Description, Group, ItemType, BasePrice, CostPrice, Min, Max, Object, VAT;
+
+  // loops through txt file
+  while (NextImportLine(false)) begin
+    ItemCode = ImportField;
+    AlternateCode = ImportField;
+    Description = ImportField;
+    Group = ImportField;
+    ItemType = ImportField;
+    BasePrice = ImportField;
+    CostPrice = ImportField;
+    Min = ImportField;
+    Max = ImportField;
+    Object = ImportField;
+    VAT = ImportField;
+
+    // store record
+    RecordNew(INr);
+    INr.Code = ItemCode;
+    INr.Name = Description;
+    INr.Group = Group;
+    INr.VATCode = StringToInt(VAT);
+    INr.AlternativeCode = AlternateCode;
+    INr.Objects = AddObjectToObjectList(INr.Objects,Object);
+
+    if(nonblank(BasePrice)) then begin
+      INr.UPrice1 = StringToVal(BasePrice,M4Val);// base price
+      INr.InPrice = blankval;// cost price
+      INr.DispGroups = "LEVY";
+    end;
+    if(nonblank(CostPrice)) then begin
+      INr.InPrice = StringToVal(CostPrice,M4UVal);// cost price
+      INr.UPrice1 = blankval;// base price
+      INr.MinLevel = StringToVal(Min,M4UVal);
+      INr.MaxLevel = StringToVal(Max,M4UVal);
+      INr.DispGroups = "STOCK";
+    end;
+
+    if(ItemType == "M") then begin
+      INr.ServQuantInCalc = 2; // service quantity calculation -> meter
+    end;
+
+    if(ItemType == "TRTOY" OR ItemType == "TRLAND" OR ItemType == "TRIMP") then begin    
+      INr.CalcOnLandOrImp = 1;
+      INr.UPrice1 = 1;
+      INr.UserStr2 = StringToVal(BasePrice,M4Val);;
+      INr.FlatFieldCode = ItemType;
+    end;
+
+    if(ItemType == "INACTIVE") then begin
+      INr.DispGroups = "INACTIVE";
+    end;
+
+    RecordImportStore(INr,false);
+  end;
+
+  return;
+end;
+
+
+
+// ========================================================================================================================
+
+
+// global
+// updating procedure ItemsLevyIn()
+// begin
+//   record INVc INr;
+//   String 255 Code, Name, UnitPrice, BasicPrice, Group, Description, VAT, VatAmount, AccountNo, VoteNo;
+
+//   // loops through txt file
+//   while (NextImportLine(false)) begin
+//     Code = ImportField;
+//     Name = ImportField;
+//     UnitPrice = ImportField;
+//     BasicPrice = ImportField;
+//     Group = ImportField;
+//     Description = ImportField;
+//     VAT = ImportField;
+//     VatAmount = ImportField; // unused
+//     AccountNo = ImportField;
+//     VoteNo = ImportField;
+
+//     // store record
+//     RecordNew(INr);
+//     INr.Code = Code;
+//     INr.Name = Name;
+//     INr.UPrice1 = StringToVal(UnitPrice,M4Val);
+//     INr.Group = Group;
+//     INr.UserStr1 = Description; // user defined field -> (Invoice Description)
+//     INr.AlternativeCode = Description;
+//     INr.VATCode = StringToInt(VAT);
+//     // INr.SalesAcc = AccountNo;
+//     INr.Objects = VoteNo;
+//     INr.ItemType = 0;
+
+//     // select service item
+//     if(Description=="Services Fees") then begin
+//       INr.ItemType = 3; // item type -> service
+//     end; 
+//     // select to calculate from meter
+//     if(Description=="Water Unit Charges") then begin
+//       // INr.UPrice1 = (StringToVal(UnitPrice,M4Val) / 1000);
+//       INr.ServQuantInCalc = 2; // service quantity calculation -> meter
+//     end;
+//     // save basic charge
+//     if(Description=="Sewerage") then begin
+//       INr.Name = INr.Name;
+//       INr.ExtraCost = StringToVal(BasicPrice,M4Val);
+//     end;
+
+//     // import premise item fields
+//     if(Description=="Land Tariffs Rates") then begin
+
+//       // set price as 1 and enter actual tariff in user defined field
+//       INr.UPrice1 = 1;
+//       INr.UserStr2 = UnitPrice; // user defined field -> (Tariff Rate)
+
+
+//       // ========= IMPROVEMENT VALUE =========
+//       // -> Residential
+//       if(Name=="IMPROVEMENT PRO RESIDENTIAL") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       if(Name=="IMPROVEMENT PROPERTY") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       if(Name=="NO TAX BLD EXMP RATES") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       if(Name=="NO TAX IMPROVEMENT PROPERTIES") then begin
+//         INr.FlatFieldCode = "TRIMP";  // Used -> IMP RATE
+//       end;
+//       if(Name=="IMPROVEMENT PRO RESIDENTIAL TAX") then begin
+//         INr.FlatFieldCode = "TRIMP"; // Used -> IMP RATE
+//       end;
+//       if(Name=="IMPROVED PROPER RESIDENTIAL TAX") then begin
+//         INr.FlatFieldCode = "TRIMP"; // Used -> IMP RATE
+//       end;
+//       // -> Business
+//       if(Name=="BUSINESS IMPROVED PROPERTIES") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       if(Name=="BUSINESS LAND") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       if(Name=="BUSINESS BLD INDUSTRIAL TAX") then begin
+//         INr.FlatFieldCode = "TRIMP"; // Used -> IMP RATE
+//       end;
+//       // Industrial
+//       if(Name=="INDUSTRIAL IMPROVED PROPERTIES") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+//       // Government/Institutions
+//       if(Name=="GOVERNMENT IMPROVED PROPERTIES LAND TAX") then begin
+//         INr.FlatFieldCode = "TRIMP";
+//       end;
+
+
+//       // ========= LAND VALUE =========
+//       // -> Residential      
+//       if(Name=="IMPROVED PROPERTIES LAND TAX") then begin
+//         INr.FlatFieldCode = "TRLAND"; // Used -> LAND RATE
+//       end;
+//       if(Name=="IMPROVEMENT PROPERTY RATES") then begin
+//         INr.FlatFieldCode = "TRLAND"; // Used -> LAND RATE
+//       end;
+//       if(Name=="IMPROVEMENT PRO RATES") then begin
+//         INr.FlatFieldCode = "TRLAND";  // Used -> LAND RATE
+//       end;
+//       if(Name=="NO TAX LAND TAX RATES") then begin
+//         INr.FlatFieldCode = "TRLAND"; // Used -> LAND RATE
+//       end;
+//       if(Name=="NO TAX LAND EXM RATES") then begin
+//         INr.FlatFieldCode = "TRLAND";
+//       end;
+//       // -> Business
+//       if(Name=="BUSINESS BLD EX") then begin
+//         INr.FlatFieldCode = "TRLAND";
+//       end;
+//       if(Name=="BUSINESS IMPROVED PROPERTIES LAND TAX") then begin
+//         INr.FlatFieldCode = "TRLAND"; // Used -> LAND RATE
+//       end;
+//       // Industrial
+//       if(Name=="INDUSTRIAL BLD TAX") then begin
+//         INr.FlatFieldCode = "TRLAND";
+//       end;
+//       // Government/Institutions
+//       if(Name=="GOVERNMENT BLD GOVERNMENT LAND TAX") then begin
+//         INr.FlatFieldCode = "TRLAND";
+//       end;
+//     end;
+
+//     RecordImportStore(INr,false);
+//   end;
+
+//   return;
+// end;

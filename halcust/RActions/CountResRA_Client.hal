@@ -1,0 +1,57 @@
+external inner function Boolean DateWarned(Date,string);
+
+global
+function LongInt CountResVcRecordSaveClient(LongInt wn,var record CountResVc CountResr,record CountResVc CountRes2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  // Record NApsSetBlock NApsSetr;
+  record FlatCountersVc FlatCountersr;
+  
+  if !Importing() and !IsMaintenance() then begin
+    FlatCountersr.SerNr = CountResr.FlatCounterSerNr;
+    if (readfirstmain(FlatCountersr,1,true)) then begin
+      if nonblank(FlatCountersr.ValidUntil) and  FlatCountersr.ValidUntil < CountResr.EndDate then begin
+        MessageBox(1000766,"");//6600003
+      end;
+    end;
+    
+    // BlockLoad(NApsSetr);
+    // if NApsSetr.AllowNegAmount != 1 and NApsSetr.Val1>0 and NApsSetr.Val1<CountResr.Amount then begin
+    //   MessageBox(1000495,"");
+    // end;  
+    if (DateWarned(CountResr.RegDate,"CountResVc")) then begin
+      MessageBox(1045,"");
+    end;
+  end;
+  
+  CountResVcRecordSaveClient = res;
+  return;
+end;
+
+global
+updating function LongInt CountResVcRecordUpdateClient(LongInt wn,var record CountResVc CountResr,record CountResVc CountRes2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  // Record NApsSetBlock NApsSetr;
+  record FlatCountersVc FlatCountersr;
+  
+  if !Importing() and !IsMaintenance() then begin
+    FlatCountersr.SerNr = CountResr.FlatCounterSerNr;
+    if (readfirstmain(FlatCountersr,1,true)) then begin
+      if nonblank(FlatCountersr.ValidUntil) and  FlatCountersr.ValidUntil < CountResr.EndDate then begin
+        MessageBox(1000766,"");//6600003
+      end;
+    end;
+    
+    // BlockLoad(NApsSetr);
+    // if NApsSetr.AllowNegAmount != 1 and NApsSetr.Val1>0 and NApsSetr.Val1<CountResr.Amount then begin
+    //   MessageBox(1000495,"");
+    // end;  
+    if (DateWarned(CountResr.RegDate,"CountResVc")) then begin
+      MessageBox(1045,"");
+    end;
+  end;
+  
+  CountResVcRecordUpdateClient = res;
+  return;
+end;

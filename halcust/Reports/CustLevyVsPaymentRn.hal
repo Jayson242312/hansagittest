@@ -1,0 +1,367 @@
+external inner function string 255 MonthName(Date);
+
+//
+global
+procedure CustLevyVsPaymentRn(record RcVc RepSpec)
+begin
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record IVVc IVr;
+  record CUVc CUr; String 25 CustCode,CustName;
+  //
+  boolean wloop;
+  Integer arr_size,count,rwcnt,i,v,j;
+  date datePeriod,periodEnd;
+  string 255 prevCode;
+  //
+  array String 225 arr_custcode;
+  Date sd,ed,getPreviousMonth;
+  Date sd_Over60,ed_Over60;
+  Date sd_Over90,ed_Over90;
+  array val arr_receipt;
+  array val arr_receipt30;
+  array val arr_receipt60;
+  array val arr_receipt90;
+  array val arr_receipt120;
+  array val arr_receiptOver60; 
+
+  array val arr_invoice;
+  array val arr_invoice30;
+  array val arr_invoice60;
+  array val arr_invoice90;
+  array val arr_invoice120;
+  array val arr_invoiceOver90;
+
+  array val arr_receipt_monthSum;
+  array val arr_receipt_itemSum;
+  array val arr_invoice_monthSum;
+  array val arr_invoice_itemSum;
+
+  array val receiptCode;
+  array String 225 customerCode;
+  boolean receiptUsed;
+
+
+  // start report job
+  StartReportJob("Customer Levies vs Payments");
+
+  // get cust.name
+  if(blank(RepSpec.f1)) then begin
+    CustName = "";
+  end else begin
+    IPrsr.CustCode = RepSpec.f1;
+    CustCode = RepSpec.f1;
+    CUr.Code = CustCode;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      CustName = CUr.Name;
+    end;
+  end;
+  
+  // no period
+  if(blank(RepSpec.f2)) then begin
+    RepSpec.f2 = CurrentDate; // default period
+  end;
+
+  // set month over 60 days (receipts)
+  datePeriod = RepSpec.f2;
+  sd_Over60 = AddMonth(datePeriod,-3);
+  ed_Over60 = sd_Over60;
+  ed_Over60.day = DaysInMonth(GetYear(sd_Over60),GetMonth(sd_Over60));
+  // set month over 90 days (invoices)
+  sd_Over90 = AddMonth(datePeriod,-4);
+  ed_Over90 = sd_Over90;
+  ed_Over90.day = DaysInMonth(GetYear(sd_Over90),GetMonth(sd_Over90));
+
+
+
+  //
+  receiptUsed = false;
+
+  // loop receipt-history
+  while (LoopMain(IPrsr,1,true)) begin
+
+    // if cust.code no match
+    if((nonblank(RepSpec.f1)) AND (RepSpec.f1 != IPrsr.CustCode)) then begin
+      goto BreakL;
+    end;
+
+    // set code on initial loop
+    if(count == 0) then begin
+      prevCode = IPrsr.CustCode;
+    end;
+    count = count + 1;
+    
+    // =========================================== INVOICES ===========================================
+
+    // get type invoice
+    if (IPrsr.TransType == 0) then begin
+      
+      // find invoice record
+      IVr.SerNr = IPrsr.TransNr;
+      if(ReadFirstMain(IVr,1,true)) then begin
+
+        // sort invoice by date
+        j = 0;
+        While(j >= -2) begin
+          //
+          datePeriod = RepSpec.f2;
+          sd = AddMonth(datePeriod,j-1);
+          sd.day = 1;
+          ed = sd;
+          ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+          // is transaction within spec.date.range
+          if(DateInRange(IVr.TransDate,sd,ed)) then begin
+
+            // increase arr.subscript
+            if(IPrsr.CustCode != prevCode) then begin
+              arr_size = arr_size + 1;
+              prevCode = IPrsr.CustCode;
+            end;
+
+            // -> CURRENT
+            if(j == 0) then begin
+              arr_custcode[arr_size] = IPrsr.CustCode;
+              if(IVr.PayDeal == "CN") then begin
+                arr_invoice[arr_size] = arr_invoice[arr_size] - IVr.Sum4;
+              end else begin
+                arr_invoice[arr_size] = arr_invoice[arr_size] + IVr.Sum4;
+              end;
+            end;
+
+            // -> 30 DAYS
+            if(j == -1) then begin
+              arr_custcode[arr_size] = IPrsr.CustCode;
+              if(IVr.PayDeal == "CN") then begin
+                arr_invoice30[arr_size] = arr_invoice30[arr_size] - IVr.Sum4;
+              end else begin
+                arr_invoice30[arr_size] = arr_invoice30[arr_size] + IVr.Sum4;
+              end;
+            end;
+
+            // -> 60 DAYS
+            if(j == -2) then begin
+              arr_custcode[arr_size] = IPrsr.CustCode;
+              if(IVr.PayDeal == "CN") then begin
+                arr_invoice60[arr_size] = arr_invoice60[arr_size] - IVr.Sum4;
+              end else begin
+                arr_invoice60[arr_size] = arr_invoice60[arr_size] + IVr.Sum4;
+              end;
+            end;
+          end;
+          j = j-1;
+        end;
+
+        // is transaction after 120 spec.date.range
+        if(IVr.TransDate <= ed_Over90) then begin
+
+          // increase arr.subscript
+          if(IPrsr.CustCode != prevCode) then begin
+            arr_size = arr_size + 1;
+            prevCode = IPrsr.CustCode;
+          end;
+          
+          arr_custcode[arr_size] = IPrsr.CustCode;
+          if(IVr.PayDeal == "CN") then begin
+            arr_invoiceOver90[arr_size] = arr_invoiceOver90[arr_size] - IVr.Sum4;
+          end else begin
+            arr_invoiceOver90[arr_size] = arr_invoiceOver90[arr_size] + IVr.Sum4;
+          end;
+        end;
+
+      end;
+    end;
+
+    // =========================================== PAYMENTS ===========================================
+
+  
+    // get type receipt
+    if (IPrsr.TransType == 1) then begin
+
+      //
+      for(i=0; i<receiptCode.length; i=i+1) begin
+        if(receiptCode[i] == IPrsr.TransNr AND customerCode[i] == IPrsr.CustCode) then begin
+          receiptUsed = true;
+        end;
+      end;
+
+      if(receiptUsed==false) then begin
+            
+        // find receipt record
+        IPr.SerNr = IPrsr.TransNr;
+        if(ReadFirstMain(IPr,1,true)) then begin
+          //
+          receiptCode[receiptCode.length] = IPrsr.TransNr;
+          customerCode[customerCode.length] = IPrsr.CustCode;
+          
+          // loop receipt row
+          rwcnt = MatRowCnt(IPr);
+          for(v=0; v<rwcnt; v=v+1) begin
+            MatRowGet(IPr,v,IPrw);
+
+            if (IPrsr.CustCode == IPrw.CustCode) then begin
+              // sort receipt by date
+              j = 0;
+              While(j >= -2) begin
+                //
+                datePeriod = RepSpec.f2;
+                sd = AddMonth(datePeriod,j);
+                sd.day = 1;
+                ed = sd;
+                ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+                // is transaction within spec.date.range
+                if(DateInRange(IPrw.PayDate,sd,ed)) then begin
+            
+                  // increase arr.subscript
+                  if(IPrsr.CustCode != prevCode) then begin
+                    arr_size = arr_size + 1;
+                    prevCode = IPrsr.CustCode;
+                  end;
+                  
+                  // -> CURRENT
+                  if(j == 0) then begin
+                    arr_custcode[arr_size] = IPrsr.CustCode;
+                    arr_receipt[arr_size] = arr_receipt[arr_size] + IPrw.RecVal;
+                  end;
+
+                  // -> 30 DAYS
+                  if(j == -1) then begin
+                    arr_custcode[arr_size] = IPrsr.CustCode;
+                    arr_receipt30[arr_size] = arr_receipt30[arr_size] + IPrw.RecVal;
+                  end;
+
+                  // -> 60 DAYS
+                  if(j == -2) then begin
+                    arr_custcode[arr_size] = IPrsr.CustCode;
+                    arr_receipt60[arr_size] = arr_receipt60[arr_size] + IPrw.RecVal;
+                  end;
+                end;
+                j = j-1;
+              end;
+            end;
+
+            // is transaction after 120 spec.date.range
+            if(IPrw.PayDate <= ed_Over60) then begin
+            
+              // increase arr.subscript
+              if(IPrsr.CustCode != prevCode) then begin
+                arr_size = arr_size + 1;
+                prevCode = IPrsr.CustCode;
+              end;
+              
+              arr_custcode[arr_size] = IPrsr.CustCode;
+              arr_receiptOver60[arr_size] = arr_receiptOver60[arr_size] + IPrw.RecVal;
+            end;
+          end;
+        end;
+      end;
+            
+      //
+      if(receiptUsed==true) then begin
+        receiptUsed = false;
+      end;
+    end;
+  end;
+  BreakL:;
+
+
+  // get last month
+  getPreviousMonth = AddMonth(RepSpec.f2,-1);
+  DaysInMonth(GetYear(CurrentDate),GetMonth(CurrentDate));
+
+  periodEnd = RepSpec.f2;
+  periodEnd.day = DaysInMonth(GetYear(RepSpec.f2),GetMonth(RepSpec.f2));
+
+  StartFormat(15);
+    OutString(1,0,CustName & " Levies vs Payments, To: " & periodEnd,true);
+  EndHeader;
+  EndFormat;
+
+  StartFormat(15); // -> show heading
+    OutString(0,0,"",false);
+    OutString(5,0,"Code",false);
+    OutString(20,0,"Customer",false);
+    OutString(120,0,MonthName(getPreviousMonth) & " Levy",true);
+    OutString(160,0,MonthName(AddMonth(getPreviousMonth,-1)) & " Levy",true);
+    OutString(200,0,MonthName(AddMonth(getPreviousMonth,-2)) & " Levy",true);
+    OutString(240,0,"Levy Past " & MonthName(AddMonth(getPreviousMonth,-2)),true);
+    OutString(290,0,"Paid " & MonthName(RepSpec.f2),true) ;
+    OutString(330,0,"Paid " & MonthName(AddMonth(RepSpec.f2,-1)),true);
+    OutString(370,0,"Paid " & MonthName(AddMonth(RepSpec.f2,-2)),true);
+    OutString(410,0,"Paid Past " & MonthName(AddMonth(RepSpec.f2,-2)),true);
+    OutString(445,0,"Total Levy",true);
+    OutString(1,0,"Total Paid",true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+
+  for(i=0; i<arr_custcode.length; i=i+1) begin
+  StartFormat(15); // -> show data
+    OutString(0,0,"",false);
+    OutString(5,"DblCUVc",arr_custcode[i],false);
+    // -> no cust.code
+    if(blank(arr_custcode[i])) then begin
+      OutString(20,0,"",false);
+    end else begin
+      // -> item description
+      CUr.Code = arr_custcode[i];
+      if(ReadFirstMain(CUr,1,true)) then begin
+        OutString(20,0,CUr.Name,false);
+      end;
+    end;
+    OutString(120,0,arr_invoice[i],true);
+    OutString(160,0,arr_invoice30[i],true);
+    OutString(200,0,arr_invoice60[i],true);
+    OutString(240,0,arr_invoiceOver90[i],true);
+    OutString(290,0,arr_receipt[i],true);
+    OutString(330,0,arr_receipt30[i],true);
+    OutString(370,0,arr_receipt60[i],true);
+    OutString(410,0,arr_receiptOver60[i],true);
+
+    // -> item invoice total
+    arr_invoice_itemSum[i] = arr_invoice[i] + arr_invoice30[i] + arr_invoice60[i] + arr_invoiceOver90[i];
+    OutString(445,0,arr_invoice_itemSum[i],true);
+    
+    // -> item payments total
+    arr_receipt_itemSum[i] = arr_receipt[i] + arr_receipt30[i] + arr_receipt60[i] + arr_receiptOver60[i];
+    OutString(1,0,arr_receipt_itemSum[i],true);
+
+    // -> period payment total
+    arr_receipt_monthSum[0] = arr_receipt_monthSum[0] + arr_receipt[i];
+    arr_receipt_monthSum[1] = arr_receipt_monthSum[1] + arr_receipt30[i];
+    arr_receipt_monthSum[2] = arr_receipt_monthSum[2] + arr_receipt60[i];
+    arr_receipt_monthSum[3] = arr_receipt_monthSum[3] + arr_receiptOver60[i];
+
+    // -> period invoice total
+    arr_invoice_monthSum[0] = arr_invoice_monthSum[0] + arr_invoice[i];
+    arr_invoice_monthSum[1] = arr_invoice_monthSum[1] + arr_invoice30[i];
+    arr_invoice_monthSum[2] = arr_invoice_monthSum[2] + arr_invoice60[i];
+    arr_invoice_monthSum[3] = arr_invoice_monthSum[3] + arr_invoiceOver90[i];
+  EndFormat;
+  end;
+
+  Gray_Divider(0,1);
+
+  StartFormat(15); // show sum by period
+    OutString(0,0,"",false);
+    OutString(5,0,"",false);
+    OutString(20,0,"Period Total:",false); 
+    OutString(120,0,arr_invoice_monthSum[0],true);
+    OutString(160,0,arr_invoice_monthSum[1],true);
+    OutString(200,0,arr_invoice_monthSum[2],true);
+    OutString(240,0,arr_invoice_monthSum[3],true);
+    OutString(290,0,arr_receipt_monthSum[0],true);
+    OutString(330,0,arr_receipt_monthSum[1],true);
+    OutString(370,0,arr_receipt_monthSum[2],true);
+    OutString(410,0,arr_receipt_monthSum[3],true);
+    OutString(445,0,(arr_invoice_monthSum[0] + arr_invoice_monthSum[1] + arr_invoice_monthSum[2] + arr_invoice_monthSum[3]),true);
+    OutString(1,0,(arr_receipt_monthSum[0] + arr_receipt_monthSum[1] + arr_receipt_monthSum[2] + arr_receipt_monthSum[3]),true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  
+  EndJob;
+
+end;

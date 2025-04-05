@@ -1,0 +1,353 @@
+external function val FADDSUBPayMS(string,string,date,date);
+external inner procedure HT2Per(Date,Date,var string);
+
+global 
+function boolean CheckServCalcVClassOnOKWindow(integer wn)
+Begin
+  Record RcVc RepSpec;
+
+  GetWindowRecord(wn,RepSpec);
+
+  RepSpec.Media = mtScreen;
+  RepSpec.repname = "tmpCheckRn";
+  RunReport(RepSpec,0);
+
+  CheckServCalcVClassOnOKWindow = true;
+  return;
+end;
+
+Global Function val FCALCPayMS(string exp,string buildcode,date sd,date ed)
+begin
+  FCALCPayMS=FADDSUBPayMS(exp,buildcode,sd,ed);
+  return;
+end;
+
+procedure addvarval(string varname,var record IPVc vararray,string varvalstr)
+begin
+  row IPVc vr;
+  integer amr;
+
+  amr=MatrowCnt(vararray);
+  vr.Objects=varname;
+  vr.Comment=varvalstr;
+  MatRowPut(vararray,amr,vr);
+
+  return;
+end;
+
+procedure getvarval(string varname,record IPVc vararray,var string varvalstr)
+begin
+  row IPVc vr;
+  integer amr,i;
+  string 250 res;
+
+  amr=MatrowCnt(vararray);
+  res="";
+  for (i=0;i<amr;i=i+1) begin
+    MatRowGet(vararray,i,vr);
+    if (vr.Objects==varname) then begin
+      res=vr.Comment;
+      i=amr;
+    end;
+  end;
+  varvalstr=res;
+  return;
+end;
+
+procedure spacedelete(var string exp)
+begin
+  string 250 newexp;
+  integer i,ls;
+  ls=len(exp);
+  newexp="";
+  for (i=0;i<ls;i=i+1) begin
+    if (mid(exp,i,1)<>" ") then begin
+      newexp=newexp & mid(exp,i,1);
+    end;
+  end;
+  exp=newexp;
+  return;
+end;
+
+global
+Function val FCALCWITHVARPayMS(string exp,var record IPVc vararray,string expname,string buildcode,date sd, date ed)
+begin
+
+  string 250 newexp,varvalstr,varname,tt,prstr;
+  string 1 ws,ss;
+  integer i,j,ls,es;
+  Val res;
+
+  spacedelete(exp);
+
+  ls=len(exp);
+  newexp="";
+  for(i=0;i<ls;i=i+1) begin
+    switch (mid(exp,i,1)) begin
+      case "#":
+        for (j=i+1;j<ls;j=j+1) begin
+          ws=mid(exp,j,1);
+          es=0;
+          if (ws=="+") or (ws=="-") or (ws=="/") or (ws=="*")  or (ws==",") or (ws==")") then begin
+            es=j;
+            j=ls;
+          end;
+          if (es==0) then begin es=ls; end;
+        end;
+        varname=mid(exp,i+1,es-i-1);
+
+        getvarval(varname,vararray,varvalstr);
+        //CheckTrTypeSum(varname,varvalstr);
+        newexp=newexp & varvalstr;
+        i=es-1;
+      case "&":
+        for (j=i+1;j<ls;j=j+1) begin
+          ws=mid(exp,j,1);
+          es=0;
+          if (ws=="+") or (ws=="-") or (ws=="/") or (ws=="*")  or (ws==",") or (ws==")") then begin
+            es=j;
+            j=ls;
+          end;
+          if (es==0) then begin es=ls; end;
+        end;
+        varname=mid(exp,i+1,es-i-1);
+        getvarval(varname,vararray,varvalstr);
+    //   getspecval(varname,RepSpec,varvalstr);
+        newexp=newexp & varvalstr;
+        i=es-1;
+      otherwise
+        prstr=newexp & mid(exp,i,1);
+        newexp=prstr;
+    end;
+  end;
+  //stopalert(newexp);
+  res= FCALCPayMS(newexp,buildcode,sd,ed);
+
+  if (expname<>"") then begin
+    tt=ValToString(res,M45Val,"",".",0);
+    addvarval(expname,vararray,tt);
+  end;
+
+  FCALCWITHVARPayMS=res;
+  return;
+end;
+
+global
+procedure AddConstToCacher(Var record IPVc Cacher,date sd, date ed)
+Begin
+  Record SysFormatBlock SysFormatRec;
+  Record MSConstBlock MSConstr;
+  Row MSConstBlock MSConstrw;
+  Row IPVc Cacherw;
+  Integer i,rwc;
+  Boolean testf;
+
+  BlockLoad(MSConstr);
+  BlockLoad(SysFormatRec);
+
+  rwc = MatRowCnt(MSConstr);
+  for(i=0;i<rwc;i=i+1)begin
+    testf = true;
+    MatRowGet(MSConstr,i,MSConstrw);
+    if MSConstrw.SDate > sd and nonblank(MSConstrw.SDate) then begin
+      testf = false;
+    end;
+    if MSConstrw.EDate < ed and nonblank(MSConstrw.EDate) then begin
+      testf = false;
+    end;
+    if testf then begin
+      Cacherw.Objects = MSConstrw.Code;
+      Cacherw.Comment = ValToString(MSConstrw.Sum,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+      MatRowPut(Cacher,MatRowCnt(Cacher),Cacherw);
+    end;
+  end;
+
+return;
+end;
+
+// global
+// procedure AddBuildConstToCacher(Var record IPVc Cacher,date sd, date ed,string buildcode)
+// Begin
+//   Record SysFormatBlock SysFormatRec;
+//   Record BuildConstVc BuildConstr;
+//   Row BuildConstVc BuildConstrw;
+//   Row IPVc Cacherw;
+//   Integer i,rwc;
+//   Boolean testf;
+
+//   BlockLoad(SysFormatRec);
+//   BuildConstr.BuildCode=buildcode;
+//   if ReadFirstMain(BuildConstr,1,true) then begin
+//     rwc = MatRowCnt(BuildConstr);
+//     for(i=0;i<rwc;i=i+1)begin
+//       testf = true;
+//       MatRowGet(BuildConstr,i,BuildConstrw);
+//       if BuildConstrw.SDate > sd and nonblank(BuildConstrw.SDate) then begin
+//         testf = false;
+//       end;
+//       if BuildConstrw.EDate < ed and nonblank(BuildConstrw.EDate) then begin
+//         testf = false;
+//       end;
+//       if BuildConstrw.stp!=1 then begin
+//         testf=false;
+//       end;
+//       if testf then begin
+//         Cacherw.Objects = BuildConstrw.Code;
+//         Cacherw.Comment = ValToString(BuildConstrw.Sum,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+//         MatRowPut(Cacher,MatRowCnt(Cacher),Cacherw);
+//       end;
+//     end;
+//   end;
+
+// return;
+// end;
+
+procedure BBSFindPeriod(var string tstr,Record ServRecPlanVc ServRecPlanr)
+Begin
+  Row ServRecPlanVc ServRecPlanrw;
+  Integer i,rwc;
+  date sd,ed;
+  boolean found;
+
+  tstr="";
+  rwc=MatRowCnt(ServRecPlanr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+    found=true;
+    if blankdate(sd) or ServRecPlanrw.SDate>sd then begin
+      sd=ServRecPlanrw.SDate;
+      ed=ServRecPlanrw.EDate;
+    end;
+    if blankdate(ed) or ServRecPlanrw.EDate>ed then begin
+      sd=ServRecPlanrw.SDate;
+      ed=ServRecPlanrw.EDate;
+    end;
+  end;
+
+  if found then begin
+    tstr=DateToString(sd,"DD/MM/YYYY") & ":" & DateToString(ed,"DD/MM/YYYY");
+  end;
+return;
+end;
+
+function string 255 GetAddress(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record FlatGroupVc FlatGroupr;
+  record BuildGroupVc BuildGroupr;
+  string 255 res;
+  
+  if nonblank(RepSpec.f2) then begin //çka
+    Buildr.Code=RepSpec.f2;
+    if ReadFirstMain(Buildr,1,true) then begin
+      res = Buildr.Address;
+    end;
+  end;
+  if nonblank(RepSpec.f3) then begin //telpu grupa
+    FlatGroupr.Code=RepSpec.f3;
+    if ReadFirstMain(FlatGroupr,1,true) then begin
+      res = FlatGroupr.Address;
+    end;
+  end;
+  if nonblank(RepSpec.f4) then begin //çku gurpa
+    BuildGroupr.Code=RepSpec.f4;
+    if ReadFirstMain(BuildGroupr,1,true) then begin
+      res = BuildGroupr.Comment;
+    end;
+  end;
+  
+  GetAddress=res;
+  return;
+end;
+
+global updating 
+procedure tmpCheckRn(Record RcVc RepSpec)
+Begin
+  Record IPVc Cacher;
+  Record CalcServicePlanVc CalcServicePlanr;
+  Row CalcServicePlanVc CalcServicePlanrw;
+  Integer i,rwc;
+  String 255 Formula,tstr,hstr;
+  String 20 FCode;
+  val res;
+  Date d1,d2;
+
+  //d1 = "01.06.2008";
+  //d2 = "30.06.2008";
+  d1=RepSpec.sStartDate;
+  d2=RepSpec.sEndDate;
+
+  // StartReportNoHeaderJob(USetStr(1000701));
+  StartReportJob(USetStr(1000701));
+    HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,hstr);
+    Header(1,hstr,1);
+    if NonBlank(RepSpec.f1) then begin
+      hstr = GetAddress(RepSpec);
+      Header(2,USetStr(1000413) & hstr,1);
+    end;
+  EndHeader;
+  SetRepCol(2,90);
+  SetRepCol(3,100);
+  
+  StartFormat(15);
+  OutString(0,"",USetStr(12501),false); //Kods
+  OutString(2,"",USetStr(14105),true); //Vçrtîba
+  OutString(3,"",USetStr(1000700),false); //Formula
+  OutString(450,"",USetStr(14133),true); //Komentârs
+  EndFormat;
+  if RepSpec.Media==mtPdf then begin
+    StartFormat(3);
+    Black_divider(0,1);
+    EndFormat;
+  end else begin
+    Black_divider(0,1);
+  end;
+  
+  if RepSpec.wholemonthf==0 or GetYear(RepSpec.sStartDate)<>GetYear(RepSpec.sEndDate) or GetMonth(RepSpec.sStartDate)<>GetMonth(RepSpec.sEndDate) then begin
+    StartFormat(15);
+    OutString(0,0,USetStr(1001027),false);
+    EndFormat;
+  end else begin
+    RecordNew(Cacher);
+    AddConstToCacher(Cacher,d1,d2);
+    // if nonblank(RepSpec.f2) then begin
+    //   AddBuildConstToCacher(Cacher,d1,d2,RepSpec.f2);
+    // end;
+
+    CalcServicePlanr.Code = RepSpec.f1;
+    If ReadFirstMain(CalcServicePlanr,1,true) then begin end;
+    rwc = MatRowCnt(CalcServicePlanr);
+    for (i=0;i<rwc;i=i+1)begin
+      MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+      FCode = CalcServicePlanrw.FCode;
+      Formula = CalcServicePlanrw.Formula;
+      if nonblank(RepSpec.f2) then begin //çka
+        tstr=RepSpec.f2;
+      end;
+      if nonblank(RepSpec.f3) then begin //telpu grupa
+        tstr="3:TIPS:" & RepSpec.f3;
+      end;
+      if nonblank(RepSpec.f4) then begin //çku grupa
+        tstr="2:TIPS:" & RepSpec.f4;
+      end;
+      res = FCALCWITHVARPayMS(Formula,Cacher,FCode,tstr,RepSpec.sStartDate,RepSpec.sEndDate);
+      if nonblank(CalcServicePlanrw.FCode) then begin
+        StartFormat(15);
+        OutString(0,"",CalcServicePlanrw.FCode,false);
+        OutVal(2,"",res,M45Val,true);
+        OutString(3,0,CalcServicePlanrw.Formula,false);
+        OutString(480,0,CalcServicePlanrw.Comment,true);
+        EndFormat;
+        if RepSpec.Media==mtPdf then begin
+          StartFormat(3);
+          Gray_divider(0,1);
+          EndFormat;
+        end else begin
+          Gray_divider(0,1);
+        end;
+      end;
+    end;
+  end;
+  EndJob;
+return;
+end;

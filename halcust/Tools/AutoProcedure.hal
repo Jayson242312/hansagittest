@@ -1,0 +1,42 @@
+// global updating
+// procedure xxxxProcedures(string argument)
+// begin
+  // integer comp,orgcomp;
+
+  // LogText(0,"xxxx auto procedures was started at " & currenttime & " on " & currentdate);
+
+  // orgcomp = CurrentCompany;
+  // comp = StringToInt(argument);
+  // SetServerCompany(comp);
+  
+  
+  // SetServerCompany(orgcomp);
+  // LogText(0,"xxxx auto procedures completed");
+  
+  // return;
+// end;
+
+global
+procedure AutoProcedure() begin
+  time t;
+  date td;
+  
+  t=CurrentTime;
+  
+  //for testing
+  // t.minute = t.minute + 2;
+  
+  //normal
+  t.hour=2;
+  t.minute=0;
+  t.second=0;
+
+  td = CurrentDate;
+  if t<CurrentTime then begin
+    td = AddDay(CurrentDate,1);
+  end;
+
+  // NewTimedTask2("xxxxAutoProcedures","xxxx Auto Procedures","xxxxProcedures","1",td,t,"","");
+
+return;
+end;

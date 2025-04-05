@@ -1,0 +1,26 @@
+
+global
+function LongInt NAContractVcRecordSaveClient(LongInt wn,var record NAContractVc NAContractr,record NAContractVc NAContract2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  
+  if !Importing() and !IsMaintenance() and NAContractr.OKFlag==0 then begin
+    MessageBox(1000748,"");
+  end;
+  
+  NAContractVcRecordSaveClient = res;
+  return;
+end;
+
+global
+updating function LongInt NAContractVcRecordUpdateClient(LongInt wn,var record NAContractVc NAContractr,record NAContractVc NAContract2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  
+  if !Importing() and !IsMaintenance() and NAContractr.OKFlag==0 and NAContract2r.OKFlag==0 then begin
+    MessageBox(1000748,"");
+  end;
+  
+  NAContractVcRecordUpdateClient = res;
+  return;
+end;

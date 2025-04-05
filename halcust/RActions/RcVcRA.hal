@@ -1,0 +1,12 @@
+// global
+// function Boolean ReadingsIClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+// BEGIN
+//   Boolean res;
+  
+//   res = LimitedAccessTest(wn,fieldname);
+//   if (res) then begin
+//     res = LimitedAccessSalesGroupTest(wn,fieldname,"ObjStr");
+//   end;
+//   QTForeCRClassActiveEditField = res;
+//   RETURN;
+// END;

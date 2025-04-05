@@ -1,0 +1,23 @@
+global
+function longint AddressFieldVcRecordCheck(var record AddressFieldVc AddressFieldr,record AddressFieldVc AddressFieldr2,longint a,longint b)
+begin
+  longint res,oldnr;
+  
+  res=0;
+  oldnr = AddressFieldr.SerNr;
+  if AddressFieldr.SerNr==-1 then begin
+    if CountRecords("AddressFieldVc")==0 then begin
+      AddressFieldr.SerNr=10001;
+    end else begin
+      AddressFieldr.SerNr=NextSerNr("AddressFieldVc",CurrentDate,-1,false,"");
+    end;
+  end;
+  
+LAddressFieldVcRecordCheck:;
+  if res!=0 then begin
+    AddressFieldr.SerNr = oldnr;
+  end;
+  
+  AddressFieldVcRecordCheck=res;
+ return; 
+end;

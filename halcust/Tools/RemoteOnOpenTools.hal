@@ -1,0 +1,178 @@
+global
+procedure AddressFieldOnOpen(var array string arrAddrFieldName,string FieldName) begin
+  Record AddressFieldVc AddressFieldr;
+  integer type,size;
+  boolean TrHs;
+  
+  switch(FieldName)begin
+    case "Street": type=0;
+    case "BuildNr": type=1;
+    case "City": type=2;
+    case "RuralTer": type=3;
+    case "Municipality": type=4;
+    case "PostalCode": type=5;
+    case "f6": type=0;
+    case "f7": type=1;
+  end;
+  TrHs = true;
+  ResetLoop(AddressFieldr);
+  AddressFieldr.Type = type;
+  while LoopKey("Type",AddressFieldr,1,TrHs) begin
+    if AddressFieldr.Type!=type then begin
+      TrHs = false;
+    end else begin
+      size = size + 1;
+      arrAddrFieldName[size] = AddressFieldr.Name;
+    end;
+  end;
+  arrAddrFieldName[0] = size;
+  
+  return;
+end;
+
+global
+procedure CountManSClassOnOpen(var array string arrCountMan) begin
+  integer i,rwc,size;
+  Record CountManBlock CountManr;
+  Row CountManBlock CountManrw;
+  
+  size = 0;
+  BlockLoad(CountManr);
+  rwc = MatRowCnt(CountManr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountManr,i,CountManrw);
+    size = size + 1;
+    arrCountMan[size] = CountManrw.Name;
+  end;
+  
+  arrCountMan[0] = size;
+return;
+end;
+
+global
+procedure CountInstOrgSClassOnOpen(var array string installperformers,var integer arrsize)
+begin
+  integer i,rwc;
+  record CountInstOrgBlock CountInstOrgbl;
+  row CountInstOrgBlock CountInstOrgblrw;
+  
+  arrsize = 0;
+  BlockLoad(CountInstOrgbl);
+  rwc = MatRowCnt(CountInstOrgbl);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountInstOrgbl,i,CountInstOrgblrw);
+    installperformers[arrsize] = CountInstOrgblrw.Name;
+    arrsize = arrsize + 1;
+  end;
+
+  return;
+end;
+
+global
+procedure CountResTypeSClassOnOpen(var array string arrCountResTypC,var array string arrCountResTypN) begin
+  integer i,rwc,size;
+  Record CountResTypBlock CountResTypBl;
+  Row CountResTypBlock CountResTyprw;
+  
+  size = 0;
+  BlockLoad(CountResTypBl);
+  rwc = MatRowCnt(CountResTypBl);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountResTypBl,i,CountResTyprw);
+    size = size + 1;
+    arrCountResTypC[size] = CountResTyprw.Code;
+    arrCountResTypN[size] = CountResTyprw.Name;
+  end;
+  
+  arrCountResTypC[0] = size;
+return;
+end;
+
+global
+procedure FirstFreeMainCountNoSClassOnOpen(var array string arrMainCountNr)
+begin
+  Record FlatCountersVc FlatCountersr;
+  boolean TrHs,testf,foundf;
+  string 30 CounterNo;
+  integer CheckNo;
+  
+  TrHs=true;
+  ResetLoop(FlatCountersr);
+  FlatCountersr.CounterNo = "9999";
+  While LoopBackKey("HeadCounterNo",FlatCountersr,1,TrHs) begin
+    if len(CounterNo)<len(FlatCountersr.CounterNo) then begin
+      CounterNo=FlatCountersr.CounterNo;
+      if len(CounterNo)==4 then begin
+        TrHs=false;
+      end;        
+    end;
+  end;
+  if CounterNo!="9999" then begin
+    foundf=true;
+    CounterNo = NextStrNumber(CounterNo,true);
+    arrMainCountNr[1] = CounterNo;
+  end;
+  
+  if !foundf then begin
+    CounterNo="";
+    CheckNo=1001;
+    TrHs=true;
+    while CheckNo<=9999 and TrHs begin
+      FlatCountersr.CounterNo=CheckNo;
+      // if !ReadFirstKey("CounterNo",FlatCountersr,1,true) then begin
+      if !ReadFirstKey("WinCounterNo",FlatCountersr,1,true) then begin
+        TrHs=false;
+        CounterNo=CheckNo;
+        arrMainCountNr[1] = CounterNo;
+      end;
+      CheckNo = CheckNo + 1;
+    end;
+  end;
+  
+return;
+end;
+
+global
+procedure OBS_PastePerSClassOnOpen(var array string arrPeriod,var array string arrCode) begin
+  integer i,rwc,size;
+  Record PeriodBlock PBr;
+  Row PeriodBlock PBrw;
+
+  size = 0;
+  BlockLoad(PBr);
+  rwc = MatRowCnt(PBr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(PBr,i,PBrw);
+    size = size + 1;
+    arrPeriod[size] =  PBrw.FromDate & ":" & PBrw.ToDate;
+    arrCode[size] = PBrw.CodeStr;
+  end;
+  
+  arrPeriod[0] = size;
+return;
+end;
+
+global
+procedure MSClass2SClassOnOpen(string CTypeCode,var array string arrCode,var array string arrName)
+begin
+  integer i,rwc,size;
+  record MSClassVc MSClassr;
+  boolean TrHs;
+  
+  size = 0;
+  
+  TrHs=true;
+  MSClassr.CTypeCode=CTypeCode;
+  While LoopKey("CTypeCode",MSClassr,1,TrHs) begin
+    if MSClassr.CTypeCode!=CTypeCode then begin
+      TrHs=false;
+    end else begin
+      size = size + 1;
+      arrCode[size] = MSClassr.Code;
+      arrName[size] = MSClassr.Description;
+    end;
+  end;
+
+  arrCode[0] = size;
+  return;
+end;

@@ -1,0 +1,511 @@
+external procedure AddConstToCacher(Var record IPVc,date,date);
+// external procedure AddBuildConstToCacher(Var record IPVc,date,date,string);
+external function val FCALCWITHVARPayMS(string,var record IPVc,string,string,date,date);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function Boolean SetInSet2(string,string);
+external updating procedure CreateServRecPlanPDF(longint,date,date);
+
+updating
+procedure AddValueFlatBuildFieldVc(integer type,string FieldCode,val value,string Code,date sd,date ed,boolean changef)
+begin
+  record BuildFieldVc BuildFieldr,oldBuildFieldr;
+  row BuildFieldVc BuildFieldrw;
+  record FlatFieldVc FlatFieldr,oldFlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  Record FlatsVc Flatsr;
+  integer i,rwc,rw;
+  boolean addf,foundf;
+  
+  if type==4 then begin
+    BuildFieldr.BuildCode=Code;
+    BuildFieldr.FieldCode=FieldCode;
+    if !ReadFirstMain(BuildFieldr,2,true) then begin
+      if !changef then begin
+        RecordNew(BuildFieldr);
+        BuildFieldr.BuildCode=Code;
+        BuildFieldr.FieldCode=FieldCode;
+        if !RecordStore(BuildFieldr,true) then begin
+          LogText(0,"AddValueFlatBuildFieldVc ERROR :: could not store BuildFieldVc record " & Code & ", " & FieldCode);
+        end else begin
+          addf=true;
+        end;
+      end;
+    end else begin
+      addf=true;
+    end;
+    if addf then begin
+      rwc=MatRowCnt(BuildFieldr);
+      rw=rwc;
+      if changef then begin
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(BuildFieldr,i,BuildFieldrw);
+          if BuildFieldrw.StartDate==sd then begin
+            if changef then begin 
+              foundf=true;
+              rw=i;
+              i=rwc;
+            end;
+          end;
+        end;
+      end;
+      RecordCopy(oldBuildFieldr,BuildFieldr);
+      BuildFieldrw.StartDate=sd;
+      BuildFieldrw.Value=value;
+      BuildFieldrw.Comment="";
+      if !foundf then begin
+        MatRowInsert(BuildFieldr,rw,BuildFieldrw);
+      end else begin
+        MatRowPut(BuildFieldr,rw,BuildFieldrw);
+      end;
+      if RecordUpdate(oldBuildFieldr,BuildFieldr,true)!=0 then begin
+        LogText(0,"AddValueFlatBuildFieldVc ERROR :: could not update field " & FieldCode & " for build: " & Code);
+      end;
+    end;
+  end;
+  
+  if type==5 then begin
+    FlatFieldr.FlatCode=Code;
+    FlatFieldr.FieldCode=FieldCode;
+    if !ReadFirstMain(FlatFieldr,2,true) then begin
+      if !changef then begin
+        Flatsr.FlatCode=Code;
+        if ReadFirstMain(Flatsr,1,true) then begin
+          RecordNew(BuildFieldr);
+          FlatFieldr.FlatCode=Code;
+          FlatFieldr.FieldCode=FieldCode;
+          FlatFieldr.BuildCode=Flatsr.Code;
+          if !RecordStore(FlatFieldr,true) then begin
+            LogText(0,"AddValueFlatBuildFieldVc ERROR :: could not store FlatFieldVc record " & Code & ", " & FieldCode);
+          end else begin
+            addf=true;
+          end;
+        end;
+      end;
+    end else begin
+      addf=true;
+    end;
+    if addf then begin
+      rwc=MatRowCnt(FlatFieldr);
+      rw=rwc;
+      if changef then begin 
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(FlatFieldr,i,FlatFieldrw);
+          if FlatFieldrw.StartDate==sd then begin
+            foundf=true;
+            rw=i;
+            i=rwc;
+          end;
+        end;
+      end;
+      RecordCopy(oldFlatFieldr,FlatFieldr);
+      FlatFieldrw.StartDate=sd;
+      FlatFieldrw.Value=value;
+      FlatFieldrw.Comment="";
+      if !foundf then begin
+        MatRowInsert(FlatFieldr,rw,FlatFieldrw);
+      end else begin
+        MatRowPut(FlatFieldr,rw,FlatFieldrw);
+      end;
+      if RecordUpdate(oldFlatFieldr,FlatFieldr,true)!=0 then begin
+        LogText(0,"AddValueFlatBuildFieldVc ERROR :: could not update field " & FieldCode & " for flat: " & Code);
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global updating
+procedure FillServCalcCacherWithValues(var Record IPVc Cacher,Record RcVc RepSpec,string CSPCode,val rowsum,string buildcode,integer type)
+Begin
+  Record CalcServicePlanVc CalcServicePlanr;
+  Row CalcServicePlanVc CalcServicePlanrw;
+  Row IPVc Cacherw;
+  Integer i,rwc,ii,rwc2;
+  String 255 Formula;
+  String 20 FCode;
+  val res;
+  String 50 code;
+
+  AddConstToCacher(Cacher,RepSpec.sStartDate,RepSpec.sEndDate);
+  // if type==1 then begin
+  //   AddBuildConstToCacher(Cacher,RepSpec.sStartDate,RepSpec.sEndDate,buildcode);
+  // end;
+  CalcServicePlanr.Code = CSPCode;
+  if ReadFirstMain(CalcServicePlanr,1,true) then begin
+    rwc = MatRowCnt(CalcServicePlanr);
+    for (i=0;i<rwc;i=i+1)begin
+      MatRowGet(CalcServicePlanr,i,CalcServicePlanrw);
+      if nonblank(CalcServicePlanrw.FCode) then begin
+        FCode = CalcServicePlanrw.FCode;
+        Formula = CalcServicePlanrw.Formula;
+        code=buildcode;
+        if type!=0 then begin
+          code=type & ":TIPS:" & buildcode;
+        end;
+        res = FCALCWITHVARPayMS(Formula,Cacher,FCode,code,RepSpec.sStartDate,RepSpec.sEndDate);
+
+        //ja aprçíina formulâ nav norâdîts aprçíinât tad to ievieto arî cache
+        if (CalcServicePlanrw.FType!=0) and (CalcServicePlanrw.FType<4) then begin
+          rwc2 = MatRowCnt(Cacher);
+          for(ii=0;ii<rwc2;ii=ii+1)begin
+            MatRowGet(Cacher,ii,Cacherw);
+            if Cacherw.Objects==CalcServicePlanrw.FCode then begin
+              Cacherw.ovst=CalcServicePlanrw.FType;
+              MatRowPut(Cacher,ii,Cacherw);
+              ii=rwc2;
+            end;
+          end;
+        end;
+        //Pievienot çkas vai telpas laukam vçrtîbu.
+        if CalcServicePlanrw.FType>3 then begin
+          AddValueFlatBuildFieldVc(CalcServicePlanrw.FType,FCode,res,CalcServicePlanrw.Comment,RepSpec.sStartDate,RepSpec.sEndDate,RepSpec.flags[0]==1);
+        end;
+      end;
+    end;
+  end else begin
+    LogText(0,"Cannot find CalcServicePlanVc with code " & CSPCode);
+  end;
+
+return;
+end;
+
+updating
+procedure MakeServPlanAndCalcValuesFromCacher(Record IPVc Cacher,Record RcVc RepSpec,string Code,integer rectype,string formula,string ExclServList,longint PlanSerNr)
+Begin
+  Record BuildVc Buildr;
+  Record BuildGroupVc BuildGroupr;
+  Record FlatGroupVc FlatGroupr;
+  Record ServicePlanVc ServicePlanr,oldServicePlanr;
+  Record ServCalcValueVc ServCalcValuer,oldServCalcValuer;
+  Row ServicePlanVc ServicePlanrw;
+  Row IPVc Cacherw;
+  Integer i,rwc,ii,rwc2,rownr;
+  Boolean recUpdate,attachf;
+  val t;
+  // Record NApsSetBlock NSr;
+
+  // BlockLoad(NSr);
+  
+  rwc = MatRowCnt(Cacher);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Cacher,i,Cacherw);
+    if Cacherw.ovst==2 and RepSpec.flags[5]==1 then begin //Aprçíinâtâs vçrtîbas
+      ServCalcValuer.Code = code;
+      ServCalcValuer.Type = rectype;
+      ServCalcValuer.FieldCode = Cacherw.Objects;
+      ServCalcValuer.StartDate = RepSpec.sStartDate;
+      ServCalcValuer.EndDate = RepSpec.sEndDate;
+      //ServCalcValuer.CalcFormula = formula;
+      if ReadFirstKey("Code",ServCalcValuer,5,true) then begin
+        if RepSpec.flags[0]==1 then begin
+          RecordCopy(oldServCalcValuer,ServCalcValuer);
+          ServCalcValuer.TransDate = CurrentDate;
+          ServCalcValuer.CalcVal = StringToVal(Cacherw.Comment,M45Val);
+          if RecordUpdate(oldServCalcValuer,ServCalcValuer,true)!=0 then begin
+            LogText(0,"ERROR cannot update ServCalcValueVc record " & ServCalcValuer.SerNr);
+          end else begin
+            attachf=true;
+          end;
+        end;
+      end else begin
+        Recordnew(ServCalcValuer);
+        ServCalcValuer.Code = code;
+        ServCalcValuer.Type = rectype;
+        ServCalcValuer.FieldCode = Cacherw.Objects;
+        ServCalcValuer.StartDate = RepSpec.sStartDate;
+        ServCalcValuer.EndDate = RepSpec.sEndDate;
+        ServCalcValuer.CalcFormula = formula;
+        ServCalcValuer.TransDate = CurrentDate;
+        ServCalcValuer.CalcVal = StringToVal(Cacherw.Comment,M45Val);
+        Switch (rectype) begin
+          Case 1: //Çkas
+            Begin
+              Buildr.Code = Code;
+              ReadFirstMain(Buildr,1,true);
+              ServCalcValuer.BuildCode = Code;
+              ServCalcValuer.Comment = Buildr.Address;
+            end;
+          Case 2: //Çku gurpas
+            Begin
+              BuildGroupr.Code=Code;
+              ReadFirstMain(BuildGroupr,1,true);
+              ServCalcValuer.BuildGroupCode = Code;
+              ServCalcValuer.Comment = BuildGroupr.Comment;
+            end;
+          Case 3: //Telpu grupas
+            Begin
+              FlatGroupr.Code=Code;
+              ReadFirstMain(FlatGroupr,1,true);
+              ServCalcValuer.FlatGroupCode = Code;
+              ServCalcValuer.Comment = FlatGroupr.Comment;
+            end;
+        end;
+        ServCalcValuer.SerNr = NextSerNr("ServCalcValueVc",CurrentDate,-1,false,"");
+        if RecordStore(ServCalcValuer,false) then begin 
+          attachf=true;
+        end;
+      end;
+    end;
+    if Cacherw.ovst==1 and RepSpec.flags[4]==1 then begin //Tarifi
+      ServicePlanr.CodeField = Code;
+      ServicePlanr.RecType = rectype;
+      ServicePlanr.ServType = Cacherw.Objects;
+      t=StringToVal(Cacherw.Comment,M45Val);
+      //sameklç tarifu pçc çkas koda, çku grupas vai telpu grupas un pakalpojuma
+      if /* (t>0  or (NSr.AllowNegServicePlan==1)) and */ (blank(ExclServList) or !SetInSet(Cacherw.Objects,ExclServList)) then begin
+        if ReadFirstKey("CodeServType",ServicePlanr,3,true) then begin
+          RecordCopy(oldServicePlanr,ServicePlanr);
+          //iespçjams nepiecieðama pârbaude vai attiecîgâ perioda tarifs jau eksistç
+          rownr = -1; recUpdate=false;
+          rwc2=MatRowCnt(ServicePlanr);
+          for(ii=0;ii<rwc2;ii=ii+1)begin
+            MatRowGet(ServicePlanr,ii,ServicePlanrw);
+            if DateInRange(ServicePlanrw.StartDate,RepSpec.sStartDate,RepSpec.sEndDate) and DateInRange(ServicePlanrw.EndDate,RepSpec.sStartDate,RepSpec.sEndDate) then begin
+              rownr = ii;
+              ii = rwc2;
+            end;
+          end;
+          if rownr<0 then begin //jâievieto jauna rinda tarifâ
+            if t>0 then begin
+              ServicePlanrw.StartDate = RepSpec.sStartDate;
+              ServicePlanrw.EndDate = RepSpec.sEndDate;
+              ServicePlanrw.PlanPrice = StringToVal(Cacherw.Comment,M45Val);
+              ServicePlanrw.RealPrice = StringToVal(Cacherw.Comment,M45Val);
+              MatRowPut(ServicePlanr,rwc2,ServicePlanrw);
+              recUpdate=true;
+            end;
+          end else begin
+            if RepSpec.flags[0]==1 then begin //jâpârraksta esoðâ tarifa rindiòa
+              ServicePlanrw.StartDate = RepSpec.sStartDate;
+              ServicePlanrw.EndDate = RepSpec.sEndDate;
+              ServicePlanrw.PlanPrice = StringToVal(Cacherw.Comment,M45Val);
+              ServicePlanrw.RealPrice = StringToVal(Cacherw.Comment,M45Val);
+              MatRowPut(ServicePlanr,rownr,ServicePlanrw);
+              recUpdate=true;
+            end;
+          end;
+          if recUpdate then begin
+            if RecordUpdate(oldServicePlanr,ServicePlanr,true)==0 then begin
+              attachf=true;
+            end;
+          end;
+        end else begin
+          if t>0 then begin
+            //ja nav atrasts tarifs, tad veido jaunu
+            RecordNew(ServicePlanr);
+            //Put Header
+            Switch (rectype) begin
+              Case 1: //Çkas
+                Begin
+                  Buildr.Code = Code;
+                  ReadFirstMain(Buildr,1,true);
+                  ServicePlanr.BuildCode = Code;
+                  ServicePlanr.Address = Buildr.Address;
+                end;
+              Case 2: //Çku gurpas
+                Begin
+                  BuildGroupr.Code=Code;
+                  ReadFirstMain(BuildGroupr,1,true);
+                  ServicePlanr.BuildGroupCode = Code;
+                  ServicePlanr.Address = BuildGroupr.Comment;
+                end;
+              Case 3: //Telpu grupas
+                Begin
+                  FlatGroupr.Code=Code;
+                  ReadFirstMain(FlatGroupr,1,true);
+                  ServicePlanr.FlatGroupCode = Code;
+                  ServicePlanr.Address = FlatGroupr.Comment;
+                end;
+            end;
+            //LogText(0,"ServicePlan=" & ServicePlanr.FlatGroupCode & " comm=" & FlatGroupr.Comment & " code=" & code & " rectype=" & rectype);
+            ServicePlanr.SerNr = NextSerNr("ServicePlanVc",CurrentDate,-1,false,"");
+            ServicePlanr.TransDate = CurrentDate;
+            ServicePlanr.ServType = Cacherw.Objects;
+            ServicePlanr.StartDate = RepSpec.sStartDate;
+            ServicePlanr.EndDate = RepSpec.sEndDate;
+            //Put Row
+            ServicePlanrw.StartDate = RepSpec.sStartDate;
+            ServicePlanrw.EndDate = RepSpec.sEndDate;
+            ServicePlanrw.PlanPrice = StringToVal(Cacherw.Comment,M45Val);
+            ServicePlanrw.RealPrice = StringToVal(Cacherw.Comment,M45Val);
+            MatRowPut(ServicePlanr,0,ServicePlanrw);
+            if RecordStore(ServicePlanr,false) then begin
+              attachf=true;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  if attachf then begin
+    // CreateServRecPlanPDF(PlanSerNr,RepSpec.sStartDate,RepSpec.sEndDate); //21.11.2018 Kaut kad vajadzes atpakal
+  end;
+  
+return;
+end;
+
+global updating
+procedure CalcServPlanMn(Record RcVc RepSpec)
+Begin
+  record ServRecPlanVc ServRecPlanr,oldServRecPlanr;
+  row ServRecPlanVc ServRecPlanrw;
+  Record IPVc Cacher;
+  Record BuildVc Buildr;
+  String 20 frbld, tobld;
+  Boolean wloop,testf,testbuild,wloop2;
+  Integer i,rwc,size;
+  Record BuildGroupVc BuildGroupr;
+  Record FlatGroupVc FlatGroupr;
+  
+  if RepSpec.flags[1]==1 or nonblank(RepSpec.f1) then begin //Çkas
+    ResetLoop(Buildr);
+    wloop2 = true;
+    Buildr.Code=RepSpec.f1;
+    While LoopMain(Buildr,1,wloop2)begin //çku cikls
+      if nonblank(RepSpec.f1) and Buildr.Code!=RepSpec.f1 then begin
+        wloop2=false;
+      end else begin
+        testbuild=true;
+        if nonblank(RepSpec.f2) and !SetInSet2(RepSpec.f2,Buildr.Classification) and RepSpec.flags[1]==1 then begin
+          testbuild=false;
+        end;
+        if testbuild then begin
+          ResetLoop(ServRecPlanr);
+          ServRecPlanr.BuildCode = Buildr.Code;
+          wloop = true;
+          While LoopKey("BuildCode",ServRecPlanr,1,wloop) begin //dalîto pakalpojumu reìistra cikls
+            if ServRecPlanr.BuildCode!=Buildr.Code then begin
+              wloop = false;
+            end else begin
+              testf = true;
+              if nonblank(RepSpec.f3) and RepSpec.f3!=ServRecPlanr.CalcServPlan then begin
+                testf=false;
+              end;
+              if testf then begin
+                if ServRecPlanr.DoNotCheckRows==0 then begin
+                  rwc = MatRowCnt(ServRecPlanr);
+                  for(i=0;i<rwc;i=i+1)begin
+                    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+                    if ServRecPlanrw.SDate<RepSpec.sEndDate and (ServRecPlanrw.EDate>RepSpec.sStartDate or blankdate(ServRecPlanrw.EDate)) then begin
+                      //Atrasta rinda ar summu un javeido tarifi izmantojot aprekinu formulas
+                      RecordNew(Cacher);
+                      FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.BuildCode,ServRecPlanr.RecType);
+                      MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.BuildCode,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                      i = rwc; //cikla izeja
+                    end;
+                  end;
+                end else begin
+                  RecordNew(Cacher);
+                  FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.BuildCode,ServRecPlanr.RecType);
+                  MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.BuildCode,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if RepSpec.flags[2]==1 or nonblank(RepSpec.f4) then begin //Çku grupas
+    wloop2=true;
+    BuildGroupr.Code=RepSpec.f4;
+    While LoopMain(BuildGroupr,1,true) begin
+      if nonblank(RepSpec.f4) and BuildGroupr.Code!=RepSpec.f4 then begin
+        wloop2=false;
+      end else begin
+        testf=true;
+        if nonblank(RepSpec.f2) and !SetInSet2(RepSpec.f2,BuildGroupr.Classification) and RepSpec.flags[2]==1 then begin
+          testf=false;
+        end;
+        if testf then begin
+          ResetLoop(ServRecPlanr);
+          ServRecPlanr.CodeField=BuildGroupr.Code;
+          ServRecPlanr.RecType=2;
+          wloop = true;
+          While LoopKey("CodeIndex",ServRecPlanr,2,wloop) begin //dalîto pakalpojumu reìistra cikls
+            if ServRecPlanr.CodeField!=BuildGroupr.Code or ServRecPlanr.RecType!=2 then begin
+              wloop = false;
+            end else begin
+              testf = true;
+              if nonblank(RepSpec.f3) and RepSpec.f3!=ServRecPlanr.CalcServPlan then begin
+                testf=false;
+              end;
+              if testf then begin
+                if ServRecPlanr.DoNotCheckRows==0 then begin
+                  rwc = MatRowCnt(ServRecPlanr);
+                  for(i=0;i<rwc;i=i+1)begin
+                    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+                    if ServRecPlanrw.SDate<RepSpec.sEndDate and (ServRecPlanrw.EDate>RepSpec.sStartDate or blankdate(ServRecPlanrw.EDate)) then begin
+                      //Atrasta rinda ar summu un javeido tarifi izmantojot aprekinu formulas
+                      RecordNew(Cacher);
+                      FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.CodeField,ServRecPlanr.RecType);
+                      MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.CodeField,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                      i = rwc; //cikla izeja
+                    end;
+                  end;
+                end else begin
+                  RecordNew(Cacher);
+                  FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.CodeField,ServRecPlanr.RecType);
+                  MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.CodeField,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  if RepSpec.flags[3]==1 or nonblank(RepSpec.f5) then begin //Telpu grupas
+    FlatGroupr.Code=RepSpec.f5;
+    wloop2=true;
+    While LoopMain(FlatGroupr,1,wloop2) begin
+      if nonblank(RepSpec.f5) and FlatGroupr.Code!=RepSpec.f5 then begin
+        wloop2=false;
+      end else begin
+        testf=true;
+        if nonblank(RepSpec.f2) and !SetInSet2(RepSpec.f2,FlatGroupr.Classification) and RepSpec.flags[3]==1 then begin
+          testf=false;
+        end;
+        if testf then begin
+          ResetLoop(ServRecPlanr);
+          ServRecPlanr.CodeField = FlatGroupr.Code;
+          ServRecPlanr.RecType=3;
+          wloop = true;
+          While LoopKey("CodeIndex",ServRecPlanr,2,wloop) begin //dalîto pakalpojumu reìistra cikls
+            if ServRecPlanr.CodeField!=FlatGroupr.Code or ServRecPlanr.RecType!=3 then begin
+              wloop = false;
+            end else begin
+              testf = true;
+              if nonblank(RepSpec.f3) and RepSpec.f3!=ServRecPlanr.CalcServPlan then begin
+                testf=false;
+              end;
+              if testf then begin
+                if ServRecPlanr.DoNotCheckRows==0 then begin
+                  rwc = MatRowCnt(ServRecPlanr);
+                  for(i=0;i<rwc;i=i+1)begin
+                    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+                    if ServRecPlanrw.SDate<RepSpec.sEndDate and (ServRecPlanrw.EDate>RepSpec.sStartDate or blankdate(ServRecPlanrw.EDate)) then begin
+                      //Atrasta rinda ar summu un javeido tarifi izmantojot aprekinu formulas
+                      RecordNew(Cacher);
+                      FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.CodeField,ServRecPlanr.RecType);
+                      MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.CodeField,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                      i = rwc; //cikla izeja
+                    end;
+                  end;
+                end else begin
+                  RecordNew(Cacher);
+                  FillServCalcCacherWithValues(Cacher,RepSpec,ServRecPlanr.CalcServPlan,ServRecPlanrw.RowSum,ServRecPlanr.CodeField,ServRecPlanr.RecType);
+                  MakeServPlanAndCalcValuesFromCacher(Cacher,RepSpec,ServRecPlanr.CodeField,ServRecPlanr.RecType,ServRecPlanr.CalcServPlan,ServRecPlanr.ExclServList,ServRecPlanr.SerNr);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+return;
+end;

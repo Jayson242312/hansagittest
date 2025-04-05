@@ -1,0 +1,47 @@
+
+function Boolean SetMeterLabel(string subset,string fldname,var string plbl)
+begin
+  Boolean res;
+  record MeterUserLabelBlock INULr;
+  
+  plbl = subset;
+  BlockLoad(INULr);  
+  switch (fldname) begin
+    case "UserStr1":  plbl = INULr.UserStr1;
+    case "UserStr2":  plbl = INULr.UserStr2;
+    case "UserStr3":  plbl = INULr.UserStr3;
+    case "UserStr4":  plbl = INULr.UserStr4;
+    case "UserStr5":  plbl = INULr.UserStr5;
+    case "UserVal1":  plbl = INULr.UserVal1;
+    case "UserVal2":  plbl = INULr.UserVal2;
+    case "UserVal3":  plbl = INULr.UserVal3;
+    case "UserDate1": plbl = INULr.UserDate1;
+    case "UserDate2": plbl = INULr.UserDate2;
+    case "UserDate3": plbl = INULr.UserDate3;
+  end;
+  if (nonblank(plbl)) then begin 
+    res = true;
+  end;
+  SetMeterLabel = res;
+  return;
+end;
+
+
+
+global
+function string 60 UserDefinedMeters(string fnr,string fldname)
+begin
+  string 60 res;
+  res = "";
+  
+  if (fnr=="FlatCountersVc") then begin
+    if (SetMeterLabel(res,fldname,res)) then begin 
+
+    end;
+  end;
+
+  UserDefinedMeters = res;
+  return;
+end;
+
+

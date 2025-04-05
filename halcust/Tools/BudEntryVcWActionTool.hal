@@ -1,0 +1,17 @@
+external inner function val FormulaCalcSum(val,string);
+external inner procedure BudEntryDClass_Sumup(var record BudEntryVc,Boolean,Boolean);
+
+global
+procedure BudEntryDClass_NewBudVal(var record BudEntryVc BEr,Integer rownr)
+begin
+  row BudEntryVc BErw;
+  val d;
+  
+  MatRowGet(BEr,rownr,BErw);
+  BErw.AddVal = BErw.NewBudVal - BErw.RsltVal;
+  BErw.NewBudVal = BErw.RsltVal + BErw.AddVal;
+  BErw.NewBudVal = FormulaCalcSum(BErw.NewBudVal,BErw.Formula);  
+  MatRowPut(BEr,rownr,BErw);  
+  BudEntryDClass_Sumup(BEr,false,false);
+  return;
+end;

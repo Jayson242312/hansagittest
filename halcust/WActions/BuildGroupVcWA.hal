@@ -1,0 +1,75 @@
+
+function boolean BuildGroupDClassRowCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildGroupVc BuildGroupr;
+  row BuildGroupVc BuildGrouprw;
+  record BuildVc Buildr;
+
+  GetWindowRecord(wn,BuildGroupr);
+  if (rownr>-1) then begin
+    MatRowGet(BuildGroupr,rownr,BuildGrouprw);
+    Buildr.Code = BuildGrouprw.RowCode;
+    if (ReadFirstMain(Buildr,1,true)) then begin end;
+    BuildGrouprw.RowComment = Buildr.Address;
+    MatRowPut(BuildGroupr,rownr,BuildGrouprw);
+    PutWindowRecord(wn,BuildGroupr);
+  end;
+  BuildGroupDClassRowCodeEFAfter = true;
+  return;
+end;
+
+global
+function boolean BuildGroupDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed<>0) then begin
+    switch (fieldname) begin
+      case "RowCode": res = BuildGroupDClassRowCodeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  BuildGroupDClassAfterEditField = res;
+  return;
+end;
+
+global 
+procedure BuildGroupCounterRessm() begin
+  integer wn;
+  record BuildGroupVc BuildGroupr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  if GetWindowClass(wn) == "BuildGroupDClass" then begin
+    GetWindowRecord(wn,BuildGroupr);
+  end;
+  if GetWindowClass(wn) == "BuildGroupLClass" then begin
+    if ReadMarkedRecord(wn,BuildGroupr) then begin end;
+  end;
+  
+  if nonblank(BuildGroupr.Code) then begin
+    RepSpec.Media=mtScreen;
+    RepSpec.repname="MainCounterResRn";
+    RepSpec.f1=BuildGroupr.Code;
+    RepSpec.flags[0]=2;
+    RunReport(RepSpec,0);
+  end;
+
+  return;
+end;
+
+global 
+procedure MSChangeCountBuildGroupMnSm() Begin
+  integer wn;
+  Record BuildGroupVc BuildGroupr;
+  Record RcVc RepSpec;
+
+  wn=CurWindow;
+  GetWindowRecord(wn,BuildGroupr);
+
+  RepSpec.Media=mtScreen;
+  RepSpec.repname="MSChangeBuildGroupCountRn";
+  RepSpec.f1=BuildGroupr.Code;
+  RunReport(RepSpec,0);
+  
+  return;
+end;

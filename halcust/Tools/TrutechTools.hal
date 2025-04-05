@@ -1,0 +1,63 @@
+external procedure ExtractObj(string,var Integer,var string);
+external procedure GetObjectsFromString(string,var array string,var integer);
+
+
+global
+function string 255 FindZoningByErfFromContract(String erf)
+BEGIN
+  record NAContractVc NAContractr;
+  string 255 res; 
+  boolean testf,trhs;
+
+  res = "";
+
+  testf = true;
+  trhs = false;
+
+  NAContractr.BuildCode = erf;
+  while (LoopKey("BuildCode", NAContractr, 1, testf)) begin
+    if (NAContractr.BuildCode <> erf) then begin testf = false;end;
+    if (nonblank(NAContractr.ZoningCode)) then begin testf = false;trhs = true;end;
+      if (trhs) then begin
+        res = NAContractr.ZoningCode;
+      end;
+  END;
+
+  FindZoningByErfFromContract = res;
+return;
+END;
+
+
+
+global  
+function string 255 GetTagObjectForItem(string ItemCode) //based off currentuser and vote
+BEGIN
+  record INVc INr;
+  record ObjVc Obr;
+  string 255 Objstr;
+  Array string 255 VarArray;
+  integer i ,Size;
+  string 255 user;
+  string 255 vote;
+  string 255 res;
+
+  user = currentUser & "X";
+  
+  INr.Code = ItemCode;
+  if (ReadFirstMain(INr,1,true)) then begin
+    Objstr = INr.Objects;
+  end;
+
+  GetObjectsFromString(Objstr,VarArray,Size); // Get the objects
+  for (i=0;i<VarArray.length;i=i+1) begin
+      Obr.Code = VarArray[i]; 
+      if (ReadFirstMain(Obr,1,true)) then begin
+        if (Obr.OTCode =="VOTE") then begin  // hardcoded to only get the vote  
+          vote =  VarArray[i];
+        end;
+      end;
+  end;  
+  res = user&","&vote;  // return the fulltagobject
+  GetTagObjectForItem = res;
+  return;
+END;

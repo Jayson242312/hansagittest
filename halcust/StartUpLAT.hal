@@ -1,0 +1,105 @@
+event startup
+begin
+  SetLangMode(LangLatvian,"LAT",2);
+
+  Module("Tiešie norēķini","",730,modMS);
+
+  //modMS
+  Register("Līgumi","Līgumi",NAContractVc,modMS);
+  Register("Ēkas","Ēkas",BuildVc,modMS);
+  Register("Telpas","Telpas",FlatsVc,modMS);
+  RegisterWS("Kontakti","Kontakti","Jauns kontakts",CUVc,modMS);
+  Register("Tarifi","Tarifi",ServicePlanVc,modMS);
+  Register("Dalītie pakalpojumi","Dalītie pakalpojumi",ServRecPlanVc,modMS);
+  Register("Skaitītāju rādījumi","Skaitītāju rādījumi",CountResVc,modMS);
+  Register("Skaitītāji","Skaitītāji",FlatCountersVc,modMS);
+
+  Document("Skaitītāju rādījumu ievades",CountResInputRClass,CountResInputForm,CountResInputFClass,modMS);
+  Document("Līgumi",NAContractRClass,NAContractForm,NAContractFClass,modMS);
+  Document("Brīdinājums",ARSRClass,ARSForm,ARSFClass,modMS);
+
+  Setting("Artikulu apmaksas prioritātes",INPayPriorityLClass,modSL);
+  Setting("Adrešu lauki",AddressFieldLClass,modMS);
+  Setting("Aprēķinātās vērtības",ServCalcValueLClass,modMS);
+  Setting("Artikulu apmaksas prioritātes",INPayPriorityLClass,modMS);
+  Setting("Ēkas lauki",BuildFieldCodeLClass,modMS);
+  Setting("Ēkas lauku uzstādījumi",BuildFieldSetTClass,modMS);
+  Setting("Ēkas lauku vērtības",BuildFieldLClass,modMS);
+  Setting("Ēkas telpu lauku uzstādījumi",BFlatFieldSetTClass,modMS);
+  Setting("Ēku grupas",BuildGroupLClass,modMS);
+  Setting("Ēku skaitītāju rādījumu ievades",BuildCountResInputLClass,modMS);
+  Setting("Ēku veidi",BuildTypeLClass,modMS);
+
+  Setting("Konstantes",MSConstWClass,modMS);
+  Setting("Līgumu lauki",COFieldCodeLClass,modMS);
+  Setting("Līgumu lauku uzstādījumi",COFieldSetTClass,modMS);
+  Setting("Līgumu lauku vērtības",COFieldLClass,modMS);
+  Setting("Namu apsaimniekošanas klases",MSClassLClass,modMS);
+  Setting("Numuru sērijas - Skaitītāju rādījumi",CountResSerTClass,modMS);
+  Setting("Rēķinu komentāri",BBSIVCommentLClass,modMS);
+  Setting("Skaitītāju ražotāji",CountManTClass,modMS);
+  Setting("Skaitītāju rādījumu tipi",CountResTypeTClass,modMS);
+  Setting("Skaitītāju rādījumu ievades",CountResInputLClass,modMS);
+  Setting("Skaitītāju uzstādīšanas organizācijas",CountInstOrgTClass,modMS);
+  Setting("Numuru sērijas - Līgumi",NAContractSerTClass,modMS);
+  
+  Setting("Soda procenti",IntPercLClass,modMS);
+  Setting("Tarifu aprēķinu formulas",CalcServicePlanLClass,modMS);
+  Setting("Telpu grupas",FlatGroupLClass,modMS);
+  Setting("Telpas lauki",FlatFieldCodeLClass,modMS);
+  Setting("Telpas lauku uzstādījumi",FlatFieldSetTClass,modMS);
+  Setting("Telpas lauku vērtības",FlatFieldLClass,modMS);
+  
+  Setting("Tiešo norēķinu uzstādījumi",NApsSetTClass,modMS);
+  Setting("PDF Rēķinu sūtīšana",PDFInvTextTClass,modMS);
+  Setting("PDF rēķinu valodas",PDFInvGenLangTClass,modMS);
+  Setting("Pakalpojumu komplekti",DefaultItemLClass,modMS);
+  Setting("Klienta statusa atskaite",CustPSLClass,modMS);
+  Setting("Sūtīt rēķinus uz e-pastu statuss",InvToEmailTaskWClass,modMS);
+  // Setting("Sūtīt rēķinus uz e-pastu (task) dati",InvToEmailTaskTClass,modSY);
+  Setting("Soda artikulu grāmatošana",LSItemTRTClass,modMS);  
+  Setting("Non stop apaklpošanu aiztures laiki",NonStopSleepTClass,modSY);
+
+  Report("Rēķinu veidošana - apvienotie",MSMergegServInvRClass,MSMergegServInvRn,0,modMS);
+  Report("Rēķinu veidošana - ēkas",MSBuildServInvRClass,MSBuildServInvRn,0,modMS);
+  Report("Rēķinu veidošana - telpas",MSFlatServInvRClass,MSFlatServInvRn,0,modMS);
+  Report("Telpas lauki",FlatFieldsRClass,FlatFieldsRn,0,modMS);
+  Report("Skaitītāju rādījumu saraksts",MSCountListRClass,MSCountListRn,0,modMS);
+  Report("Skaitītāju rādījumu pārbaude",CounterResCheckRClass,CounterResCheckRn,0,modMS);
+
+  Report("PDF rēķinu sūtīšana uz e-pastiem",PDFInvToEmailRClass,PDFInvToEmailRn,0,modMS);
+  Report("Ēku saraksts",MSBuildRClass,MSBuildRn,0,modMS);
+  Report("Maksājumu pārskats",PayOverviewRClass,PayOverviewRn,0,modMS);
+  Report("Pakalpojumu aprēķins / apmaksas",ServCalcPayRClass,ServCalcPayRn,0,modMS);
+  Report("Ēku parādi",BuildDebtRClass,BuildDebtRn,0,modMS);
+  Report("Ēkas aprēķins/apmaksa",BuildCalcPaybackRClass,BuildCalcPaybackRn,0,modMS);
+  Report("Aprēķinu salīdzināšana",MSCalcCompRClass,MSCalcCompRn,0,modMS);
+  Report("Izdrukas lauku salīdzinājums",PrintFieldTestRClass,PrintFieldTestRn,0,modMS);
+  Report("Rēķinu apvienošana",InvMergeRClass,InvMergeRn,0,modMS);
+  Report("Apturētie soda %",SuspIntPercRClass,SuspIntPercRn,0,modMS);
+  Report("Līgumu aprēķins/apmaksa",ContractCalcPayRClass,ContractCalcPayRn,0,modMS);
+
+  Maintenance("Pievienot / noņemt pakalpojumus līgumiem",AddINToNAContrVClass,AddInToNAContrMn,modMS);
+  Maintenance("Atcelt rēķinu veidošanu",UnDoInvVClass,MSUnDoInvMn,modMS);
+  Maintenance("Izveidot tarifus / apr. vērtības",CalcServPlanVClass,CalcServPlanMn,modMS);
+  Maintenance("Rēķinu veidošana - apvienotie",MSMergegServInvVClass,MSMergegServInvMn,modMS);
+  Maintenance("Rēķinu veidošana - ēkas",MSBuildServInvVClass,MSBuildServInvNSMn,modMS);
+  Maintenance("Rēķinu veidošana - telpas",MSFlatServInvVClass,MSFlatServInvNSMn,modMS);
+  Maintenance("Sūtīt rēķinus uz e-pastu",InvToEmailVClass,InvToEmailMn,modMS);
+  Maintenance("Sūtīt rēķinus uz e-pastu (Non stop)",InvToEmailVClass,InvToEmailNSMn,modMS);
+  Maintenance("Sūtīt rēķinus uz e-pastu (Task)",InvToEmailTaskVClass,InvToEmailTaskMn,modMS);
+  Maintenance("Veidot līgumsoda rēķinus",CreateIntPercInvoicesVClass,CreateIntPercInvoicesMn,modMS);
+  Maintenance("Atjaunot informāciju rēķinā",RecalcIVInfoVClass,RecalcIVInfoMn,modSL);
+  Maintenance("Adrešu lauku atjaunošana",FillAddrFieldsVClass,FillAddrFieldsMn,modMS);
+  Maintenance("Pārrēķināt artikulu apmaksu vēsturi",RecalcItemPayHistVClass,RecalcItemPayHistMn,modSY);
+  Maintenance("PDF rēķinu pārveidošana",PDFInvRemakeVClass,PDFInvRemakeMn,modSY);
+  Maintenance("Skaitītāju rādījumu dzēšana",RemCounterResVClass,RemCounterResMn,modMS);
+
+  Export("Aprēķināto vērtību exports",ServCalcValueExpEClass,ServCalcValueExpEn,modMS);
+  
+  Setting("Item payment history",ItemPayHistLClass,modDBMain);  
+  Setting("Item payment statics",ItemPayStatLClass,modDBMain);  
+  Setting("Calculate penalties",IntSumCalcLClass,modDBMain);
+  
+  return;
+end;

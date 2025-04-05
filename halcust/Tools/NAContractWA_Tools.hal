@@ -1,0 +1,194 @@
+external inner function Boolean PasteCust2InInv(var record IVVc,record LocalMachineBlock,string,Boolean,var string,var string,var string,var string,var string);
+external inner procedure SetSalesMan(var string,string);
+external inner procedure GetPriceList(string,Date,Time,var string,var Integer);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean GetItemPriceDiscount3(string,val,var record INVc,string,val,val,val,val,val,string,string,string,string,
+                                                var val,var string,var val,var string,var val,var string,Integer,var Boolean,Date,Time,
+                                                string,Boolean,var Boolean,string,var string,var val,string,string,var string);
+external inner function string 60 AddObjectToObjectList(string,string);
+external procedure GetContractAddress(record NAContractVc,var string);
+
+global
+function Boolean NAContractVc_PasteArtCode(var record NAContractVc COr,Integer rownr,var string inwarning)
+BEGIN
+  record INVc INr;
+  record CUVc CUr;
+  row NAContractVc COrw;
+  string 255 curitemname,salesacc,vatcode,tax2code,taxtemplatecode,pricelist;
+  val price,vreb,baseprice,tax2prc;
+  Boolean calcpricef,res,dummyf;
+  integer inclvat;
+  date bdate;
+  time btime;
+  
+  CUr.Code = COr.CustCode;
+  ReadFirstMain(CUr,1,true);
+  
+  MatRowGet(COr,rownr,COrw);
+  COrw.Price = blankval;
+  COrw.vRebate = blankval;
+  GetPriceList(CUr.CustCat,bdate,btime,pricelist,inclvat);
+  if (GetItemPriceDiscount3(COrw.ArtCode,1,INr,COr.CurncyCode,
+                            COr.FrRate,COr.ToRateB1,COr.ToRateB2,COr.BaseRate1,COr.BaseRate2,
+                            CUr.LangCode,CUr.CustCat,pricelist,CUr.RebCode,
+                            price,curitemname,vreb,vatcode,baseprice,salesacc,
+                            CUr.ExportFlag,calcpricef,COr.CODate,btime,COr.CustCode,true,dummyf,"",tax2code,tax2prc,"","",taxtemplatecode)) then 
+                            //removed COr.PayDeal before tax2code
+  begin
+    inwarning = INr.WarnText1;
+    COrw.Price = price;
+    COrw.Spec = curitemname;
+    COrw.vRebate = vreb;
+    if (COrw.vRebate==0) then begin
+      COrw.vRebate = blankval;
+    end;
+    COrw.ArtCode = INr.Code;
+    MatRowPut(COr,rownr,COrw);
+
+    MatRowPut(COr,rownr,COrw);
+    res = true;
+  end;
+  NAContractVc_PasteArtCode = res;
+  RETURN;
+END;
+
+global 
+function Boolean PasteCustInNAContract(var record NAContractVc NAContractp,var string warntext)
+BEGIN
+  Boolean found;
+  record CUVc CUr;
+  record INVc INr;
+  val x,pr,bal,limit;
+  val t;
+  val frrate,to1,to2,br1,br2;
+  string 255 tstr;
+  string 10 crncy;
+
+  CUr.Code = NAContractp.CustCode;
+  if ReadFirstMain(CUr,1,true) then begin
+    found = true;
+    NAContractp.CustName = CUr.Name;
+    NAContractp.Classification=CUr.Classification; 
+    NAContractp.CurncyCode = CUr.CurncyCode;
+    SetSalesMan(tstr,CUr.SalesMan);
+    NAContractp.SalesMan = tstr;
+    // NAContractp.PayDeal = CUr.PayDeal;
+    crncy = NAContractp.CurncyCode;
+    GetFullCurncyRate(crncy,NAContractp.CODate,frrate,to1,to2,br1,br2);
+    NAContractp.CurncyCode = crncy;
+    NAContractp.FrRate = frrate;
+    NAContractp.ToRateB1 = to1;
+    NAContractp.ToRateB2 = to2;
+    NAContractp.BaseRate1 = br1;
+    NAContractp.BaseRate2 = br2;
+    if (nonblank(CUr.WarnText1)) then begin
+      warntext = CUr.WarnText1;
+    end;
+  end;
+  
+  PasteCustInNAContract = found;
+  RETURN;
+END;
+
+global
+procedure PasteFlatInNAContract(var record NAContractVc NAContractr,var string warn,var string address,var string flatno)
+begin
+  record FlatsVc Flatsr;
+  string 255 tstr;
+
+  warn = ""; address=""; flatno="";
+  GetContractAddress(NAContractr,address);
+  NAContractr.FlatAddress = address;
+  
+  Flatsr.FlatCode = NAContractr.FlatCode;
+  if (ReadFirstMain(Flatsr,1,true)) then begin
+    NAContractr.BuildCode = Flatsr.Code;
+  end;
+  
+return;
+end;
+
+global
+procedure PasteBuildInNAContract(var record NAContractVc NAContractr,var string warn)
+begin
+  record FlatsVc Flatsr;
+  string 255 tstr,address;
+
+  warn = ""; address="";
+  GetContractAddress(NAContractr,address);
+  NAContractr.FlatAddress = address;
+  
+return;
+end;
+
+global
+procedure NAContractGetRate(var record NAContractVc COp)
+BEGIN
+  val from,to1,to2,base1,base2;
+  string 10 curncy
+ 
+  curncy = COp.CurncyCode;
+  GetFullCurncyRate(curncy,COp.CODate,from,to1,to2,base1,base2);
+  COp.CurncyCode = curncy;
+  COp.FrRate = from;
+  COp.ToRateB1 = to1;
+  COp.ToRateB2 = to2;
+  COp.BaseRate1 = base1;
+  COp.BaseRate2 = base2;
+  RETURN;
+END;
+
+global
+procedure NAContractVc_PasteCurncyCode(var record NAContractVc NAContractp)
+BEGIN
+  NAContractGetRate(NAContractp);
+  RETURN;
+END;
+
+global
+function boolean PasteNAContratInIVVc(var record IVVc IVr,record LocalMachineBlock LMb,var longint warn,var string warning,var string errstr,var string prepstr,var string invdatewarn,var string transdatewarn)
+begin
+  record NAContractVc NAContractr;
+  record CUVc CUr;
+  boolean res;
+  
+  res=true;
+  NAContractr.SerNr=IVr.Contract;
+  if ReadFirstMain(NAContractr,1,true) then begin
+    CUr.Code=NAContractr.CustCode;
+    if ReadFirstMain(CUr,1,true) then begin
+      IVr.CustCode=CUr.Code;
+      if (!PasteCust2InInv(IVr,LMb,"",true,warning,errstr,prepstr,invdatewarn,transdatewarn)) then begin
+        warn=1001296;
+        res=false;
+      end;
+    end;
+    // IVr.CustCode = NAContractr.CustCode;
+    IVr.FlatCode=NAContractr.FlatCode;
+    IVr.BuildCode=NAContractr.BuildCode;
+    IVr.Objects = AddObjectToObjectList(IVr.Objects,NAContractr.Objects);
+    if nonblank(NAContractr.LangCode) then begin
+      IVr.LangCode=NAContractr.LangCode;
+    end;
+  end else begin
+    warn=1001139;
+    res=false;
+  end;
+  
+  PasteNAContratInIVVc=res;
+  return;
+end;
+
+global
+procedure NAContractVc_PasteCustCode2(var record NAContractVc NAContractr)
+begin
+  record CUVc CUr;
+  
+  NAContractr.CustName2="";
+  CUr.Code=NAContractr.CustCode2;
+  if ReadFirstMain(CUr,1,true) then begin
+    NAContractr.CustName2=CUr.Name;
+  end;
+
+  return;
+end;

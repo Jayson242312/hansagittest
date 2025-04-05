@@ -1,0 +1,56 @@
+remote inner function Boolean IsSessionOpen(string,string,Date,Time);
+
+global
+updating function LongInt IPVcRecordCheckClient(longint wn,var record IPVc IPp,record IPVc IP2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;  
+  boolean transf;
+  
+  
+  res = 0;
+  if(stat==Rs_insert)then begin
+    if(IPp.OKFlag==1)then begin
+      transf = true;
+    end;
+  end;
+  if(stat==Rs_update)then begin
+    if(IPp.OKFlag==1 and IP2p.OKFlag==0)then begin
+      transf = true;
+    end;
+  end;
+  if(nonblank(IPp.MachineName))then begin
+    if(blanktime(IPp.RegTime))then begin
+      IPp.RegTime = currenttime;
+    end;
+    if(blankdate(IPp.RegDate))then begin
+      IPp.RegDate = currentdate;
+    end;
+    
+    if(IsSessionOpen(IPp.MachineName,IPp.DrawerCode,IPp.RegDate,IPp.RegTime)==false)then begin
+      RecordCheckError(2195,"",-1,"SerNr");      
+      res = -1;
+      goto lIPVcRecordCheckClient;
+    end;
+  end;
+  
+lIPVcRecordCheckClient:;
+  IPVcRecordCheckClient = res;
+  RETURN;
+END;
+
+
+
+// global
+// updating function LongInt IPVcRecordCheck(var record IPVc IPp,record IPVc IP2p,LongInt stat,LongInt long4)
+// BEGIN
+//   LongInt res;  
+//   boolean transf;
+  
+//   if(stat==Rs_insert)then begin
+//     IPp.SalesMan = currentuser;
+//   end;
+//   res = inner.IPVcRecordCheck(IPp,IP2p,stat,long4);
+  
+//   IPVcRecordCheck = res;
+//   RETURN;
+// END;

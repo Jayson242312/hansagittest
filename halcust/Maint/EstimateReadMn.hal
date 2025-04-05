@@ -1,0 +1,197 @@
+external function longint CheckCountResExistsInPeriod(record CountResVc);
+external inner function LongInt MonthDiff(Date,Date);
+external procedure GetCountResPeriod(var date,var date);
+
+
+global updating
+procedure EstimateReadingsMn(record RcVc RepSpec)
+begin
+	record CountResVc CountResr,NewCountResr; // Meter readings
+	record FlatCountersVc FlatCountersr, newFlatCounterr; // Meters
+	record MHistoryVc MHr, oldMHr, newMHr;
+	boolean found,testf,test2;
+	integer cnt,ckey, readingsCount;
+	date s,e,cd,tdate;
+	val ave, total, lastreading, reading;		
+	longint nr;
+	cd = CurrentDate;
+	// s = cd;
+	// s.day = 1;
+	// e = s;
+	// e.day = DaysInMonth(GetYear(e),GetMonth(e));
+	GetCountResPeriod(s,e);
+	readingsCount = 0;
+
+
+	// ESTIMATE READING BY -> CONTRACT
+	if (nonblank(RepSpec.f1)) then begin
+		while (LoopMain(FlatCountersr,1,true)) begin
+
+			// IF METER IS SELECTED CONTRACT
+			if(FlatCountersr.Contract == StringToInt(RepSpec.f1)) then begin
+
+				MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+				testf = true;
+				if(ReadFirstMain(MHr,1,true)) then begin
+					
+					if(blank(MHr.oldReading) or blank(MHr.prevReading) or blank(MHr.currReading)) then begin
+						testf = false;
+					end;
+
+					if((MHr.oldReading==0) or (MHr.prevReading==0) or (MHr.currReading==0)) then begin
+						testf = false;
+					end;
+
+					if(DateInRange(cd,MHr.StartDate,MHr.EndDate))then begin
+						testf = false;
+					end;
+
+					if(StringToDate(MHr.EndDate) >= e)then begin
+						testf = false;
+					end;
+
+					if(MonthDiff(MHr.EndDate,e)>2) then begin
+						testf = false;
+					end;
+					
+					if(testf) then begin
+						total = MHr.oldConsumption + MHr.prevConsumption + MHr.currConsumption; // this could change
+						ave = total/3;
+
+						if(ave>=0) then begin
+							RecordCopy(oldMHr,MHr);
+							MHr.StartDate = s;
+							MHr.EndDate = e;
+							MHr.oldReading= MHr.prevReading; 
+							MHr.prevReading = MHr.currReading;
+							MHr.currReading = MHr.prevReading + ave;
+							MHr.oldConsumption = MHr.prevConsumption;
+							MHr.prevConsumption = MHr.currConsumption;
+							MHr.currConsumption = ave;
+							MHr.Total = total;
+							MHr.Average = ave;
+
+							if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+							RecordNew(NewCountResr);
+							NewCountResr.StartDate = s;
+							NewCountResr.EndDate = e;
+							NewCountResr.FlatCode = FlatCountersr.FlatCode;
+							NewCountResr.RegDate = cd;
+							NewCountResr.StartVal = MHr.prevReading;
+							NewCountResr.EndVal = MHr.currReading;
+							NewCountResr.Amount = ave;
+							NewCountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+
+							FlatCountersr.SerNr = NewCountResr.FlatCounterSerNr;
+							if ReadFirstMain(FlatCountersr,1,true) then begin
+							NewCountResr.FlatCode = FlatCountersr.FlatCode;
+							NewCountResr.ContractNr = FlatCountersr.Contract; 
+							NewCountResr.CounterType = FlatCountersr.CounterType;
+							NewCountResr.CounterNo = FlatCountersr.CounterNo;
+							NewCountResr.CounterAddr = FlatCountersr.Address;
+							NewCountResr.BuildCode = FlatCountersr.Code;
+							NewCountResr.InvAmount = ave; //adjusted quantity
+							end;
+
+							NewCountResr.Itype = 1; // 1 => estimate
+							RecordStore(NewCountResr, true);
+
+							readingsCount = readingsCount + 1;
+						end;
+					end;
+
+					testf = true;
+				end;
+			end;
+		end;
+
+		MessageBox(0,readingsCount & " estimate reading(s) created");
+		
+		goto LBreak;
+  end;
+
+
+
+	// ESTIMATE -> ALL READINGS
+	while (LoopMain(FlatCountersr,1,true)) begin
+
+		MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+		testf = true;
+		if(ReadFirstMain(MHr,1,true)) then begin
+			
+			if(blank(MHr.oldReading) or blank(MHr.prevReading) or blank(MHr.currReading)) then begin
+				testf = false;
+			end;
+
+			if((MHr.oldReading==0) or (MHr.prevReading==0) or (MHr.currReading==0)) then begin
+				testf = false;
+			end;
+
+			if(DateInRange(e,MHr.StartDate,MHr.EndDate))then begin
+				testf = false;
+			end;
+
+			if(StringToDate(MHr.EndDate) >= e)then begin
+				testf = false;
+			end;
+
+			if(MonthDiff(MHr.EndDate,e)>2) then begin
+				testf = false;
+			end;
+
+			if(testf) then begin
+				total = MHr.oldConsumption + MHr.prevConsumption + MHr.currConsumption; // this could change
+				ave = total/3;
+
+				RecordCopy(oldMHr,MHr);
+				MHr.StartDate = s;
+				MHr.EndDate = e;
+				MHr.oldReading= MHr.prevReading; 
+				MHr.prevReading = MHr.currReading;
+				MHr.currReading = MHr.prevReading + ave;
+				MHr.oldConsumption = MHr.prevConsumption;
+				MHr.prevConsumption = MHr.currConsumption;
+				MHr.currConsumption = ave;
+				MHr.Total = total;
+				MHr.Average = ave;
+
+				if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+				RecordNew(NewCountResr);
+			    NewCountResr.SerNr = NextSerNr("CountResVc",CurrentDate,-1,false,"");
+				NewCountResr.StartDate = s;
+				NewCountResr.EndDate = e;
+				NewCountResr.FlatCode = FlatCountersr.FlatCode;
+				NewCountResr.RegDate = cd;
+				NewCountResr.StartVal = MHr.prevReading;
+				NewCountResr.EndVal = MHr.currReading;
+				NewCountResr.Amount = ave;
+				NewCountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+
+				FlatCountersr.SerNr = NewCountResr.FlatCounterSerNr;
+				if ReadFirstMain(FlatCountersr,1,true) then begin
+				NewCountResr.FlatCode = FlatCountersr.FlatCode;
+				NewCountResr.ContractNr = FlatCountersr.Contract; 
+				NewCountResr.CounterType = FlatCountersr.CounterType;
+				NewCountResr.CounterNo = FlatCountersr.CounterNo;
+				NewCountResr.CounterAddr = FlatCountersr.Address;
+				NewCountResr.BuildCode = FlatCountersr.Code;
+				NewCountResr.InvAmount = ave; //adjusted quantity
+				end;
+
+				NewCountResr.Itype = 1; // 1 => estimate
+				RecordStore(NewCountResr, true);	
+
+				readingsCount = readingsCount + 1;
+			end;
+
+			testf = true;
+		end;
+	end;
+
+	StopAlert(readingsCount & " estimate reading(s) created");
+LBreak:;
+end;
+return;
+
+
+

@@ -1,0 +1,216 @@
+external function longint GetIVSerNrFromFlatCode(date,integer,record NAContractVc);
+external procedure GenFlatServCache(date,date,var record SMVc,Boolean,integer,integer,record NAContractVc);
+external procedure GenFlatServCacheIntSum(record NAContractVc,date,var record SMVc,longint,var string,boolean);
+external procedure AddUnUsedPrepaymentToFlatServCache(record NAContractVc,date,var record SMVc);
+external updating procedure CreateIVFromFlatServCache(record RcVc,record NAContractVc,record BuildVc,date,string,record SMVc,var integer,var longint,integer,integer,LongInt,var longint,boolean,var boolean,integer,integer,string,var longint,boolean);
+external updating procedure CreateErrorMail(array string,integer);
+external function boolean ArtCodeIVTemplateTest(record SMVc);
+external procedure CalcServInvCorrections(record RcVc,record NAContractVc,var record SMVc);
+
+global
+function boolean CheckIfIVExists(date RegDate,string BuildCode,string FlatCode) begin
+  record IVVc IVr;
+  boolean res,TrHs;  
+  
+  res = true;
+  ResetLoop(IVr);
+  TrHs = true;
+  IVr.BuildCode = BuildCode;
+  IVr.InvDate = RegDate;
+  while LoopKey("BuildCode",IVr,2,TrHs) begin
+    if (IVr.BuildCode!=BuildCode) then begin
+      TrHs = false;
+    end else begin
+      if IVr.ServInvf==1 then begin
+        // TrHs = false;
+        // res = false;
+      // end;
+        if res and (IVr.InvDate==RegDate) and (IVr.FlatCode==FlatCode) then begin
+          TrHs = false;
+          res = false;
+          MessageBox(1001270,"");
+        end;
+        if res and (IVr.InvDate > RegDate) and (IVr.FlatCode==FlatCode) then begin
+          TrHs = false;
+          res = false;
+          MessageBox(1001271,"");
+        end;
+      end;
+    end;
+  end;
+  
+  CheckIfIVExists = res;
+  return;
+end;
+
+global
+function boolean MSFlatServInvVClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  boolean res;
+  
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  if CheckIfIVExists(RepSpec.RegDate,RepSpec.f1,RepSpec.f2) begin 
+    res = false;
+  end;
+  
+  MSFlatServInvVClassOnOKWindow = res; 
+  return;
+end;
+
+procedure RunMSFlatServInvNSMn(Record RcVc RepSpec/*,record NApsSetBlock NApsSetr*/) begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  record SMVc Cacher;
+  record NAContractVc NAContractr;
+  Row SMVc Cacherw; 
+  string 200 IntFormulaStr;
+  longint IVSerNr,IVCounter,TRIVCounter,newInvNr;
+  integer i,rw,cnt,kcnt;
+  boolean wLoop,res,wLoopNAContractf,testf,logf;
+  array string 255 Error_array;
+
+  TRIVCounter = 0;
+  IVCounter = 0;
+  
+  // if blank(RepSpec.f2) and blank(RepSpec.f1) and blank(RepSpec.f3) then begin
+    // LogText(0,"RunMSFlatServInvNSMn ERROR :: Flat, Erf or Classification must be specified!");
+    // GoTo LRunMSFlatServInvNSMn;
+  // end;
+  
+  //find build if it is unknown but the flat is known
+  if nonblank(RepSpec.f2) then begin
+    Flatsr.FlatCode = RepSpec.f2;
+    if ReadFirstMain(Flatsr,1,true) then begin end;
+    RepSpec.f1 = Flatsr.Code;
+  end;
+  
+  ResetLoop(Buildr);
+  Buildr.Code = RepSpec.f1;
+  wloop = true;
+  while LoopMain(Buildr,1,wLoop) begin
+    if nonblank(RepSpec.f1) and Buildr.Code<>RepSpec.f1 then begin
+      wLoop = false;
+    end else begin
+      testf = true;
+      if nonblank(RepSpec.f3) and !SetInSet(RepSpec.f3,Buildr.Classification) then begin
+        testf = false;
+      end;
+      if Buildr.Closedf==1 then begin
+        testf = false;
+      end;
+      if testf then begin
+        logf = true;
+        ResetLoop(NAContractr);
+        wLoopNAContractf = true;
+        NAContractr.BuildCode = Buildr.Code;
+        While LoopKey("BuildCode",NAContractr,1,wLoopNAContractf) begin
+          if NAContractr.BuildCode != Buildr.Code then begin
+            wLoopNAContractf = false;
+          end else begin
+            testf = true;
+            if NAContractr.OKFlag==0 then begin
+              testf = false;
+            end;
+            if NAContractr.MergedInvFlag==1 then begin
+              testf = false;
+            end;
+            if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+              testf = false;
+            end;
+            if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+              testf = false;
+            end;
+            if nonblank(RepSpec.f2) and NAContractr.FlatCode!=RepSpec.f2 then begin
+              testf = false;
+            end;
+            if blank(NAContractr.FlatCode) then begin //šeit veido tikai telpu rēķinus
+              testf = false;
+            end;
+            if testf and nonblank(NAContractr.FlatCode) then begin
+              Flatsr.FlatCode = NAContractr.FlatCode;
+              if !ReadFirstMain(Flatsr,1,true) then begin
+                testf = false;
+              end;
+            end;
+            if testf then begin
+              if logf then begin
+                LogText(0,USetStr(1000649) & " " & Buildr.Code);
+                logf = false;
+              end;
+              IVSerNr = GetIVSerNrFromFlatCode(RepSpec.RegDate,RepSpec.flags[16],NAContractr);
+              if IVSerNr==-1 then begin
+                GenFlatServCache(RepSpec.sStartDate,RepSpec.sEndDate,Cacher,0,RepSpec.flags[16],RepSpec.flags[29],NAContractr);
+                GenFlatServCacheIntSum(NAContractr,RepSpec.RegDate,Cacher,IVSerNr,IntFormulaStr,true);
+                AddUnUsedPrepaymentToFlatServCache(NAContractr,RepSpec.RegDate,Cacher);
+                if ArtCodeIVTemplateTest(Cacher) then begin
+                  CalcServInvCorrections(RepSpec,NAContractr,Cacher);
+                     qupdating.CreateIVFromFlatServCache(RepSpec,NAContractr,Buildr,RepSpec.RegDate,IntFormulaStr,Cacher,cnt,IVCounter,RepSpec.flags[4],
+                                                      RepSpec.flags[10],RepSpec.long1,TRIVCounter,false,res,
+                                                      RepSpec.flags[16],RepSpec.flags[29],"",newInvNr,true);
+                end;
+                if !res then begin //TODO I do not think this works correctly, error array must be passed to procedure
+                  //Add to error array
+                  Error_array[0] = StringToInt(Error_array[0]) + 1;
+                  Error_array[StringToInt(Error_array[0])] = NAContractr.FlatCode & "," & NAContractr.CustCode & "," & NAContractr.SerNr;
+                end;
+              end else begin
+                Error_array[0] = StringToInt(Error_array[0]) + 1;
+                Error_array[StringToInt(Error_array[0])] = NAContractr.FlatCode & "," & NAContractr.CustCode & "," & NAContractr.SerNr & "," & "1001512";
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  // if RepSpec.flags[10] != 2 then begin // automātiski palaistai nav vajadzīgs msgbox
+  //   MessageBox(0,USetStr(1000646) & " " & IVCounter & " " & USetStr(1000647) & " (" & USetStr(1000648) & ": " & TRIVCounter & ")");
+  // end;
+  if StringToInt(Error_array[0])>0 then begin
+    queued.CreateErrorMail(Error_array,1);
+  end;
+LRunMSFlatServInvNSMn:;
+  
+return;
+end;
+
+global
+procedure MSFlatServInvNSMn(record RcVc RepSpec) begin
+  record SRBlock SRRec;
+  record BuildVc Buildr;
+  // record NApsSetBlock NApsSetr;
+  longint IVSerNr;
+  String 20 frBuild,toBuild;
+  boolean wloop;
+
+  if nonblankdate(RepSpec.RegDate) and nonblankdate(RepSpec.sStartDate) and nonblankdate(RepSpec.sEndDate) then begin
+    // BlockLoad(NApsSetr);
+    // if DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) or NApsSetr.AllowOutOfPer==1 then begin
+      BlockLoad(SRRec);
+      IVSerNr = NextSerNr("IVVc",RepSpec.RegDate,SRRec.LastCOInvNr,false,"");
+      if IVSerNr <> -1 then begin
+        RunMSFlatServInvNSMn(RepSpec/*,NApsSetr*/);
+
+        // frBuild=FirstInRange(RepSpec.f1,20);
+        // toBuild=LastInRange(RepSpec.f1,20);
+        // //RepSpec.flags[10]=2; //lai neparādītos msgbox
+        // Buildr.Code=frBuild;
+        // wloop=true;
+        // While LoopMain(Buildr,1,wloop) begin
+        //   if Buildr.Code>toBuild then begin
+        //     wloop=false;
+        //   end else begin
+        //     LogText(0,USetStr(1000649) & " " & Buildr.Code);
+        //     RepSpec.f1 = Buildr.Code;
+        //     RunMSFlatServInvNSMn(RepSpec/*,NApsSetr*/);
+        //   end;
+        // end;
+      end;
+    // end;
+  end;
+  
+  return;
+end;

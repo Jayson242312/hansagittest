@@ -1,0 +1,148 @@
+/*
+  tarifu window actioni
+*/
+
+function boolean ServicePlanDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServicePlanVc ServicePlanr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServicePlanr);
+  Buildr.Code = ServicePlanr.BuildCode;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    ServicePlanr.Address = Buildr.Address;
+    PutWindowRecord(wn,ServicePlanr);
+  end else begin
+    beep;
+  end;
+  ServicePlanDClassBuildCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServicePlanDClassBuildGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildGroupVc BuildGroupr;
+  record ServicePlanVc ServicePlanr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServicePlanr);
+  BuildGroupr.Code = ServicePlanr.BuildGroupCode;
+  if (ReadFirstMain(BuildGroupr,1,true)) then begin
+    ServicePlanr.Address = BuildGroupr.Comment;
+    PutWindowRecord(wn,ServicePlanr);
+  end else begin
+    beep;
+  end;
+  ServicePlanDClassBuildGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServicePlanDClassFlatGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatGroupVc FlatGroupr;
+  record ServicePlanVc ServicePlanr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServicePlanr);
+  FlatGroupr.Code = ServicePlanr.FlatGroupCode;
+  if (ReadFirstMain(FlatGroupr,1,true)) then begin
+    ServicePlanr.Address = FlatGroupr.Comment;
+    PutWindowRecord(wn,ServicePlanr);
+  end else begin
+    beep;
+  end;
+  ServicePlanDClassFlatGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean ServicePlanDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServicePlanVc ServicePlanr;
+  Row ServicePlanVc ServicePlanrw;
+  // Record NApsSetBlock NApsSetr;
+  boolean res;
+  Date ed;
+
+  res = true;
+  // BlockLoad(NApsSetr);
+  if rownr >= 0 then begin
+    GetWindowRecord(wn,ServicePlanr);
+    MatRowGet(ServicePlanr,rownr,ServicePlanrw);
+    if /*(NApsSetr.Int6==1) and */nonblankdate(ServicePlanrw.StartDate) then begin
+      ed = ServicePlanrw.StartDate;
+      ed.day = 1; ed = addmonth(ed,1); ed = addday(ed,-1);
+      ServicePlanrw.EndDate = ed;
+      MatRowPut(ServicePlanr,rownr,ServicePlanrw);
+    end;
+    PutWindowRecord(wn,ServicePlanr);
+  end;
+  
+  ServicePlanDClassStartDateEFAfter  = res;
+return;
+end;
+
+function boolean ServicePlanDClassServTypeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServicePlanVc ServicePlanr;
+  Row ServicePlanVc ServicePlanrw;
+  record INVc INr;
+  boolean res;
+  Date ed;
+
+  res = true;
+  
+  GetWindowRecord(wn,ServicePlanr);
+  if nonblank(ServicePlanr.ServType) and changed!=0 then begin
+    INr.Code = ServicePlanr.ServType;
+    if ReadFirstMain(INr,1,true) then begin
+      ServicePlanr.Comment=INr.Name;
+      PutWindowRecord(wn,ServicePlanr);
+    end else begin
+      Beep;
+    end;
+  end;
+  
+  ServicePlanDClassServTypeEFAfter  = res;
+return;
+end;
+
+global
+function boolean ServicePlanDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "BuildCode": res = ServicePlanDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+      case "BuildGroupCode": res = ServicePlanDClassBuildGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatGroupCode": res = ServicePlanDClassFlatGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "StartDate": res = ServicePlanDClassStartDateEFAfter(wn,fn,rownr,changed);
+      case "ServType": res = ServicePlanDClassServTypeEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  ServicePlanDClassAfterEditField	 = res;
+return;
+end;
+
+// global
+// function boolean ServicePlanDClassOnOpenWindow(integer wn)
+// begin
+  // record ServicePlanVc ServicePlanr;
+  // integer rwc,nwn;
+  // boolean res;
+  
+  // GetWindowRecord(wn,ServicePlanr);
+  // rwc=MatRowCnt(ServicePlanr);
+  // if rwc>0 then begin
+    // WindowFieldGoto(wn,ServicePlanr,rwc+4,"StartDate",true);
+  // end;
+
+  // ServicePlanDClassOnOpenWindow = res;
+  // return;
+// end;

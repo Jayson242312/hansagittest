@@ -1,0 +1,55 @@
+global
+updating procedure GoodsReceipt2In()
+begin
+  record PUVc PUr;
+  row PUVc PUrw;
+  record INVc INr;
+  record CUVc CUr;
+  integer rwcnt,i;
+  String 255 Code, QOH,Group,PartNo, Description, minQoh, Re_Order,AvgCost,Value; 
+  val total;
+
+  total = 0;
+  RecordNew(PUr);
+  PUr.SerNr  = NextSerNr("PUVc",CurrentDate,-1,false,"");
+  PUr.VECode = "S999";
+  CUr.Code = PUr.VECode;
+  if (ReadFirstMain(CUr,1,true)) then begin
+    PUr.VEName = CUr.Name;
+  end;
+
+  // loops through txt file and adds 
+  while (NextImportLine(false)) begin
+    Code = ImportField;
+    QOH = ImportField;
+    Group = ImportField;
+    PartNo = ImportField;
+    Description = ImportField;
+    minQoh = ImportField;
+    Re_Order = ImportField;
+    AvgCost = ImportField;
+    Value = ImportField;
+
+
+    rwcnt = MatRowCnt(PUr);
+    PUrw.ArtCode = Code;
+    PUrw.Quant = StringToVal(QOH,M4Val);
+    INr.Code = PUrw.ArtCode;
+    if (ReadFirstMain(INr,1,true)) then begin
+      PUrw.CostPrice = INr.InPrice; // costprice
+      PUrw.Spec = INr.Name;
+      PUrw.UnitCode = INr.Unittext;
+    end;
+
+    PUrw.Sum = PUrw.CostPrice * PUrw.Quant;
+
+    total = total +  PUrw.Sum ;
+    MatRowPut(PUr,rwcnt,PUrw);
+  end;
+  PUr.PayVal = total;
+  PUr.Location = "HQ";
+
+  RecordStore(PUr,true);
+
+  return;
+end;

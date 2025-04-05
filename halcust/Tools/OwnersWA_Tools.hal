@@ -1,0 +1,22 @@
+global
+function boolean PasteCustNameInOwners(var record OwnersVc Ownersr,var longint warn,integer rownr)
+begin
+  record CUVc Cur;
+  row OwnersVc Ownersrw;
+  boolean res;
+  
+  res=false;
+  MatRowGet(Ownersr,rownr,Ownersrw);
+  CUr.Code = Ownersrw.CustCode;
+  if ReadFirstMain(CUr,1,true) then begin
+    Ownersrw.CustName=CUr.Name;
+    Ownersrw.RegNr=CUr.RegNr1;
+    MatRowPut(Ownersr,rownr,Ownersrw);
+    res=true;
+  end else begin
+    warn=1000971;
+  end;
+  
+  PasteCustNameInOwners=res;
+  return;
+end;

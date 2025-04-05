@@ -1,0 +1,311 @@
+external inner function Integer CheckObjs(string,string,var string);
+external inner function Boolean DateOverlaps(Date,Date,Date,Date);
+external updating procedure RemoveBuildFields(string);
+
+global
+updating procedure AddObjectToRec(string code,var string objstr,string apx,string name,string hobj)
+begin
+  record ObjVc Objr;
+  string 20 newobj;
+
+  newobj = code;
+  Objr.Code = newobj;
+  if (ReadFirstMain(Objr,1,true)==false) then begin
+    RecordNew(Objr);
+    Objr.Code = newobj;
+    Objr.Comment = name;
+    Objr.OTCode = apx;
+    Objr.AutoObjects = hobj;
+    if (RecordStore(Objr,true)) then begin end;
+  end;
+  if (SetInSet(newobj,objstr)==false) then begin
+    if (objstr <> "") then begin objstr = objstr & ","; end;
+    objstr = objstr & newobj;
+  end;
+return;
+end;
+
+global
+updating function longint BuildVcRecordCheck(var record BuildVc Buildr,record BuildVc Buildr2,longint a,longint b)
+begin
+  longint res;
+  row BuildVc Buildrw,Build2rw;
+  record VVTownVc Townr;
+  record VVSuburbVc Suburbr;
+  record ZoneVc ZoneR;
+  // Record NApsSetBlock NApsSetr;
+  Integer errcode,i,rwc,i2;
+  string 255 errstr;
+ 
+  // BlockLoad(NApsSetr);
+  res = 0;
+  
+  if Buildr.Code=="" then begin
+    RecordCheckError(312191,"",-1,"Code");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  // ===================== Custom Code =====================
+  if(blank(buildr.LotNo)) then begin
+    RecordCheckError(31238,"",-1,"LotNo");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  if(blank(buildr.ExtensionNo)) then begin
+    RecordCheckError(31239,"",-1,"ExtensionNo");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+ if(blank(buildr.DivisionNo)) then begin
+    RecordCheckError(31240,"",-1,"DivisionNo");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+ if(blank(buildr.UnitNo)) then begin
+    RecordCheckError(31241,"",-1,"UnitNo");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  if(blank(buildr.BuildNr)) then begin
+    RecordCheckError(31220,"",-1,"BuildNr");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+  
+  if(blank(buildr.City)) then begin
+    RecordCheckError(31222,"",-1,"City"); // town
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  if(blank(buildr.RuralTer)) then begin
+    RecordCheckError(31223,"",-1,"RuralTer"); // suburb
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  if(blank(buildr.Street)) then begin
+    RecordCheckError(31224,"",-1,"Street");
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+
+  // if(blank(buildr.ZoningCode)) then begin
+  //   RecordCheckError(31225,"",-1,"ZoningCode");
+  //   res = -1;
+  //   goto LBuildVcRecordCheck;
+  // end;
+  // Verify Dropdown Selection
+  Townr.Code = buildr.City;
+  if(ReadFirstMain(Townr,1,true)==false) then begin
+      RecordCheckError(31227,"",-1,"City"); // town
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+  Suburbr.Code = buildr.RuralTer;
+  if(ReadFirstMain(Suburbr,1,true)==false) then begin
+      RecordCheckError(31228,"",-1,"RuralTer"); // suburb
+    res = -1;
+    goto LBuildVcRecordCheck;
+  end;
+  // ZoneR.Code = buildr.ZoningCode;
+  // if(ReadFirstMain(ZoneR,1,true)==false) then begin
+  //     RecordCheckError(31229,"",-1,"ZoningCode");
+  //   res = -1;
+  //   goto LBuildVcRecordCheck;
+  // end;
+  // ===================== End of Custom Code =====================
+
+  // if Buildr.Address=="" then begin
+    // RecordCheckError(1058,"",-1,"Address");
+    // res = -1;
+    // goto LBuildVcRecordCheck;
+  // end;
+  
+  // if nonblank(NApsSetr.BuildObjType) then begin
+  //   AddObjectToRec(Buildr.Code,Buildr.Objects,NApsSetr.BuildObjType,Buildr.Address,"");
+  // end else begin
+  // AddObjectToRec(Buildr.Code,Buildr.Objects,"E",Buildr.Address,"");
+  // end;
+  
+  if nonblank(Buildr.Objects) then begin
+    errcode=CheckObjs("",Buildr.Objects,errstr);
+    if errcode!=0 then begin
+      RecordCheckError(errcode,errstr,-1,"Objects");      
+      res = -1; 
+      goto LBuildVcRecordCheck;
+    end;
+  end;
+  
+  rwc = MatRowCnt(Buildr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(Buildr,i,Buildrw);
+    if blankdate(Buildrw.StartDate) and nonblankdate(Buildrw.EndDate) then begin
+      RecordCheckError(1001215,"",i,"StartDate");      
+      res = -1; 
+      goto LBuildVcRecordCheck;
+    end;
+    // if blankdate(Buildrw.EndDate) and nonblankdate(Buildrw.StartDate) then begin
+      // RecordCheckError(1001215,"",i,"StartDate");      
+      // res = -1; 
+      // goto LBuildVcRecordCheck;
+    // end;
+    if nonblankdate(Buildrw.EndDate) and (Buildrw.EndDate<Buildrw.StartDate) then begin
+      RecordCheckError(1000810,"",i,"StartDate");      
+      res = -1; 
+      goto LBuildVcRecordCheck;
+    end;
+    if nonblankdate(Buildrw.StartDate) and nonblankdate(Buildrw.EndDate) then begin
+      for(i2=(i+1);i2<rwc;i2=i2+1)begin
+        MatRowGet(Buildr,i2,Build2rw);
+        if nonblankdate(Build2rw.StartDate) and nonblankdate(Build2rw.EndDate) then begin
+          if (DateOverlaps(Buildrw.StartDate,Buildrw.EndDate,Build2rw.StartDate,Build2rw.EndDate)) then begin
+            RecordCheckError(1000739,"",i,"StartDate");      
+            res = -1; 
+            goto LBuildVcRecordCheck;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+LBuildVcRecordCheck:;
+  BuildVcRecordCheck = res;
+return;
+end;
+
+
+global updating
+function longint BuildVcRecordImport(var record BuildVc Buildr,record BuildVc Buildr2,longint a,longint b)
+begin
+  
+  if nonblank(Buildr.BuildNr) then begin
+    if Buildr.IntBuildNo<=0 then begin
+      Buildr.IntBuildNo=StringToInt(StripNonDigits(Buildr.BuildNr));
+    end;
+  end else begin
+    Buildr.IntBuildNo=0;
+  end;
+
+  BuildVcRecordImport = -1;
+return;
+end;
+
+global
+updating function longint BuildVcRecordSave(var record BuildVc Buildr,record BuildVc Buildr2,longint a,longint b)
+begin
+  record FlatsVc Premr;//premise
+  longint res;
+
+  // if blank(Buildr.Objects) then begin
+  //   AddObjectToRec(Buildr.Code,Buildr.Objects,"E",Buildr.Address,"");
+  // end;
+  if nonblank(Buildr.Street) or nonblank(Buildr.BuildNr) then begin
+    Buildr.Address = Buildr.Street & " " & StringToInt(StripNonDigits(Buildr.BuildNr));
+  end;
+  
+  if nonblank(Buildr.BuildNr) then begin
+    if Buildr.IntBuildNo<=0 then begin
+      Buildr.IntBuildNo=StringToInt(StripNonDigits(Buildr.BuildNr));
+    end;
+  end else begin
+    Buildr.IntBuildNo=0;
+  end;
+
+  // create premise
+  RecordNew(Premr);
+  Premr.FlatCode = "P" & Buildr.ExtensionNo & Buildr.LotNo & StringToInt(StripNonDigits(Buildr.DivisionNo)) & StringToInt(StripNonDigits(Buildr.UnitNo)); // key
+  Premr.Code = "E" & Buildr.ExtensionNo & Buildr.LotNo & StringToInt(StripNonDigits(Buildr.DivisionNo)) & StringToInt(StripNonDigits(Buildr.UnitNo));
+  Premr.Address = Buildr.Address;
+  Premr.RegisterNo = Buildr.RegisterNo;
+  RecordImportStore(Premr,false);
+  //
+  
+  BuildVcRecordSave = res;
+return;
+end;
+
+global updating 
+function longint BuildVcRecordUpdate(var record BuildVc Buildr,record BuildVc Buildr2,longint stat,longint b)
+begin
+  record FlatsVc Premr,Prem2r;//premise
+  longint res;
+
+  res = 0;
+  if nonblank(Buildr.BuildNr) then begin
+    if Buildr.IntBuildNo<=0 then begin
+      Buildr.IntBuildNo=StringToInt(StripNonDigits(Buildr.BuildNr));
+    end;
+  end else begin
+    Buildr.IntBuildNo=0;
+  end;
+
+  if nonblank(Buildr.Street) or nonblank(Buildr.BuildNr) then begin
+    Buildr.Address = Buildr.Street & " " & StringToInt(StripNonDigits(Buildr.BuildNr));
+  end;
+
+  // update premise
+  Premr.FlatCode = "P" & Buildr.ExtensionNo & Buildr.LotNo & StringToInt(StripNonDigits(Buildr.DivisionNo)) & StringToInt(StripNonDigits(Buildr.UnitNo)); // key;
+  if(ReadFirstMain(Premr,1,true)) then begin
+    RecordCopy(Prem2r, Premr);
+    Prem2r.Address = Buildr.Address;
+    Prem2r.RegisterNo = Buildr.RegisterNo;
+    RecordUpdate(Premr,Prem2r,false);
+  end;
+  //
+  
+  BuildVcRecordUpdate = res;
+return;
+end;
+
+global
+function LongInt BuildVcRecordInIndex(record BuildVc Buildr,string indexname)
+begin
+  LongInt res;
+  boolean testf;
+  
+  res = 1;
+  // if indexname == "AddrWithoutSpecClass" then begin
+  //   if SetInSet("1",Buildr.Classification) or SetInSet("2",Buildr.Classification) or SetInSet("3",Buildr.Classification) then begin
+  //     res = 0;
+  //   end;
+  // end;
+  
+  BuildVcRecordInIndex = res;
+  return;
+end;
+
+global
+updating function LongInt BuildVcRecordRemoveTest(Var Record BuildVc Buildr, Record BuildVc Build2r, LongInt stat, LongInt check)
+begin
+ 
+  LongInt res;
+  
+  res = 1;
+  
+  if (UserCanAction("CustomRecordDeleteERF",false) == false) then begin
+      res = 0;
+      MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteERF"));
+      goto LBuildVcRecordRemove;
+  end;
+    RemoveBuildFields(Buildr.Code);
+
+LBuildVcRecordRemove:;
+  BuildVcRecordRemoveTest = res;
+  return;
+end;
+
+
+global
+function LongInt BuildVcRecordDefaults(Var Record BuildVc Buildr, Record BuildVc Build2r, LongInt long3, LongInt long4)
+begin
+  Buildr.Classification = "ERF";
+
+  BuildVcRecordDefaults = 1;
+  return;
+end;

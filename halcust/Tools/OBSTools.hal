@@ -1,0 +1,135 @@
+external inner procedure ExtractObj(string,var integer,var string);
+external function boolean GetActualCustCO(string,date,var record NAContractVc,boolean,boolean);
+
+global
+procedure OBSAddRemoveObjects(string orgObjects,string old_obj,string str_addObjects,var string res_objects) begin
+  integer pos,size;
+  string 20 res;
+  string 60 tstr;
+  
+  pos = 0;
+  ExtractObj(orgObjects,pos,res);
+  while (nonblank(res)) begin
+    if !SetInSet(res,old_obj) then begin
+      if nonblank(tstr) then begin
+        tstr = tstr & "," & res;
+      end else begin
+        tstr = res;
+      end;
+    end;
+    ExtractObj(orgObjects,pos,res);
+  end;  
+  
+  if nonblank(str_addObjects) then begin
+    if nonblank(tstr) then begin
+      tstr = tstr & "," & str_addObjects;
+    end else begin
+      tstr = str_addObjects;
+    end;
+  end;
+  
+  res_objects = tstr;
+  return;
+end;
+
+global 
+procedure PasteNAFields(var record IVVc IVr)
+begin
+  string 50 oldbuild;
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  boolean wloop,testf;
+  date td;
+  string 255 newobjects,oldobjects,resobjects;
+
+  oldbuild = IVr.BuildCode;
+  if nonblank(IVr.CustCode) and IVr.MergedInvFlag==0 then begin
+    if nonblankdate(IVr.InvDate) then begin
+      td = IVr.InvDate;
+    end else begin
+      td = CurrentDate;
+    end;
+    testf=false;
+    if GetActualCustCO(IVr.CustCode,td,NAContractr,false,true) and IVr.Contract==-1 then begin
+      testf=true;
+    end;
+    if IVr.Contract!=-1 then begin
+      NAContractr.SerNr=IVr.SerNr;
+      if ReadFirstMain(NAContractr,1,true) then begin
+        testf=true;
+      end;
+    end;
+    if testf then begin
+      IVr.BuildCode=NAContractr.BuildCode;
+      Buildr.Code = oldbuild;
+      if ReadFirstMain(Buildr,1,true) then begin
+        oldobjects = Buildr.Objects;
+      end;
+      ResetLoop(Buildr);
+      Buildr.Code = NAContractr.BuildCode;
+      if ReadFirstMain(Buildr,1,true) then begin
+        newobjects = Buildr.Objects;
+      end;
+      OBSAddRemoveObjects(IVr.Objects,oldobjects,newobjects,resobjects);
+      IVr.Objects = resobjects;
+      IVr.Contract=NAContractr.SerNr;
+      IVr.FlatCode=NAContractr.FlatCode;
+      if nonblank(NAContractr.LangCode) then begin
+        IVr.LangCode=NAContractr.LangCode;
+      end;
+    end;
+  end;
+  return;
+end;
+
+global 
+function LongInt RecordRemoveTest(date td,LongInt errmf) begin
+  record DBLockBlock DBLockRec;
+  longint res;
+  
+  res=1;
+  BlockLoad(DBLockRec);
+  if (td<=DBLockRec.OtherLock) then begin
+    if (errmf>0) then begin
+      MessageBox(1560,"");
+    end;
+    res = 0;
+  end;
+  
+  RecordRemoveTest=res;
+return;
+end;
+
+global
+function string 255 OBS_IVOpenPrepExists(string custcode) 
+BEGIN
+  record ARPayVc ARPayr;
+  string 255 tstr;
+  
+  ARPayr.CustCode = custcode;
+  if (ReadFirstKey("CustCode",ARPayr,1,true)) then begin
+    tstr = UsetStr(2025);
+  end;           
+  
+  OBS_IVOpenPrepExists = tstr;
+  RETURN;
+END;
+
+global
+function string 255 OBS_NormalizeString(string origstr,string removechar)
+begin
+  string 255 res;
+  integer i;
+  string 1 strchar;
+  
+  res = "";
+  for (i=1;i<=len(origstr);i=i+1) begin
+    strchar = Right(left(origstr,i),1);
+    if strchar != removechar then begin
+      res = res & strchar; 
+    end;
+  end;
+  
+  OBS_NormalizeString = res;
+  return;
+end;

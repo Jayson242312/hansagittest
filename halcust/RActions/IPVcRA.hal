@@ -1,0 +1,349 @@
+external inner procedure IPPastePayMode(var record IPVc);
+external updating procedure UpdateItemPayHistVcFromIPVc(Record IPVc,boolean,string);
+external function boolean InvArtCodeOverPayExsist(longint,string,longint,val);
+external inner procedure IPSumup(var record IPVc);
+
+global
+updating function LongInt IPVcRecordUpdate(var record IPVc IPr,record IPVc IP2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  // record NApsSetBlock NApsSetr;
+  transaction boolean gOBSGenTransMaintf;
+  res = inner.IPVcRecordUpdate(IPr,IP2r,stat,long4);
+  
+  if !gOBSGenTransMaintf then begin
+    if ((IPr.OKFlag!=0) and (IP2r.OKFlag==0)) then begin
+      UpdateItemPayHistVcFromIPVc(IPr,false,"");
+    end;
+    if ((IPr.OKFlag==0) and (IP2r.OKFlag!=0)) then begin//unok
+      UpdateItemPayHistVcFromIPVc(IPr,true,"");
+    end;
+  end;
+
+  return;
+end;
+
+global
+updating function LongInt IPVcRecordSave(var record IPVc IPr,record IPVc IP2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  integer i,rwc;
+  val ipTotal;
+  row IPVc IPrw;
+
+  res = inner.IPVcRecordSave(IPr,IP2r,stat,long4);
+
+  if (IPr.OKFlag!=0) then begin
+    UpdateItemPayHistVcFromIPVc(IPr,false,"");
+  end;
+
+  rwc=MatRowCnt(IPr);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(IPr,i,IPrw);
+    ipTotal = ipTotal + IPrw.RecVal;
+  end;
+
+  if(ipTotal != IPr.CurPayVal) then begin
+    IPr.CurPayVal = ipTotal;
+  end;
+
+  // rwc=MatRowCnt(IPr);
+  // for (i=0;i<rwc;i=i+1) begin
+  //   MatRowGet(IPr,i,IPrw);
+  //   if nonblank(IPrw.CustCode) then begin
+  //     IPr.RecNumber = IPrw.CustCode;
+  //     i=rwc;
+  //   end;
+  // end;
+
+  IPVcRecordSave = res;
+  return;
+end;
+
+global
+function LongInt IPVcRecordDefaults(var record IPVc IPr,record IPVc IP2r,LongInt stat,LongInt long4)
+BEGIN
+  longint res;
+  record IPVc LastIPr;
+  record SRBlock SRr;
+
+  // ===== CUSTOM CODE ======
+  IPr.INPayPriority = 1;
+  IPr.TransDate = CurrentDate;
+  // ===== END OF CUSTOM CODE ======
+
+  res = inner.IPVcRecordDefaults(IPr,IP2r,stat,long4);
+
+  // IPr.TransDate = "";
+  BlockLoad(SRr);
+  if SRr.LastPayNr<>-1 then begin
+    LastIPr.SerNr = SRr.LastPayNr;
+    if ReadFirstMain(LastIPr,1,true) then begin
+      IPr.TransDate = LastIPr.TransDate;
+      IPr.PayMode = LastIPr.PayMode;
+      IPPastePayMode(IPr);
+    end;
+  end;
+
+  return;
+end;
+
+global
+updating function LongInt IPVcRecordSaveAfter(var record IPVc IPr,record IPVc IP2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record SRBlock SRr;
+
+  res=inner.IPVcRecordSaveAfter(IPr,IP2r,stat,long4);
+
+  BlockLoad(SRr);
+  SRr.LastPayNr = IPr.SerNr;
+  BlockStore(SRr);
+
+  return;
+end;
+
+global
+function LongInt IPVcRecordRemoveTest(var record IPVc IPr,record IPVc IP2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+
+  res=inner.IPVcRecordRemoveTest(IPr,IP2r,long3,long4);
+
+  if res==1 then begin
+    if IPr.OKFlag==1 then begin
+      MessageBox(1000978,"");
+      res=0;
+    end;
+  end;
+
+  IPVcRecordRemoveTest = res;
+  RETURN;
+END;
+
+global
+function boolean CustHasUnpayedIV(string CustCode,date prepaydate) begin
+  boolean res,wloop;
+  Record ARVc ARr;
+  Record IVVc IVr;
+
+  res=false;
+  wloop=true;
+  ARr.CustCode=custcode;
+  While LoopKey("CustCode",ARr,1,wloop)begin
+    if ARr.CustCode!=custcode then begin
+      wloop=false;
+    end else begin
+      IVr.SerNr=ARr.InvoiceNr;
+      if ReadFirstMain(IVr,1,true) then begin
+        if IVr.InvDate>prepaydate then begin
+          res=true;
+          wloop=false;
+        end;
+      end;
+    end;
+  end;
+
+  CustHasUnpayedIV=res;
+return;
+end;
+
+function boolean ArtcodeExsitInInv(longint sernr,string artcode,longint contract)
+begin
+  record IVVC IVr;
+  row IVVc IVrw;
+  integer i,rwc;
+  boolean res;
+  
+  IVr.SerNr=sernr;
+  If ReadFirstMain(IVr,1,true) then begin
+    rwc=MatRowCnt(IVr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(IVr,i,IVrw);
+      if IVrw.stp==kInvoiceRowTypeNormal then begin
+        if IVr.MergedInvFlag==1 then begin
+          if IVrw.ArtCode==artcode then begin
+            if contract!=-1 and IVrw.ContractNr==contract then begin
+              res=true;
+              i=rwc;
+            end else begin
+              res=true;
+              i=rwc;
+            end;
+          end;
+        end else begin
+          if IVrw.ArtCode==artcode then begin
+            res=true;
+            i=rwc;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  ArtcodeExsitInInv = res;
+  return;
+end;
+
+global
+updating function LongInt IPVcRecordCheck(var record IPVc IPp,record IPVc IP2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Row IPVc IPrw;
+  Record INPayPriorityVc INPayPriorityr;
+  record IVVc IVr;
+  integer i,rwc;
+  Integer insertmode,updatemode;
+  boolean unokf,okf;
+  transaction boolean gOBSUnOkOneRowf;
+  
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+
+  if(stat==insertmode)then begin// added from -> IPVcRActionClient
+    IPp.SalesMan = currentuser;
+  end;
+
+  if (IPp.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (IP2p.OKFlag==1) then begin
+        unokf = true;
+      end;
+    end;
+  end;
+  // Permission to unok receipt
+  if (unokf) then begin
+    if(UserCanAction("CustomRecordUnOkReceipts",false)==false ) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkReceipts"));
+    goto LIPVcRecordCheck;
+    end;
+  end;
+  //
+  if (IPp.OKFlag==1) then begin
+    if (stat==updatemode) then begin
+      if (IP2p.OKFlag==0) then begin
+        okf = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf = true;
+    end;
+  end;
+
+  if !unokf then begin
+    if IPp.PrePayPriority!=-1 then begin
+      INPayPriorityr.SerNr = IPp.PrePayPriority;
+      if !ReadFirstMain(INPayPriorityr,1,true) then begin
+        RecordCheckError(1290,"",-1,"PrePayPriority");
+        res = -1;
+        goto LIPVcRecordCheck;
+      end;
+      if INPayPriorityr.INPayType!=2 then begin
+        RecordCheckError(1000072,"",-1,"PrePayPriority");
+        res = -1;
+        goto LIPVcRecordCheck;
+      end;
+    end;
+  end;
+  
+  if okf then begin
+    // Permission to ok receipt
+    if(UserCanAction("CustomRecordOkReceipts",false)==false ) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordOkReceipts"));
+    goto LIPVcRecordCheck;
+    end;
+
+    //
+    rwc = MatRowCnt(IPp);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(IPp,i,IPrw);
+      if IPrw.InvoiceNr!=-1 and blank(IPrw.rkRecNumber) then begin
+        RecordCheckError(1058,"",i,"rkRecNumber");
+        res = -1;
+        goto LIPVcRecordCheck;
+      end;
+      if IPrw.ContractNr!=-1 and IPrw.InvoiceNr!=-1 then begin
+        IVr.SerNr=IPrw.InvoiceNr;
+        if ReadFirstMain(IVr,1,true) then begin
+          if IVr.MergedInvFlag==0 then begin  
+            if IPrw.ContractNr!=IVr.Contract then begin
+              RecordCheckError(1001447,"",i,"ContractNr");
+              res = -1;
+              goto LIPVcRecordCheck;
+            end;
+          end;
+        end;
+      end;
+
+      // ============== Commented out code that checks that receipt item exists in the invoice =============
+      // if IPrw.InvoiceNr!=-1 and IPrw.rkRecNumber!="" then begin
+      //   if !ArtcodeExsitInInv(IPrw.InvoiceNr,IPrw.rkRecNumber,IPrw.ContractNr) then begin
+      //     RecordCheckError(1001482,"",i,"rkRecNumber");
+      //     res = -1;
+      //     goto LIPVcRecordCheck;
+      //   end;
+      // end;
+      // ====================================================================================================
+
+      if IPrw.ContractNr!=-1 and IPrw.InvoiceNr!=-1 and IPrw.rkRecNumber!="" then begin
+        if InvArtCodeOverPayExsist(IPrw.InvoiceNr,IPrw.rkRecNumber,IPrw.ContractNr,IPrw.RecVal) then begin
+          RecordCheckError(1001488,"",i,"rkRecNumber");
+          res = -1;
+          goto LIPVcRecordCheck;
+        end;
+      end;
+    end;
+  end;
+
+  if(IPp.KeepChange==1 and IPp.ChangeVal>0)then begin
+    MessageBox(0,"Keep change checkbox was ticked. Click distribute amount.");
+    res = -1;
+    goto LIPVcRecordCheck;
+  end;
+
+  if(IPp.UseCredit==1 and IPp.ChangeVal>0)then begin
+    MessageBox(0,"If using on Account, Keep Change must be checked");
+    res = -1;
+    goto LIPVcRecordCheck;
+  end;
+
+  res=inner.IPVcRecordCheck(IPp,IP2p,stat,long4);
+
+LIPVcRecordCheck:;
+  IPVcRecordCheck=res;
+  return;
+end;
+
+global
+function LongInt IPVcRecordDuplicate(var record IPVc IPr,record IPVc IP2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Integer i,rwcnt,wn;
+  row IPVc IPrw;
+
+  res=inner.IPVcRecordDuplicate(IPr,IP2r,stat,long4);
+
+
+  wn = curWindow;
+  PutWindowString(wn,"POSIPDClassCustomer",""); 
+  IPr.OKFlag = 0;
+  IPr.PayVal = 0;
+  IPr.UseCredit = 0;
+  IPr.KeepChange = 0;
+  IPr.CreditVal = blankval;
+  IPr.ChangeVal = blankval;
+  //clear rows
+  rwcnt = matrowcnt(IPr);
+  for(i=0;i<rwcnt;i=i+1)begin
+    matrowdelete(IPr,0);
+  end;
+  IPSumup(IPr);
+  //
+
+
+
+  IPVcRecordDuplicate = res;
+  return;
+END;

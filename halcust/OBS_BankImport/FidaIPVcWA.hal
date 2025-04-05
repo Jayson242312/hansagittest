@@ -1,0 +1,635 @@
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external inner procedure PasteFromSysList(Integer,Integer);
+external inner procedure PasteFromWn(Integer,string);
+external inner procedure ExtractObj(string,var Integer,var string);
+external inner function Boolean GetPMRow(string,var row PMBlock);
+remote updating procedure MakeIPFromFidaIP(string,string,val,string,date,string,integer,var integer,var longint,var integer,var integer,longint,longint,var longint,record FidaIPVc,integer,string,string);
+remote updating procedure MakeTRFromFidaIP(string,string,val,string,date,var integer,var longint,var integer,string);
+remote updating function boolean CanelIPFromFidaIP(longint,var integer,boolean);
+remote updating function boolean CancelTRFromFidaIP(date,longint,var integer);
+remote function boolean UpdFidaIPVcRowFromNAContr(var record FidaIPVc,integer,var longint);
+remote updating procedure SortFidaIPRows(var record FidaIPVc);
+remote procedure CreateSOCFidaIP(var record FidaIPVc,record IPVc);
+remote function boolean UpdFidaIPVcRowFromCU(var record FidaIPVc,integer);
+remote updating procedure InsertContractsFidaIP(var record FidaIPVc);
+remote procedure FidaIPExpandNIP(var record FidaIPVc,integer);
+remote function boolean UpdFidaIPVcRowFromInvoice(var record FidaIPVc,integer,var longint);
+remote updating procedure FidaIPVcMakeRecRemote(var record FidaIPVc,var integer,var integer,var integer,var longint);
+remote function boolean GetFidaIPGenRec(integer,longint,date,var record IPVc,var record OPVc,var Record TRVc);
+
+global updating
+procedure InsertContracts_FidaIPDsm()
+begin
+  Record FidaIPVc Fidar;
+  integer wn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,Fidar);
+  DeselectWindow(wn,false);
+  if (Fidar.Closed!=1) and (Fidar.OKFlag!=1) and NonBlankDate(Fidar.TransDate) then begin
+    InsertContractsFidaIP(Fidar);
+    PutWindowRecord(wn,Fidar);
+  end;
+  
+  return;
+end;
+  
+global updating
+procedure CreateSOCFidaIPbtn()
+begin
+  record IPVc IPr; // receipt
+  Record FidaIPVc Fidar;
+  integer wn,nwn;
+  
+  wn=CurWindow;
+  GetWindowRecord(wn,IPr);
+  DeselectWindow(wn,false);
+  if MatRowCnt(IPr)!=0 then begin
+    CreateSOCFidaIP(Fidar,IPr);
+    CloseWindow(wn);
+    nwn=OpenWindow("FidaIPDClass",1,0,"","",Fidar);
+  end;
+
+  return;
+end;
+
+global updating
+procedure InputSOC_FidaIPlsm()
+begin
+  record IPVc IPr;
+  integer nwn;
+  
+  nwn = OpenWindow("SOCInputWClass",1,0,"","",IPr);
+
+  return;
+end;
+
+global updating 
+procedure SortRows_FidaIPDsm() begin
+  Record FidaIPVc Fidar;
+  integer wn;
+  
+  wn=CurWindow;
+  if (Fidar.Closed!=1) and (Fidar.OKFlag!=1) then begin
+    GetWindowRecord(wn,Fidar);
+    DeselectWindow(wn,false);
+    SortFidaIPRows(Fidar);
+    PutWindowRecord(wn,Fidar);
+  end;
+  
+return;
+end;
+
+procedure PasteTagFromSysList(Integer wn)
+begin
+  PasteFromWn(wn,GetListTag(wn,SelectedListLine(wn)));
+  return;
+end;
+
+global
+function Boolean OBS_FidaTypeSClassOnOpenWindow(Integer wn)
+begin
+  string 255 tstr;
+  
+  tstr = USetStr(1100000);
+  SetListStringAndTag(wn,0,tstr,"0");     
+  
+  tstr = USetStr(1100001);
+  SetListStringAndTag(wn,1,tstr,"1");
+  
+  OBS_FidaTypeSClassOnOpenWindow=false;
+return;
+end;
+
+global
+function Boolean OBS_FidaTypeSClassOnOKWindow(Integer wn)
+begin
+  
+  PasteTagFromSysList(wn);
+  OBS_FidaTypeSClassOnOKWindow = false;
+  return;
+end;
+
+global updating
+procedure CreateIP_TR_FidaIPDsm()
+begin
+  Record FidaIPVc Fidar;
+  Row FidaIPVc Fidarw;
+  row PMBlock PMrw;
+  integer i,rwc,rownr,wn,ipcnt,ipok,ipcntIP,nwn;
+  boolean testf,update,allMadef;
+  longint ipnr,error;
+  record RcVc RepSpec;
+  
+  ipcntIP=0; ipok=0;
+  wn=CurWindow; update=false;
+  if (WindowState(wn)!=Rs_normal) then begin
+    MessageBox(1000763,"");
+    GoTo LCreateIP_TR_FidaIPDsm;
+  end;
+  
+  GetWindowRecord(wn,Fidar);
+  DeselectWindow(wn,false);
+  if Fidar.OKFlag==1 and Fidar.Closed==0 then begin
+    
+    nwn = OpenWindow("CreateRecFromFidaWClass",1,0,"","",RepSpec);
+    SelectWindow(nwn);
+    
+    rwc=MatRowCnt(Fidar);
+    //Make IPVc
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr>0 then begin
+        testf=false;
+      end;
+      if Fidarw.DCType!=0 then begin
+        testf = false;
+      end;
+      if testf then begin
+        MakeIPFromFidaIP(Fidarw.CustCode,Fidarw.InvoiceList,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,Fidar.PayMode,Fidarw.PayType,rownr,ipnr,ipcntIP,ipok,Fidarw.ContractNr,StringToLongInt(Fidarw.DebtRepAgreements),error,Fidar,i+1,Fidarw.FidaRowID,Fidarw.CaseNr);
+        if ipnr!=-1 then begin
+          Fidarw.IPNr=ipnr;
+          MatRowPut(Fidar,i,Fidarw);
+          update=true;
+        end;
+      end;
+    end;
+    //Make TRVc
+    ipcnt=0;
+    if !GetPMRow(Fidar.PayMode,PMrw) then begin
+      MessageBox(0,USetStr(1100023));
+      GoTo LCreateIP_TR_FidaIPDsm;
+    end;  
+    if blank(PMrw.AccNr) then begin
+      MessageBox(0,USetStr(1100024));
+      GoTo LCreateIP_TR_FidaIPDsm;
+    end;
+    rwc=MatRowCnt(Fidar);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr>0 then begin
+        testf=false;
+      end;
+      if Fidarw.DCType!=2 then begin
+        testf = false;
+      end;
+      if testf then begin
+        MakeTRFromFidaIP(Fidarw.AccNumber,PMrw.AccNr,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,rownr,ipnr,ipcnt,Fidarw.RowComment);
+        Fidarw.IPNr=ipnr;
+        MatRowPut(Fidar,i,Fidarw);
+        update=true;
+      end;
+    end;
+  end else begin
+    beep;
+  end;
+  CloseWindow(nwn);
+  
+  // MessageBox(0,USetStr(1100011) & " " & ipcntIP & " (" & USetStr(1100013) & ": " & ipok & ") " & USetStr(1100012) & ". " & USetStr(1100025) & ipcnt);
+
+  if update then begin
+    
+    allMadef=true;
+    rwc=MatRowCnt(Fidar);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      if Fidarw.IPNr==-1 then begin
+        allMadef=false;
+      end;
+    end;
+    if allMadef then begin
+      Fidar.IPMadeFlag=1;
+    end;
+    
+    PutWindowRecord(wn,Fidar);
+    if (WindowDoOK(wn,0)) then begin 
+    end;
+  end;
+  
+  MessageBox(0,USetStr(1100011) & " " & ipcntIP & " (" & USetStr(1100013) & ": " & ipok & ") " & USetStr(1100012) & ". " & USetStr(1100025) & ipcnt);
+  
+  SelectWindow(wn);
+  
+LCreateIP_TR_FidaIPDsm:;
+  return;
+end;
+
+global updating
+procedure CreateIP_TR_FidaIPDsm2()
+begin
+  Record FidaIPVc Fidar;
+  record RcVc RepSpec;
+  integer wn,nwn,ipcntIP,ipok,ipcnt;
+  longint error;
+  string 255 tstr;
+  
+  ipcntIP=0; ipok=0; ipcnt=0;
+  wn=CurWindow;
+  if (WindowState(wn)!=Rs_normal) then begin
+    MessageBox(1000763,"");
+    GoTo LCreateIP_TR_FidaIPDsm2;
+  end;
+
+  GetWindowRecord(wn,Fidar);
+  // CloseWindow(wn);
+  nwn = OpenWindow("FidaIPMakeWaitWClass",1,0,"","",RepSpec);
+  qupdating.FidaIPVcMakeRecRemote(Fidar,ipcntIP,ipok,ipcnt,error);
+  PutWindowRecord(wn,Fidar);
+  if (WindowDoOK(wn,0)) then begin 
+  end;
+  CloseWindow(nwn);
+  // nwn = OpenWindow("FidaIPDClass",1,0,"","",Fidar);
+  if error>0 then begin
+    MessageBox(error,"");
+  end else begin
+    tstr = USetStr(1100011) & " " & ipcntIP & " (" & USetStr(1100013) & ": " & ipok & ") " & USetStr(1100012) & ". " & chr(10); 
+    tstr = tstr & USetStr(1100025) & ipcnt & ".";
+    MessageBox(0,tstr);
+  end;
+LCreateIP_TR_FidaIPDsm2:;
+  return;
+end;
+
+global updating
+procedure CancelIP_FidaIPDsm()
+begin
+  Record FidaIPVc Fidar;
+  Row FidaIPVc Fidarw;
+  integer i,rwc,wn,ipcnt;
+  boolean testf,update;
+  
+  wn=CurWindow; update=false;
+  GetWindowRecord(wn,Fidar);
+  DeselectWindow(wn,false);
+  if Fidar.OKFlag==1 and Fidar.Closed==0 then begin
+    rwc=MatRowCnt(Fidar);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr==-1 then begin
+        testf=false;
+      end;
+      if testf then begin
+        if Fidarw.DCType==0 then begin
+          if CanelIPFromFidaIP(Fidarw.IPNr,ipcnt,false) then begin
+            Fidarw.IPNr=-1;
+            MatRowPut(Fidar,i,Fidarw);
+            update=true;
+          end;
+        end;
+        if Fidarw.DCType==2 then begin
+          if CancelTRFromFidaIP(Fidar.TransDate,Fidarw.IPNr,ipcnt) then begin
+            Fidarw.IPNr=-1;
+            MatRowPut(Fidar,i,Fidarw);
+            update=true;
+          end;
+        end;
+      end;
+    end;
+    MessageBox(0,USetStr(1100031) & " " & ipcnt & " " & USetStr(1100012));
+  end else begin
+    Beep;
+  end;
+
+  if update then begin
+    Fidar.IPMadeFlag=0;
+    PutWindowRecord(wn,Fidar);
+    if (WindowDoOK(wn,0)) then begin 
+    end;
+  end;
+  SelectWindow(wn);
+  
+  return;
+end;
+
+global updating
+procedure CancelIP_RowFidaIPDsm()
+begin
+  integer wn,insertmode,updatemode,rownr,ipcnt;
+  record FidaIPVc Fidar;
+  row FidaIPVc Fidarw;
+  boolean testf,update;
+  
+  wn = CurWindow;
+  update = false;
+  // insertmode = 1;
+  // updatemode = 2;
+  // if ((WindowState(wn)==updatemode) or (WindowState(wn)==insertmode)) then begin
+  rownr = WindowActiveRow(wn);
+  DeselectWindow(wn,true);
+  GetWindowRecord(wn,Fidar);
+  if Fidar.OKFlag==1 and Fidar.Closed==0 then begin
+    if rownr>=0 then begin
+      MatRowGet(Fidar,rownr,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr==-1 then begin
+        testf=false;
+      end;
+      if testf then begin
+        if Fidarw.DCType==0 then begin
+          if CanelIPFromFidaIP(Fidarw.IPNr,ipcnt,true) then begin
+            Fidarw.IPNr=-1;
+            MatRowPut(Fidar,rownr,Fidarw);
+            update=true;
+          end;
+        end;
+        if Fidarw.DCType==2 then begin
+          if CancelTRFromFidaIP(Fidar.TransDate,Fidarw.IPNr,ipcnt) then begin
+            Fidarw.IPNr=-1;
+            MatRowPut(Fidar,rownr,Fidarw);
+            update=true;
+          end;
+        end;
+      end;
+    end;
+    MessageBox(0,USetStr(1100031) & " " & ipcnt & " " & USetStr(1100012));
+  end else begin
+    Beep;
+  end;
+
+  if update then begin
+    Fidar.IPMadeFlag=0;
+    PutWindowRecord(wn,Fidar);
+    if (WindowDoOK(wn,0)) then begin 
+    end;
+  end;
+  SelectWindow(wn);
+  
+  return;
+end;
+
+function boolean TypeFidaIPDClassAEField(integer wn,integer rownr,integer changed) begin
+  Record FidaIPVc Fidar;
+  Row FidaIPVc Fidarw;
+  Record ARVc ARr;
+  Record IVVc IVr;
+  integer ecode,pos;
+  string 255 tstr,invoicenr;
+  val t,t2;
+  val fr,to1,to2,br1,br2;
+  
+  ecode=0;
+  if changed!=0 then begin
+    GetWindowRecord(wn,Fidar);
+    MatRowGet(Fidar,rownr,Fidarw);
+    if Fidarw.Type==1 then begin
+      /*if blank(Fidarw.RegNr) then begin
+        ecode=1;
+        Goto EndTypeFidaIPDClassAEField;
+      end;*/
+      if Fidarw.Amount<0 and Fidarw.DCType!=2 then begin
+        ecode=2;
+        Goto EndTypeFidaIPDClassAEField;
+      end;
+      if nonblank(Fidarw.RegNr) and nonblank(Fidarw.InvoiceList) and Fidarw.Amount>0 then begin
+        pos = 0; t=0;
+        ExtractObj(Fidarw.InvoiceList,pos,invoicenr);
+        while nonblank(invoicenr) begin
+          IVr.SerNr=invoicenr;
+          if !ReadFirstMain(IVr,1,true) then begin
+            ecode=5;
+            Goto EndTypeFidaIPDClassAEField;
+          end;
+          ARr.InvoiceNr=invoicenr;
+          if !ReadFirstMain(ARr,1,true) then begin
+            ecode=3;
+            Goto EndTypeFidaIPDClassAEField;
+          end;
+          t=t+MulRateToBase1(ARr.ARCurncyCode,ARr.RVal,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+          ExtractObj(Fidarw.InvoiceList,pos,invoicenr);
+        end;
+      
+        GetFullCurncyRate(Fidarw.Currency,Fidar.TransDate,fr,to1,to2,br1,br2);
+        t2=MulRateToBase1(Fidarw.Currency,Fidarw.Amount,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+        if t2>t then begin
+          ecode=4;
+          Goto EndTypeFidaIPDClassAEField;
+        end;
+      end;
+    end;
+  end;
+  
+  
+EndTypeFidaIPDClassAEField:;
+  if ecode!=0 then begin
+    Switch (ecode) begin
+      case 1: tstr=USetStr(1100014); //nav nor�d�ts klienta reg nr
+      case 2: tstr=USetStr(1100015); //nor�d�t� summa ir zem 0
+      case 3: tstr=USetStr(1100016); //k��da nor�d�taj� r��in�
+      case 4: tstr=USetStr(1100017); //summa ir liel�ka k� neapmaks�t� r��ina summa
+      case 5: tstr=USetStr(1100018); //nav r��ina
+    end;
+    Beep;
+    MessageBox(0,tstr);
+  end;
+  
+  TypeFidaIPDClassAEField=false;
+end;
+
+function boolean CustCodeFidaIPDClassAEField(integer wn,integer rownr,integer changed) begin
+  Record FidaIPVc Fidar;
+  
+  if changed!=0 then begin
+    GetWindowRecord(wn,Fidar);
+    if UpdFidaIPVcRowFromCU(Fidar,rownr) then begin
+      PutWindowRecord(wn,Fidar);
+    end;
+  end;
+  
+  CustCodeFidaIPDClassAEField=false;
+end;
+
+function boolean ContractNrFidaIPDClassAEField(integer wn,integer rownr,integer changed) begin
+  Record FidaIPVc Fidar;
+  longint warn;
+  
+  if changed!=0 then begin
+    GetWindowRecord(wn,Fidar);
+    if UpdFidaIPVcRowFromNAContr(Fidar,rownr,warn) then begin
+      PutWindowRecord(wn,Fidar);
+    end;
+    if warn!=-1 then begin
+      MessageBox(warn,"");
+    end;
+  end;  
+  
+  ContractNrFidaIPDClassAEField=false;
+end;
+
+function boolean InvoiceListFidaIPDClassAEField(integer wn,integer rownr,integer changed)
+begin
+  Record FidaIPVc Fidar;
+  longint warn;
+  
+  if changed!=0 then begin
+    GetWindowRecord(wn,Fidar);
+    if UpdFidaIPVcRowFromInvoice(Fidar,rownr,warn) then begin
+      PutWindowRecord(wn,Fidar);
+    end;
+    if warn!=-1 then begin
+      MessageBox(warn,"");
+    end;
+  end;  
+  
+  InvoiceListFidaIPDClassAEField=false;
+  return;
+end;
+
+global
+function boolean FidaIPDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed) begin
+  Boolean res;
+  
+  Switch (fieldname) begin
+    Case "Type": res=TypeFidaIPDClassAEField(wn,rownr,changed);
+    Case "CustCode": res=CustCodeFidaIPDClassAEField(wn,rownr,changed);
+    Case "ContractNr": res=ContractNrFidaIPDClassAEField(wn,rownr,changed);
+    Case "InvoiceList": res=InvoiceListFidaIPDClassAEField(wn,rownr,changed);
+  end;
+  
+  FidaIPDClassAfterEditField=res;
+  return;
+end;
+
+global
+function Boolean FidaIPDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  record FidaIPVc FidaIPr;
+  record FidaIPVc FidaIP2r;
+  row FidaIPVc FidaIPrw;
+  
+  res=true;
+  if WindowState(wn)==2 then begin
+    GetPrevWindowRecord(wn,FidaIPr);
+  end else begin
+    GetWindowRecord(wn,FidaIPr);
+  end;
+  if (FidaIPr.OKFlag==1) then begin 
+    res=false;
+  end;
+  
+  FidaIPDClassActiveEditField = res;
+  RETURN;
+END;
+
+global 
+function Boolean FidaIPDClassDeleteRowTest(Integer wn,Integer rownr) begin
+  Boolean res;
+  record FidaIPVc FidaIPr;
+  
+  res=true;
+  GetWindowRecord(wn,FidaIPr);
+  if (FidaIPr.OKFlag==1) then begin 
+    res=false;
+  end;
+  
+  FidaIPDClassDeleteRowTest=res;
+  return;
+end;
+
+global 
+function Boolean FidaIPDClassInsertRowTest(Integer wn,Integer rownr) begin
+  Boolean res;
+  record FidaIPVc FidaIPr;
+  
+  res=true;
+  GetWindowRecord(wn,FidaIPr);
+  if (FidaIPr.OKFlag==1) then begin 
+    res=false;
+  end;
+  
+  FidaIPDClassInsertRowTest=res;
+  return;
+end;
+
+global
+function string 40 FidaIPDClassSpecPasteName(Integer wn,string defpsname)
+begin
+  string 40 psname;
+  record FidaIPVc FidaIPr;
+  row FidaIPVc FidaIPrw;
+  integer rownr;
+  
+  psname = defpsname;
+  switch (WindowActiveField(wn)) begin
+    case "InvoiceList": 
+          GetWindowRecord(wn,FidaIPr);
+          rownr = GetWindowCurRow(wn);
+          if rownr>=0 then begin
+            MatRowGet(FidaIPr,rownr,FidaIPrw);
+            if FidaIPrw.DCType==1 then begin
+              psname = "APSClass";
+            end;
+            if FidaIPrw.DCType==2 then begin
+              psname = "";
+            end;
+          end;
+  end;
+  
+  FidaIPDClassSpecPasteName = psname;
+  return;
+end;
+
+global
+updating procedure FidaIPExpandNIPDsm()
+begin
+  Integer wn,insertmode,updatemode,rownr;
+  record FidaIPVc FidaIPr;
+  
+  wn = CurWindow;
+  // insertmode = 1;
+  // updatemode = 2;
+  // if ((WindowState(wn)==updatemode) or (WindowState(wn)==insertmode)) then begin
+    rownr = WindowActiveRow(wn);
+    DeselectWindow(wn,true);
+    GetWindowRecord(wn,FidaIPr);
+    if (rownr<0) then begin
+      rownr = MatRowCnt(FidaIPr)-1;
+    end;
+    FidaIPExpandNIP(FidaIPr,rownr);
+    PutWindowRecord(wn,FidaIPr);
+  // end;  
+  return;
+end;
+
+
+global
+function Boolean FidaIPDClassOpenRecord(Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  record FidaIPVc FidaIPr;
+  record IPVc IPr;
+  record TRVc TRr;
+  record OPVc OPr;
+  row FidaIPVc FidaIPrw;
+  
+  if fieldname=="IPNr" then begin
+    GetWindowRecord(wn,FidaIPr);
+    MatRowGet(FidaIPr,rownr,FidaIPrw);
+    if GetFidaIPGenRec(FidaIPrw.DCType,FidaIPrw.IPNr,FidaIPr.TransDate,IPr,OPr,TRr) then begin
+      Switch (FidaIPrw.DCType) begin
+        case 0: OpenWindow("IPDClass",0,0,"","",IPr);
+        case 1: OpenWindow("OPDClass",0,0,"","",OPr);
+        case 2: OpenWindow("TRDClass",0,0,"","",TRr);
+      end;
+    end;
+  end;
+  
+  FidaIPDClassOpenRecord = res;
+  return;
+end;

@@ -166,8 +166,7 @@ begin
 end;
 
 
-function 
-Boolean PrintReceipt(record RcVc RepSpec,string formcode,record IPVc IPr,record CUVc CUr,record SysFormatBlock SysFormatRec,record LangNrVc LangNrr,
+function Boolean PrintReceipt(record RcVc RepSpec,string formcode,record IPVc IPr,record CUVc CUr,record SysFormatBlock SysFormatRec,
                      string IPDrBankAcc,string IPDrBankName,string IPDrBankNr1,string IPDrBankNr2,string IPDrCustCode,
                      string IPDrCustName,string IPDrInvCurncy,string IPDrBankCurncy,string IPDrRecCurncy,string IPDrSWIFT,string IPDrRefStr,
                      val IPDrInvVal,val IPDrInvValB1,val IPDrBankVal,val IPDrRecVal,val IPDrBase1Val,val SettlementVal,val IPDrRebVal,val IPDrVATVal,val IPDrRebVATVal,
@@ -176,8 +175,8 @@ Boolean PrintReceipt(record RcVc RepSpec,string formcode,record IPVc IPr,record 
                      Array val IVRecpInvVal,Array val IVRecpBankVal,Array val IVRecpRecVal,Array val IVRecpBase1Val,Array val IVRecpInvOutstand,
                      Array string IVRecpRecpOfficialSerNr,Integer IVRecpcnt,
                      Array Integer aChequeType,Array LongInt aChequeNr,Array val aChequeTot,var Integer aChcnt,
-                     Array string aPayMode,Array val aPayModeTot,var Integer apmcnt)
-BEGIN
+                     Array string aPayMode,Array val aPayModeTot,var Integer apmcnt,string langcode, Array String IVRecItemCodes, Array string IVRecItems)
+begin
   Boolean res;
   record DocVc Docr;
   string 255 tstr,t2,fldarg,bankname,curncy,oldCheque;
@@ -193,158 +192,344 @@ BEGIN
   record RoundBlock RoundRec; 
   array LongInt aIVr;
   vector val v_IVrReceiveVal;
-  record IVVc IVr;
-  
+  record IVVc IVr;  
+  record LangNrVc LangNrr;
+  string 255 iplangcode;
+
+  iplangcode = OverrideLangCode;
+  GetLangNr(iplangcode,LangNrr);  
+
   BlockLoad(MBr);
   BlockLoad(BCb);
-  if (OpenForm(formcode)) then begin
-    if (IPr.OKFlag==0) then begin
-      if (MBr.NoTestprintEnabler==0) then begin
-        FormWaterMark(1117,-1);
-      end;
+  if (IPr.OKFlag==0) then begin
+    if (MBr.NoTestprintEnabler==0) then begin
+      FormWaterMark(1117,-1);
     end;
-    if ((IPr.OKFlag!=0) and (IPr.Invalid==0)) then begin
-      if (IPr.Prntdf!=0) and (MBr.NoTestprintEnabler==0) then begin
-        FormWaterMark(1118,-1);
-      end;
-    end else begin
-      if (IPr.Prntdf!=0) then begin
-        FormWaterMark(1118,-1);
-      end;
+  end;
+  if ((IPr.OKFlag!=0) and (IPr.Invalid==0)) then begin
+    if (IPr.Prntdf!=0) and (MBr.NoTestprintEnabler==0) then begin
+      FormWaterMark(1118,-1);
     end;
-    if (IPr.Invalid!=0) then begin
-      FormWaterMark(1400,-1);
+  end else begin
+    if (IPr.Prntdf!=0) then begin
+      FormWaterMark(1118,-1);
     end;
-    if (HasLocalization("ARG")==false) then begin
-      ClearArray(aChequeNr);
-      ClearArray(aChequeTot);
-      aChcnt = 0;
-      ClearArray(aPayMode);
-      ClearArray(aPayModeTot);
-      apmcnt = 0;
+  end;
+  if (IPr.Invalid!=0) then begin
+    FormWaterMark(1400,-1);
+  end;
+  if (HasLocalization("ARG")==false) then begin
+    ClearArray(aChequeNr);
+    ClearArray(aChequeTot);
+    aChcnt = 0;
+    ClearArray(aPayMode);
+    ClearArray(aPayModeTot);
+    apmcnt = 0;
+  end;
+  res = true;
+  CommonDocumentFields(RepSpec);
+  NumberofDocumentPages(formcode,MatRowCnt(IPr));
+  Docr.Code = formcode;
+  if (ReadFirstMain(Docr,1,true)) then begin
+  end;
+  if (FIELDINFORM("F_NOTE")) then begin
+    GetFieldArgument(Docr,F_NOTE,fldarg);
+    IPPrintNote(IPr,fldarg);
+  end;
+  if (HasLocalization("ARG")) then begin
+    OUTFORMFIELD("F_OFFICIALSERNOHEAD",IPr.OfficialSerNr);
+  end;
+  if (HasLocalization("PRT")) then begin
+    PortugueseFormFields(28282);
+    GetLegalInvNrRow(IPr.OfficialSerNr,LINrbrw);
+    OUTFORMFIELD("F_OFFICIALSERNOHEAD",GetOffSerNrIVJournalID(IPr.SerNr,"IPVc",IPr.OfficialSerNr) & " " &  Left(IPr.OfficialSerNr,len(IPr.OfficialSerNrSerie)) & "/" & Right(IPr.OfficialSerNr,len(IPr.OfficialSerNr)-len(IPr.OfficialSerNrSerie)));
+    OUTFORMFIELD("F_OFFICIALSERNO2",IPr.OfficialSerNr2);    
+    if (IPr.IPBookVAT!=0) then begin 
+      OUTFORMFIELD("F_IPBOOKVAT",USetStr(19123));
     end;
-    res = true;
-    CommonDocumentFields(RepSpec);
-    NumberofDocumentPages(formcode,MatRowCnt(IPr));
-    Docr.Code = formcode;
-    if (ReadFirstMain(Docr,1,true)) then begin
-    end;
-    if (FIELDINFORM("F_NOTE")) then begin
-      GetFieldArgument(Docr,F_NOTE,fldarg);
-      IPPrintNote(IPr,fldarg);
-    end;
-    if (HasLocalization("ARG")) then begin
-      OUTFORMFIELD("F_OFFICIALSERNOHEAD",IPr.OfficialSerNr);
-    end;
-    if (HasLocalization("PRT")) then begin
-      PortugueseFormFields(28282);
-      GetLegalInvNrRow(IPr.OfficialSerNr,LINrbrw);
-      OUTFORMFIELD("F_OFFICIALSERNOHEAD",GetOffSerNrIVJournalID(IPr.SerNr,"IPVc",IPr.OfficialSerNr) & " " &  Left(IPr.OfficialSerNr,len(IPr.OfficialSerNrSerie)) & "/" & Right(IPr.OfficialSerNr,len(IPr.OfficialSerNr)-len(IPr.OfficialSerNrSerie)));
-      OUTFORMFIELD("F_OFFICIALSERNO2",IPr.OfficialSerNr2);    
-      if (IPr.IPBookVAT!=0) then begin 
-        OUTFORMFIELD("F_IPBOOKVAT",USetStr(19123));
-      end;
-      OUTFORMFIELD("F_PORQRCODE",BuildPorQRCodeIP(IPr));
-      GetLegalInvNrRow(IPr.OfficialSerNr,LINrbrw);
-      OUTFORMFIELD("F_ATCUD",LINrbrw.ATCUD & "-" & IPr.OfficialSerNr);
-    end;  
-    OutFormField("F_DATEDAY",GetDay(IPr.TransDate));
-    OutFormField("F_DATEYEAR",GetYear(IPr.TransDate));
-    OutFormField("F_DATEMONTH",GetMonth(IPr.TransDate));
-    GetMonthText("",IPr.TransDate,tstr);
-    OUTFORMFIELD("F_DATEMONTHTEXT",tstr);
-    OUTFORMFIELD("F_REGDATUM",USetStr(2780+GetMonth(IPr.TransDate)));
-    OutFormField("F_REFERENSNUMMER",IPr.RecNumber);
-    OutFormField("F_UTBETNR",IPr.SerNr);
-    OutFormField("F_SERNR",IPr.SerNr);
-    OutFormField("F_TRANSDATUM",IPr.TransDate);
-    OUTFORMFIELD("F_TRANSDATUMHIJRI",ConvertDate(kCalendarGregorian,IPr.TransDate,kCalendarHijri));
-    OutFormField("F_KOMMENTAR2",IPr.Comment);
+    OUTFORMFIELD("F_PORQRCODE",BuildPorQRCodeIP(IPr));
+    GetLegalInvNrRow(IPr.OfficialSerNr,LINrbrw);
+    OUTFORMFIELD("F_ATCUD",LINrbrw.ATCUD & "-" & IPr.OfficialSerNr);
 
-    OUTFORMFIELD("F_KUNDMOMSNR",CUr.VATNr);
-    OUTFORMFIELD("F_BANKACC",CUr.BankAccount);
-    OUTFORMFIELD("F_VARTKUNDNR",CUr.Code);
-    OUTFORMFIELD("F_LEVNAMN",CUr.Name);
-    OutAddress("F_LEVADRESS",CUr.Name,CUr.InvAddr0,CUr.InvAddr1,CUr.InvAddr2,CUr.InvAddr3,CUr.InvAddr4);
-    OUTFORMFIELD("F_SPECLEV",CUr.Comment);
+  end;
 
-    OUTFORMFIELD("F_REFSTR",IPDrRefStr);
-    if (FIELDINFORM("F_TOTALDISCOUNT")) then begin
-      t = IPDrRebVal - IPDrRebVATVal;
-      RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
-      PrintValue("F_TOTALDISCOUNT",t,M4Val,LangNrr,SysFormatRec,false);
-    end;
-    if (FIELDINFORM("F_VATTOT")) then begin
-      t = IPDrVATVal;
-      RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
-      PrintValue("F_VATTOT",t,M4Val,LangNrr,SysFormatRec,false);
-    end;
-    if (FIELDINFORM("F_TOTVATBASE")) then begin
-      t = IPDrRebVATVal;
-      RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
-      PrintValue("F_TOTVATBASE",t,M4Val,LangNrr,SysFormatRec,false);
-    end;
-    if (FIELDINFORM("F_SUMMA")) then begin
-      t = IPDrRecVal - IPDrRebVal - IPDrVATVal;
-      PrintValue("F_SUMMA",t,M4Val,LangNrr,SysFormatRec,false);
-    end;
+  OUTFORMFIELD("F_CASHVALUEX",IPr.PayVal);// TMK::19-03-2025
+  OUTFORMFIELD("F_RETVALUEX",IPr.ChangeVal);// TMK::19-03-2025
+  OUTFORMFIELD("F_DATEE",IPr.TransDate);// TMK::19-03-2025
+  OUTFORMFIELD("F_TIME",IPr.RegTime);// TMK::19-03-2025 
+  OUTFORMFIELD("F_PAYMODE",IPr.PayMode);// TMK::19-03-2025 
+  OUTFORMFIELD("F_TILL",IPr.MachineName);// TMK::19-03-2025 
+
+  OUTFORMFIELD("F_CASHIER",IPr.SalesMan); // TMK::19-03-2025
+  OutFormField("F_DATEDAY",GetDay(IPr.TransDate));
+  OutFormField("F_DATEYEAR",GetYear(IPr.TransDate));
+  OutFormField("F_DATEMONTH",GetMonth(IPr.TransDate));
+  GetMonthText("",IPr.TransDate,tstr);
+  OUTFORMFIELD("F_DATEMONTHTEXT",tstr);
+  OUTFORMFIELD("F_REGDATUM",USetStr(2780+GetMonth(IPr.TransDate)));
+  OutFormField("F_REFERENSNUMMER",IPr.RecNumber);
+  OutFormField("F_UTBETNR",IPr.SerNr);
+  OutFormField("F_SERNR",IPr.SerNr);
+  OutFormField("F_TRANSDATUM",IPr.TransDate);
+  OUTFORMFIELD("F_TRANSDATUMHIJRI",ConvertDate(kCalendarGregorian,IPr.TransDate,kCalendarHijri));
+  OutFormField("F_KOMMENTAR2",IPr.Comment);
+
+  OUTFORMFIELD("F_KUNDMOMSNR",CUr.VATNr);
+  OUTFORMFIELD("F_BANKACC",CUr.BankAccount);
+  OUTFORMFIELD("F_VARTKUNDNR",CUr.Code);
+  OUTFORMFIELD("F_LEVNAMN",CUr.Name);
+
+  OUTFORMFIELD("F_LEVNAMNKM",CUr.Name);//jh
+
+  OutAddress("F_LEVADRESS",CUr.Name,CUr.InvAddr0,CUr.InvAddr1,CUr.InvAddr2,CUr.InvAddr3,CUr.InvAddr4);
+  OUTFORMFIELD("F_SPECLEV",CUr.Comment);
+
+  OUTFORMFIELD("F_REFSTR",IPDrRefStr);
+  if (FIELDINFORM("F_TOTALDISCOUNT")) then begin
+    t = IPDrRebVal - IPDrRebVATVal;
+    RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
+    PrintValue("F_TOTALDISCOUNT",t,M4Val,LangNrr,SysFormatRec,false);
+  end;
+  if (FIELDINFORM("F_VATTOT")) then begin
+    t = IPDrVATVal;
+    RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
+    PrintValue("F_VATTOT",t,M4Val,LangNrr,SysFormatRec,false);
+  end;
+  if (FIELDINFORM("F_TOTVATBASE")) then begin
+    t = IPDrRebVATVal;
+    RoundRowSum(IPDrRecCurncy,IVRecpPayMode[i],"IPVc",t);
+    PrintValue("F_TOTVATBASE",t,M4Val,LangNrr,SysFormatRec,false);
+  end;
+  if (FIELDINFORM("F_SUMMA")) then begin
+    t = IPDrRecVal - IPDrRebVal - IPDrVATVal;
+    PrintValue("F_SUMMA",t,M4Val,LangNrr,SysFormatRec,false);
+  end;
 //    if (IPDrInvVal>0 or HasLocalization("PRT")) then begin
-      PrintValue("F_ATTBETALA",IPDrInvVal,M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_ATTBETALA",IPDrInvVal,M4Val,LangNrr,SysFormatRec,false);
 //    end else begin
 //      OUTFORMFIELD("F_ATTBETALA",USetStr(1216));
 //    end;
-    if (FIELDINFORM("F_ATTBETALATEXT")) then begin
-      ValToText(IPDrInvVal,M4Val,IPDrInvCurncy,CUr.LangCode,tstr);
-      OUTFORMFIELD("F_ATTBETALATEXT",tstr);
-    end;
-    if (FIELDINFORM("F_ATTBETALATEXTBASE1")) then begin
-      ValToText(IPDrInvValB1,M4Val,BCb.BaseCur1,CUr.LangCode,tstr);
-      OUTFORMFIELD("F_ATTBETALATEXTBASE1",tstr);
-    end;
-    PrintValue("F_BASE1BETALA",IPDrBase1Val,M4Val,LangNrr,SysFormatRec,false);
-    PrintValue("F_KASSARABATT",SettlementVal,M4Val,LangNrr,SysFormatRec,false);
-    PrintValue("F_AMOUNTWITHOUTDISCSUM",IPDrInvVal + SettlementVal,M4Val,LangNrr,SysFormatRec,false);
-    OUTFORMFIELD("F_KUNDNR",IPDrCustCode);
-    OUTFORMFIELD("F_KOMMENTAR",IPDrCustName);
-    OUTFORMFIELD("F_TILLGIRO",IPDrBankAcc);
-    OUTFORMFIELD("F_TILLBANK",IPDrBankName);
-    OUTFORMFIELD("F_TOBANKNR1",IPDrBankNr1);
-    OUTFORMFIELD("F_TOBANKNR2",IPDrBankNr2);
-    PrintCurrencyCode("F_VALUTA",IPDrInvCurncy);
-    OUTFORMFIELD("F_SWIFT",IPDrSWIFT);
-    if (GetPM(IPr.PayMode,t2,tstr)) then begin
-      OUTFORMFIELD("F_PAYMODE",tstr);
-    end;
-    for (i=0;i<=IVRecpcnt;i=i+1) begin
-      PrintCurrencyCode("F_RECCURENCY",IVRecpRecCurncy[i]);
-      PrintCurrencyCode("F_BANKCURENCY",IVRecpBankCurncy[i]);
-      PrintValue("F_BANKVALUE",IVRecpBankVal[i],M4Val,LangNrr,SysFormatRec,false);
-      PrintValue("F_RECVALUE",IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
-      if (FIELDINFORM("F_CREDCARDFEE") and IVRecpInvoiceNr[i]!=-1) then begin
-        IVr.SerNr = IVRecpInvoiceNr[i];
-        if (ReadFirstMain(IVr,1,true)) then begin
-          if (IVr.PayLinkFlag) then begin
-            PrintValue("F_CREDCARDFEE",IVr.ConvenienceFee,M4Val,LangNrr,SysFormatRec,false);
-          end;
+  if (FIELDINFORM("F_ATTBETALATEXT")) then begin
+    ValToText(IPDrInvVal,M4Val,IPDrInvCurncy,CUr.LangCode,tstr);
+    OUTFORMFIELD("F_ATTBETALATEXT",tstr);
+  end;
+  if (FIELDINFORM("F_ATTBETALATEXTBASE1")) then begin
+    ValToText(IPDrInvValB1,M4Val,BCb.BaseCur1,CUr.LangCode,tstr);
+    OUTFORMFIELD("F_ATTBETALATEXTBASE1",tstr);
+  end;
+  PrintValue("F_BASE1BETALA",IPDrBase1Val,M4Val,LangNrr,SysFormatRec,false);
+  PrintValue("F_KASSARABATT",SettlementVal,M4Val,LangNrr,SysFormatRec,false);
+  PrintValue("F_AMOUNTWITHOUTDISCSUM",IPDrInvVal + SettlementVal,M4Val,LangNrr,SysFormatRec,false);
+  OUTFORMFIELD("F_KUNDNR",IPDrCustCode);
+  OUTFORMFIELD("F_KOMMENTAR",IPDrCustName);
+  OUTFORMFIELD("F_TILLGIRO",IPDrBankAcc);
+  OUTFORMFIELD("F_TILLBANK",IPDrBankName);
+  OUTFORMFIELD("F_TOBANKNR1",IPDrBankNr1);
+  OUTFORMFIELD("F_TOBANKNR2",IPDrBankNr2);
+  PrintCurrencyCode("F_VALUTA",IPDrInvCurncy);
+  OUTFORMFIELD("F_SWIFT",IPDrSWIFT);
+  if (GetPM(IPr.PayMode,t2,tstr)) then begin
+    OUTFORMFIELD("F_PAYMODE",tstr);
+  end;
+  for (i=0;i<=IVRecpcnt;i=i+1) begin
+    //jh
+    OUTFORMFIELD("F_ITEMCODES",IVRecItemCodes[i]);
+    OUTFORMFIELD("F_ITEMS",IVRecItems[i])
+    //jh
+    PrintCurrencyCode("F_RECCURENCY",IVRecpRecCurncy[i]);
+    PrintCurrencyCode("F_BANKCURENCY",IVRecpBankCurncy[i]);
+    PrintValue("F_BANKVALUE",IVRecpBankVal[i],M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_RECVALUE",IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
+    if (FIELDINFORM("F_CREDCARDFEE") and IVRecpInvoiceNr[i]!=-1) then begin
+      IVr.SerNr = IVRecpInvoiceNr[i];
+      if (ReadFirstMain(IVr,1,true)) then begin
+        if (IVr.PayLinkFlag) then begin
+          PrintValue("F_CREDCARDFEE",IVr.ConvenienceFee,M4Val,LangNrr,SysFormatRec,false);
         end;
       end;
+    end;
+    GetPMBankAccName(IVRecpPayMode[i],tstr,bankname);
+    OUTFORMFIELD("F_FRANBANK",tstr);
+    OUTFORMFIELD("F_BANKNAME2",bankname);// F_EGENBANKKOD is taken from Cympany info
+
+    if (IVRecpInvoiceNr[i]==-1) then begin
+      OUTFORMFIELD("F_INVOICENR","");
+    end else begin
+      OUTFORMFIELD("F_INVOICENR",IVRecpInvoiceNr[i]);
+    end;
+
+    if (HasLocalization("PRT")) then begin
+      IVr.SerNr = IVRecpInvoiceNr[i];
+      ReadFirstMain(IVr,1,true);
+      OUTFORMFIELD("F_OFFICIALSERNO",GetOffSerNrIVJournalID(IVr.SerNr,"IVVc",IVr.OfficialSerNr) & " " &  Left(IVr.OfficialSerNr,len(IVr.OfficialSerNrSerie)) & "/" & Right(IVr.OfficialSerNr,len(IVr.OfficialSerNr)-len(IPr.OfficialSerNrSerie)));
+    end else begin
+      OUTFORMFIELD("F_OFFICIALSERNO",IVRecpRecpOfficialSerNr[i]);      
+    end;
+    OUTFORMFIELD("F_INVDATE",IVRecpInvDate[i]);
+    OUTFORMFIELD("F_INVDATEHIJRI",ConvertDate(kCalendarGregorian,IVRecpInvDate[i],kCalendarHijri));
+    switch (IVRecpstp[i]) begin
+      case kReceiptRowTypeSettlementDiscount:
+        OUTFORMFIELD("F_COMMENT",USetStr(19120));
+      case kReceiptRowTypeWriteoff:
+        OUTFORMFIELD("F_COMMENT",USetStr(19121));
+      case kReceiptRowTypeBankFee:
+        OUTFORMFIELD("F_COMMENT",USetStr(19122));
+      otherwise
+        OUTFORMFIELD("F_COMMENT",IVRecpComment[i]);
+    end;
+    PrintValue("F_AMOUNT",IVRecpInvVal[i],M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_INVOUTSTAND",IVRecpInvOutstand[i],M4Val,LangNrr,SysFormatRec,false);      
+    totinvoutstand = totinvoutstand + IVRecpInvOutstand[i];
+    t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,IVRecpInvOutstand[i],DefaultCurRoundOff);
+    PrintValue("F_INVOUTSTANDBASE1",t,M4Val,LangNrr,SysFormatRec,false);      
+      
+    openv = IVRecpInvOutstand[i];    
+    if (IVRecpRecVal[i]>0) then begin
+      openv = openv - IVRecpRecVal[i];
+    end;
+//       if (IVRecpInvoiceNr[i]>0) then begin
+//         for (j=0;j<i;j=j+1) begin
+//           if (IVRecpInvoiceNr[j]==IVRecpInvoiceNr[i]) then begin
+//             openv = openv - IVRecpRecVal[j];
+//           end;
+//         end;
+//       end;
+    t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,openv,DefaultCurRoundOff);
+    PrintValue("F_INVOPENBASE1",t,M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_INVOPEN",openv,M4Val,LangNrr,SysFormatRec,false);
+
+    // if (HasLocalization("ARG")==false) then begin
+      gchk = GetCheck(IPr.PayMode,IVRecpPayMode[i],IVRecpChequeNr[i],tstr,bankname,curncy,t,td,regdate);
+      OUTFORMFIELD("F_CHECKNR",tstr);
+      OUTFORMFIELD("F_BANKNAME",bankname);
+      OUTFORMFIELD("F_EFFECTDATE",td);
+      OUTFORMFIELD("F_DATUM",regdate);
+      OUTFORMFIELD("F_UTBETDATUM",regdate);
+      PrintValue("F_CHEQUETOTAL",t,M4Val,LangNrr,SysFormatRec,false);
+
+      if (nonblank(tstr)) then begin 
+        InsertTempInArray(achequeNum,aChequeTot,aChcnt,tstr,t,false);
+      end; 
+    // end;
+    
+    fldarg = IVRecpPayMode[i];
+    if (blank(fldarg)) then begin 
+      fldarg = IPr.PayMode; 
+    end;
+    if (GetPM(fldarg,t2,tstr)) then begin
+      OUTFORMFIELD("F_PAYMODEROW",tstr);
+    end;
+    
+    tstr = IVRecpPayMode[i];
+    if (blank(tstr)) then begin tstr = IPr.PayMode; end;
+    if (GetPMTAX(tstr,t)) then begin end;
+    PrintValue("F_PAYMODETAXPERC",t,M4Prcnt,LangNrr,SysFormatRec,false);
+    v = t * IVRecpRecVal[i];
+    v = v/100;
+    PrintValue("F_PAYMODETAXTOTAL",v,M4Val,LangNrr,SysFormatRec,false);
+    v = t * IVRecpRecVal[i];
+    v = v/100;
+    v = v + IVRecpRecVal[i];
+    PrintValue("F_PAYMODETAXVAL",v,M4Val,LangNrr,SysFormatRec,false);
+    if (IVRecpInvoiceNr[i]>0) then begin  
+      aIVr[aIVr.length] = IVRecpInvoiceNr[i];
+      if (SettlementVal!=0) then begin
+        v_IVrReceiveVal[IVRecpInvoiceNr[i]] = IVRecpRecVal[i] + IVRecpInvOutstand[i] + SettlementVal;  
+      end else begin
+        v_IVrReceiveVal[IVRecpInvoiceNr[i]] = v_IVrReceiveVal[IVRecpInvoiceNr[i]] + IVRecpRecVal[i];
+      end;
+    end;
+    EndFormRow;
+  end;
+  // if (HasLocalization("ARG")) then begin
+  //   for (i=0;i<=aChequeNr.length;i=i+1) begin
+  //     if (aChequeNr[i]>0) then begin
+  //       switch (aChequeType[i]) begin
+  //         case kPayModeTypeOwnCheque:
+  //           OwnCheckr.SerNr = aChequeNr[i];
+  //           ReadFirstMain(OwnCheckr,1,true);
+  //           OUTFORMFIELD("F_CHECKNR",OwnCheckr.CheckNr);
+  //           OUTFORMFIELD("F_BANKNAME",OwnCheckr.BankName);
+  //           OUTFORMFIELD("F_EFFECTDATE",OwnCheckr.EffectDate);
+  //           OUTFORMFIELD("F_DATECREATED",OwnCheckr.TransDate);
+  //           PrintValue("F_CHEQUETOTAL",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
+  //         case kPayModeTypeCheque:
+  //           Checkr.SerNr = aChequeNr[i];
+  //           ReadFirstMain(Checkr,1,true);
+  //           OUTFORMFIELD("F_CHECKNR",Checkr.CheckNr);
+  //           OUTFORMFIELD("F_BANKNAME",Checkr.BankName);
+  //           OUTFORMFIELD("F_EFFECTDATE",Checkr.EffectDate);
+  //           OUTFORMFIELD("F_DATECREATED",Checkr.TransDate);
+  //           PrintValue("F_CHEQUETOTAL",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
+  //       end;  
+  //       EndFormRow;
+  //     end;
+  //   end; 
+  // end else begin
+    if (FIELDINFORM("F_CHEQUETOTAL2") or FIELDINFORM("F_CHECKNR2")) then begin
+      for (i=0;i<=aChcnt;i=i+1) begin
+        if (achequeNum[i]!=oldCheque) then begin 
+          oldCheque = achequeNum[i];
+          OUTFORMFIELD("F_CHECKNR2",oldCheque);
+          PrintValue("F_CHEQUETOTAL2",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
+          EndFormRow;
+        end;  
+      end;
+    end;    
+  // end;    
+  if (FIELDINFORM("F_PAYMODE2A") or FIELDINFORM("F_PAYMODETOTAL2")) then begin
+    for (i=0;i<=apmcnt;i=i+1) begin
+      if (GetPM(aPayMode[i],fldarg,tstr)==false) then begin
+      end;          
+      OUTFORMFIELD("F_PAYMODE2A",tstr);
+      PrintValue("F_PAYMODETOTAL2",aPayModeTot[i],M4Val,LangNrr,SysFormatRec,false);
+      EndFormRow;
+    end;    
+  end;
+  if (HasLocalization("PRT")) then begin 
+    BlockLoad(RoundRec);
+    CalcIVTotalsFromIP(aIVr,v_IVrReceiveVal,Docr,RoundRec,LangNrr,SysFormatRec);
+  end;
+/*
+  if (FIELDINFORM("F_RECCURENCY")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_RECCURENCY",IVRecpRecCurncy[i]);
+    end;
+  end;
+  if (FIELDINFORM("F_BANKCURENCY")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_BANKCURENCY",IVRecpBankCurncy[i]);
+    end;
+  end;
+  if (FIELDINFORM("F_BANKVALUE")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      PrintValue("F_BANKVALUE",IVRecpBankVal[i],M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if (FIELDINFORM("F_RECVALUE")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      PrintValue("F_RECVALUE",IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if ((FIELDINFORM("F_FRANBANK")) or (FIELDINFORM("F_EGENBANKKOD"))) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       GetPMBankAccName(IVRecpPayMode[i],tstr,bankname);
       OUTFORMFIELD("F_FRANBANK",tstr);
-      OUTFORMFIELD("F_BANKNAME2",bankname);// F_EGENBANKKOD is taken from Cympany info
-      if (IVRecpInvoiceNr[i]==-1) then begin
-        OUTFORMFIELD("F_INVOICENR","");
-      end else begin
-        OUTFORMFIELD("F_INVOICENR",IVRecpInvoiceNr[i]);
-      end;
-      if (HasLocalization("PRT")) then begin
-        IVr.SerNr = IVRecpInvoiceNr[i];
-        ReadFirstMain(IVr,1,true);
-        OUTFORMFIELD("F_OFFICIALSERNO",GetOffSerNrIVJournalID(IVr.SerNr,"IVVc",IVr.OfficialSerNr) & " " &  Left(IVr.OfficialSerNr,len(IVr.OfficialSerNrSerie)) & "/" & Right(IVr.OfficialSerNr,len(IVr.OfficialSerNr)-len(IPr.OfficialSerNrSerie)));
-      end else begin
-        OUTFORMFIELD("F_OFFICIALSERNO",IVRecpRecpOfficialSerNr[i]);      
-      end;
+      OUTFORMFIELD("F_EGENBANKKOD",bankname);
+    end;
+  end;
+  if (FIELDINFORM("F_INVOICENR")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_INVOICENR",IVRecpInvoiceNr[i]);
+    end;
+  end;
+  if (FIELDINFORM("F_INVDATE")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       OUTFORMFIELD("F_INVDATE",IVRecpInvDate[i]);
-      OUTFORMFIELD("F_INVDATEHIJRI",ConvertDate(kCalendarGregorian,IVRecpInvDate[i],kCalendarHijri));
+    end;
+  end;
+  if (FIELDINFORM("F_COMMENT")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       switch (IVRecpstp[i]) begin
         case kReceiptRowTypeSettlementDiscount:
           OUTFORMFIELD("F_COMMENT",USetStr(19120));
@@ -355,51 +540,61 @@ BEGIN
         otherwise
           OUTFORMFIELD("F_COMMENT",IVRecpComment[i]);
       end;
+    end;
+  end;
+  if (FIELDINFORM("F_AMOUNT")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       PrintValue("F_AMOUNT",IVRecpInvVal[i],M4Val,LangNrr,SysFormatRec,false);
-      PrintValue("F_INVOUTSTAND",IVRecpInvOutstand[i],M4Val,LangNrr,SysFormatRec,false);      
-      totinvoutstand = totinvoutstand + IVRecpInvOutstand[i];
+    end;
+  end;
+  if (FIELDINFORM("F_INVOUTSTAND")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      PrintValue("F_INVOUTSTAND",IVRecpInvOutstand[i],M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if (FIELDINFORM("F_INVOUTSTAND")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,IVRecpInvOutstand[i],DefaultCurRoundOff);
-      PrintValue("F_INVOUTSTANDBASE1",t,M4Val,LangNrr,SysFormatRec,false);      
-        
-      openv = IVRecpInvOutstand[i];    
-      if (IVRecpRecVal[i]>0) then begin
-        openv = openv - IVRecpRecVal[i];
-      end;
-//       if (IVRecpInvoiceNr[i]>0) then begin
-//         for (j=0;j<i;j=j+1) begin
-//           if (IVRecpInvoiceNr[j]==IVRecpInvoiceNr[i]) then begin
-//             openv = openv - IVRecpRecVal[j];
-//           end;
-//         end;
-//       end;
-      t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,openv,DefaultCurRoundOff);
+      PrintValue("F_INVOUTSTAND",t,M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if (FIELDINFORM("F_INVOPENBASE1")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,IVRecpInvOutstand[i]-IVRecpRecVal[i],DefaultCurRoundOff);
       PrintValue("F_INVOPENBASE1",t,M4Val,LangNrr,SysFormatRec,false);
-      PrintValue("F_INVOPEN",openv,M4Val,LangNrr,SysFormatRec,false);
-
-      // if (HasLocalization("ARG")==false) then begin
-        gchk = GetCheck(IPr.PayMode,IVRecpPayMode[i],IVRecpChequeNr[i],tstr,bankname,curncy,t,td,regdate);
-        OUTFORMFIELD("F_CHECKNR",tstr);
-        OUTFORMFIELD("F_BANKNAME",bankname);
-        OUTFORMFIELD("F_EFFECTDATE",td);
-        OUTFORMFIELD("F_DATUM",regdate);
-        OUTFORMFIELD("F_UTBETDATUM",regdate);
-        PrintValue("F_CHEQUETOTAL",t,M4Val,LangNrr,SysFormatRec,false);
-        if (nonblank(tstr)) then begin 
-          InsertTempInArray(achequeNum,aChequeTot,aChcnt,tstr,t,false);
-        end; 
-      // end;
-      
-      fldarg = IVRecpPayMode[i];
-      if (blank(fldarg)) then begin 
-        fldarg = IPr.PayMode; 
-      end;
-      if (GetPM(fldarg,t2,tstr)) then begin
-        OUTFORMFIELD("F_PAYMODEROW",tstr);
-      end;
-      
+    end;
+  end;
+  if (FIELDINFORM("F_INVOPEN")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      PrintValue("F_INVOPEN",IVRecpInvOutstand[i]-IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if (FIELDINFORM("F_CHEQUENR")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_COMMENT",IVRecpChequeNr[i]);
+    end;
+  end;
+  if ((FIELDINFORM("F_CHECKNR")) or (FIELDINFORM("F_BANKNAME")) or (FIELDINFORM("F_EFFECTDATE"))
+      or (FIELDINFORM("F_CHEQUETOTAL")))  then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      gchk = GetCheck(IPr.PayMode,IVRecpPayMode[i],IVRecpChequeNr[i],tstr,bankname,curncy,t,td);
+      OUTFORMFIELD("F_CHECKNR",tstr);
+      OUTFORMFIELD("F_BANKNAME",bankname);
+      OUTFORMFIELD("F_EFFECTDATE",td);
+      PrintValue("F_CHEQUETOTAL",t,M4Val,LangNrr,SysFormatRec,false);
+    end;
+  end;
+  if (FIELDINFORM("F_PAYMODEROW")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_PAYMODEROW",IVRecpPayMode[i]);
+    end;
+  end;
+  if ((FIELDINFORM("F_PAYMODETAXPERC")) or (FIELDINFORM("F_PAYMODETAXTOTAL")) or (FIELDINFORM("F_PAYMODETAXVAL"))) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
       tstr = IVRecpPayMode[i];
       if (blank(tstr)) then begin tstr = IPr.PayMode; end;
-      if (GetPMTAX(tstr,t)) then begin end;
+      if (GetPMTAX(tstr,t)) then begin
+      end;
       PrintValue("F_PAYMODETAXPERC",t,M4Prcnt,LangNrr,SysFormatRec,false);
       v = t * IVRecpRecVal[i];
       v = v/100;
@@ -408,191 +603,17 @@ BEGIN
       v = v/100;
       v = v + IVRecpRecVal[i];
       PrintValue("F_PAYMODETAXVAL",v,M4Val,LangNrr,SysFormatRec,false);
-      if (IVRecpInvoiceNr[i]>0) then begin  
-        aIVr[aIVr.length] = IVRecpInvoiceNr[i];
-        if (SettlementVal!=0) then begin
-          v_IVrReceiveVal[IVRecpInvoiceNr[i]] = IVRecpRecVal[i] + IVRecpInvOutstand[i] + SettlementVal;  
-        end else begin
-          v_IVrReceiveVal[IVRecpInvoiceNr[i]] = v_IVrReceiveVal[IVRecpInvoiceNr[i]] + IVRecpRecVal[i];
-        end;
-      end;
-      EndFormRow;
     end;
-    // if (HasLocalization("ARG")) then begin
-    //   for (i=0;i<=aChequeNr.length;i=i+1) begin
-    //     if (aChequeNr[i]>0) then begin
-    //       switch (aChequeType[i]) begin
-    //         case kPayModeTypeOwnCheque:
-    //           OwnCheckr.SerNr = aChequeNr[i];
-    //           ReadFirstMain(OwnCheckr,1,true);
-    //           OUTFORMFIELD("F_CHECKNR",OwnCheckr.CheckNr);
-    //           OUTFORMFIELD("F_BANKNAME",OwnCheckr.BankName);
-    //           OUTFORMFIELD("F_EFFECTDATE",OwnCheckr.EffectDate);
-    //           OUTFORMFIELD("F_DATECREATED",OwnCheckr.TransDate);
-    //           PrintValue("F_CHEQUETOTAL",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
-    //         case kPayModeTypeCheque:
-    //           Checkr.SerNr = aChequeNr[i];
-    //           ReadFirstMain(Checkr,1,true);
-    //           OUTFORMFIELD("F_CHECKNR",Checkr.CheckNr);
-    //           OUTFORMFIELD("F_BANKNAME",Checkr.BankName);
-    //           OUTFORMFIELD("F_EFFECTDATE",Checkr.EffectDate);
-    //           OUTFORMFIELD("F_DATECREATED",Checkr.TransDate);
-    //           PrintValue("F_CHEQUETOTAL",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
-    //       end;  
-    //       EndFormRow;
-    //     end;
-    //   end; 
-    // end else begin
-      if (FIELDINFORM("F_CHEQUETOTAL2") or FIELDINFORM("F_CHECKNR2")) then begin
-        for (i=0;i<=aChcnt;i=i+1) begin
-          if (achequeNum[i]!=oldCheque) then begin 
-            oldCheque = achequeNum[i];
-            OUTFORMFIELD("F_CHECKNR2",oldCheque);
-            PrintValue("F_CHEQUETOTAL2",aChequeTot[i],M4Val,LangNrr,SysFormatRec,false);
-            EndFormRow;
-          end;  
-        end;
-      end;    
-    // end;    
-    if (FIELDINFORM("F_PAYMODE2A") or FIELDINFORM("F_PAYMODETOTAL2")) then begin
-      for (i=0;i<=apmcnt;i=i+1) begin
-        if (GetPM(aPayMode[i],fldarg,tstr)==false) then begin
-        end;          
-        OUTFORMFIELD("F_PAYMODE2A",tstr);
-        PrintValue("F_PAYMODETOTAL2",aPayModeTot[i],M4Val,LangNrr,SysFormatRec,false);
-        EndFormRow;
-      end;    
-    end;
-    if (HasLocalization("PRT")) then begin 
-      BlockLoad(RoundRec);
-      CalcIVTotalsFromIP(aIVr,v_IVrReceiveVal,Docr,RoundRec,LangNrr,SysFormatRec);
-    end;
-    CloseForm;
-/*
-    if (FIELDINFORM("F_RECCURENCY")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_RECCURENCY",IVRecpRecCurncy[i]);
-      end;
-    end;
-    if (FIELDINFORM("F_BANKCURENCY")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_BANKCURENCY",IVRecpBankCurncy[i]);
-      end;
-    end;
-    if (FIELDINFORM("F_BANKVALUE")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        PrintValue("F_BANKVALUE",IVRecpBankVal[i],M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_RECVALUE")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        PrintValue("F_RECVALUE",IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if ((FIELDINFORM("F_FRANBANK")) or (FIELDINFORM("F_EGENBANKKOD"))) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        GetPMBankAccName(IVRecpPayMode[i],tstr,bankname);
-        OUTFORMFIELD("F_FRANBANK",tstr);
-        OUTFORMFIELD("F_EGENBANKKOD",bankname);
-      end;
-    end;
-    if (FIELDINFORM("F_INVOICENR")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_INVOICENR",IVRecpInvoiceNr[i]);
-      end;
-    end;
-    if (FIELDINFORM("F_INVDATE")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_INVDATE",IVRecpInvDate[i]);
-      end;
-    end;
-    if (FIELDINFORM("F_COMMENT")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        switch (IVRecpstp[i]) begin
-          case kReceiptRowTypeSettlementDiscount:
-            OUTFORMFIELD("F_COMMENT",USetStr(19120));
-          case kReceiptRowTypeWriteoff:
-            OUTFORMFIELD("F_COMMENT",USetStr(19121));
-          case kReceiptRowTypeBankFee:
-            OUTFORMFIELD("F_COMMENT",USetStr(19122));
-          otherwise
-            OUTFORMFIELD("F_COMMENT",IVRecpComment[i]);
-        end;
-      end;
-    end;
-    if (FIELDINFORM("F_AMOUNT")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        PrintValue("F_AMOUNT",IVRecpInvVal[i],M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_INVOUTSTAND")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        PrintValue("F_INVOUTSTAND",IVRecpInvOutstand[i],M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_INVOUTSTAND")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,IVRecpInvOutstand[i],DefaultCurRoundOff);
-        PrintValue("F_INVOUTSTAND",t,M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_INVOPENBASE1")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        t = MulWithRateToBase1(IPDrInvCurncy,IPr.TransDate,IVRecpInvOutstand[i]-IVRecpRecVal[i],DefaultCurRoundOff);
-        PrintValue("F_INVOPENBASE1",t,M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_INVOPEN")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        PrintValue("F_INVOPEN",IVRecpInvOutstand[i]-IVRecpRecVal[i],M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_CHEQUENR")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_COMMENT",IVRecpChequeNr[i]);
-      end;
-    end;
-    if ((FIELDINFORM("F_CHECKNR")) or (FIELDINFORM("F_BANKNAME")) or (FIELDINFORM("F_EFFECTDATE"))
-        or (FIELDINFORM("F_CHEQUETOTAL")))  then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        gchk = GetCheck(IPr.PayMode,IVRecpPayMode[i],IVRecpChequeNr[i],tstr,bankname,curncy,t,td);
-        OUTFORMFIELD("F_CHECKNR",tstr);
-        OUTFORMFIELD("F_BANKNAME",bankname);
-        OUTFORMFIELD("F_EFFECTDATE",td);
-        PrintValue("F_CHEQUETOTAL",t,M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_PAYMODEROW")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_PAYMODEROW",IVRecpPayMode[i]);
-      end;
-    end;
-    if ((FIELDINFORM("F_PAYMODETAXPERC")) or (FIELDINFORM("F_PAYMODETAXTOTAL")) or (FIELDINFORM("F_PAYMODETAXVAL"))) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        tstr = IVRecpPayMode[i];
-        if (blank(tstr)) then begin tstr = IPr.PayMode; end;
-        if (GetPMTAX(tstr,t)) then begin
-        end;
-        PrintValue("F_PAYMODETAXPERC",t,M4Prcnt,LangNrr,SysFormatRec,false);
-        v = t * IVRecpRecVal[i];
-        v = v/100;
-        PrintValue("F_PAYMODETAXTOTAL",v,M4Val,LangNrr,SysFormatRec,false);
-        v = t * IVRecpRecVal[i];
-        v = v/100;
-        v = v + IVRecpRecVal[i];
-        PrintValue("F_PAYMODETAXVAL",v,M4Val,LangNrr,SysFormatRec,false);
-      end;
-    end;
-    if (FIELDINFORM("F_PAYMODEROW")) then begin
-      for (i=0;i<=IVRecpcnt;i=i+1) begin
-        OUTFORMFIELD("F_PAYMODEROW",IVRecpPayMode[i]);
-      end;
-    end;
-*/    
   end;
+  if (FIELDINFORM("F_PAYMODEROW")) then begin
+    for (i=0;i<=IVRecpcnt;i=i+1) begin
+      OUTFORMFIELD("F_PAYMODEROW",IVRecpPayMode[i]);
+    end;
+  end;
+*/    
   PrintReceipt = res;
-  RETURN;
-END;                         
+  return;
+end;                         
 
 procedure IPDPasteBank(var string IPDpBankName,var string IPDpBankNr1,var string IPDpBankNr2,var string IPDpSWIFT)
 BEGIN
@@ -624,8 +645,8 @@ BEGIN
   RETURN;
 END;
 
-function Boolean PrintIPD(record RcVc RepSpec,string formcode,record IPVc argIPp,string arg1)
-BEGIN
+function Boolean PrintIPD(record RcVc RepSpec,string formcode,record IPVc argIPp,string arg1,string langcode)
+begin
   Boolean res;
   row IPVc IPrw;
   row IPVc IP2rw;
@@ -675,12 +696,14 @@ BEGIN
   Array val IVRecpInvOutstand;
   Array string 255 IVRecpRecpOfficialSerNr;
   Array Integer IVRecpstp;
-  
+  //jh
+  Array String 255 IVRecItemCodes;
+  Array String 255 IVRecItems;
+  //
   Integer rownr;
   LongInt curChNr;
   val t;
   record SysFormatBlock SysFormatRec;
-  record LangNrVc LangNrr;
 
   string 255 paymode,tstr;
   record IPVc IPp;
@@ -697,8 +720,8 @@ BEGIN
   Array val aPayModeTot;
   Integer apmcnt;  
   val ChequeVal;
+  array string 255 languages;
 
-  GetLangNr("",LangNrr);  
   BlockLoad(SysFormatRec);
 
   RecordCopy(IPp,argIPp);
@@ -780,6 +803,10 @@ BEGIN
   end;
   for (i=0 ; i<rwcnt; i=i+1) begin
     MatRowGet(IPp,i,IPrw);
+    //jh
+    IVRecItemCodes[i] = IPrw.rkRecNumber;
+    IVRecItems[i] = IPrw.ArtCodeName;
+    //
     if (IPrw.ovst==0) then begin
       if (blank(CUArrpCode[i])) then begin goto L77PrintIPD; end;
       if (HasLocalization("PRT")) then begin
@@ -806,6 +833,7 @@ BEGIN
       IPDrBase1Val = IPDrBase1Val + IVRecpBase1Val[rownr];
       IVRecpInvDate[rownr] = CUArrpInvDate[i];
       IVRecpComment[rownr] = IPrw.CustName;
+
       if (nonblank(IPrw.PayMode)) then begin
         IVRecpPayMode[rownr] = IPrw.PayMode;
       end else begin
@@ -870,10 +898,13 @@ BEGIN
           IPDrBankCurncy = IP2rw.BankCurncy;
           rownr = rownr + 1;
           IVRecpInvoiceNr[rownr] = IP2rw.InvoiceNr;
+
+
           IVr.SerNr = IP2rw.InvoiceNr;
           IVs = ReadFirstMain(IVr,1,true);
           IVRecpRecpOfficialSerNr[rownr] = IVr.OfficialSerNr;
           IVRecpInvOutstand[rownr] = IP2rw.InvOutstand;
+          
           switch (IP2rw.stp) begin
             case kReceiptRowTypeSettlementDiscount: 
               FindInvOutstand(IPp,IP2rw.InvoiceNr,j,t);
@@ -888,6 +919,10 @@ BEGIN
           IVRecpBankCurncy[rownr] = IP2rw.BankCurncy;
           IVRecpInvDate[rownr] = CUArrpInvDate[j];
           IVRecpComment[rownr] = IP2rw.CustName;
+              //jh
+          IVRecItemCodes[rownr] = IP2rw.rkRecNumber;
+          IVRecItems[rownr] = IP2rw.ArtCodeName;
+            //
           if (curChNr>0) then begin IP2rw.ChequeNr = curChNr; end;
           IVRecpBase1Val[rownr] = MulWithRateToBase1(IP2rw.InvCurncy,IPp.TransDate,IP2rw.InvVal,DefaultCurRoundOff);
           switch (IP2rw.stp) begin
@@ -915,23 +950,39 @@ L77PrintIPD2:;
       IPDPasteBank(IPDrBankName,IPDrBankNr1,IPDrBankNr2,IPDrSWIFT);
       IPDrCustCode = IPrw.CustCode;
       IPDrCustName = IPrw.CustName;
-      res = PrintReceipt(RepSpec,formcode,IPp,CUr,SysFormatRec,LangNrr,
-                         IPDrBankAcc,IPDrBankName,IPDrBankNr1,IPDrBankNr2,IPDrCustCode,
-                         IPDrCustName,IPDrInvCurncy,IPDrBankCurncy,IPDrRecCurncy,IPDrSWIFT,IPDrRefStr,
-                         IPDrInvVal,IPDrInvValB1,IPDrBankVal,IPDrRecVal,IPDrBase1Val,SettlementVal,IPDrRebVal,IPDrVATVal,IPDrRebVATVal,
-                         IVRecpstp,IVRecpInvCurncy,IVRecpBankCurncy,IVRecpRecCurncy,IVRecpComment,IVRecpPayMode,IVRecpAccount,
-                         IVRecpInvoiceNr,IVRecpChequeNr,IVRecpInvDate,
-                         IVRecpInvVal,IVRecpBankVal,IVRecpRecVal,IVRecpBase1Val,IVRecpInvOutstand,IVRecpRecpOfficialSerNr,rownr,
-                         aChequeType,aChequeNr,aChequeTot,achcnt,aPayMode,aPayModeTot,apmcnt);
-                         
-       if (curChNr>0) then begin curChNr = curChNr + 1; end;
+
+      if (OpenForm(formcode)) then begin
+        res = PrintReceipt(RepSpec,formcode,IPp,CUr,SysFormatRec,
+                          IPDrBankAcc,IPDrBankName,IPDrBankNr1,IPDrBankNr2,IPDrCustCode,
+                          IPDrCustName,IPDrInvCurncy,IPDrBankCurncy,IPDrRecCurncy,IPDrSWIFT,IPDrRefStr,
+                          IPDrInvVal,IPDrInvValB1,IPDrBankVal,IPDrRecVal,IPDrBase1Val,SettlementVal,IPDrRebVal,IPDrVATVal,IPDrRebVATVal,
+                          IVRecpstp,IVRecpInvCurncy,IVRecpBankCurncy,IVRecpRecCurncy,IVRecpComment,IVRecpPayMode,IVRecpAccount,
+                          IVRecpInvoiceNr,IVRecpChequeNr,IVRecpInvDate,
+                          IVRecpInvVal,IVRecpBankVal,IVRecpRecVal,IVRecpBase1Val,IVRecpInvOutstand,IVRecpRecpOfficialSerNr,rownr,
+                          aChequeType,aChequeNr,aChequeTot,achcnt,aPayMode,aPayModeTot,apmcnt,langcode,IVRecItemCodes,IVRecItems); //JH
+        GetFormLanguages(languages);    
+        for (j = 0; j<languages.length; j = j + 1) begin
+          SetOverrideLangCode(languages[j]);
+          res = PrintReceipt(RepSpec,formcode,IPp,CUr,SysFormatRec,
+                          IPDrBankAcc,IPDrBankName,IPDrBankNr1,IPDrBankNr2,IPDrCustCode,
+                          IPDrCustName,IPDrInvCurncy,IPDrBankCurncy,IPDrRecCurncy,IPDrSWIFT,IPDrRefStr,
+                          IPDrInvVal,IPDrInvValB1,IPDrBankVal,IPDrRecVal,IPDrBase1Val,SettlementVal,IPDrRebVal,IPDrVATVal,IPDrRebVATVal,
+                          IVRecpstp,IVRecpInvCurncy,IVRecpBankCurncy,IVRecpRecCurncy,IVRecpComment,IVRecpPayMode,IVRecpAccount,
+                          IVRecpInvoiceNr,IVRecpChequeNr,IVRecpInvDate,
+                          IVRecpInvVal,IVRecpBankVal,IVRecpRecVal,IVRecpBase1Val,IVRecpInvOutstand,IVRecpRecpOfficialSerNr,rownr,
+                          aChequeType,aChequeNr,aChequeTot,achcnt,aPayMode,aPayModeTot,apmcnt,languages[j],IVRecItemCodes,IVRecItems);
+        end;
+        SetOverrideLangCode("");
+        CloseForm;     
+      end;    
+      if (curChNr>0) then begin curChNr = curChNr + 1; end;
     end;
 L77PrintIPD:; 
     MatRowPut(IPp,i,IPrw);
   end;
   PrintIPD = res;
-  RETURN;
-END;
+  return;
+end;
 
 global
 procedure DoIPDForm(record RcVc RepSpec,record IPVc IPr)
@@ -981,7 +1032,7 @@ LFINDFORMCOCEIP:;
     end;   
 LBREAKIP:;
     if (nonblank(formcode)) then begin
-      if (PrintIPD(RepSpec,formcode,IPr,"")) then begin  
+      if (PrintIPD(RepSpec,formcode,IPr,"",langcode)) then begin  
         if (IPr.OKFlag!=0) then begin
           IPr.Prntdf = 1;
         end;

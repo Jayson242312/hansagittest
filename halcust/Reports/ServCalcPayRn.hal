@@ -1,0 +1,387 @@
+external inner procedure HT2Per(Date,Date,var string);
+external procedure HTMSClass(string,var string);
+external procedure HTBuild(string,var string);
+external procedure GetIntPercArtCode(var string); 
+external procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+external function val GetUnUsedPrepaymentSum(string,longint,date,date);
+external function val GetPayedPrepaymentSum(string,longint,date,date);
+// external inner function val FindVAT(string,val,Integer,Integer);
+// external inner function roundmode SetRoundModeD(integer);
+
+procedure COGetPeriodSums(longint contract,date sd,date ed,var val bal,var val intsum,var val endbal,string intperccodes,var val payed,var val balnovat)
+Begin
+  Record INVc INr;
+  record ItemPayHistVc ItemPayHistr;
+  boolean TrHs,TrHs2,testf;
+  record IVVc IVr;
+  row IVVc IVrw;
+  
+  bal = 0;
+  intsum = 0;
+  endbal = 0;
+  payed = 0;
+  balnovat = 0;
+  
+  INr.Code = ""; 
+  TrHs = true;
+  while LoopMain(INr,1,TrHs) begin
+    TrHs2=true;
+    ResetLoop(ItemPayHistr);
+    ItemPayHistr.ContrSerNr=contract;
+    ItemPayHistr.ArtCode=INr.Code;
+    ItemPayHistr.TransDate=sd;
+    While LoopKey("ContrSerNr",ItemPayHistr,3,TrHs2) begin
+      if (ItemPayHistr.ContrSerNr!=contract) or (ItemPayHistr.ArtCode!=INr.Code) or (ItemPayHistr.TransDate>ed) then begin
+        TrHs2=false;
+      end else begin
+        if ItemPayHistr.FileName==1 then begin
+          endbal = endbal + ItemPayHistr.AmtValBaseCur;
+          if SetInSet(ItemPayHistr.ArtCode,intperccodes) then begin
+            intsum = intsum + ItemPayHistr.AmtValBaseCur;
+          end else begin
+            bal = bal + ItemPayHistr.AmtValBaseCur;
+            
+            testf=true;
+            if IVr.SerNr!=ItemPayHistr.IVNr then begin
+              IVr.SerNr=ItemPayHistr.IVNr;
+              if !ReadFirstMain(IVr,1,true) then begin
+                testf=false;
+                IVr.SerNr=-1;
+              end;
+            end;
+            if testf then begin
+              MatRowGet(IVr,ItemPayHistr.RowNr,IVrw);
+              balnovat = balnovat + IVrw.Sum;
+            end;
+          end;
+        end else begin
+          endbal = endbal - ItemPayHistr.AmtValBaseCur;
+          if ItemPayHistr.FileName!=5 /* and (ItemPayHistr.FileName!=6) */ then begin
+            payed = payed + ItemPayHistr.AmtValBaseCur;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+
+procedure ProcOneNAContractVc(record RcVc RepSpec,record NAContractVc NAContractr,record BuildVc Buildr,array integer colx,string intperccodes,
+                              var boolean firstf,var array val arrBuildTot)
+begin
+  string 255 tstr;
+  val bal,latebal,exclsum,lateexclsum,startbal,intsum,endbal,payed,balnovat;
+  date blnkdate;
+  
+  COGetBalance(NAContractr.SerNr,AddDay(RepSpec.sStartDate,-1),startbal,latebal,exclsum,lateexclsum,intperccodes);
+  startbal = startbal - GetUnUsedPrepaymentSum(NAContractr.CustCode,NAContractr.SerNr,blnkdate,AddDay(RepSpec.sStartDate,-1));
+  COGetPeriodSums(NAContractr.SerNr,RepSpec.sStartDate,RepSpec.sEndDate,bal,intsum,endbal,intperccodes,payed,balnovat);
+  payed = payed + GetPayedPrepaymentSum(NAContractr.CustCode,NAContractr.SerNr,RepSpec.sStartDate,RepSpec.sEndDate);
+  // endbal = endbal - GetUnUsedPrepaymentSum(NAContractr.CustCode,NAContractr.SerNr,RepSpec.sStartDate,RepSpec.sEndDate);
+  if RepSpec.ArtMode==1 then begin
+    if !firstf then begin
+      StartFormat(15);
+      EndFormat;
+      StartFormat(15);
+      OutString(colx[0],0,Buildr.Code,false);
+      OutString(colx[1],0,Buildr.Address,false);
+      OutString(colx[2],0,"",false);
+      OutString(colx[3],0,"",false);
+      OutString(colx[4],0,"",true);
+      OutString(colx[5],0,"",true);
+      OutString(colx[6],0,"",true);
+      OutString(colx[7],0,"",true);
+      OutString(colx[8],0,"",true);
+      OutString(colx[9],0,"",true);
+      OutString(colx[10],0,"",true);
+      EndFormat;
+      Black_Divider(0,1);
+      firstf=true;
+    end;
+    StartFormat(15);
+    OutString(colx[0],0,NAContractr.FlatAddress,false);
+    OutString(colx[1],0,NAContractr.CustName,false);
+    OutString(colx[2],"DblNAContractVc",NAContractr.SerNr,false);
+    OutString(colx[3],0,NAContractr.OldCode,false);
+    OutVal(colx[4],0,startbal,M4Val,true);
+    OutVal(colx[5],0,balnovat,M4Val,true);
+    OutVal(colx[6],0,bal,M4Val,true);
+    OutVal(colx[7],0,intsum,M4Val,true);
+    OutVal(colx[8],0,bal+intsum,M4Val,true);
+    OutVal(colx[9],0,payed,M4Val,true);
+    OutVal(colx[10],0,startbal+bal+intsum-payed,M4Val,true);
+    EndFormat;
+  end;
+  if RepSpec.ArtMode==2 then begin
+    StartFormat(15);
+    OutString(colx[0],0,NAContractr.FlatAddress,false);
+    OutString(colx[1],0,NAContractr.CustName,false);
+    OutString(colx[2],"DblNAContractVc",NAContractr.SerNr,false);
+    OutString(colx[3],0,NAContractr.OldCode,false);
+    OutVal(colx[4],0,startbal,M4Val,true); //1
+    OutVal(colx[5],0,startbal-exclsum,M4Val,true); //2
+    OutVal(colx[6],0,exclsum,M4Val,true); //3
+    OutVal(colx[7],0,balnovat,M4Val,true); //4
+    OutVal(colx[8],0,bal,M4Val,true); //4
+    OutVal(colx[9],0,intsum,M4Val,true); //5
+    OutVal(colx[10],0,bal+intsum,M4Val,true); //6
+    OutVal(colx[11],0,(startbal-exclsum)+bal,M4Val,true); //7
+    OutVal(colx[12],0,exclsum+intsum,M4Val,true); //8
+    OutVal(colx[13],0,payed,M4Val,true); //9
+    OutVal(colx[14],0,startbal+bal+intsum-payed,M4Val,true); //9
+    EndFormat;
+  end;
+  arrBuildTot[0] = arrBuildTot[0] + startbal;
+  arrBuildTot[1] = arrBuildTot[1] + bal;
+  arrBuildTot[2] = arrBuildTot[2] + intsum;
+  arrBuildTot[3] = arrBuildTot[3] + startbal+bal+intsum-payed;
+  arrBuildTot[4] = arrBuildTot[4] + payed;
+  arrBuildTot[5] = arrBuildTot[5] + balnovat;
+
+  return;
+end;
+
+global
+procedure ServCalcPayRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  record NAContractVc NAContractr;
+  integer rw;
+  string 255 tstr,intperccodes;
+  array integer colx;
+  boolean TrHs,testf,wLoopFlat,wloopCO,firstf;
+  val bal,latebal,exclsum,lateexclsum,startbal,intsum,endbal,payed;
+  array val arrBuildTot,arrTot;
+  date blnkdate;
+  
+  StartReportJob(USetStr(1001616));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw, tstr, 1);
+  rw = rw + 1;
+  if RepSpec.f1!="" then begin
+    HTBuild(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+    rw=rw+1;
+  end;
+  if RepSpec.f2!="" then begin
+    HTMSClass(RepSpec.f2,tstr);
+    Header(rw,tstr,1);
+    rw=rw+1;
+  end;
+  EndHeader;
+  
+  if RepSpec.ArtMode==0 then begin
+    colx[0]=0;
+    colx[1]=40;
+    colx[4]=220;
+    colx[5]=270;
+    colx[6]=310;
+    colx[7]=350;
+    colx[8]=405;
+    colx[9]=440;
+    colx[10]=1;
+  end;
+  
+  if RepSpec.ArtMode==1 then begin
+    colx[0]=0;
+    colx[1]=75;
+    colx[2]=150;
+    colx[3]=180;
+    colx[4]=240;
+    colx[5]=285;
+    colx[6]=320;
+    colx[7]=355;
+    colx[8]=405;
+    colx[9]=440;
+    colx[10]=1;
+  end;
+  
+  if RepSpec.ArtMode==2 then begin
+    colx[0]=0;
+    colx[1]=30;
+    colx[2]=60;
+    colx[3]=90;
+    colx[4]=105;
+    colx[5]=120;
+    colx[6]=150;
+    colx[7]=180;
+    colx[8]=215;
+    colx[9]=265;
+    colx[10]=315;
+    colx[11]=355;
+    colx[12]=410;
+    colx[13]=445;
+    colx[14]=1;
+  end;
+
+  if (RepSpec.ArtMode==0) then begin
+    OutString(colx[0],0,USetStr(1000394),false);
+    OutString(colx[1],0,USetStr(1000211),false);
+    OutString(colx[4],0,USetStr(1000552),true);
+    OutString(colx[5],0,USetStr(8665) & " " & USetStr(16010),true); //aprēķināts 4
+    OutString(colx[6],0,USetStr(1000437),true);
+    OutString(colx[7],0,USetStr(1001615),true);
+    OutString(colx[8],0,USetStr(1001614),true);
+    OutString(colx[9],0,USetStr(26480),true);
+    OutString(colx[10],0,USetStr(1000487),true);
+    EndFormat;
+    Black_Divider(0,1);
+  end;
+
+  if (RepSpec.ArtMode==1) then begin
+    StartFormat(15);
+    OutString(colx[0],0,USetStr(1000211),false);
+    OutString(colx[1],0,USetStr(1000183),false);
+    OutString(colx[2],0,USetStr(1000541),false);
+    OutString(colx[3],0,USetStr(1001603),false);
+    OutString(colx[4],0,USetStr(1000552),true);
+    OutString(colx[5],0,USetStr(8665) & " " & USetStr(16010),true); //aprēķināts 4
+    OutString(colx[6],0,USetStr(1000437),true);
+    OutString(colx[7],0,USetStr(1001615),true);
+    OutString(colx[8],0,USetStr(1001614),true);
+    OutString(colx[9],0,USetStr(26480),true);
+    OutString(colx[10],0,USetStr(1000487),true);
+    EndFormat;
+    Black_Divider(0,1);
+  end;
+  
+  if RepSpec.ArtMode==2 then begin
+    StartFormat(15);
+    OutString(colx[0],0,USetStr(1000211),false);
+    OutString(colx[1],0,USetStr(1000183),false);
+    OutString(colx[2],0,USetStr(1000541),false);
+    OutString(colx[3],0,USetStr(1001603),false);
+    OutString(colx[4],0,USetStr(1000552),false); //saldo
+    OutString(colx[5],0,USetStr(1001396),true); //pamatparāds 2
+    OutString(colx[6],0,USetStr(1001630),true); //kavējuma nauda 3
+    OutString(colx[7],0,USetStr(8665) & " " & USetStr(16010),true); //aprēķināts 4
+    OutString(colx[8],0,USetStr(1000437),true); //aprēķināts 4
+    OutString(colx[9],0,USetStr(1001630),true); //kavējuma nauda 5
+    OutString(colx[10],0,USetStr(1001614),true); //kopā aprēķināts
+    OutString(colx[11],0,USetStr(1001396),true); //pamatparāds
+    OutString(colx[12],0,USetStr(1001630),true); //kavējuma nauda
+    OutString(colx[13],0,USetStr(26480),true); //kavējuma nauda
+    OutString(colx[14],0,USetStr(1000487),true);
+    EndFormat;
+  end;
+
+  GetIntPercArtCode(intperccodes);
+  // intperccodes = "LS";
+
+  TrHs=true;
+  Buildr.Code=RepSpec.f1;
+  While LoopMain(Buildr,1,TrHs) begin
+    if nonblank(RepSpec.f1) and RepSpec.f1!=Buildr.Code then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if nonblank(RepSpec.f2) and SetInSet(RepSpec.f2,Buildr.Classification) then begin
+        testf=false;
+      end;
+      if testf then begin
+        firstf=false;
+        if Buildr.InvToBuild==1 then begin
+          ResetLoop(NAContractr);
+          NAContractr.BuildCode=Buildr.Code;
+          wloopCO=true;
+          While LoopKey("BuildCode",NAContractr,1,wloopCO) begin
+            if NAContractr.BuildCode!=Buildr.Code then begin
+              wloopCO=false;
+            end else begin
+              testf=true;
+              if (RepSpec.flags[0]==0) and (nonblankdate(NAContractr.EndDate) and (NAContractr.EndDate<RepSpec.sStartDate)) then begin
+                testf=false;
+              end;
+              if testf then begin
+                ProcOneNAContractVc(RepSpec,NAContractr,Buildr,colx,intperccodes,firstf,arrBuildTot);
+              end;
+            end;
+          end;
+        end else begin
+          wLoopFlat=true;
+          ResetLoop(Flatsr);
+          Flatsr.Code=Buildr.Code;
+          While LoopKey("Code",Flatsr,1,wLoopFlat) begin
+            if Flatsr.Code!=Buildr.Code then begin
+              wLoopFlat=false;
+            end else begin
+              ResetLoop(NAContractr);
+              NAContractr.FlatCode=Flatsr.FlatCode;
+              wloopCO=true;
+              While LoopKey("FlatCode",NAContractr,1,wloopCO) begin
+                if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+                  wloopCO=false;
+                end else begin
+                  testf=true;
+                  if (RepSpec.flags[0]==0) and (nonblankdate(NAContractr.EndDate) and (NAContractr.EndDate<RepSpec.sStartDate)) then begin
+                    testf=false;
+                  end;
+                  if testf then begin
+                    ProcOneNAContractVc(RepSpec,NAContractr,Buildr,colx,intperccodes,firstf,arrBuildTot);
+                  end;                  
+                end;
+              end;
+            end;
+          end;
+        end;
+        if RepSpec.ArtMode==1 and firstf then begin
+          Black_Divider(0,1);
+        end;
+        StartFormat(15);
+        if RepSpec.ArtMode==0 or RepSpec.ArtMode==1 then begin
+          if RepSpec.ArtMode==1 then begin
+            OutString(colx[0],0,"",false);
+            OutString(colx[1],0,"",false);
+            OutString(colx[2],0,"",false);
+            OutString(colx[3],0,"",false);
+          end else begin
+            OutString(colx[0],0,Buildr.Code,false);
+            OutString(colx[1],0,Buildr.Address,false);
+          end;
+          OutVal(colx[4],0,arrBuildTot[0],M4Val,true);
+          OutVal(colx[5],0,arrBuildTot[5],M4Val,true);
+          OutVal(colx[6],0,arrBuildTot[1],M4Val,true);
+          OutVal(colx[7],0,arrBuildTot[2],M4Val,true);
+          OutVal(colx[8],0,arrBuildTot[1]+arrBuildTot[2],M4Val,true);
+          OutVal(colx[9],0,arrBuildTot[4],M4Val,true);
+          OutVal(colx[10],0,arrBuildTot[3],M4Val,true);
+          EndFormat;
+          if RepSpec.ArtMode==0 then begin
+            Gray_Divider(0,1);
+          end;
+        end;
+        arrTot[0]=arrTot[0]+arrBuildTot[0];
+        arrTot[1]=arrTot[1]+arrBuildTot[1];
+        arrTot[2]=arrTot[2]+arrBuildTot[2];
+        arrTot[3]=arrTot[3]+arrBuildTot[1]+arrBuildTot[2];
+        arrTot[4]=arrTot[4]+arrBuildTot[3];
+        arrTot[5]=arrTot[5]+arrBuildTot[4];
+        arrTot[6]=arrTot[6]+arrBuildTot[5];
+        ClearArray(arrBuildTot);
+      end;
+    end;
+  end;
+  if RepSpec.ArtMode==0 then begin
+    Black_Divider(0,1);
+    StartFormat(15);
+    OutString(colx[0],0,"",false);
+    OutString(colx[1],0,"",false);
+    // OutString(colx[2],0,"",false);
+    // OutString(colx[3],0,"",false);
+    OutVal(colx[4],0,arrTot[0],M4Val,true);
+    OutVal(colx[5],0,arrTot[6],M4Val,true);
+    OutVal(colx[6],0,arrTot[1],M4Val,true);
+    OutVal(colx[7],0,arrTot[2],M4Val,true);
+    OutVal(colx[8],0,arrTot[3],M4Val,true);
+    OutVal(colx[9],0,arrTot[5],M4Val,true);
+    OutVal(colx[10],0,arrTot[4],M4Val,true);
+    EndFormat;
+  end;
+  EndJob;
+
+  return;
+end;

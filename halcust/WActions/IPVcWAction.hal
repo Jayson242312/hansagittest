@@ -1,0 +1,494 @@
+external inner procedure AutomatedSalesOrderly(string);
+remote inner procedure IPPasteRowPayMode3(var row IPVc,string,string);
+external inner function string 40 ObjSClassPasteSpecialWindowClass(string);
+remote inner function Boolean IPVc_PasteInvoiceOfficialSerNr(var record IPVc,Integer,var val,var Boolean);
+remote inner procedure IPVc_PasteTaxTemplateCode(var record IPVc,Integer);
+remote inner function Boolean IPVc_PasteToRateB1BankVal(var record IPVc,Integer);
+external inner function roundmode DefaultRoundMode();
+remote inner function string 255 CurDrawerCode(string);
+remote inner procedure IPVc_PasteBankVal(var record IPVc,Integer);
+external inner procedure FindOTforAcc(string,var string);
+external inner function Boolean GetPM(string,var string,var string);
+external inner function Integer PMCheckType(string,var string,var string);
+remote inner function Boolean PasteInvInIPr(var record IPVc,row IPVc,Integer,Integer);
+remote inner function Boolean IPVc_PasteChequeNr(var record IPVc,Integer);
+remote inner procedure IPVc_PasteVATCode(var record IPVc,Integer);
+remote inner procedure IPVc_PasteRecVal(var record IPVc,Integer);
+remote inner procedure IPVc_PasteRecCurncy(var record IPVc,Integer);
+remote inner procedure IPVc_PastePayDate(var record IPVc,Integer);
+remote inner function Boolean IPVc_PasteCustCode(var record IPVc,Integer,var LongInt);
+remote inner procedure IPVc_PasteOrderNr(var record IPVc,Integer);
+remote inner procedure IPVc_PasteCUPNr(var record IPVc,Integer);
+remote inner procedure IPVc_PastePayCurCode(var record IPVc);
+remote inner procedure IPPastePayMode2(var record IPVc,string);
+remote inner procedure IPVc_PasteTransDate(var record IPVc);
+remote inner procedure IPVc_PasteBankCurncy(var record IPVc,Integer);
+external updating procedure RecLAction_rlIPDPrint(record RcVc,var record IPVc,Boolean);
+remote inner function Boolean PasteInvIn2IPr(var record IPVc,Integer,Date,var val,Boolean,var Boolean);
+external inner procedure IPSumup(var record IPVc);
+external inner procedure IPVc_PasteCurPayVal(var record IPVc);
+
+remote procedure DistributeCustoimerSum_RA(var record IPVc,string,val,var val,val,boolean);// TMK::19-03-2025
+forward procedure POSIPDClassDistribute();
+external inner procedure GetOnAccBalance(record RcVc,string,string,Boolean,Integer,var val,var val,var val,var val,var val,var val,var val,record SMVc,Array string,Array val,var Integer); // jh
+external function val GetCUBalance(record CUVc);
+external inner procedure IPPastePayMode(var record IPVc);
+
+
+// get customer on-account balance
+function Boolean IPDClassCustCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+begin
+  record IPVc IPr;
+  record CUVc CUr;
+  boolean res;
+  string 255 customer;
+
+  // get on-account
+  record RcVc RepSpec;
+  Boolean inAR;
+  val sum,sum2,sumincur,sumbooked,sumnow,sumdiff,rval,rsb1,bal;
+  record SMVc CurTotalsr;
+  Integer lastpaidnr,keynr,rwcnt;
+  Array string 10 debaccs;
+  Array val debbal;
+  Integer debcnt,i;
+  //
+  customer = getwindowstring(wn,"POSIPDClassCustomer");
+
+  res = true;
+  if (changed!=0) then begin
+    //clear row
+    GetWindowRecord(wn,IPr);
+    rwcnt = matrowcnt(IPr);
+    for(i=0;i<rwcnt;i=i+1)begin
+      matrowdelete(IPr,0);
+    end;
+    IPSumup(IPr);
+
+    IPr.UseCredit = 0;
+    IPr.KeepChange = 0;
+    IPr.PayVal = blankval;
+    IPr.ChangeVal = blankval;
+    //
+    CUr.Code = customer;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      CUr.CurncyCode = "NAD";
+      GetOnAccBalance(RepSpec,CUr.Code,CUr.CurncyCode,false,1,sum,sum2,rval,sumbooked,sumnow,sumincur,sumdiff,CurTotalsr,debaccs,debbal,debcnt);
+      IPr.CreditVal = sum;
+      PutWindowRecord(wn,IPr);
+    end;
+  end;
+  IPDClassCustCodeEFAfter = res;
+  return;
+end;
+
+// get pay-mode
+function Boolean POSIPDClassPayModeEFAfter(Integer wn,Integer rownr,Integer changed)
+begin
+  record IPVc IPr;
+  boolean res;
+
+  res = true;
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IPr);
+    IPPastePayMode(IPr);
+    PutWindowRecord(wn,IPr);
+  end;
+
+  POSIPDClassPayModeEFAfter = res;
+  return;
+end;
+
+
+global
+function Boolean POSIPDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  Switch (fieldname) begin
+    case "PayMode":POSIPDClassPayModeEFAfter(wn,rownr,changed);
+    case "PayVal":POSIPDClassDistribute;
+    case "POSIPDClassCustomer": res = IPDClassCustCodeEFAfter(wn,rownr,changed);
+  end;
+    
+  POSIPDClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean POSIPDClassOKFlagButtonAction(Integer wn,Integer value)
+BEGIN
+  Boolean res;
+  record IPVc IPr;
+  Integer normalmode,updatemode;
+ 
+  res = true;
+  normalmode = 0;//Rs_normal
+  updatemode = 2;//Rs_update
+  if (WindowState(wn)==normalmode) then begin
+    GetWindowRecord(wn,IPr);
+    if (IPr.OKFlag!=0) then begin
+      res = UserCanAction("UnOKAll",false);
+    end;
+  end;  
+  if (WindowState(wn)==updatemode) then begin
+    GetPrevWindowRecord(wn,IPr);
+    if (IPr.OKFlag!=0) then begin
+      res = false;
+    end;
+  end;  
+//if (IPButActSpec(IPp,IP2p,WindowState(wn),*(Integer*)ap2)==false) then res = false;//I think it is not needed
+  POSIPDClassOKFlagButtonAction = res;
+  RETURN;
+END;
+
+global
+function Boolean POSIPDClassUpdateTest(Integer wn)
+BEGIN
+  Boolean res;
+  record IPVc IPr;
+  
+  res = true;
+  GetWindowRecord(wn,IPr);
+  if (IPr.OKFlag!=0) then begin
+    res = UserCanAction("UnOKAll",false); 
+  end;
+  POSIPDClassUpdateTest = res;
+  RETURN;
+END;
+
+global
+updating function Boolean POSIPDClassPrint(Integer wn,Boolean previewf)
+BEGIN
+  Boolean res,testf;
+  record IPVc IPr;
+  record RcVc RepSpec;
+  
+  DeselectWindow(wn,false);
+  if (HasLocalization("PRT")) then begin
+    switch (WindowState(wn)) begin
+      case Rs_normal:
+        GetWindowRecord(wn,IPr);
+      case Rs_update:
+        GetPrevWindowRecord(wn,IPr);
+    end;
+    if (IPr.OKFlag==0) then begin
+      MessageBox(12556,"");
+      goto LIPDClassPrint;
+    end;
+  end;
+  GetWindowRecord(wn,IPr);
+  if ((WindowState(wn)==Rs_normal) and (previewf==false)) then begin
+    RecLAction_rlIPDPrint(RepSpec,IPr,true);
+  end else begin
+    testf = PrintDocument(IPr,"IPDForm",true);
+  end;  
+  res = true;
+LIPDClassPrint:;
+  POSIPDClassPrint = res;
+  RETURN;
+END;
+
+global
+function Boolean POSIPDClassOnOverStrike(Integer wn,Integer rownr)
+BEGIN
+  record IPVc IPr;
+
+  if (rownr>=0) then begin
+    GetWindowRecord(wn,IPr);    
+    IPSumUp(IPr);
+    PutWindowRecord(wn,IPr);    
+  end;
+  POSIPDClassOnOverStrike = true;
+  RETURN;
+END;
+
+global 
+function Boolean POSIPDClassDeleteRowTest(Integer wn,Integer rownr)
+begin
+  record IPVc IPr;
+  Boolean res;
+  Integer updatemode;
+
+  res = false;
+
+  POSIPDClassDeleteRowTest = res;
+  return;
+end;
+
+global
+function Boolean POSIPDClassOverStrikeTest(Integer wn,Integer rownr)
+begin
+  record IPVc IPr;
+  Boolean res;
+  Integer updatemode;
+
+  res = false;
+
+  POSIPDClassOverStrikeTest = res;
+  return;
+end;
+
+global
+function Boolean POSIPDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  record IPVc IPr;
+  record CYBlock CYRec;
+  
+  res = false;
+  if(fieldname=="CUPNr" or fieldname=="PayVal" or fieldname=="PayMode")then begin
+    if(windowstate(wn)==1)then begin
+      res = true;
+    end;
+    if(windowstate(wn)==2)then begin
+      getwindowrecord(wn,IPr);
+      if(IPr.OKFlag==0)then begin
+        res = true;
+      end;
+    end;
+  end;
+  
+  POSIPDClassActiveEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean POSIPDClassOnEnterKey(Integer wn,string fieldname,Integer fn,Integer rownr)
+BEGIN
+  Boolean res;
+  LongInt newf;
+  
+  res = true;
+  newf = -1;
+  if (rownr>=0) then begin
+    switch (fieldname) begin
+//      case "InvoiceNr": newf = sf+nfr*(row+1)-1;
+    end;
+  end;
+  if (newf!=-1) then begin
+//    if (EFGoto(wn,newf,true)) then begin res = false; end;
+  end;
+  POSIPDClassOnEnterKey = true;
+  RETURN;
+END;
+
+function string 40 IPDClassSpecPasteNameObjects(Integer wn)
+BEGIN
+  record IPVc IPr;
+  row IPVc IPrw;
+  Integer rownr;
+  string 200 typ,tstr;
+  string 255 psname,accnr;
+
+  GetWindowRecord(wn,IPr);
+  rownr = WindowActiveRow(wn);
+  typ="";
+  if (rownr>=0) then begin
+    MatRowGet(IPr,rownr,IPrw);
+    tstr = IPrw.PayMode;
+    if (blank(tstr)) then begin
+      tstr = IPr.PayMode;
+    end;
+    if (GetPM(tstr,accnr,tstr)==false) then begin
+    end;    
+    FindOTforAcc(accnr,typ);
+  end;
+  if (nonblank(typ)) then begin
+    psname = "TRObjSClass";
+  end else begin    
+    psname = ObjSClassPasteSpecialWindowClass("ObjSClass");
+  end;
+  IPDClassSpecPasteNameObjects = psname;
+  RETURN;
+END;
+
+function string 40 IPDClassSpecPasteNameInstNr(Integer wn)
+begin
+  record IPVc IPr;
+  row IPVc IPrw;
+  Integer rownr;
+  string 200 typ,tstr;
+  string 255 psname,accnr;
+
+  GetWindowRecord(wn,IPr);
+  rownr = WindowActiveRow(wn);
+  if (rownr>=0) then begin
+    MatRowGet(IPr,rownr,IPrw);
+  end;
+  if (IPrw.InvoiceNr>0) then begin
+    psname = "ARInstSClass";
+  end else begin    
+    psname = "ARInstallSClass";
+  end;
+  IPDClassSpecPasteNameInstNr = psname;
+  return;
+end;
+
+global
+function string 40 POSIPDClassSpecPasteName(Integer wn,string defpsname)
+begin
+  string 255 psname;
+  record IPVc IPr;
+  row IPVc IPrw;
+  Integer rownr,cht;
+  
+  psname = defpsname;
+  switch (WindowActiveField(wn)) begin
+    case "ChequeNr":
+      GetWindowRecord(wn,IPr);
+      rownr = WindowActiveRow(wn);
+      if (rownr>=0) then begin
+        MatRowGet(IPr,rownr,IPrw);
+      end;
+      if (nonblank(IPrw.PayMode)) then begin
+        cht = PMCheckType(IPrw.PayMode,psname,psname);
+      end else begin
+        cht = PMCheckType(IPr.PayMode,psname,psname);
+      end;    
+      switch (cht) begin
+        case 0: psname = "";
+        case 1: psname = "RegCheckSClass";
+        case 3: psname = "CouponSClass";
+        otherwise psname = "";
+      end;
+    case "Objects": psname = IPDClassSpecPasteNameObjects(wn);
+    case "InstNr": psname = IPDClassSpecPasteNameInstNr(wn);
+  end;
+  POSIPDClassSpecPasteName = psname;
+  return;
+end;
+
+global
+function Boolean POSIPDClassOpenRecord(Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  record IPVc IPr;
+  row IPVc IPrw;
+  Integer nwn,cht;
+  string 255 tstr,thepm;
+  record CheckVc Checkr;
+  record OwnCheckVc OwnCheckr;
+  
+  switch (fieldname) begin
+    case "ChequeNr":
+      GetWindowRecord(wn,IPr);  
+      MatRowGet(IPr,rownr,IPrw);
+      if (IPrw.ChequeNr!=-1) then begin
+        thepm = IPrw.PayMode;
+        if (blank(thepm)) then begin
+          thepm = IPr.PayMode; 
+        end;
+        cht = PMCheckType(thepm,tstr,tstr);
+        switch (cht) begin
+          case kPayModeTypeCheque:
+            Checkr.SerNr = IPrw.ChequeNr;
+            if (ReadFirstMain(Checkr,1,true)) then begin
+              nwn = OpenWindow("CheckDClass",0,0,"","",Checkr);    
+            end;
+          case kPayModeTypeOwnCheque:
+            OwnCheckr.SerNr = IPrw.ChequeNr;
+            if (ReadFirstMain(OwnCheckr,1,true)) then begin
+              nwn = OpenWindow("OwnCheckDClass",0,0,"","",OwnCheckr);    
+            end;
+        end;        
+      end;
+  end;
+  POSIPDClassOpenRecord = res;
+  return;
+end;
+
+
+global function POSIPDClassDistribute()
+begin
+  integer wn;
+  integer i,rwcnt;
+  record IPVc IPr;
+  string 50 customer;
+  val amount,change,creditNum;
+  boolean testf,useCredit;
+  // get on-account
+  record CUVc CUr;
+  record RcVc RepSpec;
+  Boolean inAR;
+  val sum,sum2,sumincur,sumbooked,sumnow,sumdiff,rval,rsb1,bal;
+  record SMVc CurTotalsr;
+  Integer lastpaidnr,keynr;
+  Array string 10 debaccs;
+  Array val debbal;
+  Integer debcnt;
+  val custbal;
+
+  testf = true;
+  wn = curwindow;
+  deselectwindow(wn,true);
+  getwindowrecord(wn,IPr);
+
+  rwcnt = matrowcnt(IPr);
+  for(i=0;i<rwcnt;i=i+1)begin
+    matrowdelete(IPr,0);
+  end;
+  IPSumup(IPr);
+
+  if (IPr.UseCredit==1 AND IPr.KeepChange==0) then begin
+    MessageBox(0,"If using on Account, Keep Change must be checked");
+    testf = false;
+  end;
+
+  customer = getwindowstring(wn,"POSIPDClassCustomer");
+  CUr.Code = customer;
+  if (ReadFirstMain(CUr,1,true)) then begin
+    custbal = GetCUBalance(CUr);
+  end;
+
+
+  // do nothing if on-acc ticked and user has no outstanding
+  if (IPr.UseCredit==1 AND custbal < 0.01 ) then begin
+    rwcnt = matrowcnt(IPr);
+    for(i=0;i<rwcnt;i=i+1)begin
+      matrowdelete(IPr,0);
+    end;
+    IPSumup(IPr);
+    testf = false;
+  end;
+
+
+  if testf then begin
+    customer = getwindowstring(wn,"POSIPDClassCustomer");
+    amount = IPr.PayVal;
+    IPr.PayVal = 0;
+    if(IPr.OKFlag==0)then begin
+      // add on-account amount
+      if (IPr.UseCredit == 1) then begin
+        CUr.Code = customer;
+        if (ReadFirstMain(CUr,1,true)) then begin
+          CUr.CurncyCode = "NAD";
+          GetOnAccBalance(RepSpec,CUr.Code,CUr.CurncyCode,false,1,sum,sum2,rval,sumbooked,sumnow,sumincur,sumdiff,CurTotalsr,debaccs,debbal,debcnt);
+          IPr.CreditVal = 0;
+          creditNum = sum * -1;
+          if(creditNum>0.01) then begin
+            amount = amount + creditNum;
+            useCredit = true;
+          end;
+        end;
+      end;
+      // distribute to matrix
+      if(nonblank(customer) and amount>0.01)then begin
+        DistributeCustoimerSum_RA(IPr,customer,amount,change,creditNum,useCredit);
+        IPr.PayVal = amount;
+        // remove on-acc from amount
+        if (IPr.UseCredit==1) then begin
+          IPr.PayVal = amount - creditNum;
+        end;
+        IPr.ChangeVal = change;
+        putwindowrecord(wn,IPr);
+      end else begin
+        beep;
+      end;
+    end else begin
+      beep;
+    end;
+  end;
+
+return;
+end;

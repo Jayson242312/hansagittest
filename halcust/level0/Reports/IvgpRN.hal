@@ -1,0 +1,29 @@
+global
+procedure InvoiceType(Integer tp,var string res,var record RcVc RepSpec)
+begin
+  res = ""; 
+  switch (tp) begin
+    case 1: res = USetStr(1803);
+    case 2: res = USetStr(1804);
+    case 3: res = USetStr(1805);
+    case 4: res = USetStr(1810);
+    if (RepSpec.flags[18] == 1) then begin // Interest invoice
+    res = "";
+    end;
+    // ::c
+    case 5: res = USetStr(1806);
+    case 6: res = USetStr(1818); // Receipt
+    //JH ::CustBegin 05.09.2024
+    if (RepSpec.flags[18] == 1) then begin
+      res = "";
+    end;
+    case 7: res = USetStr(1872); // On account (receipt)
+     if (RepSpec.flags[18] == 1) then begin
+      res = "";
+    end;
+    case 8: res = USetStr(1879);
+    case 9: // Cashin....
+    case 10: res = USetStr(1644);
+  end;
+  return;
+end;

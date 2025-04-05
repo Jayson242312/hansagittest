@@ -1,0 +1,235 @@
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+external inner procedure PrintValueInclZero(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
+external inner procedure CommonDocumentFields(record RcVc);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure GetLangNr(string,var record LangNrVc);
+external inner procedure OutAddress(string,string,string,string,string,string,string);
+external inner function Boolean FindCustomerRelation(string,string,var record CUVc);
+external inner function Integer NumberofDocumentPages(string,Integer);
+external function val GetFlatFieldValue(string,string,date,date);
+
+global
+procedure PrintCustCode2Text(string custcode)
+begin
+  record CUVc CUr;
+  
+  if nonblank(custcode) then begin
+    CUr.Code=custcode;
+    if ReadFirstMain(CUr,1,true) then begin
+      OutFormField("FF_CUSTNAME2TEXT",USetStr(1001734) & CUr.Name);
+      OutFormField("FF_CUSTREGNR2TEXT",USetStr(1001735) & CUr.RegNr1);
+    end;
+  end;
+  
+  return;
+end;
+
+procedure PrintNAContract(record NAContractVc NAContractr,string formcode)
+begin
+  record LangNrVc LangNrr;
+  record SysFormatBlock SFb;
+  record CUVc CUr,ContactCUr;
+  record PDVc PDr;
+  record IntPercVc IntPercr;
+  record BuildVc Buildr;
+  record FlatsVc Flatsr;
+  string 255 tstr,city,custcode,custname,contract;
+  val t;
+  boolean negamountf,buildf,flatsf;
+  longint i;
+  date blnkdate,codate;
+  integer pages;
+  
+  BlockLoad(SFb);
+  GetLangNr(NAContractr.LangCode,LangNrr);
+  
+  pages = NumberofDocumentPages(formcode,3);
+  
+  tstr = DateToString(NAContractr.StartDate,"DD.MM.YYYY") & ".-";
+  tstr = tstr & DateToString(NAContractr.EndDate,"DD.MM.YYYY") & ".";
+  OutFormField("FF_PERIODCO",tstr);
+  OutFormField("FF_CODATE",DateToString(NAContractr.CODate,"DD.MM.YYYY"));
+  OutFormField("FF_COSERNR",NAContractr.SerNr);
+
+  Buildr.Code=NAContractr.BuildCode;
+  if ReadFirstMain(Buildr,1,true) then begin
+    city = Buildr.City;
+    buildf=true;
+  end;
+  
+  Flatsr.FlatCode=NAContractr.FlatCode;
+  if ReadFirstMain(Flatsr,1,true) then begin
+    flatsf=true;
+  end;
+  
+  if nonblank(city) then begin
+    OutFormField("FF_ADDRESS",city & ", " & NAContractr.FlatAddress); 
+  end else begin
+    OutFormField("FF_ADDRESS",NAContractr.FlatAddress); 
+  end;
+
+  OutFormField("FF_CUSTNAME",NAContractr.CustName); 
+  OutFormField("FF_STARTDATE",DateToString(NAContractr.StartDate,"DD.MM.YYYY")); 
+  OutFormField("FF_ATTACHNR",NAContractr.AttachNr); 
+  
+  
+  CUr.Code=NAContractr.CustCode;
+  if ReadFirstMain(CUr,1,true) then begin
+  end;
+  if nonblank(CUr.PayDeal) then begin
+    PDr.Code=CUr.PayDeal;
+    if ReadFirstMain(PDr,1,true) then begin
+    end;  
+    OutFormField("F_VILLKOR",PDr.pdComment);
+  end;
+
+  if CUr.CustType==0 then begin //kompanija
+    OutFormField("FF_REGPKNR",USetStr(1000116));
+  end else begin  // persona
+    OutFormField("FF_REGPKNR",USetStr(8909));
+  end;
+  
+  OUTFORMFIELD("F_KUNDNAMN",CUr.Name); //"Klienta nosaukums"
+  OutFormField("FF_CONTRACTNR",NAContractr.ContractNr);
+  OUTFORMFIELD("F_KUNDTEL",CUr.Phone); //Klienta telefona Nr.
+  OUTFORMFIELD("F_EMAIL",CUr.eMail); //e-pasta adrese
+  OUTFORMFIELD("FF_REGNR",CUr.RegNr1);
+  OUTFORMFIELD("FF_PHONE",CUr.Phone);
+  OUTFORMFIELD("FF_CONTREMAIL",NAContractr.eMail); //FF_CONTREMAIL
+  OUTFORMFIELD("F_KONTAKT",CUr.Person); //Kontaktpersona
+  if FindCustomerRelation(CUr.Code,CUr.Person,ContactCUr) then begin
+    OUTFORMFIELD("FF_CONTACTNAMEPOS",ContactCUr.Name & ", " & ContactCUr.JobDesc); //Kontaktpersona
+  end;
+  
+  OUTFORMFIELD("FF_CONTRCOMMENT1",NAContractr.Comment1);
+  OUTFORMFIELD("FF_CONTRCOMMENT2",NAContractr.Comment2);
+  OUTFORMFIELD("FF_CONTRCOMMENT3",NAContractr.Comment3);
+  OUTFORMFIELD("FF_CONTRCOMMENT4",NAContractr.Comment4);
+  OUTFORMFIELD("FF_CONTRCOMMENT5",NAContractr.Comment5);
+  // OutAddress("F_ADRESS",CUr.InvAddr0,CUr.InvAddr1,CUr.InvAddr2,CUr.InvAddr3,CUr.InvAddr3,CUr.InvAddr4); //Adrese
+  OUTFORMFIELD("F_ADDR1",CUr.InvAddr0); //Adrese 1
+  OUTFORMFIELD("F_ADDR2",CUr.InvAddr1); //Adrese 2
+  OUTFORMFIELD("F_ADDR3",CUr.InvAddr2); //Adrese 3
+  OUTFORMFIELD("F_ADDR4",CUr.InvAddr3); //Adrese 4
+  OUTFORMFIELD("FF_INVDELADDR",NAContractr.InvDelAddress); //Adrese 4
+ 
+  IntPercr.Code=NAContractr.IntPercCode;
+  if ReadFirstMain(IntPercr,1,true) then begin
+    OutFormField("FF_INTPERC",IntPercr.Description);
+  end;
+  
+  if FieldInForm("FF_THEATAREA") then begin
+    t = GetFlatFieldValue(NAContractr.FlatCode,"THEATAREA",blnkdate,blnkdate);
+    tstr = ValToString(t,M45Val,"",".",0);
+    tstr = tstr & " kv.m."; 
+    OutFormField("FF_THEATAREA",tstr);
+  end;
+  
+  if buildf then begin
+    OUTFORMFIELD("FF_BUILDDATE",DateToString(Buildr.BDate,"DD.MM.YYYY"));
+  end;
+  
+  if flatsf then begin
+    Switch (Flatsr.PrivStat) begin
+      case 2: tstr = USetStr(1001750);
+      case 7: tstr = USetStr(1001751);
+      otherwise
+        tstr = "";
+    end;
+    OutFormField("FF_PRIVSTAT",tstr);
+  end;
+  
+  PrintCustCode2Text(NAContractr.CustCode2);
+  
+  for (i=0;i<3;i=i+1) begin
+    if FieldInForm("FF_EMPTYFIELD") then begin
+      OUTFORMFIELD("FF_EMPTYFIELD","");
+      EndFormRow;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+procedure DoNAContractForm(record RcVc RepSpec,record NAContractVc NAContractr)
+begin
+  Integer i,rwcnt;
+  Boolean printf,testf,langf;
+  Integer intdocnr;
+  string 30 formcode,langcode;
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+ 
+  testf = true;
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    testf = false;
+  end;
+  if testf then begin
+    langcode = NAContractr.LangCode;
+    rwcnt = MatRowCnt(FDr);
+    for (i=rwcnt-1;i>=0;i=i-1) begin
+      MatRowGet(FDr,i,FDrw);
+      if (FDrw.LangCode==langcode) then begin
+        i = -1;
+        langf = true;
+      end;
+    end;
+    if (langf==false) then begin langcode = ""; end;  
+    intdocnr = 1;
+    printf = true;
+    rwcnt = MatRowCnt(FDr);
+    while (printf) begin
+      formcode = "";
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(FDr,i,FDrw);
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,-1,FDrw.PrintGroupCode,
+                          langcode,intdocnr,"",formcode)) then
+          begin
+          goto LBREAKPrint;
+        end;
+      end;
+  LBREAKPrint:;
+      
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          CommonDocumentFields(RepSpec);
+          PrintNAContract(NAContractr,formcode);
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);  // Dokuments nav atrasts
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));  // Dokumentam nav piesaistīta forma Pārbaudiet formas definīciju
+        end;
+      end;
+      intdocnr = intdocnr + 1;
+    end;
+  end;
+  
+  return;
+end;
+
+global 
+procedure NAContractForm(record RcVc RepSpec) 
+begin
+  record NAContractVc NAContractr;
+
+  if RepSpec.long1==-1 then begin
+    goto LNAContractForm;
+  end;
+  
+  NAContractr.SerNr = RepSpec.long1;
+  if (ReadFirstMain(NAContractr,1,true)) then begin
+    PrintDocument(NAContractr,"NAContractForm",false);
+  end;
+  
+LNAContractForm:;
+  return;
+end;

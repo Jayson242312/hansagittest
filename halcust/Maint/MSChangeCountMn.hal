@@ -1,0 +1,201 @@
+/* Disabled-ServerOnly */
+
+// external function boolean prevCounterRes(record CountResVc ,var record CountResVc);
+external updating function boolean GenCountResRec(longint,val,date,date,boolean,string);
+external function boolean IsTwoTypeFlatCounter(longint);
+
+// global updating 
+// procedure MSChangeCountMn(record RcVc RepSpec)
+// begin
+//   record FlatCountersVc FlatCounterr,FlatCounter2r;
+//   record oldFlatCountersVc oldFlatCounterr;
+//   record CountResVc CountResr,prevCountResr,CountRes2r;
+//   Record NApsSetBlock NApsSetr;
+//   integer i;
+//   date sd,ed;
+
+//   BlockLoad(NApsSetr);
+//   if (repSpec.f1 <>"" and nonblankDate(RepSpec.d1) ) then begin
+//     sd = RepSpec.d1;
+//     sd.Day = 1;
+//     ed = RepSpec.d1;
+//     // FlatCounterr.CounterNo = repSpec.f1;
+//     // FlatCounterr.FlatCode = RepSpec.f3;
+//     FlatCounterr.SerNr = RepSpec.long1;
+//     if (ReadFirstMain(FlatCounterr,1,true)) then begin
+//       RecordCopy(FlatCounter2r,FlatCounterr);
+//       FlatCounterr.Closedf = 1;
+//       RecordUpdate(FlatCounter2r,FlatCounterr,true);
+//       // RecordNew(oldFlatCounterr);
+//       // oldFlatCounterr.Code = FlatCounterr.Code;
+//       // oldFlatCounterr.Address = FlatCounterr.Address;
+//       // oldFlatCounterr.FlatNo = FlatCounterr.FlatNo;
+//       // oldFlatCounterr.MainCounter = FlatCounterr.MainCounter;
+//       // oldFlatCounterr.CounterNo = FlatCounterr.CounterNo;
+//       // oldFlatCounterr.CounterType = FlatCounterr.CounterType;
+//       // oldFlatCounterr.SealNo = FlatCounterr.SealNo;
+//       // oldFlatCounterr.Location = FlatCounterr.Location;
+//       // oldFlatCounterr.ServiceType = FlatCounterr.ServiceType;
+//       // oldFlatCounterr.InitAmount = FlatCounterr.InitAmount;
+//       // oldFlatCounterr.MaxAmount = FlatCounterr.MaxAmount;
+//       // oldFlatCounterr.InstallDate = FlatCounterr.InstallDate;
+//       // oldFlatCounterr.InstallOrg = FlatCounterr.InstallOrg;
+//       // oldFlatCounterr.ValidUntil = FlatCounterr.ValidUntil;
+//       // oldFlatCounterr.WarningDate = FlatCounterr.WarningDate;
+//       // oldFlatCounterr.InternalWarnDate = FlatCounterr.InternalWarnDate;
+//       // oldFlatCounterr.LastCheckDate = FlatCounterr.LastCheckDate;
+//       // oldFlatCounterr.OrgChecked = FlatCounterr.OrgChecked;
+//       // oldFlatCounterr.RemoveDate = FlatCounterr.RemoveDate;
+//       // oldFlatCounterr.OrgRemoved = FlatCounterr.OrgRemoved;
+//       // oldFlatCounterr.Comment = FlatCounterr.Comment;
+//       // oldFlatCounterr.Coef = FlatCounterr.Coef;
+//       // oldFlatCounterr.Closedf = FlatCounterr.Closedf;
+//       // oldFlatCounterr.FlatCode = FlatCounterr.FlatCode;
+//       // oldFlatCounterr.CountTypef = FlatCounterr.CountTypef;
+//       // oldFlatCounterr.SerNr = NextSernr("OldFlatCountersVc",CurrentDate,-1,false,"");
+//       // if (RecordStore(oldFlatCounterr,true)) then begin
+//       // end;
+//       RecordNew(FlatCounter2r);
+//       FlatCounter2r.Code = FlatCounterr.Code;
+//       FlatCounter2r.Address = FlatCounterr.Address;
+//       FlatCounter2r.FlatNo = FlatCounterr.FlatNo;
+//       FlatCounter2r.MainCounter = FlatCounterr.MainCounter;
+//       FlatCounter2r.CounterNo = RepSpec.f2;
+//       FlatCounter2r.CounterType = FlatCounterr.CounterType;
+//       FlatCounter2r.SealNo = RepSpec.f3;
+//       if nonblankdate(RepSpec.d2) then begin
+//         FlatCounter2r.ValidUntil = RepSpec.d2;
+//       end else begin
+//         if NApsSetr.CountStartDateFromVerDate == 0 then begin
+//           FlatCounter2r.ValidUntil = AddDay(AddYear(RepSpec.d1,NApsSetr.FlatCountYears),-1);
+//         end else begin
+//           FlatCounter2r.ValidUntil = AddDay(AddYear(RepSpec.RegDate,NApsSetr.FlatCountYears),-1);
+//         end;
+//       end;
+//       FlatCounter2r.Location = FlatCounterr.Location;
+//       FlatCounter2r.ServiceType = FlatCounterr.ServiceType;
+//       FlatCounter2r.InstallDate = RepSpec.d1;
+//       FlatCounter2r.FlatCode = FlatCounterr.FlatCode;
+//       FlatCounter2r.CountTypef = FlatCounterr.CountTypef;
+//       FlatCounter2r.PrevCounterNo = FlatCounterr.CounterNo;
+//       FlatCounter2r.Manufacture = RepSpec.f5;
+//       FlatCounter2r.InstallOrg = RepSpec.f6;
+//       FlatCounter2r.ExpertCode = RepSpec.f7;
+//       FlatCounter2r.VerificationDate = RepSpec.RegDate;
+      
+//       CountResr.StartDate = sd;
+//       CountResr.CounterNo = FlatCounterr.CounterNo;
+//       CountResr.FlatCode=FlatCounterr.FlatCode;
+//       CountResr.FlatCounterSerNr = FlatCounterr.SerNr;
+//       if (prevCounterRes(CountResr,PrevCountResr)) then begin end;
+// 	  //stopalert("Date: " & PrevCountResr.EndDate);
+//       FlatCounter2r.CorrAmount = PrevCountResr.EndVal - RepSpec.vals0; //calc correction given endval - real endval
+//       FlatCounter2r.MaxAmount = RepSpec.vals1;
+//       FlatCounter2r.InitAmount = RepSpec.vals1 + FlatCounter2r.CorrAmount;
+//       FlatCounter2r.SerNr = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+//       if (RecordStore(FlatCounter2r,true)) then begin end;
+//       RecordDelete(FlatCounterr);
+//     end;
+//   end;
+// return;
+// end;
+
+global updating 
+procedure MSChangeCount2Mn(record RcVc RepSpec)
+begin
+  record FlatCountersVc FlatCounterr,FlatCounter2r,oldFlatCounter;
+  record CountResVc CountResr,prevCountResr,CountRes2r; //Meter readings
+  Record NApsSetBlock NApsSetr; // direct payments
+  integer i;
+  date sd,ed;
+  boolean testf,twotypef,AMRf;
+  val t,t2,t3,t4;
+  string 20 crestype;
+
+  BlockLoad(NApsSetr);
+  if (repSpec.f1 <>"" and nonblankDate(RepSpec.d1) ) then begin
+    t = StringToVal(RepSpec.f8,M45Val);
+    t2 = StringToVal(RepSpec.f9,M45Val);
+    t3 = StringToVal(RepSpec.f10,M45Val);
+    t4 = StringToVal(RepSpec.f11,M45Val);
+    sd = RepSpec.d1;
+    sd.Day = 1;
+    ed = RepSpec.d1;
+    FlatCounterr.SerNr = repSpec.long1;
+
+    
+    if (ReadFirstMain(FlatCounterr,1,true)) then begin
+      testf = true;
+      twotypef = IsTwoTypeFlatCounter(FlatCounterr.SerNr); 
+      // if t < t2 then begin
+        //Create New CountResVc Record
+        crestype = "";
+        if twotypef then begin
+          crestype = "MWH";
+        end;
+        //KS5 - bez rad. tipa, bet M3.
+        if FlatCounterr.CounterType!="KS5" then begin
+          testf = GenCountResRec(FlatCounterr.SerNr,t2 - t,sd,ed,true,crestype);
+        end else begin
+          testf = GenCountResRec(FlatCounterr.SerNr,t4 - t3,sd,ed,true,crestype);
+        end;
+      // end;
+      if /*(t3 < t4) and*/ twotypef then begin
+        crestype = "M3";
+        testf = GenCountResRec(FlatCounterr.SerNr,t4 - t3,sd,ed,true,crestype);
+      end;
+      
+      if testf then begin
+        RecordCopy(oldFlatCounter,Flatcounterr);
+        Flatcounterr.Changed=1;
+        Flatcounterr.RemoveDate=RepSpec.d1;
+        if Flatcounterr.SendToAMRf!=0 then begin
+          AMRf=true;
+          Flatcounterr.SendToAMRf=0;
+          Flatcounterr.AMRChangef=0;
+        end;
+        if RecordUpdate(oldFlatCounter,Flatcounterr,true) then begin end;
+        if RepSpec.flags[0]==1 then begin
+          RecordNew(FlatCounter2r);
+          FlatCounter2r.Code = FlatCounterr.Code;
+          FlatCounter2r.Address = FlatCounterr.Address;
+          FlatCounter2r.FlatNo = FlatCounterr.FlatNo;
+          FlatCounter2r.CounterNo = RepSpec.f2;
+          FlatCounter2r.CounterType = FlatCounterr.CounterType;
+          FlatCounter2r.ValidUntil = RepSpec.d2;
+          FlatCounter2r.Location = FlatCounterr.Location;
+          FlatCounter2r.ServiceType = FlatCounterr.ServiceType;
+          FlatCounter2r.InstallDate = RepSpec.sStartDate;
+          FlatCounter2r.FlatCode = FlatCounterr.FlatCode;
+          FlatCounter2r.BuildGroupCode = FlatCounterr.BuildGroupCode;
+          FlatCounter2r.FlatGroupCode = FlatCounterr.FlatGroupCode;
+          FlatCounter2r.CountTypef = FlatCounterr.CountTypef;
+          FlatCounter2r.PrevCounterNo = FlatCounterr.CounterNo;
+          FlatCounter2r.Manufacture = RepSpec.f5;
+          FlatCounter2r.InstallOrg = RepSpec.f6;
+          FlatCounter2r.ExpertCode = RepSpec.f7;
+          FlatCounter2r.VerificationDate = RepSpec.RegDate;
+          FlatCounter2r.ManufactureNo = RepSpec.f12;
+          if AMRf then begin
+            FlatCounter2r.SendToAMRf=1;
+            FlatCounter2r.AMRChangef=1;
+          end;
+          FlatCounter2r.SendToNIPf = Flatcounterr.SendToNIPf;
+          // FlatCounter2r.MaxAmount = RepSpec.vals1;
+          FlatCounter2r.InitAmount = RepSpec.vals1;
+          FlatCounter2r.InitAmount2 = RepSpec.vals2;
+          FlatCounter2r.SerNr = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+          if t > t2 then begin
+            FlatCounter2r.InitAmount = FlatCounter2r.InitAmount + (t - t2);
+          end;
+          if t3 > t4 then begin
+            FlatCounter2r.InitAmount2 = FlatCounter2r.InitAmount2 + (t3 - t4);
+          end;
+          if (RecordStore(FlatCounter2r,true)) then begin 
+          end;
+        end;
+      end;
+    end;
+  end;
+return;
+end;

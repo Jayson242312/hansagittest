@@ -1,0 +1,2178 @@
+
+event startup
+begin
+  SetLangMode(LangEnglish,"ENG",2);
+
+  SetBegin(1002);//owner type
+  SetText(0,"-");
+  SetText(1,"Joint property");
+  SetText(2,"Private individual");
+  SetText(3,"Legal entity");
+  SetText(4,"State");
+  SetText(5,"Municipality");
+  SetText(6,"Not under ownership");
+  EndSet;
+
+  SetBegin(1003);//privatizācijas statuss
+  SetText(0,"-");
+  SetText(1,"Private property");
+  SetText(2,"Privatised");
+  SetText(3,"Partly privatised");
+  SetText(4,"State-owned property");
+  SetText(5,"Municipal property");
+  SetText(6,"No status");
+  SetText(7,"Non-privatised");
+  endset;
+
+  SetBegin(1004);//rūm taips
+  SetText(0,"-");
+  SetText(1,"Apartment");
+  SetText(2,"Communal apartment");
+  SetText(3,"Office apartment");
+  SetText(4,"Artists' studio");
+  SetText(5,"Garage");
+  SetText(6,"Basement premises");
+  SetText(7,"Underground car parks");
+  SetText(8,"Non-residential premises");
+  SetText(9,"House");
+  SetText(10,"Terrace house");
+  SetText(11,"Business");
+  SetText(12,"Living space");
+  SetText(13,"Uninhabited space");
+  endset;
+
+  SetBegin(1005);//rūm aptaisīšans līmeņ
+  SetText(0,"-");
+  SetText(1,"All amenities");
+  SetText(2,"Partial amenities");
+  SetText(3,"No amenities");
+  endset;
+
+  SetBegin(1006);//land owner type
+  SetText(0,"-");
+  SetText(1,"State-owned property");
+  SetText(2,"Municipalities");
+  SetText(3,"Joint property");
+  SetText(4,"Legal entities");
+  SetText(5,"Private individuals");
+  SetText(6,"Unknown");
+  EndSet;
+
+  SetBegin(1007);//land owner type
+  SetText(0,"-");
+  SetText(1,"Tenant");
+  SetText(25,"Tenant");
+  SetText(2,"Daughter");
+  SetText(21,"Son");
+  SetText(4,"Mother");
+  SetText(5,"Father");
+  SetText(6,"Wife");
+  SetText(7,"Husband");
+  SetText(8,"Brother");
+  SetText(9,"Sister");
+  SetText(10,"Grandfather");
+  SetText(11,"Grandmother");
+  SetText(12,"Grandson");
+  SetText(13,"Granddaughter");
+  SetText(14,"Sub-tenant");
+  SetText(15,"Daughter-in-law");
+  SetText(16,"Son-in-law");
+  SetText(17,"Mother-in-law");
+  SetText(18,"Father-in-law");
+  SetText(19,"Mother-in-law");
+  SetText(20,"Father-in-law");
+  SetText(23,"Owner");
+  SetText(24,"Owner");
+  SetText(22,"Other");
+  EndSet;
+
+  SetBegin(1008);
+  SetText(0,"-");
+  SetText(1,"No. of rooms");
+  SetText(2,"No. of balconies");
+  SetText(3,"Total area");
+  SetText(4,"Living area");
+  SetText(5,"Heated area");
+  SetText(6,"Outdoor areas");
+  SetText(7,"Deemed parts");
+  SetText(8,"Balcony area");
+  SetText(9,"Enclosed balcony area");
+  SetText(10,"Actual no. of residents");
+  SetText(11,"No. of declared persons");
+  SetText(12,"No. of radiators");
+  SetText(13,"Garage area");
+  SetText(14,"Commercial area");
+  EndSet;
+
+  SetBegin(1009);
+  SetText(0,"-");
+  SetText(1,"No. of rooms");
+  SetText(2,"Total area");
+  SetText(3,"Living area");
+  SetText(4,"Heated area");
+  SetText(5,"Outdoor areas");
+  SetText(6,"Actual no. of residents");
+  SetText(7,"Declared no. of residents");
+  EndSet;
+
+  SetBegin(1010);
+  SetText(0,"-");
+  SetText(1,"January");
+  SetText(2,"February");
+  SetText(3,"March");
+  SetText(4,"April");
+  SetText(5,"May");
+  SetText(6,"June");
+  SetText(7,"July");
+  SetText(8,"August");
+  SetText(9,"September");
+  SetText(10,"October");
+  SetText(11,"November");
+  SetText(12,"December");
+  EndSet;
+
+  SetBegin(1011);
+  SetText(0,"-");
+  SetText(1,"Calculated");
+  SetText(2,"Completed");
+  endset;
+
+  SetBegin(1012);
+  SetText(0,"By meters");
+  SetText(1,"By periods");
+  endset;
+
+  SetBegin(1013);//artcode payment priority, INPayPriorityBlock
+  SetText(0,"Client - pay first");
+  SetText(1,"Invoice - pay first");
+  SetText(2,"Do not pay");
+  SetText(3,"Client - pay last");
+  SetText(4,"Invoice - pay last");
+  EndSet;
+
+  SetBegin(1014); //Tarifa aprēķina formula
+  SetText(0,"Calculation");
+  SetText(1,"Tariff");
+  SetText(2,"Register");
+  SetText(3,"Water diff.");
+  SetText(4,"Set erf field");
+  SetText(5,"Set premises field");
+  EndSet;
+
+  SetBegin(1015); //Telpu lauki
+  SetText(0,"Declared residents");
+  SetText(1,"Residents");
+  SetText(2,"Heated area");
+  EndSet;
+
+  SetBegin(1016); //Ēku bilances aprēķina formula
+  SetText(0,"Calculation");
+  SetText(1,"Set");
+  EndSet;
+
+  SetBegin(1017); //Ēku bilances aprēķina formula
+  SetText(0,"Sum");
+  SetText(1,"Middle");
+  SetText(2,"First");
+  SetText(3,"Last");
+  SetText(4,"1st column (per. start)");
+  SetText(5,"2nd column (paid)");
+  SetText(6,"3rd column (handed out)");
+  //SetText(7,"4th column (per. end)");
+  EndSet;
+
+  SetBegin(1018); //Ēku bilances aprēķina formula
+  SetText(0,"-");
+  SetText(1,"Invoice print out");
+  SetText(2,"PDF invoice dispatch");
+  SetText(3,"Erf balance sheet calculations");
+  EndSet;
+
+  SetBegin(1019);
+  SetText(0,"Unknown");
+  SetText(1,"Correct");
+  SetText(2,"Internet pay.");
+  SetText(3,"Court bailiff");
+  EndSet;
+
+  SetBegin(1020);
+  SetText(0,"Prepared");
+  SetText(1,"Created");
+  EndSet;
+
+  SetBegin(1021);
+  SetText(0,"-");
+  SetText(1,"Head of erf");
+  SetText(2,"Head of stairwell");
+  EndSet;
+
+  SetBegin(1022);
+  SetText(0,"Active");
+  SetText(1,"Closed");
+  EndSet;
+
+  SetBegin(1023);
+  SetText(0,"-");
+  SetText(1,"Under administration ");
+  SetText(2,"Contract of authorization");
+  SetText(3,"Union");
+  SetText(4,"Losses");
+  //SetText(5,"Passive");
+  SetText(6,"Emergency");
+  EndSet;
+
+  SetBegin(1024);
+  SetText(0,"Unanswered");
+  SetText(1,"Answered");
+  SetText(2,"Cancelled");
+  EndSet;
+
+  SetBegin(1025); //Telpu lauka tips, pievienot tikai tad, ja vajag izdalīt telpas lauku no pārējiem
+  SetText(0,"-");//None
+  SetText(1,"Area");//Area
+  SetText(2,"Residents");
+  EndSet;
+
+  SetBegin(1026); //Izdrukas tips paziņojumiem par neapmaksātajiem rēķiniem
+  SetText(0,"Reminder");
+  SetText(1,"Warning");
+  SetText(2,"Explanation");
+  SetText(3,"Warning to owner/Tenant");
+  EndSet;
+
+  SetBegin(1027); //Izdrukas tips tāmēm
+  SetText(0,"Planned");
+  SetText(1,"Processing");
+  SetText(2,"Accomplished");
+  EndSet;
+
+  SetBegin(1028);  //Piegādātāju līgumu tips
+  SetText(0,"Active");
+  SetText(1,"Passive");
+  EndSet;
+
+  SetBegin(1029);  //Prombūtnes statusi
+  SetText(0,"-");
+  SetText(1,"Approved");
+  SetText(2,"Unapproved");
+  EndSet;
+
+  SetBegin(1030);  //Izziņu veida maksāšanas veids
+  SetText(0,"-");
+  SetText(1,"Pay");
+  SetText(2,"Free");
+  EndSet;
+
+  SetBegin(1031);  //Istabas veids
+  SetText(0,"-");
+  SetText(1,"Communicating");
+  SetText(2,"Isolated");
+  EndSet;
+
+  SetBegin(1032);  //Tiesības privatizēt
+  SetText(0,"-");
+  SetText(1,"Non-privatised, cannot be in possession");
+  SetText(2,"No rights on privatization");
+  SetText(3,"there is ");
+  SetText(4,"there is not");
+  EndSet;
+
+  SetBegin(1033);  //Domes lēmuma veids
+  SetText(0,"-");
+  SetText(1,"Assignment");
+  SetText(2,"Reforming");
+  SetText(3,"Prolongation");
+  EndSet;
+
+  SetBegin(1034);  // pamatlīdzekļa statusa tipi
+  SetText(0,"Department change");
+  SetText(1,"Executive change ");
+  SetText(2,"Inventory");
+  EndSet;
+
+  SetBegin(1035);  // iedzīvotāja statuss
+  SetText(0,"-");
+  SetText(1,"Family member");
+  SetText(2,"Subtenant");
+  EndSet;
+
+  SetBegin(1036);  // deklarēšanas anulēšanas datums
+  SetText(0,"-");
+  SetText(1,"Dead");
+  SetText(2,"Cancelled");
+  SetText(3,"Decl. Else");
+  EndSet;
+
+  SetBegin(1037);  // avots priekš periodiskajiem pakalpojumiem
+  SetText(0,"-");
+  SetText(1,"Activity");
+  SetText(2,"Work tasks");
+  SetText(3,"Periodic service input");
+  SetText(4,"Erf credit allocation");
+  SetText(5,"Water difference distribution");
+  EndSet;
+
+  SetBegin(1038);  // teksti priekš inventarizācijas atskaites
+  SetText(0,"Based on ________ year \"____\"________________ order No.________");
+  SetText(1,"the calculation of existing values actual amounts on the balance account No.________ was made, counting them");
+  SetText(2,"in the storing places on ________ year \"____\"________________");
+  SetText(3,"Inventory started    on ________ year \"____\"________________");
+  SetText(4,"Inventory ended on ________ year\"____\"________________");
+  SetText(5,"In inventory following found: ");
+  SetText(6,"Inventory ten. No. ");
+  SetText(7,"Date of dispatch");
+  SetText(8,"Person responsible for materials");
+  SetText(9,"Counts");
+  SetText(10,"Be declared out of order");
+  SetText(11,"Actual amount");
+  SetText(12,"By record report");
+  SetText(13,"Number");
+  SetText(14,"Value");
+  SetText(15,"Total for person responsible for materials");
+  SetText(16,"A) Sum total, EUR");
+  SetText(17,"B) Amount, piece: ");
+  SetText(18,"Commission Chair");
+  SetText(19,"Position");
+  SetText(20,"Surname, Name");
+  SetText(21,"Signature");
+  SetText(22,"Commission members");
+  SetText(23,"All values that are mentioned in the inventory list from No. __________ To No. __________");
+  SetText(24,"were checked at work at my (our) presence and are noted in the list, therefore I (we) do not have any complaints");
+  SetText(25,"to the inventory committee. Values, noted in the list, are under my (our) responsible storage.");
+  SetText(26,"________ year \"____.\"______________");
+  SetText(27,"In this list information and calculations verified: ");
+  SetText(28,"Inv. No. ");
+  SetText(29,"Total according to list:");
+  EndSet;
+
+  SetBegin(1039);  //Rindas tips priekš ēku un ien. rēķinu sasaistes
+    SetText(0,"and incoming invoice");
+    SetText(1,"Records ");
+    SetText(2,"Erf values");
+  EndSet;
+
+  SetBegin(1040);  //Rādīt / nerādīt personas telpās
+    SetText(0,"Show");
+    SetText(1,"Do not show");
+  EndSet;
+
+  SetBegin(1041);  // Saīsināti nosaukumi priekš parādnieku apkopojuma atskaites
+    SetText(0,"Start balance");
+    SetText(1,"Calc.");
+    SetText(2,"Pay.");
+    SetText(3,"Final balance");
+    SetText(4,"KL");
+    SetText(5,"Kds.");
+    SetText(6,"PA");
+    SetText(7,"Activities ");
+  EndSet;
+
+  SetBegin(1042);
+    SetText(0,"-");
+    SetText(1,"Middle");
+    SetText(2,"Web ");
+    SetText(3,"Controlact");
+    SetText(4,"report ");
+    SetText(5,"Absence");
+    SetText(6,"Telephone");
+  EndSet;
+
+  SetBegin(1043); //Plānotās bilances aprēķini
+    SetText(0,"Yes");
+    SetText(1,"No");
+  EndSet;
+
+  SetBegin(1044); // Kādā orientācijā drukāt izziņu
+    SetText(0,"Portray oriented");
+    SetText(1,"Landscape oriented");
+  EndSet;
+
+  SetBegin(1045);  // kopa priekš atskaites 'Ēku izdevumu pārskats'
+    SetText(0,"Property cost overview");
+    SetText(1,"Erf code");
+    SetText(2,"Service type");
+  EndSet;
+
+  SetBegin(1046);
+    SetText(0,"to fit into negatives");
+    SetText(1,"does not fit into negatives");
+  EndSet;
+
+  SetBegin(1047);  // kopa priekš atskaites 'Ēku skaitītāju rādījumi'
+    SetText(0,"Erf meter readings");
+    SetText(1,"Initial readings");
+    SetText(2,"Consumption");
+    SetText(3,"Annex");
+    SetText(4,"House meter readings and water realization");
+    SetText(5,". year");
+  EndSet;
+
+  SetBegin(1048);  // Elektrības daudzumu tipi
+    SetText(0,"Gift card");
+    SetText(1,"Initial tariff");
+  EndSet;
+
+  SetBegin(1049); // Ēkas darbinieku amati
+    SetText(0,"Erf manager");
+    SetText(1,"Home senior");
+    SetText(2,"Responsible person");
+    SetText(3,"Janitor");
+    SetText(4,"Heating unit responsible");
+    SetText(5,"Keys from basement");
+    SetText(6,"House manager");
+    SetText(7,"Init. group member");
+    SetText(8,"Other");
+  EndSet;
+
+  SetBegin(1050);  // Kolonu tips priekš logu definīcijām
+    SetText(0,"Normal");
+    SetText(1,"Extends");
+  EndSet;
+
+  SetBegin(1051);
+    SetText(0,"Skip articles missing in flats");
+    SetText(1,"Take the amount from counter results for missing articles");
+    SetText(2,"If has reading (no avg.)-0, else Coef.(Calc.value)");
+    SetText(3,"If has reading (incl. avg.)-0, else Coef.(Calc.value)");
+    SetText(4,"Skip articles missing in flats (coef. 0)");
+  EndSet;
+
+  SetBegin(1052);
+    SetText(0,"From maintenance");
+    SetText(1,"Charge");
+  EndSet;
+
+  SetBegin(1053);
+    SetText(0,"-");
+    SetText(1,"No water leakage");
+    SetText(2,"Hot");
+    SetText(3,"Cold");
+    SetText(4,"Heating");
+  EndSet;
+
+  SetBegin(1054);
+    SetText(0,"-");
+    SetText(1,"Raiser");
+    SetText(2,"Entrance");
+    SetText(3,"Erf");
+  EndSet;
+
+  SetBegin(1055);
+    SetText(0,"-");
+    SetText(1,"Cold");
+    SetText(2,"Hot");
+  EndSet;
+
+  SetBegin(1056);
+    SetText(0,"-");
+    SetText(1,"Rebuild stock");
+    SetText(2,"Database backup");
+    SetText(3,"Send and receive e-mails");
+  EndSet;
+
+  SetBegin(1057);
+    SetText(0,"-");
+    SetText(1,"One time");
+    SetText(2,"Daily");
+    SetText(3,"Periodic");
+  EndSet;
+
+  SetBegin(1058); //Universāls Jā - Nē sets
+    SetText(0,"No");
+    SetText(1,"Yes");
+  EndSet;
+
+  SetBegin(1059); //Universāls Jā - Nē sets
+    SetText(0,"-");
+    SetText(1,"No");
+    SetText(2,"Yes");
+  EndSet;
+
+  SetBegin(1060);
+    SetText(0,"Normal");
+    SetText(1,"Court bailiff");
+  EndSet;
+
+  SetBegin(1061);
+    SetText(0,"-");
+    SetText(1,"Flat has not submitted readings");
+    SetText(2,"Flat has no counters");
+    SetText(3,"Inspector was not allowed to enter flat");
+    SetText(4,"Flat has defective counter");
+    SetText(5,"Expired counter's validation date");
+  EndSet;
+
+  SetBegin(1062);
+    SetText(0,"Cold water");
+    SetText(1,"Hot water");
+  EndSet;
+
+  SetBegin(1063);
+    SetText(0,"Do not calc fines");
+    SetText(1,"Court bailiff");
+  EndSet;
+
+  SetBegin(1064);
+    SetText(0,"No");
+    SetText(1,"Yes");
+  EndSet;
+
+  SetBegin(1065);
+    SetText(0,"-");
+    SetText(1,"Letter");
+    SetText(2,"Signed letter");
+    SetText(3,"Fax");
+    SetText(4,"E-mail");
+    SetText(5,"In person");
+  EndSet;
+
+  SetBegin(1066);
+    SetText(0,"Prepared");
+    SetText(1,"Printing");
+    SetText(2,"Completed");
+  EndSet;
+
+  SetBegin(1067);
+    SetText(0,"-");
+    SetText(1,"Do not match");
+    SetText(2,"Match");
+  EndSet;
+
+  SetBegin(1068);
+    SetText(0,"Stat. perc.");
+    SetText(1,"Contr. penalty");
+    SetText(2,"Dont calc");
+  EndSet;
+
+  SetBegin(1069);
+  	SetText(0,"General order");
+    SetText(1,"Order of warning");
+    SetText(2,"Small claim order");
+    SetText(3,"Requirement application");
+  EndSet;
+
+  // SetBegin(1070);
+    // SetText(0,"-");
+    // SetText(1,"Prasītājs");
+    // SetText(2,"Atbildētājs");
+    // SetText(3,"Trešā persona");
+  // EndSet;
+
+  // SetBegin(1071)
+    // SetText(0,"Nav nodots");
+    // SetText(1,"Nodots sāk. sinh.");
+    // SetText(2,"Nodots atsevišķi");
+    // SetText(3,"Maks. no piedz.");
+    // SetText(4,"Maks. no piedz. (apstrādāts)");
+  // EndSet;
+
+  // SetBegin(1072);
+    // SetText(0,"-");
+    // SetText(1,"Nodots");
+  // EndSet;
+
+  SetBegin(1073);
+  SetText(0,"Queued");
+  SetText(1,"Being Sent");
+  SetText(2,"Sent");
+  SetText(3,"Failed");
+  EndSet;
+
+  SetBegin(1074);
+    SetText(0,"Standart");
+    SetText(1,"Doubtful");
+    SetText(2,"Hopeless");
+  EndSet;
+
+  SetBegin(1081);
+    SetText(0,"-");
+    SetText(1,"Code");
+    SetText(2,"Client code");
+    SetText(3,"Contract number");
+    SetText(4,"Invoice sum");
+    SetText(5,"Sum to pay");
+    SetText(6,"Invoice number");
+  EndSet;
+
+  SetBegin(1082);
+  SetText(0,"-");
+  SetText(1,"Active");
+  SetText(2,"Pasive");
+  EndSet;
+
+  SetBegin(1083);
+  SetText(0,"-");
+  SetText(1,"Active");
+  SetText(2,"Completed");
+  EndSet;
+
+  // // Papildu darbības personu grupās
+  // StrSetAdd(3);
+  //   StrSetText(OBSAllowDeleteMeters,"Allow to delete meter records");
+  //   StrSetText(OBSAllowDeleteFlat,"Allow to delete flat records");
+  //   StrSetText(BBSAllowUncheckMailClosed,"Permit mail closed sign to be changed");
+  //   StrSetText(OBSAllowNAContrRowChange,"Allow to change services in contract");
+  //   StrSetText(OBSAllowChgMainIntPerc,"Allow change mainīt basic panalty precent records (OBS)");
+  // EndStrSet;
+
+//----------------------------------------------
+  SString(1000000,"The contract has been signed or approved, can not be edited");
+  SString(1000001,"Reading from meter must be indicated when replacing");
+  SString(1000002,"Meter reading to meter indicated in the period is already entered. Please correct it before running the service.");
+  SString(1000003,"Not specified meter reading period. Please check the settings \"Erf management settings\"");
+  SString(1000004,"In period indicated this service in premise does not exist ");
+  SString(1000005,"Specify the existing area of the premise for the residents of the area declared.");
+  SString(1000006,"Classification must be indicated");
+  SString(1000007,"Periodical services");
+  SString(1000008,"Distribution");
+  SString(1000009,"Meter reading list");
+  SString(1000010,"No articles found adequate to – Meter classification type ");
+  SString(1000011,"Property");
+  SString(1000012,"Properties");
+  SString(1000013,"Consumption on ");
+  SString(1000014,"Calculate consumption on");
+  SString(1000015,"Not divided ");
+  SString(1000016,"Number");
+  SString(1000017,"With meter");
+  SString(1000018,"Without meter");
+  SString(1000019,"Total meters");
+  SString(1000020,"Total water consumption");
+  SString(1000021,"Together without classifications");
+  SString(1000022,"Statement of water consumption for ");
+  SString(1000023,". year");
+  SString(1000024,"In the previous month, Declaration has been entered for you: ");
+  SString(1000025,"Contractual penalty/legal interest");
+  SString(1000026,"Report on water consumption by ");
+  SString(1000027,"by address");
+  SString(1000028,"By meter, EUR");
+  SString(1000029,"On Average, EUR");
+  SString(1000030,"Rate, EUR");
+  SString(1000031,"Water not divided, EUR");
+  SString(1000032,"Erf water consumption");
+  SString(1000033,"-NOT FOUND-");
+  SString(1000034,"The negative consumption indicated in line ");
+  SString(1000035,"The meter reading has already been entered for the meter in row ");
+  SString(1000036,"HAL version");
+  SString(1000037,"Exit");
+  SString(1000038,"Start date must be the first date of the month");
+  SString(1000039,"End date must be the last day of the month");
+  SString(1000040,"Service calculation/payment by premise");
+  SString(1000041,"Non-existent Service Package!");
+  SString(1000042,"End date is mandatory if \"Addtitional start tariff\" is selected");
+  SString(1000043,"No Contract");
+  SString(1000044,"closed");
+  SString(1000045,"VAT Declaration Annex 1, part III");
+  SString(1000046,"In this object already active meter exists with the same number");
+  SString(1000047,"The premise is not linked to the contract!");
+  SString(1000048,"Premises fields (exclude)");
+  SString(1000049,"Functionality is foreseen only for erf meters");
+  SString(1000050,"Customer category is not specified");
+  SString(1000051,"Category not found");
+  SString(1000052,"Category must be unique");
+  SString(1000053,"Invoice series is not specified");
+  SString(1000054,"Invoice series not found");
+  SString(1000055,"Meter reading template");
+  SString(1000056,"Customer debt details");
+  SString(1000057,"Debt details for period from");
+  SString(1000058,"Calculated incl.:");
+  SString(1000059,"1. Debt incl.:");
+  SString(1000060,"2. Penalty / statutory %");
+  SString(1000061,"Payed incl.:");
+  SString(1000062,"- Principal amount");
+  SString(1000063,"- Penalty / statutory %");
+  SString(1000064,"Balance incl.:");
+  SString(1000065,"Accounting officer");
+  SString(1000066,"Meter with the same number and premise already added to this record!");
+  SString(1000067,"Same meter specified in row ");
+  SString(1000068,"Priority");
+  SString(1000069,"Proportional");
+  SString(1000070,"Only specified");
+  SString(1000071,"Error in item payment priority");
+  SString(1000072,"Incorrect pay type for prepay item pay. priority");
+  SString(1000073,"ERROR in prepaid amount distribution");
+  SString(1000074,"VAT code percent must be blank or 0%");
+  SString(1000075,"VAT code percent must be blank or 0%, check item group");
+  SString(1000076,"VAT code percent must be blank or 0%, check Account Usage S/L");
+  SString(1000077,"Rows with the same item must also have the same trans. type");
+  SString(1000078,"The flat has an active contract, it cannot be deleted!");
+  SString(1000079,"Calculated sums in period");
+  SString(1000080,"Calculated in period");
+  SString(1000081,"Type \"Extends\" can be specified only in one row");
+  SString(1000082,"Customer code cannot be used in invoice number");
+  SString(1000083,"Current amount is not specified");
+  SString(1000084,"Periodic services records check");
+  SString(1000085,"Done");
+  SString(1000086,"Meters(m3)");
+  SString(1000087,"Diff.(m3)");
+  SString(1000088,"Diff.(%)");
+  SString(1000089,"Estimated difference in water");
+  SString(1000090,"Resident has absences on the redeclaration date!");
+  SString(1000091,"Resident has absences after the redeclaration date!");
+  SString(1000092,"There are periodic service records attached, which were not included into invoices!");
+  SString(1000093,"Meter ID must be specified");
+  SString(1000094,"Stock No");
+  SString(1000095,"Purch.dat.");
+  SString(1000096,"Dep");
+  SString(1000097,"Qnt");
+  SString(1000098,"Acc.val.ps");
+  SString(1000099,"Rem.val.p");
+  SString(1000100,"Acc.depr.ps");
+  SString(1000101,"Purch.per.");
+  SString(1000102,"Cap.invest.");
+  SString(1000103,"Depr.per.");
+  SString(1000104,"Acc.val.pe");
+  SString(1000105,"Rem.val.p");
+  SString(1000106,"Acc.depr.pe");
+  SString(1000107,"Shared services for period");
+  SString(1000108,"Tariff calculation formulas");
+  SString(1000109,"Error report - Invoice creation");
+  SString(1000110,"Invoice creation would overwrite another invoice.");
+  SString(1000111,"Incorrect stock depreciation date");
+  SString(1000112,"Item does not have cost value");
+  SString(1000113,"Penalty / statutory interest calculation.");
+
+  SString(1000114,"Basic debt");
+  SString(1000115,"Contr. penalty");
+
+  SString(1000116,"Hearing : ");
+  SString(1000117," room: ");
+  SString(1000118," process server: ");
+  SString(1000119,"Case No.: ");
+
+  SString(1000120,"The fee review");
+  SString(1000121,"Number");
+  SString(1000122,"Contract");
+  SString(1000123,"Customer");
+  SString(1000124,"Paid");
+  SString(1000125,"Date");
+  SString(1000126,"Recovered");
+  SString(1000127,"Date");
+  SString(1000128,"Debt");
+  SString(1000129,"Total");
+  SString(1000130,"Type");
+  SString(1000131,"Contract : ");
+  SString(1000132,"Fee type : ");
+
+  SString(1000133,"Debtor status");
+
+  SString(1000134,"Invoice");
+  SString(1000135,"Date");
+  SString(1000136,"Sum");
+  SString(1000137,"Debt");
+  SString(1000138,"Balance");
+  SString(1000139,"Debt dynamics");
+  SString(1000140,"Activities");
+
+  SString(1000141,"Init. debt");
+  SString(1000142,"End debt");
+  SString(1000143,"Init. prep.");
+  SString(1000144,"End prep.");
+  SString(1000145,"Comparison of water usage");
+  SString(1000146,"Cur.consum. (m3)");
+
+  SString(1000150,"External debts");
+  SString(1000151,"Date");
+  SString(1000152,"Balance");
+  SString(1000153,"Activity does not have a document form");
+
+  SString(1000155,"Flats report");
+  SString(1000156,"Erf : ");
+  SString(1000157,"Erf classification : ");
+
+  SString(1000158,"-");
+  SString(1000159,"Private property");
+  SString(1000160,"Privatized");
+  SString(1000161,"Partly privatized");
+  SString(1000162,"State property");
+  SString(1000163,"Municipal property");
+  SString(1000164,"No status");
+  SString(1000165,"Not privatized");
+
+  SString(1000166,"-");
+  SString(1000167,"Flat");
+  SString(1000168,"Communal flat");
+  SString(1000169,"Service flat");
+  SString(1000170,"Artists' workshop");
+  SString(1000171,"Garage");
+  SString(1000172,"Premises in a basement");
+  SString(1000173,"Underground parking");
+  SString(1000174,"Non-residential premises");
+  SString(1000175,"House");
+  SString(1000176,"Line house");
+  SString(1000177,"Commercial activities");
+  SString(1000178,"Residential room");
+  SString(1000179,"Non-residential room");
+
+  SString(1000180,"No.");
+  SString(1000181,"Address");
+  SString(1000182,"Customer");
+  SString(1000183,"Name");
+  SString(1000184,"Legal address");
+  SString(1000185,"Priv. status");
+  SString(1000186,"Cat.");
+  SString(1000187,"Premises type");
+  SString(1000188,"Liv. area");
+  SString(1000189,"Tot. area");
+  SString(1000190,"With balc.");
+  SString(1000191," fl. ");
+
+  SString(1000192,"Bill on debt");
+  SString(1000193,"Customer : ");
+  SString(1000194,"Month");
+  SString(1000195,"Balance");
+  SString(1000196,"Calculation");
+  SString(1000197,"Paid");
+  SString(1000198,"Balance");
+  SString(1000199,"Bill on property management communal services calculation and payment");
+  SString(1000200,"Total : ");
+
+  SString(1000201,"There are meter result inputs with types: ");
+  SString(1000202,"Wrong meter type");
+
+  SString(1000203,"Results : ");
+
+  SString(1000204,"Overview of the claims sent to the court");
+  SString(1000205,"No.");
+  SString(1000206,"Address");
+  SString(1000207,"Flat");
+  SString(1000208,"Customer");
+  SString(1000209,"Date");
+
+  SString(1000210,"Hearings");
+  SString(1000211,"Address");
+  SString(1000212,"Flat");
+  SString(1000213,"Customer");
+  SString(1000214,"Priv.");
+  SString(1000215,"Date");
+  SString(1000216,"Actual hearing");
+
+  SString(1000220,"VAT ");
+  SString(1000221,"%:");
+  SString(1000222,"With VAT ");
+  SString(1000223,"% :");
+  SString(1000224,"No VAT:");
+  SString(1000225,"No VAT: ");
+
+  SString(1000226,"Under ownership flat No.");
+
+  SString(1000227,"Overview of the submitted calls");
+  SString(1000228,"Submitted to");
+  SString(1000229,"Appl. group");
+  SString(1000230,"Appl. descr.");
+  SString(1000231,"Applied");
+
+  SString(1000232,"Overview of the emergency calls");
+  SString(1000233,"Resp.time");
+
+  SString(1000234,"Overview of the leaked water");
+
+  SString(1000235,"List of the concluded contracts");
+  SString(1000236,"Name/Surname");
+  SString(1000237,"Reason");
+  SString(1000238,"Deal type");
+  SString(1000239,"Dome decision");
+
+  SString(1000240,"Cons. note no.");
+  SString(1000241,"Basic sum");
+  SString(1000242,"Adj. account");
+
+  SString(1000243,"rented flat No.");
+  SString(1000244,"W.off in per.");
+
+  SString(1000245,"January");
+  SString(1000246,"February");
+  SString(1000247,"March");
+  SString(1000248,"April");
+  SString(1000249,"May");
+  SString(1000250,"June");
+  SString(1000251,"July");
+  SString(1000252,"August");
+  SString(1000253,"September");
+  SString(1000254,"October");
+  SString(1000255,"November");
+  SString(1000256,"December");
+
+  SString(1000257,"Start and end dates are not specified!");
+  SString(1000258,"Cannot create a record!");
+
+  SString(1000259,"cold");
+  SString(1000260,"hot");
+  SString(1000261,"gas");
+  SString(1000262,"Only existing different categories should be specified");
+  SString(1000263,"Assets purchased in period");
+  SString(1000264,"Inv. no.");
+  SString(1000265,"Value change");
+  SString(1000266,"Tangible");
+  SString(1000267,"Intangible");
+  SString(1000268,"Em. call No.");
+  SString(1000269,"From:Till");
+  SString(1000270,"Time worked");
+  SString(1000271,"Meter type classes");
+  SString(1000272,"All meter type classes with the type");
+  SString(1000273,"Em. call");
+  SString(1000274,"Classification of flats");
+  SString(1000275,"Municipality of Daugavpils");
+
+  SString(1000276,"Specify a code of the form!");
+  SString(1000277,"The combination is already defined:");
+  SString(1000278,"Check the setting \"Revenue/cost overview forms\"");
+  SString(1000279,"flat meters");
+
+  SString(1000280,"Courtroom");
+  SString(1000281,"Num. of documents");
+  SString(1000282,"About");
+  SString(1000283,"Water leak type must be specified");
+
+  SString(1000284,"Leaked water");
+  SString(1000285,"Leak cnt.");
+  SString(1000286,"Leaked (M3)");
+  SString(1000287,"CW");
+  SString(1000288,"HW");
+  SString(1000289,"Prev. leak.");
+  SString(1000290,"Com. leak.");
+  SString(1000291,"Cashbook page");
+  SString(1000292,"Excess of replaning days");
+
+  SString(1000293,"Payments with neg. rows");
+  SString(1000294,"Incl. penalty");
+  SString(1000295,"Receivables report");
+  SString(1000296,"Excl. penalty and legal prc.");
+
+  SString(1000297,"Masters");
+  SString(1000298,"Compl. time");
+  SString(1000299,"What was done");
+  SString(1000300,"Invalid document date for specified number series");
+
+  SString(1000301,"Record has been entered with prior date");
+
+  SString(1000302,"Invoice number conformity with contact codes");
+  SString(1000303,"Debtor calculations");
+  SString(1000304,"Calc.wo.pen.");
+  SString(1000305,"Period for average reading can be used ONLY in combination with mark \"Do not create a average readings\"");
+
+  SString(1000306,"Negative amount not allowed");
+  SString(1000307,"Reminder of counter expiry dates");
+  SString(1000308,"Write-off");
+
+  SString(1000309,"In order to add number, linked mail must be sent to conference");
+  SString(1000310,"Trans.sum");
+  SString(1000311,"Service group");
+  SString(1000312,"Counter validation expires during input period");
+  SString(1000313,"Service for this counter is not registered in flat");
+  SString(1000314,"Counter validation has expired");
+  SString(1000315,"Prepay amt.");
+
+  SString(1000316,"Work task overview");
+  SString(1000317,"Doc. number");
+  SString(1000318,"Missing document numbers");
+
+  SString(1000319,"Amount of counters");
+
+  SString(1000320,"Prop. management invoice verification");
+  SString(1000321,"Missing invoices");
+  SString(1000322,"Missing items");
+
+  SString(1000323,"Saving funds");
+  SString(1000324,"Saving fund saldo on ");
+  SString(1000325,"Saving fund usage");
+  SString(1000326,"WARNING - Your counter validation has expired!");
+
+  SString(1000327,"Correction");
+  SString(1000328,"Items with priority \"Do not pay\" are not allowed if payment method is \"Only specified\"");
+
+  SString(1000329,"Periodic service records already created");
+  SString(1000330,"No flats specified");
+  SString(1000331,"Flat is not registered in this Erf, Erf group or flat group");
+  SString(1000332,"Item for water distribution not specified - please check settings");
+  SString(1000333,"Erf, Erf group or Flat group must be specified");
+  SString(1000334,"Customer total saldo");
+  SString(1000335,"1st unpayed inv.");
+  SString(1000336,"Number of inv.");
+  SString(1000337,"Late");
+  SString(1000338,"Not late");
+  SString(1000339,"incl. principal amount");
+  SString(1000340,"incl. penalty");
+  SString(1000341,"Prepayments");
+  SString(1000342,"Balance on ");
+
+  SString(1000343,"Debt repayment agreements");
+  SString(1000344,"Agree. date");
+  SString(1000345,"Agreement months");
+  SString(1000346,"Min. payments");
+  SString(1000347,"Last payment");
+  SString(1000348,"Payed principal amt.");
+  SString(1000349,"Debt bal. incl. fine");
+  SString(1000350,"Agreem. total");
+  SString(1000351,"Debt bal.");
+  SString(1000352,"Last pay. amount");
+
+  SString(1000353,"VAT ");
+  SString(1000354,"% taxed:");
+  SString(1000355,"Priority \"Only specified\" is not allowed");
+  SString(1000356,"Rows without item not allowed");
+  SString(1000357,"Counter validation date has expired");
+
+  SString(1000358,"Issue registration");
+  SString(1000359,"Confirmed debt repay agreements");
+  SString(1000360,"Agree.");
+  SString(1000361,"Agree. period");
+  SString(1000362,"Status");
+  SString(1000363,"Late");
+  SString(1000364,"Not late");
+  SString(1000365,"This database has no data for year 2013 or earlier years");
+  SString(1000366,"This database has no data for year 2014 or later years");
+  SString(1000367,"Int. date");
+  SString(1000368,"EUR");
+  SString(1000369,"Contract has no management contract date");
+  SString(1000370,"Contract does not have debt repayment agreements");
+  SString(1000371,"Use court order field");
+  SString(1000372,"There were errors durring sending, please check log file for details");
+  SString(1000373,"Allowd pay. priority row types are \"Client - pay first\" and \"Invoice - pay first\"");
+  SString(1000374,"from");
+  SString(1000375,"to");
+  SString(1000376, "Court order overview");
+  SString(1000377, "Contract no.");
+  SString(1000378, "Court order no.");
+  SString(1000379, "Invoice");
+  SString(1000380, "Invoice sum");
+  SString(1000390, "Payed sum");
+  SString(1000391, "Debt sum");
+  SString(1000392, "Date");
+  SString(1000393, "Customer");
+  SString(1000394, "Erf");
+  SString(1000395, "Customer");
+
+  SString(1000396,"Successfully deleted");
+  SString(1000397,"Unsuccessfully deleted");
+
+  SString(1000398,"Erf must be specified!");
+  SString(1000399,"Erf code");
+  SString(1000400,"Address");
+  SString(1000401,"Apartment no.");
+  SString(1000402,"Name");
+  SString(1000403,"Reg. no.");
+  SString(1000404,"Debtor overview");
+  SString(1000405,"List of premises");
+  SString(1000406,"Erf: ");
+  SString(1000407,"Non-existent Erf specified!");
+  SString(1000408,"TOTAL");
+  SString(1000409,"Signature");
+  SString(1000410,"Contractual penalty overview/legal interest");
+  SString(1000411,"Client: ");
+  SString(1000412,"Article: ");
+  SString(1000413,"Address: ");
+  SString(1000414,"Calculated contractual penalty fee/legal interest");
+  SString(1000415,"in invoices");
+  SString(1000416,"Invoice no.");
+  SString(1000417,"Invoice date");
+  SString(1000418,"Does not fit into series!");
+  SString(1000419,"Must be specified!");
+  SString(1000420,"Data verification");
+  SString(1000421,"Premises");
+  SString(1000422,"Erfs");
+  SString(1000423,"Clients");
+  SString(1000424,"Total sum exceeds 100!");
+  SString(1000425,"You may enter pre-payment No., invoice No. or Account No.");
+  SString(1000426,"Enter pre-payment number or Account No.");
+  SString(1000427,"Please indicate warehouse!");
+  SString(1000428,"Overlapping dates!");
+  SString(1000429,"You may only omit final date on last row!");
+  SString(1000430,"Meter readings");
+  SString(1000431,"Meter");
+  SString(1000432,"Service code");
+  SString(1000433,"Resident has absence on declaration date!");
+  SString(1000434,"Status");
+  SString(1000435,"Previous indices");
+  SString(1000436,"Current indices");
+  SString(1000437,"Calculated");
+  SString(1000438,"No reading");
+  SString(1000439,"Reading submitted");
+  SString(1000440,"Additional payments from cost estimates");
+  SString(1000441,"Erf residents' overview");
+  SString(1000442,"Pers. Payment");
+  SString(1000443,"Payroll pay.");
+  SString(1000444,"Start date or final date must be indicated!");
+  SString(1000445,"Absences");
+  SString(1000446,"Total");
+  SString(1000447,"Hot water readings");
+  SString(1000448,"Meters");
+  SString(1000449,"Norms");
+  SString(1000450,"Cold water reading");
+  SString(1000451,"HW reading 1");
+  SString(1000452,"HW reading 2");
+  SString(1000453,"Norm per person");
+  SString(1000454,"Difference");
+  SString(1000455,"Main meter");
+  SString(1000456,"Cold water readings");
+  SString(1000457,"Set tariffs");
+  SString(1000458,"Cold water use");
+  SString(1000459,"Report regarding absences");
+  SString(1000460,"Water consumption not incl. Erf meters");
+  SString(1000461,"Social");
+  SString(1000462,"Agreements");
+  SString(1000463,"Court executor");
+  SString(1000464,"Service calculation/payments");
+  SString(1000465,"Calculated sum");
+  SString(1000466,"Paid sum");
+  SString(1000467,"heating");
+  SString(1000468,"hot water heating");
+  SString(1000469,"cold water");
+  SString(1000470,"Joint Erf meters");
+  SString(1000471,"Cost estimate overview");
+  SString(1000472,"Total by cost estimate");
+  SString(1000473,"Total by Erf");
+  SString(1000474,"Salary bonuses for cost estimates");
+  SString(1000475,"VAT");
+  SString(1000476,"Trans. costs");
+  SString(1000477,"PD");
+  SString(1000478,"Percentagewise");
+  SString(1000479,"Empty apartments");
+  SString(1000480,"Date from");
+  SString(1000481,"Date until");
+  SString(1000482,"Debtor list by period");
+  SString(1000483,"Client");
+  SString(1000484,"Start balance");
+  SString(1000485,"Calculated sum");
+  SString(1000486,"Paid");
+  SString(1000487,"Final balance");
+  SString(1000488,"Article");
+  SString(1000489,"Sum");
+  SString(1000490,"Quantity");
+  SString(1000491,"Price");
+  SString(1000492,"Unit");
+  SString(1000493,"Contractual penalty calculation");
+  SString(1000494,"Invoice");
+  SString(1000495,"Amount bigger than permitted by settings");
+  SString(1000496,"Debtor list with services");
+  SString(1000497,"Npc");
+  SString(1000498,"Total debt");
+  SString(1000499,"Period");
+  SString(1000500,"Days");
+  SString(1000501,"Percentage");
+  SString(1000502,"Contractual penalty");
+  SString(1000503,"Legal proceedings");
+  SString(1000504,"Discount");
+  SString(1000505,"Tariff not incl. disc.");
+  SString(1000506,"Tariff incl. disc.");
+  SString(1000507,"Total (calc.)");
+  SString(1000508,"Total (from reg.)");
+  SString(1000509,"Cost price");
+  SString(1000510,"Average weight");
+  SString(1000511,"Site");
+  SString(1000512,"Template");
+  SString(1000513,"Error");
+  SString(1000514,"no such type");
+  SString(1000515,"closed");
+  SString(1000516,"Site does not match template");
+  SString(1000517,"More than one site");
+  SString(1000518,"No site specified");
+  SString(1000519,"non-existent");
+  SString(1000520,"Site");
+  SString(1000521,"Incorrect");
+  SString(1000522,"from");
+  SString(1000523,"Invoice");
+  SString(1000524,"Erf");
+  SString(1000525,"Deed type");
+  SString(1000526,"Comment");
+  SString(1000527,"Time");
+  SString(1000528,"Calculated sum");
+  SString(1000529,"Paid sum");
+  SString(1000530,"Solvency (%)");
+  SString(1000531,"Valid until");
+  SString(1000532,"Apt.");
+  SString(1000533,"Actual revenue and cost overview");
+  SString(1000534,"Erf balance sheet calculation created");
+  SString(1000535,"Erf balance sheet calculation not created");
+  SString(1000536,"Invoice Sum");
+  SString(1000537,"Invoice No.");
+  SString(1000538,"Unpaid Sales");
+  SString(1000539,"Unpaid Services");
+  SString(1000540,"Difference");
+  SString(1000541,"Contract");
+  SString(1000542,"Other");
+  SString(1000543,"Total by client");
+  SString(1000544,"divided");
+  SString(1000545,"Total by Erf");
+  SString(1000546,"Overall total");
+  SString(1000547,"Debtor list");
+  SString(1000548,"Date");
+  SString(1000549,"A/M");
+  SString(1000550,"Debt");
+  SString(31353,"Next month");
+  SString(1000551,"Uncollected");
+  SString(1000552,"Balance");
+  SString(1000553,"Premises/Client");
+  SString(1000554,"Stat.");
+  SString(1000555,"Unpaid sum verification");
+  SString(1000556,"Sum I");
+  SString(1000557,"Sum II");
+  SString(1000558,"Gr.");
+  SString(1000559,"Non-gr.");
+  SString(1000560,"No. of invoices");
+  SString(1000561,"Documents submitted by residents regarding absences");
+  SString(1000562,"Persons");
+  SString(1000563,"Monthly");
+  SString(1000564,"Days");
+  SString(1000565,"Justification");
+  SString(1000566,"Start date");
+  SString(1000567,"End date");
+  SString(1000568,"Bookkeeper");
+  SString(1000569,"Code");
+  SString(1000570,"Sureties");
+  SString(1000571,"Reg. date");
+  SString(1000572,"Term from");
+  SString(1000573,"Term until");
+  SString(1000574,"Surety provider");
+  SString(1000575,"Received");
+  SString(1000576,"Account");
+  SString(1000577,"Service code");
+  SString(1000578,"Sum not incl. VAT");
+  SString(1000579,"VAT 10%");
+  SString(1000580,"VAT 21%");
+  SString(1000581,"Sum incl. VAT");
+  SString(1000582,"Paid");
+  SString(1000583,"Payment capacity");
+  SString(1000584,"Erf invoices");
+  SString(1000585,"No. of floors");
+  SString(1000586,"Date must be the last day of the month");
+  SString(1000587,"No. of premises/apartments");
+  SString(1000588,"Date built");
+  SString(1000589,"Payment service must not occur in the absence of marked \"Add to the bill payment service\"");
+  SString(1000590,"Erf type");
+  SString(1000591,"Priv. status");
+  SString(1000592,"Owner types");
+  SString(1000593,"Landowners");
+  SString(1000594,"Payment service must necessarily be present if it has been marked \"Add to the bill payment service\"");
+  SString(1000595,"Communal premises");
+  SString(1000596,"S. n. land");
+  SString(1000597,"Basement areas");
+  SString(1000598,"Car parking");
+  SString(1000599,"Non-res. areas");
+  SString(1000600,"Outdoor areas");
+  SString(1000601,"Deemed parts");
+  SString(1000602,"Green zone");
+  SString(1000603,"Other areas");
+  SString(1000604,"Private property");
+  SString(1000605,"Privatised");
+  SString(1000606,"Partly privatised");
+  SString(1000607,"State-owned property");
+  SString(1000608,"Municipal property");
+  SString(1000609,"No status");
+  SString(1000610,"Joint property");
+  SString(1000611,"Private individual");
+  SString(1000612,"Legal entity");
+  SString(1000613,"State");
+  SString(1000614,"Municipality");
+  SString(1000615,"Not under ownership");
+  SString(1000616,"No. of decl.");//JS: possibly not used -- VG: this is used in DebStatRn
+  SString(1000617,"The flat must be indicated if there is a marked \"Add to the bill payment service\"");
+  SString(1000618,"Site address");
+  SString(1000619,"Issued invoice (norm)");
+  SString(1000620,"Actually consumed");
+  SString(1000621,"Meter verification");
+  SString(1000622,"Meter");
+  SString(1000623,"Calc.");
+  SString(1000624,"By ind. coef.");
+  SString(1000625,"By coef.");
+  SString(1000626,"In invoice");
+  SString(1000627,"List of meters");
+  SString(1000628,"Apartment");
+  SString(1000629,"Type");
+  SString(1000630,"Last reading");
+  SString(1000631,"Meter verification");
+  SString(1000632,"Apt.");
+  SString(1000633,"Tallied");
+  SString(1000634,"Meter type");
+  SString(1000635,"Place");
+  SString(1000636,"Reading");
+  SString(1000637,"Final reading");
+  SString(1000638,"No invoice");
+  SString(1000639,"Disc.%");
+  SString(1000640,"Amount");
+  SString(1000641,"Invoice preparation No.");
+  SString(1000642,"preparation usage is disconnected");
+  SString(1000643,"Draw up service invoices");
+  SString(1000644,"Prepare service invoices");
+  SString(1000645,"Total by articles");
+  SString(1000646,"Established");
+  SString(1000647,"invoices");
+  SString(1000648,"recorded");
+  SString(1000649,"Draws up invoices for Erf");
+  SString(1000650,"Invoice series not created on this date");
+  SString(1000651,"Specified invoice date");
+  SString(1000652,"does not fit into period");
+  SString(1000653,"Invoice date cannot be empty");
+  SString(1000654,"Reading No.");
+  SString(1000655,"Subm.");
+  SString(1000656,"Main meter");
+  SString(1000657,"No meter");
+  SString(1000658,"Area");
+  SString(1000659,"Calculation");
+  SString(1000660,"Coefficient");
+  SString(1000661,"One resident's charge");
+  SString(1000662,"Tariff");
+  SString(1000663,"Sum per house");
+  SString(1000664,"Price per m2");
+  SString(1000665,"Monthly calculation");
+  SString(1000666,"Planned");
+  SString(1000667,"Actual");
+  SString(1000668,"Correction");
+  SString(1000669,"Water calculation");
+  SString(1000670,"All Erfs");
+  SString(1000671,"Cold");
+  SString(1000672,"Hot");
+  SString(1000673,"Heating");
+  SString(1000674,"No meter");
+  SString(1000675,"No reading");
+  SString(1000676,"No valid meter");
+  SString(1000677,"Total submitted for Erf");
+  SString(1000678,"Total area by Erf");
+  SString(1000679,"Total cold water reading");
+  SString(1000680,"Total hot water reading");
+  SString(1000681,"Total with meters");
+  SString(1000682,"Total without meters");
+  SString(1000683,"Specify Erf code");
+  SString(1000684,"Specify service type");
+  SString(1000685,"One specific month must be indicated");
+  SString(1000686,"Prepared");
+  SString(1000687,"Calculated");
+  SString(1000688,"Registered");
+  SString(1000689,"Calc. contractual penalty");
+  SString(1000690,"Printed out");
+  SString(1000691,"Erf invoice preparation report");
+  SString(1000692,"Floor");
+  SString(1000693,"No. of premises");
+  SString(1000694,"Web indices");
+  SString(1000695,"Index number");
+  SString(1000696,"Meter number");
+  SString(1000697,"Registration date");
+  SString(1000698,"Meter type");
+  SString(1000699,"Total readings");
+  SString(1000700,"Formula");
+  SString(1000701,"Tariffs");
+  SString(1000702,"To");
+  SString(1000703,"Sum total");
+  SString(1000704,"Commission Chair");
+  SString(1000705,"Position/Surname/Name/Signature");
+  SString(1000706,"Commission members");
+  SString(1000707,"Values listed in list are in my safekeeping.");
+  SString(1000708,"Person responsible for materials");
+  SString(1000709,"Account turnover not incl. site type");
+  SString(1000710,"Sites");
+  SString(1000711,"Client/invoice list");
+  SString(1000712,"E-mail");
+  SString(1000713,"Phone");
+  SString(1000714,"Fax");
+  SString(1000715,"Premises");
+  SString(1000716,"Classification");
+  SString(1000717,"Premises overview");
+  SString(1000718,"N/A");
+  SString(1000719,"Yes");
+  SString(1000720,"No");
+  SString(1000721,"KPL");
+  SString(1000722,"Apl");
+  SString(1000723,"No. of people");
+  SString(1000724,"No. of declared people");
+  SString(1000725,"Privatised");
+  SString(1000726,"Bpl");
+  SString(1000727,"Lpl");
+  SString(1000728,"FiDAViSta payment orders");
+  SString(1000729,"Payment order export");
+  SString(1000730,"Erf payment capacity");
+  SString(1000731,"Erf authority");
+  SString(1000732,"Erf(list)");
+  SString(1000733,"Erf(from:till)");
+  SString(1000734,"Cost group overview");
+  SString(1000735,"Cost groups");
+  SString(1000736,"Jobs carried out");
+  SString(1000737,"Salary");
+  SString(1000738,"CSSSP");
+  SString(1000739,"Overlapping periods");
+  SString(1000740,"Overhead");
+  SString(1000741,"Materials");
+  SString(1000742,"Profits");
+  SString(1000743,"Not incl. VAT");
+  SString(1000744,"Vpl");
+  SString(1000745,"Erf overview");
+  SString(1000746,"May be given only one of the classifications \"KM\", \"MKM\", \"SEZKM\"");
+  SString(1000747,"To row type specified this field can not be shown");
+  SString(1000748,"Contract isn't \"Approved\"");
+  SString(1000749,"Non-residential area");
+  SString(1000750,"Living area");
+  SString(1000751,"If actual balance calculated, then calculating not showed");
+  SString(1000752,"Outdoor areas");
+  SString(1000753,"Communal areas");
+  SString(1000754,"Other areas");
+  SString(1000755,"Green zone");
+  SString(1000756,"Per. start");
+  SString(1000757,"Paid");
+  SString(1000758,"Issued");
+  SString(1000759,"Per. end");
+  SString(1000760,"Administration balance sheets");
+  SString(1000761,"Total difference");
+  SString(1000762," invoices were not deleted, because their entries could not be revised");
+  SString(1000763,"Entry not saved!");
+  SString(1000764,"Non-existent premises");
+  SString(1000765,"No no. series");
+  SString(1000766,"Meter validity term has expired");
+  SString(1000767,"Meter no. required");
+  SString(1000768,"Enter start date");
+  SString(1000769,"Enter premises code");
+  SString(1000770,"Water recalculation");
+  SString(1000771,"Reason: No joint water meters per house");
+  SString(1000772,"Site address");
+  SString(1000773,"Issued invoice (norm)");
+  SString(1000774,"Actually consumed");
+  SString(1000775,"By");
+  SString(1000776,"not incl.");
+  SString(1000777,"water");
+  SString(1000778,"with");
+  SString(1000779,"norms");
+  SString(1000780,"for meter");
+  SString(1000781,"measurement devices");
+  SString(1000782,"meter");
+  SString(1000783,"consumed");
+  SString(1000784,"m3");
+  SString(1000785,"For service");
+  SString(1000786,"VAT 21%");
+  SString(1000787,"LVL");
+  SString(1000788,"in apartments");
+  SString(1000789,"Payment due");
+  SString(1000790,"For service");
+  SString(1000791,"Services");
+  SString(1000792,"all");
+  SString(1000793,"General info");
+  SString(1000794,"Residents");
+  SString(1000795,"Area (sums from flats)");
+  SString(1000796,"No. of contracts drawn up");
+  SString(1000797,"Site type not indicated in Erf management settings");
+  SString(1000798,"No site specified");
+  SString(1000799,"More than one site with type");
+  SString(1000800,"Site does not match template");
+  SString(1000801,"Non-existent site");
+  SString(1000802,"Sealed site");
+  SString(1000803,"Non-existent site type");
+  SString(1000804,"Hierarchical error");
+  SString(1000805,"Data verification");
+  SString(1000806,"Erf activities");
+  SString(1000807,"Activ. types");
+  SString(1000808,"Erf or classification must be specified!");
+  SString(1000809,"Unpaid invoice comparison");
+  SString(1000810,"Start date greater than end date");
+  SString(1000811,"Overlapping period");
+  SString(1000812,"Service invoices");
+  SString(1000813,"Sums: Generated");
+  SString(1000814,"Sums: From invoices");
+  SString(1000815,"Non-existent standard text!");
+  SString(1000816,"year");
+  SString(1000817,"Meter replacement");
+  SString(1000818,"change");
+  SString(1000819,"Invoice with negative sum! ");
+  SString(1000820,"Erf status report");
+  SString(1000821,"Basic information");
+  SString(1000822,"Declared");
+  SString(1000823,"Actual");
+  SString(1000824,"Children");
+  SString(1000825,"Pensioners");
+  SString(1000826,"Handicapped");
+  SString(1000827,"Low-income persons");
+  SString(1000828,"Residents");
+  SString(1000829,"Areas");
+
+  SString(1000830,"Erf, Erf group or Premise group must be noted");
+
+  SString(1000831,"Service total");
+  SString(1000832,"Row object type can be shown only for overview");
+  SString(1000833,"Meter validity term ");
+  SString(1000834,"Communal areas");//JS: possibly not used
+  SString(1000835,"No active contract found on ");
+  SString(1000836,"No. of debtors");
+  SString(1000837,"Erf balance sheet calculations");
+  SString(1000838,"Work tasks");
+  SString(1000839,"Head of Erf");
+  SString(1000840,"Paid %");
+  SString(1000841,"Initially");
+  SString(1000842,"Total calc.");
+  SString(1000843,"Total paid");
+  SString(1000844,"Calculated");
+  SString(1000845,"Paid");
+  SString(1000846,"Final");
+  SString(1000847,"Cadastral No.");
+  SString(1000848,"Erf administrator");
+  SString(1000849,"Start number greater than end number");
+  SString(1000850,"Last invoice date");
+  SString(1000851,"Balcony area");
+  SString(1000852,"Enclosed balcony area");
+  SString(1000853,"No. of rooms");
+  SString(1000854,"Premises status report");
+  SString(1000855,"Start date must be indicated!");
+  SString(1000856,"Erf invoices");
+  SString(1000857,"Total by villages");
+  SString(1000858,"Total by Erfs");
+  SString(1000859,"Total by articles");
+  SString(1000860,"Total by tenants");
+  SString(1000861,"Erf payments");
+  SString(1000862,"No site with type");
+  SString(1000863,"Rows");
+  SString(1000864,"Contact sites");
+  SString(1000865,"Erf sites");
+  SString(1000866,"Premises sites");
+  SString(1000867,"Negative sums in invoice E sections");
+  SString(1000868,"Negative total invoice sums");
+  SString(1000869,"No classification with type");
+  SString(1000870,"Classification does not conform to template");
+  SString(1000871,"Client classifications");
+  SString(1000872,"Tariff overview");
+  SString(1000873,"Invoices with negative unpaid sums");
+  SString(1000874,"Premises meter cannot be found");
+  SString(1000875,"with type");
+  SString(1000876,"successfully established");
+  SString(1000877,"recorded");
+  SString(1000878,"payments");
+  SString(1000879,"Client registration number must be shown");
+  SString(1000880,"Incorrect sum");
+  SString(1000881,"Error in invoice showed");
+  SString(1000882,"Sum showed is bigger than unpaid invoice sum");
+  SString(1000883,"non-existent invoice");
+  SString(1000884,"To approve type must be" & chr(34) & "Correct" & chr(34));
+  SString(1000885,"At least one row must be showed!");
+  SString(1000886,"Indicated client does not match to client in invoice");
+  SString(1000887,"Debtor statistics");
+  SString(1000888,"Invoice service fee comparison");
+  SString(1000889,"E section");
+  SString(1000890,"Invoice sum");
+  SString(1000891,"Debtor statistics");
+  SString(1000892,"Not marked" & chr(34) & " To build a report without any additional parameters" & chr(34));
+  SString(1000893,"Position must be showed");
+  SString(1000894,"Balance position decoding");
+  SString(1000895,"Realization period can only be one calendar month");
+  SString(1000896,"If in incoming invoice divided service or actual articles showed, realization period must be showed");
+  SString(1000897,"In accordance with ");
+  SString(1000899,"January");
+  SString(1000900,"February");
+  SString(1000901,"March");
+  SString(1000902,"April");
+  SString(1000903,"May");
+  SString(1000904,"June");
+  SString(1000905,"July");
+  SString(1000906,"August");
+  SString(1000907,"September");
+  SString(1000908,"October");
+  SString(1000909,"November");
+  SString(1000910,"December");
+  SString(1000911,"Erf not indicated");
+  SString(1000912,"Start date not indicated");
+  SString(1000913,"Final date not indicated ");
+  SString(1000914,"Indicated Erf non-existant");
+  SString(1000915,"No data regarding Erf indicated");
+  SString(1000916,"Meter readings established");
+  SString(1000917,"Reminders");
+  SString(1000918,"Client contracts");
+  SString(1000919,"Supplier contracts");
+  SString(1000920,"Unpaid");
+  SString(1000921,"Form write offs");
+  SString(1000922,"To form write off, warehouse must be showed");
+  SString(1000923,"Error in write off insert article");
+  SString(1000924,"Error in write off insert amount for article ");
+  SString(1000925,"Product receipt No. ");
+  SString(1000926,"Formed preparations with numbers");
+  SString(1000927,"In forming period was");
+  SString(1000928,"Error. For details see log file!");
+  SString(1000929,"Administrator profit");
+  SString(1000930,"Administrator profit");
+  SString(1000931,"Service package");
+  SString(1000932,"Balance not showed in calculation formula");
+  SString(1000933,"Showed balance calculation formula does not exist");
+  SString(1000934,"Erf balance");
+  SString(1000935,"Delta");
+  SString(1000936,"Service package code not showed");
+  SString(1000937,"Only ONE of the fields Erf, Erf group or Premise group can be shown");
+  //JH
+  SString(1001808,"Please enter Book No for this Meter");
+  SString(1001809,"Please enter Sequence No for this Meter");
+  SString(10018010,"Please enter Alpha No for this Meter");
+  //
+  SString(1000938,"Sum from incoming invoice can be received ONLY if divided service formed for Erf");
+  SString(1000939,"Erf, Erf group or Premise group must be noted if indication Global tariff not showed");
+  SString(1000940,"If marked indication Global tariff, then fields Erf, Erf group or Premise group can not be filled");
+  SString(1000941,"Premise can not be indicated if readings formed for premise or Erf group");
+  SString(1000942,"Already registered in this pass, row");
+  SString(1000943,"ONLY Erf or premise can be showen");
+  SString(1000944,"Extra article pass with number has been formed for Erf indicated");
+  SString(1000945,"Extra article pass with number has been formed for premise indicated");
+  SString(1000946,"To reading type or reading indicated middle readings can not be formed");
+  SString(1000947,"Can not input new global extra articles");
+  SString(1000948,"Article can not be equal to extra article ");
+  SString(1000949,"Article indicated also as extra article in row");
+  SString(1000950,"Article indicated also as extra article, in global extra article pass, in row");
+  SString(1000951,"Article indicated also as extra article, in Erf extra article pass, in row");
+  SString(1000952,"Article indicated also as extra article, in premise extra article pass, in row");
+  SString(1000953,"Non-existant classification");
+  SString(1000954,"No rights to fulfil this operation");
+  SString(1000955,"SMS service");
+  SString(1000956,"SMS amount");
+  SString(1000957,"Symbol amount over 150!");
+  SString(1000958,"If contact person showed, then client code must be showed");
+  SString(1000959,"SMS already created");
+  SString(1000960,"Document search");
+  SString(1000961,"Conference");
+  SString(1000962,"Number");
+  SString(1000963,"Heading");
+  SString(1000964,"To whom assigned");
+  SString(1000965,"Invoices with negative prepayment");
+  SString(1000966,"Mail is locked");
+  SString(1000967,"Client code not indicated");
+  SString(1000968,"Premise code not indicated");
+  SString(1000969,"Premise has already active contract");
+  SString(1000970,"with period");
+  SString(1000971,"Indicated client does not exist");
+  SString(1000972,"Indicated Erf group does not exist");
+  SString(1000973,"Indicated premise group does not exist");
+  SString(1000974,"Indicated service does not exist");
+  SString(1000975,"With service indicated global tariff already exists");
+  SString(1000976,"This type of tariff already registered");
+  SString(1000977,"This type of divided service already registered");
+  SString(1000978,"Recorded entry can not be deleted");
+  SString(1000979,"With service groups");
+  SString(1000980,"Premise groups");
+  SString(1000981,"In field and column" & chr(34) & "Objects" & chr(34) & " allowed input only 60 symbols");
+  SString(1000982,"House things ");
+  SString(1000983,"Period type: ");
+  SString(1000984,"Start date");
+  SString(1000985,"Final date");
+  SString(1000986,"Date");
+  SString(1000987,"Show all documents");
+  SString(1000988,"PLEASE CONSIDER PAYMENT CHRONOLOGY. Invoice with new date has been created to client see report" & chr(34) & "Periodic Customer Statement" & chr(34));
+  SString(1000989,"Maximum allowed 80" & chr(34) & "+, -, *, / " & chr(34) & " symbols");
+  SString(1000990,"Period must be showed in full months");
+  SString(1000991,"Code can not be changed, it is already used for client:");
+  SString(1000992,"Code can not be changed, it is already used in contract:");
+  SString(1000993,"Sending PDF invoice to e-mail");
+  SString(1000994,"Send invoices to e-mail");
+  SString(1000995,"Clients with contracts");
+  SString(1000996,"Clients without contracts");
+  SString(1000997,"E-mail not found");
+  SString(1000998,"E-mail created");
+  SString(1000999,"E-mail inserted in sending row");
+  SString(1001000,"E-mail sent");
+  SString(1001001,"Balance calculation formula");
+  SString(1001002,"Over tasks");
+  SString(1001003,"auxiliary materials");
+  SString(1001004,"Machinery");
+  SString(1001005,"Profit");
+  SString(1001006,"Standard text not found. Please check PDF invoice sending processing");
+  SString(1001007,"Sender not indicated. Please check Mail and conference parameter processing");
+  SString(1001008,"Error inserting e-mail in sending row");
+  SString(1001009,"Approved entry cannot be changed");
+  SString(1001010,"This is global entry, Erf can not be indicated");
+  SString(1001011,"Client has several contracts. Way of payment has been changed in all. ");
+  SString(1001012,"Not marked" & chr(34) & " Run the service at no extra parameters" & chr(34));
+  SString(1001013,"Income/expense period must be showed, if mark has inserted" & chr(34) & "Print Inc./Exp. reports" & chr(34));
+  SString(1001014,"Entry must be saved and recorded");
+  SString(1001015,"Invoice payment distribution");
+  SString(1001016,"Invoice ");
+  SString(1001017,"Bank account does not match to pattern given LV##BANK#############");
+  SString(1001018,"Bank accounts can add only to suppliers");
+  SString(1001019,"If in invoice row sum showed, then the article and amount must be indicated");
+  SString(1001020,"E-mail address is not indicated to user");
+  SString(1001021,"Estimate overview in expense types");
+  SString(1001022,"Meter readings in period");
+  SString(1001023,"data on");
+  SString(1001024,"Person");
+  SString(1001025,"Client code");
+  SString(1001026,"Surname/Name");
+  SString(1001027,"Planned that one full month must be showed");
+
+  SString(1001028,"Erf and premise groups");
+  SString(1001029,"Erf group code");
+  SString(1001030,"Premise group code");
+  SString(1001031,"Pemise code");
+  SString(1001032, "Work types");
+  SString(1001033, "Work task class");
+	SString(1001034, "Please indicate article class");
+	SString(1001035, "Article class indicated does not exist");
+	SString(1001036, "Fixed sum");
+
+  SString(1001037,"Erf code not registered");
+  SString(1001038,"Apartment number not registered");
+  SString(1001039,"Unpaid services");
+  SString(1001040,"Contract already registered for these premises ");
+  SString(1001041,"Negative tallied amount only permitted by resending it to savings");
+  SString(1001042,"Main meter required for apartment meter");
+  SString(1001043,"Maximum reading exceeded");
+  SString(1001044,"Meter sealed");
+  SString(1001045,"Meter expiry date exceeded");
+  SString(1001046,"Recipient attached ");
+  SString(1001047,"Recipient removed ");
+  SString(1001048,"Text/content changes");
+  SString(1001049,"Status attached ");
+  SString(1001050,"Status removed ");
+  SString(1001051,"Entry already registered for this period : ");
+  SString(1001052,"Premises");
+  SString(1001053,"Erf");
+
+  //Telpas pakalpojumi
+  SString(1001054,"Premises");
+  SString(1001055,"Service");
+  SString(1001056,"Name");
+  SString(1001057,"Quantity calculation");
+  SString(1001058,"Premises services");
+  SString(1001059,"From premises");
+  SString(1001060,"From meter");
+  SString(1001061,"Other");
+
+  //Dalītie pakalpojumi
+  SString(1001062,"Article not attached to specified service!");
+  SString(1001063,"Non-existent article attached to service!");
+  SString(1001064,"Service calculation");
+
+  SString(1001065,"Reminder printed about unpaid invoices");
+  SString(1001066,"Warning printed about unpaid invoices");
+  SString(1001067,"Explanation printed about unpaid invoices");
+
+  SString(1001068,"Hours");
+  SString(1001069,"Persons and employees must be showed");
+  SString(1001070,"Salary calculation");
+  SString(1001071,"Salary");
+  SString(1001072,"Rate");
+  SString(1001073,"Material write off already created");
+
+  SString(1001074,"Hansa Contract No.");
+  SString(1001075,"Supplier Contract No.");
+  SString(1001076,"Date of Contract");
+  SString(1001077,"Active/Passive");
+  SString(1001078,"The name of the supplier");
+  SString(1001079,"Contract execution date ");
+  SString(1001080,"Erf address");
+  SString(1001081,"Contract sum");
+  SString(1001082,"supplier indicated does not exist!");
+
+  SString(1001083,"Not enough space to paste an object(s) from the location!");
+
+  SString(1001084,"Contracts without premises");
+
+  SString(1001085,"Cost estimate overview 3");
+  SString(1001086,"No.");
+  SString(1001087,"Labour/material name");
+  SString(1001088,"Unit");
+  SString(1001089,"Total amount of all");
+  SString(1001090,"Work capacity, persons/hours");
+  SString(1001091,"Salary(Ls)");
+  SString(1001092,"Mater.(Ls)");
+  SString(1001093,"Mechan.(Ls)");
+  SString(1001094,"Sum(Ls)");
+  SString(1001095,"In total with work task");
+  SString(1001096,"VAT 22%");
+  SString(1001097,"Total with VAT");
+  SString(1001098,"In total with all work tasks");
+  SString(1001099,"Fee:");
+  SString(1001100,"Received:");
+
+  SString(1001101,"Statistical indicator readings in heat hub:");
+  SString(1001102,"Time");
+  SString(1001103,"Thermal energy");
+  SString(1001104,"Hot water");
+  SString(1001105,"Water system for the input");
+  SString(1001106,"Additional information:");
+  SString(1001107,"Data collected: ");
+  SString(1001108,"number of overdue days in old invoices");
+  SString(1001109,"Ent.class.cont.card");
+  SString(1001110,"Persons who entered activities for Erf");
+  SString(1001111,"Persons who entered activities for premise given:");
+  SString(1001112,"Persons who entered activities for client given:");
+  SString(1001113,"Activity types which entered for premise given:");
+  SString(1001114,"Activity types which entered for client given");
+  SString(1001115,"Activity types which entered for Erf");
+  SString(1001116,"Report is not made without extra parameters, and Erf is not indicated!");
+
+  SString(1001117,"Please indicate the field");
+
+  SString(1001118,"Due to technical reasons for values in fields \"From\" and \"To\" must be the same length. Please, add zero in the front.");
+  SString(1001119,"Type code of notice must be unique within the limits of preparation!");
+  SString(1001120,"Specified addressee does not exist!");
+  SString(1001121,"Specified submitter does not exist!");
+  SString(1001122,"Specified recipient does not exist!");
+  SString(1001123,"Specified notice type does not exist!");
+  SString(1001124,"Not possible to assign to the selected reference number reference number in the series. The selected certificate is not valid!");
+  SString(1001125,"Issued notices");
+  SString(1001126,"Contract number: ");
+  SString(1001127,"Notice number");
+  SString(1001128,"Notice date");
+  SString(1001129,"Type of notice");
+  SString(1001130,"Field “From date” must be filled in!");
+  SString(1001131,"Field “To date” must be filled in!");
+  SString(1001132,"Date “To date” cannot be earlier than the “From date”");
+  SString(1001133,"Field “From” can  not be empty!");
+  SString(1001134,"Field “To” can not be empty!");
+  SString(1001135,"Notice type code cannot be blank!");
+  SString(1001136,"Notice type is not specified for the number series!");
+  SString(1001137,"Notice cannot be saved without a number. Enter a valid notice type.");
+  SString(1001138,"Notice cannot be saved without the contract number. Enter a valid contract number.");
+  SString(1001139,"Specified contract does not exist!");
+  SString(1001140,"Notice is not attached to the form. Check the definition of notice type!");
+  SString(1001141,"Not possible to find notice’s associated form. Check to see if one is defined.");
+  SString(1001142,"Notice addressee code and name cannot be empty!");
+  SString(1001143,"Notice addressee code and name must be unique within the limits of preparation!");
+  SString(1001144,"If in the report the credit and debit amounts must be eliminated, then report period must be in full months");
+  SString(1001145,"Old debtors");
+  SString(1001146,"Resident with this number does not exist!");
+  SString(1001147,"The absences must be made from premise pass!");
+  SString(1001148,"The absences must be made from resident pass!");
+  SString(1001149,"Resident name and surname cannot be blank! Please choose a valid resident number!");
+  SString(1001150,"Resident number can not be empty!");
+  SString(1001151,"The Declaration cancellation date can not be earlier than the start date of the Declaration.");
+  SString(1001152,"Resident's pass with the specified code already exists: ");
+  SString(1001153,"Field „Service start date” and “Term” may be either both are given, either both empty");
+  SString(1001154,"Fixed assets inventory list");
+  SString(1001155,"Company:");
+  SString(1001156,"Subdivision:");
+  SString(1001157,"FIXED ASSETS INVENTORY LIST No.");
+  SString(1001158,"Fixed asset");
+  SString(1001159,"Location");
+  SString(1001160,"CERTIFICATION");
+  SString(1001161,"Until the beginning of the inventory all documents relating to my (our) responsibility of the values transferred and the issue of adoption");
+  SString(1001162,"Financially responsible person:");
+  SString(1001163,"Name, Surname");
+
+  SString(1001164,"are recorded and transferred to the accounts.");
+  SString(1001165,"Room Nr.");
+  SString(1001166,"Can not find a signed and approved contract for the specified client!");
+  SString(1001167,"Together specify only the premise and Erf, Erf, premise group, or Erf group!");
+  SString(1001168,"Meters already entered!");
+  SString(1001169,"The specified meter can not be found in the row: ");
+  SString(1001170,"Area must be specified, the registration date, all row fields.");
+  SString(1001171,"Meter reading already entered!");
+  SString(1001172,"Work task status must be \"Done\"!");
+  SString(1001173,"Type of work");
+  SString(1001174,"Client overview");
+  SString(1001175,"No. of premises");
+  SString(1001176,"In house management settings classification type of meter not indicated");
+  SString(1001177,"Classifications with type");
+  SString(1001178,"Reading’s type");
+  SString(1001179,"To create a document for Erf");
+  SString(1001180,"Document date");
+  SString(1001181,"Urgency");
+  SString(1001182,"In The Archive");
+  SString(1001183,"No document type");
+  SString(1001184,"Area in total");
+  SString(1001185,"Periods overlap between the rows");
+  SString(1001186,"Not specified number from ");
+  SString(1001187,"The contract number is in use");
+  SString(1001188,"Names overlap between the rows");
+  SString(1001189,"A blank field in the row");
+  SString(1001190,"Date not specified");
+  SString(1001191,"Warehouse No.");
+  SString(1001192,"Warehouse does not exist.");
+  SString(1001193,"MATERIAL VALUES INVENTORY LIST No. ");
+  SString(1001194,"Inventory list of material values");
+  SString(1001195,"Periodical service is inserted in the Bill. Can not be deleted.");
+  SString(1001196,"Without classification");
+  SString(1001197,"Type");
+  SString(1001198,"Erf code repeating!");
+
+  SString(1001199,"Prepared");
+  SString(1001200,"Printing");
+  SString(1001201,"Suspended");
+  SString(1001202,"Completed");
+
+  SString(1001203,"Incorrect values in flat, build, contact fields");
+  SString(1001204,"Description");
+  SString(1001205,"Not specified contract");
+  SString(1001206,"Not specified Erf");
+  SString(1001207,"Not specified flat");
+  SString(1001208,"Improper contract");
+  SString(1001209,"There is no such contract");
+  SString(1001210,"There is no such Erf");
+  SString(1001211,"Improper flat");
+  SString(1001212,"There is no such flat");
+
+  SString(1001213,"Multiple active contracts for one flat");
+  SString(1001214,"Repeating contracts");
+
+  SString(1001215,"Necessarily indicate start date and end date");
+  SString(1001216,"Do not match start dates and end dates months or years");
+  SString(1001217,"Incorrect day in start date");
+  SString(1001218,"Incorrect day in end date");
+
+  SString(1001219,"Accruals are used in invoice");
+
+  SString(1001220,"Signature");
+
+  SString(1001221,"Invoice by users");
+  SString(1001222,"Num. of inv.");
+  SString(1001223,"OK amount");
+  SString(1001224,"Not OK amount");
+  SString(1001225,"E-mail statistics");
+
+  SString(1001226,"Record keeping overview");
+  SString(1001227,"Recieved correspondence");
+  SString(1001228,"Doc. date");
+  SString(1001229,"Correspondent");
+  SString(1001230,"Answ. date");
+
+  SString(1001231,"Conference for recieved correspondence not defined");
+  SString(1001232,"Specified conference does not exist");
+  SString(1001233,"Sent correspondence");
+  SString(1001234,"Prepared by");
+  SString(1001235,"Answer to");
+  SString(1001236,"Sent to");
+  SString(1001237,"Description");
+  SString(1001238,"Conference for sent correspondence not defined");
+
+  SString(1001239,"Contractor");
+  SString(1001240,"Contract object");
+  SString(1001241,"Valid from");
+  SString(1001242,"Valid till");
+  SString(1001243,"Extended to");
+
+  SString(1001244,"Customer contracts");
+  SString(1001245,"Contract object");
+  SString(1001246,"Notes");
+
+  SString(1001247,"Control");
+  SString(1001248,"Not answered");
+  SString(1001249,"Answered");
+  SString(1001250,"Document with specified number does not exist");
+  SString(1001251,"Economic agreements");
+  SString(1001252,"Contracts for heat supply and usage");
+
+  SString(1001253," meters reading");
+  SString(1001254,"There are reading in this period ");
+  SString(1001255,"Specify start and/or end date");
+  SString(1001256,"Erfs do not match");
+  SString(1001257,"Enter the amount");
+
+  SString(1001258,"Printing already in progress, at the same time only one record can be printed");
+
+  SString(1001259,"Name is too long");
+
+  SString(1001260,"Start date must be bigger than end date");
+  SString(1001261,"Start date must be month's first day");
+  SString(1001262,"End date must be month's last day");
+  SString(1001263,"Enter the start date");
+
+  SString(1001264,"Income invoice VAT check");
+  SString(1001265,"Invoice nr.");
+  SString(1001266,"Header VAT");
+  SString(1001267,"Calc. VAT");
+  SString(1001268,"Calculated");
+
+  SString(1001269,"Date must be month's first day");
+
+  SString(1001270,"Already exists invoice with this invoice date");
+  SString(1001271,"Invoice date is older than last invoice date");
+  SString(1001272,"Perc.");
+
+  SString(1001273,"In contract registred another client");
+  SString(1001274,"In contract registred another flat");
+
+  SString(1001280,"Invoices");
+  SString(1001281,"VIENM");
+  SString(1001282,"VIENR");
+
+  SString(1001284,"The code has to start with the symbol: ");
+  SString(1001285,"No Erf or flat specified");
+  SString(1001286,"Flat fields");
+  SString(1001287,"Sum with coef.");
+  SString(1001288,"Apartment no. ");
+  SString(1001289,"Coef.");
+  SString(1001290,"Total across all Erfs");
+
+  SString(1001296,"Error inserting contract attaced client!");
+  SString(1001297,"There are unattached prepayments");
+  SString(1001298,"Quantity not specified!");
+  SString(1001299,"Counter number not specified!");
+  SString(1001300,"Start.read.");
+  SString(1001301,"End.read.");
+  SString(1001302,"Corr. quant.");
+  SString(1001303,"Without type");
+
+  SString(1001317,"Total debt of the Erf (EUR):");
+
+
+  SString(1001323,"Premises: ");
+
+  SString(1001328,"Error canceling invoice.");
+  SString(1001329,"Error canceling invoice. CAnt unok invoice.");
+
+  SString(1001331,"The meter with this number is already listed!");
+
+
+  SString(1001336,"Meter reading check");
+  SString(1001337,"Meter types ");
+  SString(1001338,"Meter type");
+  SString(1001339,"No meter");
+  SString(1001340,"No reading");
+
+
+  SString(1001346,"Create invoices - merged");
+  SString(1001347,"Customer or classification must be specified!");
+  SString(1001348,"Restored");
+  SString(1001349,"contracts");
+
+  SString(1001353,"Meters with this type dont specify reading type");
+
+  SString(1001376,"Total thermal energy consumption of the Erf MWh: ");
+  SString(1001377,"Total ");
+  SString(1001378,"heat ");
+  SString(1001379,"water heat ");
+  SString(1001380,"Invoices are not sent to the customer by e-mail!");
+
+  SString(1001396,"Principal debt");
+
+  SString(1001429,"The specified amount is greater than the unpaid amount of the service!");
+
+  SString(1001435,"Debt of former apartment owners");
+  SString(1001436,"Erf debt");
+  SString(1001437,"Apartment owners");
+  SString(1001438,"Former apartment owners");
+  SString(1001439,"Name, Surname");
+  SString(1001440,"Build. code ,PG code, apartment no.");
+  SString(1001441,"Together about the former owners");
+
+  SString(1001447,"The specified contract no. is different. with the invoice!");
+
+  SString(1001482,"Such a service is not included in the invoice!");
+
+  SString(1001485,"Erf calculation/payment");
+  SString(1001486,"Services calculated in the period:");
+  SString(1001487,"Services paid for during the period:");
+  SString(1001488,"The service is paid or the outstanding amount is less!");
+
+  SString(1001508,"During the comparison period");
+
+  SString(1001512,"A service invoice already exists on this date");
+
+  SString(1001542,"The date cannot be more than 3 months ahead of today's date");
+  SString(1001553,"Erf status report");
+
+  SString(1001599,"Create counter from report");
+
+  SString(1001600,"Standard");
+  SString(1001601,"Doubtful");
+  SString(1001602,"Hopeless");
+  SString(1001603,"Old code");
+  SString(1001604,"1. Total hot water consumption of the Erf");
+  SString(1001605,"2. The total population reported and ");
+  SString(1001606,"calculated hot water consumption, incl.");
+  SString(1001607,"- population reported total hot");
+  SString(1001608,"water consumption");
+  SString(1001609,"- calculated according to consumption norms ");
+
+  SString(1001610,"total hot water consumption");
+  SString(1001611,"3. Difference (1.p. - 2.p.)");
+  SString(1001612,"Data provided by the operator:");
+  SString(1001613,"Payment overview");
+  SString(1001614,"Total calculated");
+  SString(1001615,"Contractual penalty");
+  SString(1001616,"Service calculations / payments");
+
+
+
+  SString(1001624,"Comparing customer names");
+
+  SString(1001630,"Late payment penalty");
+  SString(1001632,"Comparison of print fields");
+
+  SString(1001649,"Create merged file");
+
+  SString(1001663,"List of subscriptions");
+  SString(1001664,"Flat address");
+  SString(1001665,"Empty");
+  SString(1001667,"No invoices to email!");
+
+  SString(1001686,"This file has already been imported!");
+
+  SString(1001697,"MWh quantity:");
+
+  SString(1001703,"january");
+  SString(1001704,"february");
+  SString(1001705,"march");
+  SString(1001706,"april");
+  SString(1001707,"may");
+  SString(1001708,"june");
+  SString(1001709,"july");
+  SString(1001710,"august");
+  SString(1001711,"september");
+  SString(1001712,"october");
+  SString(1001713,"november");
+  SString(1001714,"december");
+
+
+  SString(1001715,"To ");
+  SString(1001716," late fee calculation has been suspended.");
+  SString(1001717,"Suspended penalty %");
+  SString(1001718,"Read.");
+  SString(1001719,"HW met.");
+
+  SString(1001720,"Norm.");
+  SString(1001721,"Circ.");
+  SString(1001722,"Heat");
+  SString(1001723,"Inv.");
+  SString(1001724,"Area");
+
+  SString(1001729,"You do not have the right to change/delete this record");
+
+  SString(1001731,"Start balance");
+  SString(1001733,"End balance");
+  SString(1001734,"by authority: ");
+  SString(1001735,"person code: ");
+
+  SString(1001750,"Owner");
+  SString(1001751,"Tenant");
+
+  SString(1001778,"Contract calculation/payment");
+  SString(1001779,"Period from ");
+
+  SString(1001780," to ");
+  SString(1001781,"Payment");
+  SString(1001782,"Customer Name Surname");
+  SString(1001783,"Overdue %");
+  SString(1001787,"Conversion of negative readings");
+  SString(1001805,"MB comparison with sales");
+
+  // JH
+  SString(1001806,"Reading date is behind the current date");
+  SString(1001807,"Please enter Department");
+  //
+
+  SString(12023,"ReadingType");
+  SString(12024,"Start/End Date should be the first and last day of the month!");
+  SString(12025,"Blank Start or End Date");
+
+  // JH Lease Agreement 
+  SString(100190,"Code is required!");
+  SString(100191,"Date Leasee signed not entered!");
+  SString(100192,"Date Katima Mulilo Council signed not entered!");
+  SString(100193,"Lease start date not entered!");
+  SString(100194,"Lease end date not entered!");
+  SString(100195,"Title is not entered!");
+  SString(100196,"Customer Code is not entered!");
+  SString(100197,"HoD Code is not entered!");
+  SString(100198,"Representative is not entered!");
+  SString(100199,"ERF code is not entered!");
+  SString(100200,"Lease amount is not entered!");
+  SString(100201,"Lease amount (in words) is not entered!");
+  //
+
+  //jh dead of sale;
+  SString(100202,"Deed number was not entered!");
+  SString(100203,"Date purchaser signed not entered!");
+  SString(100204,"Date Katima Mulilo Council signed not entered!");
+  SString(100205,"Purchase price amount is not entered!");
+  SString(100206,"Purchase price amount (in words) is not entered!");
+  //
+
+
+  //jh dead of donation;
+  SString(100207,"Date donee signed not entered!");
+  SString(100208,"Date Katima Mulilo Council signed not entered!");
+  SString(100209,"Donation amount is not entered!");
+  SString(100210,"Donation amount (in words) is not entered!");
+  SString(100211,"Donee Code is not entered!");
+
+
+  //
+
+  return;
+end;

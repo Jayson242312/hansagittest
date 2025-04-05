@@ -1,0 +1,64 @@
+external procedure HTFlat(string,var string);
+
+global
+procedure FlatsStatusRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record IVVc Cacher;
+  row IVVc Cacherw;
+  boolean TrHs;
+  string 255 tstr;
+  integer rw,i,rwc;
+  
+  StartReportJob(USetStr(1000854));
+    rw=1;
+    HTFlat(RepSpec.f1,tstr);
+    Header(rw,tstr,1);
+  EndHeader;  
+  
+  SetRepCol(2,10);
+  SetRepCol(3,80);
+  SetRepCol(4,250);
+  SetRepCol(5,350);
+  
+  StartFormat(15);
+    OutString(2,0,USetStr(1000122),false);
+    OutString(3,0,USetStr(1000183),false);
+    OutString(4,0,USetStr(1000984),false);
+    OutString(5,0,USetStr(1000985),false);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  TrHs=true;
+  NAContractr.FlatCode=RepSpec.f1;
+  NAContractr.OKFlag=1;
+  while LoopKey("LastFlatCO",NAContractr,2,TrHs) begin
+    if (NAContractr.FlatCode!=RepSpec.f1) or (NAContractr.OKFlag!=1) then begin
+      TrHs=false;
+    end else begin
+      Cacherw.CUPNr = NAContractr.SerNr;
+      Cacherw.UnitComment = NAContractr.CustName;
+      Cacherw.CUServiceUntilDate = NAContractr.StartDate;
+      Cacherw.ServiceDelDate = NAContractr.EndDate;
+      MatRowPut(Cacher,MatRowCnt(Cacher),Cacherw);
+    end;
+  end;
+  
+  rwc=MatRowCnt(Cacher);
+  if rwc>0 then begin
+    SortRows(Cacher,"ServiceDelDate",true);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Cacher,i,Cacherw);
+      StartFormat(15);
+      OutString(2,"DblNAContractVc",Cacherw.CUPNr,false);
+      OutString(3,0,Cacherw.UnitComment,false);
+      OutString(4,0,Cacherw.CUServiceUntilDate,false);
+      OutString(5,0,Cacherw.ServiceDelDate,false);
+      EndFormat;
+    end;
+  end;
+  Black_Divider(0,1);
+  EndJob;
+  
+  return;
+end;

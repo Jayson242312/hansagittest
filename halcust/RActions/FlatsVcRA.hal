@@ -1,0 +1,261 @@
+external inner function Integer CheckObjs(string,string,var string);
+// external updating procedure AddObjectToRec(string,var string,string,string,string);
+external updating procedure RemoveFlatFields(string);
+external updating procedure ChangeBCodeFlatFields(string,string);
+external updating procedure ChangeFlatCodeFlatFields(string,string);
+
+global
+updating function longint FlatsVcRecordCheck(var record FlatsVc Flatsr,record FlatsVc Flatsr2,longint a,longint b)
+begin
+  // Record NApsSetBlock NApsSetr;
+  record INVc Inr;
+  record BuildVc Buildr;
+  integer i,j,rwcnt,rwcnt2,errcode;
+  longint res;
+  string 255 errstr;
+  record FlatsVc CacheFlatsr;
+  boolean cacheinserted;
+
+  // BlockLoad(NApsSetr);
+  res = 0;
+
+  if Flatsr.Code=="" then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res = -1;
+    goto LFlatsVcRecordCheck;
+  end;
+  if Flatsr.FlatCode=="" then begin
+    RecordCheckError(1058,"",-1,"FlatCode");
+    res = -1;
+    goto LFlatsVcRecordCheck;
+  end;
+
+  Buildr.Code = Flatsr.Code;
+  if (ReadFirstMain(Buildr,1,true)==false) then begin
+    RecordCheckError(1001037,"",-1,"Code");
+    res = -1;
+    goto LFlatsVcRecordCheck;
+  end;
+
+  // if NApsSetr.FlatNeedsPrivStat==1 and Flatsr.PrivStat==0 then begin
+  //   RecordCheckError(1058,"",-1,"PrivStat");
+  //   res = -1;
+  //   goto LFlatsVcRecordCheck;
+  // end;
+
+  // if nonblank(NApsSetr.FlatsObjType) then begin
+  //   AddObjectToRec(Flatsr.FlatCode,Flatsr.Objects,NApsSetr.FlatsObjType,Flatsr.Address & " " & Flatsr.FlatNo,Buildr.Objects);
+  // end;
+  // AddObjectToRec(Flatsr.FlatCode,Flatsr.Objects,"T",Flatsr.Address & " " & Flatsr.FlatNo,Buildr.Objects);
+  
+  if nonblank(Flatsr.Objects) then begin
+    errcode=CheckObjs("",Flatsr.Objects,errstr);
+    if errcode!=0 then begin
+      RecordCheckError(errcode,errstr,-1,"Objects");
+      res = -1;
+      goto LFlatsVcRecordCheck;
+    end;
+  end;
+LFlatsVcRecordCheck:;
+
+  FlatsVcRecordCheck = res;
+return;
+end;
+
+// updating procedure UpdateCORecData(record FlatsVc Flatsr,record FlatsVc oldFlatsr)
+// begin
+//   record FlatsVc Flatsr2;
+//   record NAContractVc NAContractr,NAContractr2;
+//   row NAContractVc NAContractrw;
+//   row FlatsVc Flatsrw,oldFlatsrw;
+//   integer rw,rwc;
+//   integer i,rwcnt;
+//   boolean foundf,cochangef;
+
+//   NAContractr.SerNr = Flatsr.CONr;
+//   if (ReadFirstMain(NAContractr,1,true)) then begin
+//     RecordCopy(Flatsr2,oldFlatsr);
+//     RecordCopy(NAContractr2,NAContractr);
+//     cochangef = false;
+//       rwc = MatRowCnt(Flatsr);
+//       for (rw = 0; rw < rwc; rw = rw +1) begin
+//         MatRowGet(Flatsr,rw,Flatsrw);
+//         foundf = false;
+//         rwcnt = MatRowCnt(Flatsr2);
+//         for (i = 0; i < rwcnt; i = i +1) begin
+//           MatRowGet(Flatsr2,i,oldFlatsrw);
+//           if (Flatsrw.ArtCode == oldFlatsrw.ArtCode) then begin
+//             MatRowDelete(Flatsr2,i);
+//             foundf = true;
+//             i = rwcnt;
+//           end;
+//         end;
+//         if (foundf==false) then begin
+//           rwcnt = MatRowCnt(NAContractr);
+//           foundf = false;
+//           for (i = 0; i < rwcnt; i = i + 1) begin
+//             MatRowGet(NAContractr,i,NAContractrw);
+//             if (NAContractrw.ArtCode==Flatsrw.ArtCode) then begin
+//               foundf = true;
+//             end;
+//           end;
+//           if (foundf==false) then begin
+//             ClearRow(NAContractr,NAContractrw,1);
+//             NAContractrw.ArtCode = Flatsrw.ArtCode;
+//             NAContractrw.Spec = Flatsrw.Spec;
+//             MatRowPut(NAContractr,rwcnt,NAContractrw);
+//             cochangef = true;
+//           end;
+//         end;
+//       end;
+//       rwcnt = MatRowCnt(Flatsr2);
+//       for (i = 0;i < rwcnt; i = i +1) begin
+//         MatRowGet(Flatsr2,i,Flatsrw);
+//         rwc = MatRowCnt(NAContractr);
+//         for (rw = 0; rw < rwc; rw = rw + 1) begin
+//           MatRowGet(NAContractr,rw,NAContractrw);
+//           if (NAContractrw.ArtCode==Flatsrw.ArtCode) then begin
+//             MatRowDelete(NAContractr,rw);
+//             cochangef = true;
+//           end;
+//         end;
+//       end;
+//     if (cochangef) then begin
+//       if (RecordUpdate(NAContractr2,NAContractr,true)==0) then begin end;
+//     end;
+//   end;
+// return;
+// end;
+
+global updating 
+function longint FlatsVcRecordSave(var record FlatsVc Flatsr,record FlatsVc Flatsr2,longint stat,longint b)
+begin
+  record FlatsVc blankFlatsr;
+  Record BuildVc Buildr;
+  longint res;
+
+  res = 0;
+  if nonblank(Flatsr.FlatNo) then begin
+    if Flatsr.IntFlatNo<=0 then begin
+      Flatsr.IntFlatNo=StringToInt(StripNonDigits(Flatsr.FlatNo));
+    end;
+  end else begin
+    Flatsr.IntFlatNo=0;
+  end;
+  
+  // UpdateCORecData(Flatsr,blankFlatsr);
+  FlatsVcRecordSave = res;
+return;
+end;
+
+global updating 
+function longint FlatsVcRecordUpdate(var record FlatsVc Flatsr,record FlatsVc Flatsr2,longint stat,longint b)
+begin
+  longint res;
+
+  res = 0;
+  if nonblank(Flatsr.FlatNo) then begin
+    if Flatsr.IntFlatNo<=0 then begin
+      Flatsr.IntFlatNo=StringToInt(StripNonDigits(Flatsr.FlatNo));
+    end;
+  end else begin
+    Flatsr.IntFlatNo=0;
+  end;
+  
+  // UpdateCORecData(Flatsr,Flatsr2);
+  FlatsVcRecordUpdate = res;
+return;
+end;
+
+global
+updating function LongInt FlatsVcRecordUpdateAfter(Var Record FlatsVc Flatsr, Record FlatsVc Flats2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 0;  
+  if Flatsr.Code!=Flats2r.Code then begin //changed erf code
+    ChangeBCodeFlatFields(Flatsr.FlatCode,Flatsr.Code);
+  end;
+  if Flatsr.FlatCode!=Flats2r.FlatCode then begin //changed flat code
+    ChangeFlatCodeFlatFields(Flatsr.FlatCode,Flats2r.FlatCode);
+  end;
+  
+  FlatsVcRecordUpdateAfter = res;
+  return;
+end;
+
+global
+updating function longint FlatsVcRecordDuplicate(var record FlatsVc Flatsr,record FlatsVc Flatsr2,longint stat,longint b)
+begin
+  record FlatsVc blankFlatsr;
+  longint res;
+
+  res = 0;
+  Flatsr.FlatCode = "";
+  Flatsr.CustCode = "";
+  Flatsr.CustName = "";
+  Flatsr.CONr = "";
+  FlatsVcRecordDuplicate = res;
+return;
+end;
+
+global
+updating function longint FlatsVcRecordImport(var record FlatsVc Flatsr,record FlatsVc Flatsr2,longint stat,longint b)
+begin
+  longint res;
+
+  if nonblank(Flatsr.FlatNo) then begin
+    if Flatsr.IntFlatNo<=0 then begin
+      Flatsr.IntFlatNo=StringToInt(StripNonDigits(Flatsr.FlatNo));
+    end;
+  end else begin
+    Flatsr.IntFlatNo=0;
+  end;
+
+  FlatsVcRecordImport = res;
+return;
+end;
+
+global
+updating function LongInt FlatsVcRecordRemove(Var Record FlatsVc Flatsr, Record FlatsVc Flats2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 0;
+  
+  RemoveFlatFields(Flatsr.FlatCode);
+  
+  FlatsVcRecordRemove = res;
+  return;
+end;
+
+global
+function LongInt FlatsVcRecordRemoveTest(var record FlatsVc Flatsr,record FlatsVc Flats2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  record NAContractVc NAContractr;
+
+  res = 1;
+  
+  if (!Importing and !IsMaintenance) then begin
+    if (!UserCanAction("OBSAllowDeleteFlat",false)) then begin
+      res = 0;
+      MessageBox(1274,StringFromStringSet(3,"OBSAllowDeleteFlat"));
+      goto LFlatsVcRecordRemoveTest;
+    end;
+    if (Flatsr.CONr != -1) then begin
+      NAContractr.SerNr = Flatsr.CONr;
+      if (ReadFirstMain(NAContractr,1,true)) then begin
+        if (BlankDate(NAContractr.EndDate) or CurrentDate < NAContractr.EndDate) then begin
+          res = 0;
+          MessageBox(1000078,"");
+          goto LFlatsVcRecordRemoveTest;
+        end;
+      end;
+    end;
+  end;
+
+LFlatsVcRecordRemoveTest:;
+  FlatsVcRecordRemoveTest = res;
+  RETURN;
+END;

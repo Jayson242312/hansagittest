@@ -1,5 +1,3 @@
-//c85430339
-// RP - UnOK Stock Movement Customization
 external function Integer AccrualSimulationsTransferred(LongInt,string);
 external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
 external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
@@ -514,7 +512,7 @@ BEGIN
     rwcnt = MatRowCnt(IPp);
     for (i=0;i<rwcnt;i=i+1) begin
       MatRowGet(IPp,i,IPrw);
-      if (IPrw.CUPNr!=-1) then begin
+      if (IPrw.CUPNr!=-1) and IPrw.RecVal>=0 then begin //OBS edit
         ARPayHistr.CUPNr = IPrw.CUPNr;
         ARPayHistr.FileName = "IVVc";
         if (ReadFirstMain(ARPayHistr,2,true)) then begin
@@ -1135,26 +1133,20 @@ begin
 
   res = 0;
   BlockLoad(MSb);
-  //VN Block
-  if ((UserCanAction("UnOKAll",false) or UserCanAction("UnOKStockMov",false))) then begin
-    res = 0;
-  end else begin
-    if (nonblankdate(MSb.StockCorectAfter)) then begin
-      if (SMp.TransDate<MSb.StockCorectAfter) then begin
-        res = 20884;
-        goto LIsUnOKAllowed_StockMovVc;
-      end;
-    end else begin
+  if (nonblankdate(MSb.StockCorectAfter)) then begin
+    if (SMp.TransDate<MSb.StockCorectAfter) then begin
       res = 20884;
       goto LIsUnOKAllowed_StockMovVc;
     end;
-    if (nonblank(SMp.Hash)) then begin
-      res = 20650;
-      goto LIsUnOKAllowed_StockMovVc;
-    end;
+  end else begin
+    res = 20884;
+    goto LIsUnOKAllowed_StockMovVc;
   end;
-  //End
-LIsUnOKAllowed_StockMovVc:;
+  if (nonblank(SMp.Hash)) then begin
+    res = 20650;
+    goto LIsUnOKAllowed_StockMovVc;
+  end;
+LIsUnOKAllowed_StockMovVc:;  
   IsUnOKAllowed_StockMovVc = res;
   return;
 end;

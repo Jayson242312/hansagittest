@@ -1,0 +1,319 @@
+external inner procedure PasteFromSysList(Integer,Integer);
+external inner procedure PasteFromWn(Integer,string);
+remote procedure CountManSClassOnOpen(var array string);
+remote procedure CountResFlatsSClassOnOpen(string,var array string,var array string,boolean,boolean);
+remote procedure CountInstOrgSClassOnOpen(var array string,var integer);
+remote procedure AddressFieldOnOpen(var array string,string);
+remote procedure CountResTypeSClassOnOpen(var array string,var array string);
+remote procedure FirstFreeMainCountNoSClassOnOpen(var array string);
+remote procedure OBS_PastePerSClassOnOpen(var array string,var array string);
+remote procedure MSClass2SClassOnOpen(string,var array string,var array string);
+
+global
+function boolean AddressField2SClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  integer sel;
+  string 255 tstr;
+  string 50 FieldName;
+  integer mwn;
+
+  sel = SelectedListLine(wn);
+  if sel > -1 then begin
+    tstr = GetListString(wn,sel);
+    mwn = MotherWindow(wn);
+    FieldName = WindowActiveField(mwn);
+    CloseWindow(wn);
+    if (mwn!=0) then begin
+      DeselectWindow(mwn,false);
+      GetWindowRecord(mwn,RepSpec);
+      SetFieldValueByName(RepSpec,FieldName,tstr,-1); 
+      PutWindowRecord(mwn,RepSpec);
+    end;
+  end;
+  
+  AddressField2SClassOnOKWindow = false;
+  return;
+end;
+
+global 
+function boolean AddressField2SClassOnOpenWindow(integer wn) begin
+  Array string 200 arrAddrFieldName;
+  integer i,size,mwn;
+  String 50 FieldName;
+  
+  mwn = MotherWindow(wn);
+  FieldName = WindowActiveField(mwn);
+  AddressFieldOnOpen(arrAddrFieldName,FieldName);
+  size = StringToInt(arrAddrFieldName[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,len(arrAddrFieldName[i]),arrAddrFieldName[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function boolean AddressFieldSClassOnOKWindow(integer wn)
+begin
+  record BuildVc Buildr;
+  integer i,pos,sel,length;
+  string 255 tstr;
+  string 50 FieldName;
+  integer mwn;
+
+  sel = SelectedListLine(wn);
+  if sel > -1 then begin
+    tstr = GetListString(wn,sel);
+    // pos = 0;
+    // i = 0;
+    // length = len(tstr);
+    // for (i=0;i<length;i=i+1) begin
+      // if Mid(tstr,i,1)== " " then begin
+        // pos = i;
+        // i=length;
+      // end;
+    // end;
+    // tstr = Right(tstr,len(tstr)-pos-3);
+    mwn = MotherWindow(wn);
+    FieldName = WindowActiveField(mwn);
+    CloseWindow(wn);
+    if (mwn!=0) then begin
+      DeselectWindow(mwn,false);
+      GetWindowRecord(mwn,Buildr);
+      SetFieldValueByName(Buildr,FieldName,tstr,-1); 
+      PutWindowRecord(mwn,Buildr);
+    end;
+  end;
+  
+  AddressFieldSClassOnOKWindow = false;
+  return;
+end;
+
+global 
+function boolean AddressFieldSClassOnOpenWindow(integer wn) begin
+  Array string 200 arrAddrFieldName;
+  integer i,size,mwn;
+  String 50 FieldName;
+  
+  mwn = MotherWindow(wn);
+  FieldName = WindowActiveField(mwn);
+  AddressFieldOnOpen(arrAddrFieldName,FieldName);
+  size = StringToInt(arrAddrFieldName[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,len(arrAddrFieldName[i]),arrAddrFieldName[i],false);
+  end;
+  
+  return;
+end;
+
+global 
+function boolean CountManSClassOnOpenWindow(integer wn) begin
+  Array string 255 arrCountMan;
+  integer i,size;
+  
+  CountManSClassOnOpen(arrCountMan);
+  size = StringToInt(arrCountMan[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,len(arrCountMan[i]),arrCountMan[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function Boolean CountManSClassOnOKWindow(Integer wn)
+begin
+  PasteFromSysList(wn,255);
+  CountManSClassOnOKWindow = false;
+  return;
+end;
+
+global
+function boolean CountResFlatsSClassOnOpenWindow(integer wn) begin
+  integer mwn,i,size;
+  Record CountResVc CountResr;
+  string 255 tstr;
+  Array string 50 arrFlatCode;
+  Array string 220 arrFlatAddress;
+  
+  mwn = MotherWindow(wn);
+  Switch (GetWindowFileName(mwn)) begin
+    Case "CountResVc":
+      GetWindowRecord(mwn,CountResr);
+      CountResFlatsSClassOnOpen(CountResr.CounterNo,arrFlatCode,arrFlatAddress,true,true);
+      size = StringToInt(arrFlatCode[0]);
+      for(i=1;i<=size;i=i+1)begin
+        tstr = arrFlatCode[i] & "   " & arrFlatAddress[i];
+        SetListString(wn,len(tstr),tstr,false); 
+      end;
+  end;
+  
+  CountResFlatsSClassOnOpenWindow=false;
+return;
+end;
+
+global
+function Boolean CountResFlatsSClassOnOKWindow(Integer wn)
+begin
+  PasteFromSysList(wn,-2);
+  CountResFlatsSClassOnOKWindow = false;
+  return;
+end;
+
+global 
+function boolean CountInstOrgSClassOnOpenWindow(integer wn)
+begin
+  array string 255 installperformers;
+  integer i,arrsize;
+  
+  CountInstOrgSClassOnOpen(installperformers,arrsize);
+  for (i=0;i<arrsize;i=i+1) begin
+    SetListString(wn,len(installperformers[i]),installperformers[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function boolean CountInstOrgSClassOnOKWindow(integer wn)
+begin
+  boolean res;
+  
+  PasteFromSysList(wn,255);
+  CountInstOrgSClassOnOKWindow = res;
+  return;
+end;
+
+global 
+function boolean CountResTypeSClassOnOpenWindow(integer wn) begin
+  Array string 255 arrCountResTypC,arrCountResTypN;
+  integer i,size;
+  
+  CountResTypeSClassOnOpen(arrCountResTypC,arrCountResTypN);
+  size = StringToInt(arrCountResTypC[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,200,arrCountResTypC[i] & "   " & arrCountResTypN[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function Boolean CountResTypeSClassOnOKWindow(Integer wn)
+begin
+  integer i,pos,sel,length;
+  string 255 tstr;
+  integer mwn;
+  
+  sel = SelectedListLine(wn);
+  if sel > -1 then begin
+    tstr = GetListString(wn,sel);
+    pos = 0;
+    i = 0;
+    length = len(tstr);
+    for (i=0;i<length;i=i+1) begin
+      if Mid(tstr,i,1)== " " then begin
+        pos = i;
+        i=length;
+      end;
+    end;
+    tstr = left(tstr,pos);
+    mwn = MotherWindow(wn);
+    CloseWindow(wn);
+    if (mwn!=0) then begin
+      PasteString(mwn,tstr);
+    end;
+  end;
+  
+  CountResTypeSClassOnOKWindow = false;
+  return;
+end;
+
+
+global 
+function boolean FirstFreeMainCountNoSClassOnOpenWindow(integer wn) begin
+  Array string 255 arrMainCountNr;
+  
+  FirstFreeMainCountNoSClassOnOpen(arrMainCountNr);
+  SetListString(wn,len(arrMainCountNr[1]),arrMainCountNr[1],false);
+  
+  return;
+end;
+
+global
+function boolean FirstFreeMainCountNoSClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  integer i,pos,sel,length;
+  string 255 tstr;
+  string 50 FieldName;
+  integer mwn;
+
+  sel = SelectedListLine(wn);
+  if sel > -1 then begin
+    tstr = GetListString(wn,sel);
+    mwn = MotherWindow(wn);
+    FieldName = WindowActiveField(mwn);
+    CloseWindow(wn);
+    if (mwn!=0) then begin
+      DeselectWindow(mwn,false);
+      GetWindowRecord(mwn,RepSpec);
+      SetFieldValueByName(RepSpec,FieldName,tstr,-1); 
+      PutWindowRecord(mwn,RepSpec);
+    end;
+  end;
+  
+  return;
+end;
+
+global 
+function boolean OBS_PastePerSClassOnOpenWindow(integer wn) begin
+  Array string 255 arrPeriod,arrCode;
+  integer i,size;
+  
+  OBS_PastePerSClassOnOpen(arrPeriod,arrCode);
+  size = StringToInt(arrPeriod[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,200,arrPeriod[i] & "   " & arrCode[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function Boolean OBS_PastePerSClassOnOKWindow(Integer wn)
+begin
+  PasteFromSysList(wn,-2);
+  OBS_PastePerSClassOnOKWindow = false;
+  return;
+end;
+
+global 
+function boolean MSClass2SClassOnOpenWindow(integer wn)
+begin
+  Array string 255 arrCode,arrName;
+  integer i,size,mwn;
+  string 20 code;
+  
+  mwn=MotherWindow(wn);
+  if GetWindowClass(mwn)=="TariffByDistRClass" then begin
+    code="RAJ";
+  end;
+  
+  MSClass2SClassOnOpen(code,arrCode,arrName);
+  size = StringToInt(arrCode[0]);
+  for(i=1;i<=size;i=i+1)begin
+    SetListString(wn,200,arrCode[i] & "   " & arrName[i],false);
+  end;
+  
+  return;
+end;
+
+global
+function Boolean MSClass2SClassOnOKWindow(Integer wn)
+begin
+  PasteFromSysList(wn,-2);
+  MSClass2SClassOnOKWindow = false;
+  return;
+end;

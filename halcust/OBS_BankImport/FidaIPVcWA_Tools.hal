@@ -1,0 +1,100 @@
+external inner function Boolean GetPMRow(string,var row PMBlock);
+external updating procedure MakeIPFromFidaIP(string,string,val,string,date,string,integer,var integer,var longint,var integer,var integer,longint,longint,var longint,record FidaIPVc,integer,string,string);
+external updating procedure MakeTRFromFidaIP(string,string,val,string,date,var integer,var longint,var integer,string);
+
+global updating
+procedure FidaIPVcMakeRecRemote(var Record FidaIPVc orgFidar,var integer ipcntIP,var integer ipok,var integer ipcnt,var longint error)
+begin
+  Record FidaIPVc Fidar;
+  Row FidaIPVc Fidarw;
+  row PMBlock PMrw;
+  integer i,rwc,rownr,wn,nwn;
+  boolean testf,update,allMadef;
+  longint ipnr;
+  
+  ipcntIP=0;
+  ipok=0;
+  ipcnt=0;
+  update=false;
+  RecordCopy(Fidar,orgFidar);
+  if Fidar.OKFlag==1 and Fidar.Closed==0 then begin
+    rwc=MatRowCnt(Fidar);
+    //Make IPVc
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr>0 then begin
+        testf=false;
+      end;
+      if Fidarw.DCType!=0 then begin
+        testf = false;
+      end;
+      if testf then begin
+        MakeIPFromFidaIP(Fidarw.CustCode,Fidarw.InvoiceList,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,Fidar.PayMode,Fidarw.PayType,rownr,ipnr,ipcntIP,ipok,Fidarw.ContractNr,StringToLongInt(Fidarw.DebtRepAgreements),error,Fidar,i+1,Fidarw.FidaRowID,Fidarw.CaseNr);
+        if ipnr!=-1 then begin
+          Fidarw.IPNr=ipnr;
+          MatRowPut(Fidar,i,Fidarw);
+          update=true;
+        end;
+      end;
+    end;
+    //Make TRVc
+    ipcnt=0;
+    if !GetPMRow(Fidar.PayMode,PMrw) then begin
+      error=1100023;
+      // MessageBox(0,USetStr(1100023));
+      GoTo LCreateIP_TR_FidaIPDsm;
+    end;  
+    if blank(PMrw.AccNr) then begin
+      error=1100024;
+      // MessageBox(0,USetStr(1100024));
+      GoTo LCreateIP_TR_FidaIPDsm;
+    end;
+    rwc=MatRowCnt(Fidar);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      testf=true;
+      if Fidarw.Type!=1 then begin
+        testf=false;
+      end;
+      if Fidarw.IPNr>0 then begin
+        testf=false;
+      end;
+      if Fidarw.DCType!=2 then begin
+        testf = false;
+      end;
+      if testf then begin
+        MakeTRFromFidaIP(Fidarw.AccNumber,PMrw.AccNr,Fidarw.Amount,Fidarw.Currency,Fidar.TransDate,rownr,ipnr,ipcnt,Fidarw.RowComment);
+        Fidarw.IPNr=ipnr;
+        MatRowPut(Fidar,i,Fidarw);
+        update=true;
+      end;
+    end;
+  end;
+
+  if update then begin
+    allMadef=true;
+    rwc=MatRowCnt(Fidar);
+    for(i=0;i<rwc;i=i+1)begin
+      MatRowGet(Fidar,i,Fidarw);
+      if Fidarw.IPNr==-1 then begin
+        allMadef=false;
+      end;
+    end;
+    if allMadef then begin
+      Fidar.IPMadeFlag=1;
+    end;
+    
+    if RecordUpdate(orgFidar,Fidar,true)!=0 then begin
+      LogText(0,"FidaIPVcMakeRecRemote ERROR :: Cant update record " & Fidar.SerNr);
+    end else begin
+      RecordCopy(orgFidar,Fidar);
+    end;
+  end;
+
+LCreateIP_TR_FidaIPDsm:;
+  return;
+end;

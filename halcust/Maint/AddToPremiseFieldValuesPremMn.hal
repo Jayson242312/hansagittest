@@ -1,0 +1,60 @@
+global
+updating procedure AddValuesToPremise(Record NAContractVc NAContractr,String Field,val Value,var integer count)
+BEGIN
+  record FlatFieldVc FlatFieldr,OldFlatFieldr;
+  row FlatFieldVc FlatFieldrw;
+  integer rwcnt,i;
+  date startDate;
+  boolean add;
+
+  // startDate = currentDate;
+
+  RecordNew(FlatFieldr);
+  FlatFieldr.FieldCode = Field;
+  FlatFieldr.BuildCode = NAContractr.BuildCode; 
+  FlatFieldr.FlatCode = NAContractr.FlatCode; // key
+
+  rwcnt = MatRowCnt(FlatFieldr);
+  FlatFieldrw.StartDate = stringtodate("01/01/2025");
+  FlatFieldrw.Value = value;
+  FlatFieldrw.Comment = "Imported fields";
+  count = count + 1 ;
+  MatRowPut(FlatFieldr,rwcnt,Flatfieldrw);
+  RecordStore(FlatFieldr,false);
+
+// END;
+END;
+
+
+
+// Just Built for toilets at the moment. Will comment out. If needed in the future it has to be modified
+global 
+updating procedure AddPremiseValuesToPremMn(record RcVc RepSpec)
+BEGIN
+  record NAContractVc NAContractr;
+  boolean testf;
+  string 255 zoning;
+  string 255 premisefield;
+  integer count,i;
+  val value;
+
+
+  premisefield = "TRTOY";
+  if NonBlank(RepSpec.f1) then begin zoning = RepSpec.f1; end;
+  if NonBlank(RepSpec.vals0) then begin value = RepSpec.vals0; end;
+
+  testf = true;
+  NAContractr.ZoningCode = zoning;
+  while loopkey("ZoningCode",NAContractr,1,testf) begin    // loop through contracts using zoning
+      if (NAContractr.ZoningCode<>zoning) then begin testf = false;end;
+      if (testf) then begin
+        i = i + 1; 
+        AddValuesToPremise(NAContractr,premisefield,value,count);
+      end; //sf
+  end;
+  MessageBox(0,"Total number of Contracts with this zoning:" & i );
+  MessageBox(0,"Final number of Premises affected:" & Count );
+  
+
+return;
+END;

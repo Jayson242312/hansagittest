@@ -1,0 +1,75 @@
+external function boolean IPVc_PasteContractNr(var record IPVc,integer);
+remote function boolean IPCheckForFidaIP(record IPVc,var longint);
+
+global
+function Boolean IPDClassContractNrEFAfter(Integer wn,Integer rownr,Integer changed)
+begin
+  record IPVc IPr;
+   boolean res;
+
+  res=true;
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IPr);
+    If IPVc_PasteContractNr(IPr,rownr) then begin 
+      PutWindowRecord(wn,IPr);
+    end;
+  end;
+  IPDClassContractNrEFAfter = res;
+  return;
+end;
+
+global
+function Boolean IPDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+
+  Switch (fieldname) begin
+    case "ContractNr": res = IPDClassContractNrEFAfter(wn,rownr,changed);
+    otherwise
+      res=inner.IPDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  end;
+
+  IPDClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean IPDClassIPBookVATButtonAction(Integer wn,Integer value)
+begin
+  boolean res;
+  record IPVc IPr;
+  
+  res = true;
+  if (WindowState(wn)!=Rs_update) then begin
+    GetWindowRecord(wn,IPr);
+  end else begin
+    GetPrevWindowRecord(wn,IPr);    
+  end;
+  if IPr.OKFlag==1 then begin
+    res = false;
+  end;
+  
+  IPDClassIPBookVATButtonAction = res;
+  return;
+end;
+
+global
+function Boolean IPDClassOKFlagButtonAction(Integer wn,Integer value)
+BEGIN
+  Boolean res;
+  record IPVc IPr;
+  longint sernr;
+
+  res = inner.IPDClassOKFlagButtonAction(wn,value);
+
+  GetWindowRecord(wn,IPr);
+  // if (IPr.OKFlag!=0) and value==0 then begin
+    if IPCheckForFidaIP(IPr,sernr) then begin
+      MessageBox(1001402,"");
+    end;
+  // end;
+
+  IPDClassOKFlagButtonAction = res;
+  return;
+end;

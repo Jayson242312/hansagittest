@@ -1,0 +1,64 @@
+
+remote function string 60 OBSGetCTypeComment(string);
+
+global
+procedure MSClassDClassOnWindowRecordChange(integer wn)
+begin
+  record MSClassVc MSClassr;
+  
+  GetWindowRecord(wn,MSClassr);
+  if NonBlank(MSClassr.CTypeCode) then begin
+    PutWindowString(wn,"CTypeComment",OBSGetCTypeComment(MSClassr.CTypeCode));
+  end;
+
+  return;
+end;
+
+global
+function boolean MSClassDClassOnOpenWindow(integer wn)
+begin
+  record MSClassVc MSClassr;
+  
+  GetWindowRecord(wn,MSClassr);
+  if NonBlank(MSClassr.CTypeCode) then begin
+    PutWindowString(wn,"CTypeComment",OBSGetCTypeComment(MSClassr.CTypeCode));
+  end;
+  
+  MSClassDClassOnOpenWindow = false;
+  return;
+end;
+
+function boolean MSClassDClassCTypeCodeEFAfter(integer wn,integer changed)
+begin
+  boolean res;
+  record MSClassVc MSClassr;
+  
+  res = true;
+  if changed == 0 then begin
+    goto LMSClassDClassCTypeCodeEFAfter;
+  end;
+  GetWindowRecord(wn,MSClassr);
+  if Blank(MSClassr.CTypeCode) then begin
+    PutWindowString(wn,"CTypeComment","");
+  end else begin
+    PutWindowString(wn,"CTypeComment",OBSGetCTypeComment(MSClassr.CTypeCode));
+  end;
+  
+LMSClassDClassCTypeCodeEFAfter:;
+  MSClassDClassCTypeCodeEFAfter = res;
+  return;
+end;
+
+global
+function boolean MSClassDClassAfterEditField(integer wn,string fieldname,integer fn,integer rownr,integer changed)
+begin
+  boolean res;
+  
+  switch fieldname begin
+    case "CTypeCode":
+      res = MSClassDClassCTypeCodeEFAfter(wn,changed);
+  end;
+  
+  MSClassDClassAfterEditField = res;
+  return;
+end;

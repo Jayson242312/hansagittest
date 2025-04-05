@@ -1,0 +1,215 @@
+global
+updating function LongInt ClearanceCertVcRecordCheck(Var Record ClearanceCertVc ClearanceCertr, Record ClearanceCertVc ClearanceCert2r, LongInt stat, LongInt check)
+begin
+  record ClearanceCertVc ClearanceCertr2;
+  Integer insertmode,updatemode;
+  boolean unokf,okf,unokf2,okf2;
+  //
+  longint res;
+  res = 0;
+
+  if (blank(ClearanceCertr.SerNr)) then begin
+    MessageBox(0,"Code is required!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.PeriodStartDate)) then begin
+    MessageBox(0,"Start period missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.PeriodEndDate)) then begin
+    MessageBox(0,"End period missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.ContractNr) OR ClearanceCertr.ContractNr<1) then begin
+    MessageBox(0,"Contract number missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  // =====================  =====================
+  if (ClearanceCertr.ContractNr != ClearanceCert2r.ContractNr) then begin
+    MessageBox(0,"Contract number change not permitted!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  // =====================  =====================
+  if (blank(ClearanceCertr.FlatCode) OR ClearanceCertr.FlatCode=="") then begin
+    MessageBox(0,"Premise missing! Enter contract number!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.BuildCode) OR ClearanceCertr.BuildCode=="") then begin
+    MessageBox(0,"Erf missing! Enter contract number!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.CustCode) OR ClearanceCertr.CustCode=="") then begin
+    MessageBox(0,"Customer Code number missing! Enter contract number!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(ClearanceCertr.CustName) OR ClearanceCertr.CustName=="") then begin
+    MessageBox(0,"Customer name missing! Enter contract number!");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  // ==================================== PERMISSIONS  ==================================
+
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+
+  if (ClearanceCertr.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (ClearanceCert2r.OKFlag==1) then begin
+        unokf = true;
+      end;
+    end;
+  end;
+  // Permission to unok
+  if (unokf) then begin
+    if(UserCanAction("CustomRecordUnOkCCERT",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkCCERT"));
+    goto LExitCheck;
+    end;
+  end;
+  //
+  if (ClearanceCertr.OKFlag==1) then begin
+    if (stat==updatemode) then begin
+      if (ClearanceCert2r.OKFlag==0) then begin
+        okf = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf = true;
+    end;
+  end;
+  //
+  if okf then begin
+    //
+    if(blank(ClearanceCertr.TotalOpen)) then begin //
+      MessageBox(0,"Enter total payable amount field!");
+      res = -1;
+      goto LExitCheck;
+    end;
+    // Permission to ok
+    if(UserCanAction("CustomRecordOkCCERT",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordOkCCERT"));
+    goto LExitCheck;
+    end;
+  end;
+
+  // ============================== PERMISSIONS - OK - TRANSFER  ==============================
+
+  if (ClearanceCertr.OKFlag2==0) then begin
+    if (stat==updatemode) then begin
+      if (ClearanceCert2r.OKFlag2==1) then begin
+        unokf2 = true;
+      end;
+    end;
+  end;
+  // Permission to unok
+  if (unokf2) then begin
+    if(UserCanAction("CustomRecordUnOkTransCCERT",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkTransCCERT"));
+    goto LExitCheck;
+    end;
+  end;
+  //
+  if (ClearanceCertr.OKFlag2==1) then begin
+    if (stat==updatemode) then begin
+      if (ClearanceCert2r.OKFlag2==0) then begin
+        okf2 = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf2 = true;
+    end;
+  end;
+  //
+  if okf2 then begin
+    //
+    if(blank(ClearanceCertr.TotalOpen)) then begin //
+      res = -1;
+      goto LExitCheck;
+    end;
+    // Permission to ok
+    if(UserCanAction("CustomRecordOkTransCCERT",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordOkTransCCERT"));
+    goto LExitCheck;
+    end;
+  end;
+  // =============================== END OF PERMISSIONs  ===============================
+
+
+  if (stat==insertmode) then begin
+    while (LoopMain(ClearanceCertr2, 1, true)) begin
+
+      if(ClearanceCertr2.ContractNr == ClearanceCertr.ContractNr) then begin
+        if(DateInRange(ClearanceCertr.PeriodEndDate,ClearanceCertr2.PeriodStartDate,ClearanceCertr2.PeriodEndDate)) then begin
+          MessageBox(0,"Clearance certificate application already exists!");
+          res = -1;
+          goto LExitCheck;
+        end;
+      end;
+    end;
+  end;
+
+  ClearanceCertr.User = CurrentUser;
+  ClearanceCertr.LastUpdated = CurrentDate;
+
+LExitCheck:;
+  ClearanceCertVcRecordCheck = res;
+end;
+
+
+global
+function LongInt ClearanceCertVcRecordDefaults(Var Record ClearanceCertVc ClearanceCertr, Record ClearanceCertVc ClearanceCert2r, LongInt long3, LongInt long4)
+begin
+  record ComplianceCertBlock ComplianceCertsb;
+  Integer standardPeriod;
+  date ed;
+  LongInt res;
+  res = -1;
+
+  BlockLoad(ComplianceCertsb); // get period
+  if(blank(ComplianceCertsb.Months) or (ComplianceCertsb.Months == 0)) then begin
+    MessageBox(0,"Clearance Certificate Period was not set. Go to clearance certificate settings!");
+    res = 1;
+  end else begin
+    ClearanceCertr.SerNr = NextSerNr("ClearanceCertVc",CurrentDate,-1,false,"");
+    ClearanceCertr.PeriodStartDate = CurrentDate;
+
+    standardPeriod = ComplianceCertsb.Months;
+    ed = AddMonth(CurrentDate,standardPeriod);
+    // ed.day = 15;
+    ClearanceCertr.PeriodEndDate = ed;
+  end;
+  
+  ClearanceCertVcRecordDefaults = res;
+  return;
+end;
+
+
+global
+function longint ClearanceCertVcRecordRemoveTest(var record ClearanceCertVc ClearanceCertr,record ClearanceCertVc ClearanceCertr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!UserCanAction("CustomRecordDeleteClearanceCertificate",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteClearanceCertificate"));
+    goto LClearanceCertVcRecordRemoveTest;
+  end;
+
+LClearanceCertVcRecordRemoveTest:;
+  ClearanceCertVcRecordRemoveTest = res;
+  return;
+end;

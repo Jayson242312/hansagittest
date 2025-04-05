@@ -1,0 +1,110 @@
+external inner function LongInt MonthDiff(Date,Date);
+external procedure GetCountResPeriod(var date,var date);
+
+global
+procedure MeterEstimationsRn()
+begin
+	record CountResVc CountResr,NewCountResr;
+	record FlatCountersVc FlatCountersr, newFlatCounterr; // Meters
+	record MHistoryVc MHr, oldMHr, newMHr;
+  record NAContractVc COr;
+	boolean found,testf,test2;
+	val ave, total, lastreading, reading;
+	date s,e,cd,tdate;		
+	longint nr;
+	String 255 tstr;
+	Integer wn,rw,rwcnt,i;
+	cd = CurrentDate;
+
+	GetCountResPeriod(s,e); 
+  StartReportJob("Meter Estimations Report");
+	StartFormat(15);
+    OutString(1,0,"Meter Estimations",true);
+	EndHeader;
+	EndFormat;
+
+	StartFormat(15);
+	OutString(0,0,"MeterID",false); 
+	OutString(40,0,"Book.No",false);
+	OutString(80,0,"Alpha No.",false);
+	OutString(120,0,"Meter No.",false);
+	OutString(200,0,"Erf.No",false);
+  OutString(240,0,"Cust.No",false);
+	OutString(280,0,"Address",false);
+	OutString(360,0,"Previous Reading",false);
+	OutString(420,0,"Estimate Reading",false);
+	OutString(500,0,"Reading Date",false);
+	EndFormat; 
+
+	Gray_Divider(0,1);
+
+  while (LoopKey("UserStr1", FlatCountersr,1,true)) begin
+	MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+	testf = true;
+	
+		if(ReadFirstMain(MHr,1,true)) then begin
+			if(blank(MHr.oldReading) or blank(MHr.prevReading) or blank(MHr.currReading)) then begin testf = false; end;
+			if((MHr.oldReading==0) or (MHr.prevReading==0) or (MHr.currReading==0)) then begin testf = false; end;
+			if(DateInRange(e,MHr.StartDate,MHr.EndDate))then begin testf = false; end;   
+			if(StringToDate(MHr.EndDate) >= e)then begin testf = false; end; 
+			if(MonthDiff(MHr.EndDate,e)>2) then begin testf = false; end;
+		
+			if(testf) then begin
+				total = MHr.oldConsumption + MHr.prevConsumption + MHr.currConsumption; // this could change
+				ave = total/3;
+
+				if(ave>=0) then begin
+					MHr.StartDate = s;
+					MHr.EndDate = e;
+					MHr.oldReading= MHr.prevReading; 
+					MHr.prevReading = MHr.currReading;
+					MHr.currReading = MHr.prevReading + ave;
+					MHr.oldConsumption = MHr.prevConsumption;
+					MHr.prevConsumption = MHr.currConsumption;
+					MHr.currConsumption = ave;
+					MHr.Total = total;
+					MHr.Average = ave;
+
+					NewCountResr.StartDate = s;
+					NewCountResr.EndDate = e;
+					NewCountResr.FlatCode = FlatCountersr.FlatCode;
+					NewCountResr.RegDate = cd;
+					NewCountResr.StartVal = MHr.prevReading;
+					NewCountResr.EndVal =  MHr.currReading;
+					NewCountResr.Amount = ave;
+					NewCountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+
+					FlatCountersr.SerNr = NewCountResr.FlatCounterSerNr;
+					if ReadFirstMain(FlatCountersr,1,true) then begin
+						NewCountResr.FlatCode = FlatCountersr.FlatCode;
+						NewCountResr.ContractNr = FlatCountersr.Contract; 
+						NewCountResr.CountResType = FlatCountersr.CounterType;
+						NewCountResr.CounterNo = FlatCountersr.CounterNo;
+						NewCountResr.CounterAddr = FlatCountersr.Address;
+						NewCountResr.BuildCode = FlatCountersr.Code; 
+						StartFormat(15);
+						OutString(0,"DblFlatCountersVc",FlatCountersr.SerNr,false); // MeterID
+						OutString(40,0,FlatCountersr.UserStr1,false); // BookNo
+						OutString(80,0,FlatCountersr.UserStr3,false); // Aplha No
+						OutString(120,0,NewCountResr.CounterNo,false); //MeterNo
+						OutString(200,0,FlatCountersr.UserStr2,false); //SeqNo
+						// get customer data
+						COr.SerNr = FlatCountersr.Contract;
+						if(ReadFirstMain(COr,1,true)) then begin
+							OutString(240,"DblCUVc",COr.CustCode,false);
+						end;
+						OutString(280,0,FlatCountersr.Address,false); //Address
+						OutString(360,0,NewCountResr.StartVal,false); //Start Reading
+						OutString(420,0,NewCountResr.EndVal,false); // End Reading
+						OutDate(500,0,MHr.EndDate,false); // Reading Date // previously cd 
+						EndFormat; 
+					end;
+				end;
+			end;
+			testf = true;
+		end;
+	end;
+	EndJob;
+
+	return;
+end;

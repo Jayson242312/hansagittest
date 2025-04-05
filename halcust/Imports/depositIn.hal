@@ -1,0 +1,35 @@
+global
+updating procedure DepositIn()
+begin
+  record CLInVc CLIr;
+  row CLInVc CLIrw;
+
+  string 255 CustomerNo,CustomerName,PaymentMode,Amount,GLAcc,testDate;
+  integer j,rwcnt;
+  j=0;
+  while (NextImportLine(true)) begin
+    CustomerNo = ImportField;
+    CustomerName = ImportField;
+    PaymentMode = ImportField;
+    Amount = ImportField;
+    GLAcc = ImportField;
+    
+    RecordNew(CLIr);
+    CLIr.SerNr  = NextSerNr("CLInVc",CurrentDate,-1,false,"");
+    testDate = "31/01/2025";
+    CLIr.TransDate = StringToDate(testDate);
+    CLIr.PayMode = "C";
+    CLIr.CorspCode = "DEPOSIT";
+    CLIr.CorspComment = "DEPOSIT";
+    CLIr.CUCode = CustomerNo;
+    CLIr.CUName = CustomerName;
+    CLIr.Total = StringToVal(Amount,M4Val);
+    ClIr.NetVal = StringToVal(Amount,M4Val);
+    CLIr.OKFlag = 1;
+    RecordImportStore(CLIr,false);
+    j = j + 1;
+  end;
+
+  MessageBox(0,"No. of deposits: " & j );
+  return;
+end;

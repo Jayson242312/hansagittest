@@ -1,0 +1,249 @@
+remote function boolean FindAnotherCountResInputWithType(record CountResInputVc,string);
+external procedure GetCountResPeriod(var date,var date);
+
+global
+updating function longint CountResInputVcRecordCheck(var record CountResInputVc CountResInputr,record CountResInputVc CountResInput2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  Record FlatsVc Flatsr;
+  record DBLockBlock DBLockBl;
+  integer i,rwc,i2;
+  Row CountResInputVc CountResInputrw,CountResInput2rw;
+  Record FlatCountersVc FlatCountersr;
+  record NApsSetBlock NApsSetbl;
+  longint pos;
+  string 20 ctype;
+  string 100 overctypes;
+  date td;
+  
+  res=0;
+  BlockLoad(NApsSetbl);
+  if CountResInputr.SerNr<0 then begin
+    if CountRecords("CountResInputVc")==0 then begin
+      CountResInputr.SerNr=10001;
+    end else begin
+      CountResInputr.SerNr=NextSernr("CountResInputVc",CurrentDate,-1,false,"");
+    end;
+  end;
+  
+  if (blank(CountResInputr.InputCTypes)) then begin
+    res = -1;
+    RecordCheckError(1058,"",-1,"InputCTypes");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+
+  // pos = 0;
+  // while (GetNextSubstring(CountResInputr.InputCTypes,pos,",",ctype)) begin
+    // if (FindAnotherCountResInputWithType(CountResInputr,ctype)) then begin
+      // if (blank(overctypes)) then begin
+        // overctypes = ctype;
+      // end else begin
+        // overctypes = overctypes & ", " & ctype;
+      // end;
+    // end;
+  // end;
+  // if (nonblank(overctypes)) then begin
+    // res = -1;
+    // RecordCheckError(1000201,overctypes,-1,"InputCTypes");
+    // GoTo EndCountResInputVcRecordCheck;
+  // end;
+
+  if blank(CountResInputr.BuildCode) then begin
+    res=-1;
+    RecordCheckError(1058,"",-1,"BuildCode");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  if blankdate(CountResInputr.StartDate) then begin
+    res=-1;
+    RecordCheckError(1058,"",-1,"StartDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+
+  if GetDay(CountResInputr.StartDate)!=1 then begin
+    res=-1;
+    RecordCheckError(1001261,"",-1,"StartDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  if blankdate(CountResInputr.EndDate) then begin
+    res=-1;
+    RecordCheckError(1058,"",-1,"EndDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  if GetDay(CountResInputr.EndDate)!=DaysInMonth(GetYear(CountResInputr.EndDate),GetMonth(CountResInputr.EndDate)) then begin
+    res=-1;
+    RecordCheckError(1001262,"",-1,"EndDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  BlockLoad(DBLockBl);
+  if CountResInputr.EndDate<DBLockBl.OtherLock then begin
+    res=-1;
+    RecordCheckError(1046,"",-1,"EndDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+    
+  if CountResInputr.StartDate>CountResInputr.EndDate then begin
+    res=-1;
+    RecordCheckError(1000810,"",-1,"StartDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  td=AddMonth(CurrentDate,4);
+  td.day=1;
+  if CountResInputr.StartDate>td or CountResInputr.EndDate>td then begin
+    res=-1;
+    RecordCheckError(1001542,"",i,"StartDate");
+    GoTo EndCountResInputVcRecordCheck;
+  end;
+  
+  rwc = MatRowCnt(CountResInputr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountResInputr,i,CountResInputrw);
+    FlatCountersr.SerNr = CountResInputrw.FlatCounterSerNr;
+    if !ReadFirstMain(FlatCountersr,1,true) then begin
+      res = -1;
+      RecordCheckError(1120,CountResInputrw.FlatCounterSerNr,i,"FlatCounterSerNr");
+      GoTo EndCountResInputVcRecordCheck;
+    end;
+    // if nonblankdate(FlatCountersr.ValidUntil) and FlatCountersr.ValidUntil < CountResInputr.StartDate and NApsSetbl.CountValidWarn==1 then begin
+    //   res = -1;
+    //   RecordCheckError(1000314,"",i,"CounterNo");
+    //   GoTo EndCountResInputVcRecordCheck;
+    // end;
+    if (nonblank(CountResInputr.InputCTypes)) then begin
+      if ((nonblank(CountResInputrw.CounterType)) and (!SetInSet(CountResInputrw.CounterType,CountResInputr.InputCTypes))) then begin
+        res = -1;
+        RecordCheckError(1000202,"",i,"CounterType");
+        GoTo EndCountResInputVcRecordCheck;
+      end;
+    end;
+    // if NApsSetbl.AllowNegAmount==0 then begin
+      // if CountResInputrw.SumAmount<0 then begin
+        // res=-1;
+        // RecordCheckError(1001288,"",i,"SumAmount");
+        // GoTo EndCountResInputVcRecordCheck;
+      // end;
+    // end;
+    for(i2=i+1;i2<rwc;i2=i2+1)begin
+      MatRowGet(CountResInputr,i2,CountResInput2rw);
+      if CountResInput2rw.FlatCounterSerNr == CountResInputrw.FlatCounterSerNr then begin
+        res=-1;
+        RecordCheckError(1000067,(i2+1),i,"FlatCounterSerNr");
+        GoTo EndCountResInputVcRecordCheck;
+      end;
+    end;
+  end;
+  
+EndCountResInputVcRecordCheck:;
+  CountResInputVcRecordCheck=res;
+  return;
+end;
+
+function integer CountResMadeFromInput(Record CountResInputVc CountResInputr) begin
+  Row CountResInputVc CountResInputrw;
+  integer i,rwc,res;
+  
+  res = 1;
+  rwc = MatRowCnt(CountResInputr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(CountResInputr,i,CountResInputrw);
+    if CountResInputrw.Type!=1 then begin
+      res = 0;
+      i = rwc;
+    end;
+  end;
+  
+  CountResMadeFromInput = res;
+return;
+end;
+
+global
+updating function LongInt CountResInputVcRecordSave(Var Record CountResInputVc CountResInputr, Record CountResInputVc CountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+
+  res = 0;
+  CountResInputr.CountResMade = CountResMadeFromInput(CountResInputr);
+  
+  CountResInputVcRecordSave = res;
+  return;
+end;
+
+global
+updating function LongInt CountResInputVcRecordUpdate(Var Record CountResInputVc CountResInputr, Record CountResInputVc CountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  res = 0;
+  CountResInputr.CountResMade = CountResMadeFromInput(CountResInputr);
+  
+  CountResInputVcRecordUpdate = res;
+  return;
+end;
+
+global
+updating function LongInt CountResInputVcRecordImport(Var Record CountResInputVc CountResInputr, Record CountResInputVc CountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  
+  CountResInputr.CountResMade = CountResMadeFromInput(CountResInputr);
+  
+  CountResInputVcRecordImport = res;
+  return;
+end;
+
+global
+updating function LongInt CountResInputVcRecordDefaults(Var Record CountResInputVc CountResInputr, Record CountResInputVc CountResInput2r, LongInt stat, LongInt check)
+begin
+  LongInt res;
+  date sd,ed;
+  
+  GetCountResPeriod(sd,ed);
+  
+  CountResInputr.StartDate=sd;
+  CountResInputr.EndDate=ed;
+  
+  CountResInputVcRecordDefaults = res;
+  return;
+end;
+
+global
+function LongInt CountResInputVcRecordCheckClient(LongInt wn,record CountResInputVc CRIr,record CountResInputVc CRI2r,LongInt stat,LongInt errorcheck)
+begin
+  record RcVc RepSpec;
+  integer nwn;
+  longint pos,res;
+  string 255 overctypes,ctype,msg;
+  
+//no client-server calls pls
+  res = 0;
+  if stat==Rs_insert then begin
+    if nonblank(CRIr.InputCTypes) then begin
+      pos = 0;
+      while (GetNextSubstring(CRIr.InputCTypes,pos,",",ctype)) begin
+        if (FindAnotherCountResInputWithType(CRIr,ctype)) then begin
+          if (blank(overctypes)) then begin
+            overctypes = ctype;
+          end else begin
+            overctypes = overctypes & ", " & ctype;
+          end;
+        end;
+      end;
+      if (nonblank(overctypes)) then begin
+        msg = USetStr(1000201) & " " & overctypes;
+      end;
+      if nonblank(msg) then begin
+        RepSpec.f1=msg;
+        nwn = OpenWindow("MSCRIWClass",0,wn,"","",RepSpec);
+        res=-1;
+      end;
+    end;
+
+  end;
+
+  CountResInputVcRecordCheckClient = res;
+  return;
+end;

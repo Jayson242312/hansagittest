@@ -1,0 +1,596 @@
+external inner procedure SetupCustPS2Rn(string,var record RcVc);
+remote procedure PasteFlatInNAContract(var record NAContractVc,var string,var string,var string);
+remote procedure PasteBuildInNAContract(var record NAContractVc,var string);
+remote function Boolean PasteCustInNAContract(var record NAContractVc,var string);
+remote procedure NAContractGetRate(var record NAContractVc);
+remote procedure NAContractVc_PasteCurncyCode(var record NAContractVc);
+remote function Boolean NAContractVc_PasteArtCode(var record NAContractVc,Integer,var string);
+remote procedure COGetBalance(longint,date,var val,var val,var val,var val,string);
+remote function val GetLastContractInvSum(longint);
+remote updating procedure ChangeCustInvPay(record NAContractVc);
+remote procedure NAContractVc_PasteCustCode2(var record NAContractVc);
+
+//jh
+// external inner procedure CustMakeInt(record RcVc,record BaseCurBlock,record IIBlock,record CUVc,Date,Date,Integer,var LongInt);
+// external inner procedure SetupIntInvoice(record RcVc,record IIBlock,record CUVc,var record IVVc,Date,Date,var LongInt);
+// external inner procedure CUInt(record RcVc,Integer);
+external inner procedure CUIntMn(record RcVc);
+
+global
+procedure CreateMeterDsm() 
+begin
+  record INVc INr; // items
+  record NAContractVc NAContractr;
+  record BuildVc ERFMasterr;
+  
+  row NAContractVc NAContractrw; // contract row
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+  integer wn,nwn,rwcnt,i;
+  wn = curwindow;
+  if (WindowState(wn) == Rs_normal) then begin
+    GetWindowRecord(wn,NAContractr);
+    recordNew(FlatCountersr);
+    // FlatCountersr.SerNr = NextSerNr("FlatCountersr",CurrentDate,-1,false,"");
+    FlatCountersr.Contract = NAContractr.SerNr;
+    FlatCountersr.FlatCode = NAContractr.FlatCode; //premise
+    FlatCountersr.Code = NAContractr.BuildCode; //erf
+    FlatCountersr.Address = NAContractr.FlatAddress;
+
+    ERFMasterr.Code = NAContractr.BuildCode;
+    if (ReadFirstMain(ERFMasterr,1,true)) then begin 
+      FlatCountersr.CounterNo = ERFMasterr.LotNo; // meter.no 
+      FlatCountersr.UserStr2 = ERFMasterr.LotNo; // Seq No
+      FlatCountersr.UserStr3 = ERFMasterr.ExtensionNo;  // Alpha No                                         
+    end;
+
+    i = 0; rwcnt = 0;
+    rwcnt = MatRowCnt(NAContractr);
+
+    if(rwcnt==0) then begin
+        MessageBox(0,"No Items in Contract");
+        goto Linebreak2;
+    end;
+
+    while (i<rwcnt) begin
+      // read each item row
+      MatRowGet(NAContractr,i,NAContractrw);
+      // find item
+      INr.Code = NAContractrw.ArtCode;
+      if(ReadFirstMain(INr,1,true)) then begin
+        if(INr.ServQuantInCalc == 2) then begin
+          FlatCountersr.CounterType = INr.Code;
+          goto LineBreak; // break loop
+        end;
+      end;
+      if(i==(rwcnt-1)) then begin
+        MessageBox(0,"No meter levy in contract selected");
+        goto Linebreak2;
+      end;
+      i = i + 1;
+    end;
+Linebreak:;
+    nwn = OpenWindow("FlatCountersDClass",1,0,"","",FlatCountersr);
+Linebreak2:;
+    end else begin
+    beep;
+    MessageBox(1000763,"");
+  end;
+return;
+end;
+
+
+global
+procedure NAContactSearchLsm() begin
+  integer nwn;
+  Record RcVc RepSpec;
+    
+  nwn = OpenWindow("SearchNAContractRClass",0,0,"","",RepSpec);
+  DeselectWindow(nwn,false);
+  ReportDefaults(RepSpec,"SearchNAContractRClass");
+  RepSpec.UsedOnly = 0;
+  RepSpec.repname = "SearchNAContractVcRn";
+  RepSpec.critname = "SearchNAContractRClass";
+  RepSpec.Media = mtScreen;
+  PutWindowRecord(nwn,RepSpec);  
+  WindowFieldGoto(nwn,RepSpec,-1,"f1",true);
+  
+  return;
+end;
+
+global updating
+procedure ChangeCustNAContractDsm()
+begin
+  Record NAContractVc NAContractr;
+
+  integer wn,nwn;
+  
+  wn = CurWindow;
+  if WindowState(wn)==0 then begin
+    GetWindowRecord(wn,NAContractr);
+    ChangeCustInvPay(NAContractr);
+  end else begin
+    MessageBox(22902,"");
+  end;
+  
+  return;
+end;
+
+
+// ============================== CUSTOM ==============================
+function Boolean NAContractDClassSerNrEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record NAContractVc COr;
+
+  if (changed!=0) then begin
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,COr);
+    COr.ContractNr = COr.SerNr;
+    PutWindowRecord(wn,COr);
+  end;
+  NAContractDClassSerNrEFAfter = true;
+  return;
+end;
+
+
+// PRINT -> CONTRACT FORM
+global
+function Boolean PrintContractDClass(Integer wn, Boolean previewf)
+begin
+  record NAContractVc COr;
+  Boolean tmpf;
+  record RcVc RepSpec;
+  RepSpec.repname = "ContractForm";
+
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,COr);
+
+  if(WindowState(wn)==Rs_normal) then begin
+    
+    if(COr.OKFlag==0) then begin
+      MessageBox(0,"Contract not okayed!");
+      goto LExitCheck;
+    end;
+
+    if(previewf==false) then begin
+      RepSpec.f1 = COr.SerNr;
+      tmpf = PrintDocument(RepSpec,"ContractForm",false);
+    end else begin
+      RepSpec.f1 = COr.SerNr;
+      tmpf = PrintDocument(RepSpec,"ContractForm",true);
+    end;
+  end;
+
+LExitCheck:;
+  return;
+end;
+
+// ============================== END DF CUSTOM ==============================
+
+
+function Boolean NAContractDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record NAContractVc COr;
+  string 255 tstr;
+
+  if (changed!=0) then begin
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,COr);
+    PasteBuildInNAContract(Cor,tstr);
+    if nonblank(tstr) then begin
+      MessageBox(0,tstr);
+    end;
+    PutWindowRecord(wn,COr);
+  end;
+  NAContractDClassBuildCodeEFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassFlatCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record NAContractVc COr;
+  string 255 tstr,address,flatno;
+
+  if (changed!=0) then begin
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,COr);
+    PasteFlatInNAContract(Cor,tstr,address,flatno);
+    if nonblank(tstr) then begin
+      MessageBox(0,tstr);
+    end;
+    PutWindowRecord(wn,COr);
+  end;
+  NAContractDClassFlatCodeEFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassCustCodeEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  record NAContractVc NAContractr;
+  string 255 warning;
+
+  GetWindowRecord(wn,NAContractr);    
+  if ((changed!=0) or ((blank(NAContractr.CustName)) and (nonblank(NAContractr.CustCode)))) then begin
+    GetWindowRecord(wn,NAContractr);    
+    DeselectWindow(wn,false);
+    if (PasteCustInNAContract(NAContractr,warning)) then begin
+      PutWindowRecord(wn,NAContractr);
+      if (nonblank(warning)) then begin
+        MessageBox(0,warning);
+      end;
+    end else begin
+      Beep;
+    end;
+  end;
+  NAContractDClassCustCodeEFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassCustCode2EFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  record NAContractVc NAContractr;
+
+  GetWindowRecord(wn,NAContractr);    
+  if (changed!=0) then begin
+    GetWindowRecord(wn,NAContractr);    
+    DeselectWindow(wn,false);
+    NAContractVc_PasteCustCode2(NAContractr);
+    PutWindowRecord(wn,NAContractr);
+  end;
+  NAContractDClassCustCode2EFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassCODateEFAfter(Integer wn,Boolean changedf)
+begin
+  record NAContractVc NAContractr;
+ 
+  if (changedf) then begin
+    GetWindowRecord(wn,NAContractr);
+    NAContractGetRate(NAContractr);
+    NAContractr.StartDate = NAContractr.CODate;
+    PutWindowRecord(wn,NAContractr);
+  end;
+  NAContractDClassCODateEFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassCurncyCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changedf)
+begin
+  record NAContractVc NAContractr;
+
+  if (changedf!=0) then begin  
+    GetWindowRecord(wn,NAContractr);
+    DeselectWindow(wn,false);
+    NAContractVc_PasteCurncyCode(NAContractr);
+    PutWindowRecord(wn,NAContractr);
+  end;
+  NAContractDClassCurncyCodeEFAfter = true;
+  return;
+end;
+
+function Boolean NAContractDClassArtCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changedf)
+begin
+  record NAContractVc NAContractr;
+  row NAContractVc NAContractrw;
+  record INVc INr;
+  string 255 inwarning;
+ 
+  GetWindowRecord(wn,NAContractr);
+  MatRowGet(NAContractr,rownr,NAContractrw);
+  if ((changedf!=0) or ((blank(NAContractrw.Spec)) and (nonblank(NAContractrw.ArtCode)))) then begin
+    GetWindowRecord(wn,NAContractr);
+    DeselectWindow(wn,false);
+
+    // ============================== CUSTOM ==============================
+    INr.Code = NAContractrw.ArtCode;
+    if(ReadFirstMain(INr,1,true)) then begin
+      // if land tariff - place price in coeff.
+      if(INr.CalcOnLandOrImp == 1) then begin
+        NAContractrw.ArtCode = INr.Code;
+        NAContractrw.Spec = INr.Name;
+        NAContractrw.Price = 1;
+        NAContractrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+        MatRowPut(NAContractr,rownr,NAContractrw);
+      end;
+    end;
+    // =========================== END OF CUSTOM ==========================
+
+    if (NAContractVc_PasteArtCode(NAContractr,rownr,inwarning)) then begin
+      PutWindowRecord(wn,NAContractr);
+      if (nonblank(inwarning)) then begin
+          MessageBox(0,inwarning);
+      end;
+    end else begin
+      Beep;
+    end;
+  end;
+  NAContractDClassArtCodeEFAfter = true;
+  return;
+end;
+
+
+function Boolean NAContractDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record NAContractVc COr;
+
+  if (changed!=0) then begin
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,COr);
+    COr.CODate = COr.StartDate;
+    PutWindowRecord(wn,COr);
+  end;
+  NAContractDClassStartDateEFAfter = true;
+  return;
+end;
+
+global
+function Boolean NAContractDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+begin
+  boolean res,actiondone;
+   
+  Switch (fieldname) begin
+    
+    Case "StartDate": res = NAContractDClassStartDateEFAfter(wn,fn,rownr,changed);
+
+    Case "FlatCode": res = NAContractDClassFlatCodeEFAfter(wn,fn,rownr,changed);
+    Case "BuildCode": res = NAContractDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+    Case "CustCode": res = NAContractDClassCustCodeEFAfter(wn,fn,rownr,changed);
+    Case "CustCode2": res = NAContractDClassCustCode2EFAfter(wn,fn,rownr,changed);
+    case "CODate": res = NAContractDClassCODateEFAfter(wn,changed!=0);
+    case "CurncyCode": res = NAContractDClassCurncyCodeEFAfter(wn,fn,rownr,changed);
+    case "ArtCode": res = NAContractDClassArtCodeEFAfter(wn,fn,rownr,changed);
+    case "SerNr": res = NAContractDClassSerNrEFAfter(wn,fn,rownr,changed);
+  end;
+  
+  NAContractDClassAfterEditField = res;
+  return;
+end;
+
+procedure OpenCOFieldCode(longint coser,string FieldCode)
+begin
+  record COFieldVc COFieldr;
+
+  COFieldr.COSer = coser;
+  COFieldr.FieldCode = FieldCode;
+  if !ReadFirstMain(COFieldr,2,true) then begin
+    RecordNew(COFieldr);
+    COFieldr.COSer = coser;
+    COFieldr.FieldCode = FieldCode;
+  end;
+  OpenWindow("COFieldDClass",1,0,"","",COFieldr);
+  return;
+end;
+  
+global
+procedure OpenChCOFieldSm()
+begin
+  record NAContractVc COr;
+  record COFieldSetBlock COFieldSetr;
+  row COFieldSetBlock COFieldSetrw;
+  record RcVc RepSpec;
+  string 20 FieldName;
+  integer wn,nwn,rownr;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,COr);
+  FieldName = WindowActiveField(wn);
+  BlockLoad(COFieldSetr);
+  rownr = StringToInt(Right(FieldName,Len(FieldName)-3));
+  if MatRowCnt(COFieldSetr)>=rownr then begin
+    MatRowGet(COFieldSetr,rownr-1,COFieldSetrw);
+    OpenCOFieldCode(COr.SerNr,COFieldSetrw.FieldCode);
+  end;
+  
+  return;
+end;
+
+global
+procedure OpenCOField()
+begin
+  record RcVc RepSpec;
+  integer wn,nwn;
+
+  wn = CurWindow;
+  DeselectWindow(wn,true);
+  GetWindowRecord(wn,RepSpec);
+  if nonblank(RepSpec.f2) then begin
+    OpenCOFieldCode(RepSpec.f1,RepSpec.f2);
+    CloseWindow(wn);
+  end else begin
+    MessageBox(1001117,"");
+  end;
+  return;
+end;
+
+global
+procedure NewIntPercNAContractDsm()
+begin
+  record IntPercVc IntPercr;
+  record NAContractVc NAContractr;
+  integer wn,nwn;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,NAContractr);
+  if NAContractr.OKFlag == 0 then begin
+    IntPercr.Code = NAContractr.SerNr;
+    if !ReadFirstMain(IntPercr,1,true) then begin
+      RecordNew(IntPercr);
+      IntPercr.Code = NAContractr.SerNr;
+      //COr.Fax = COr.SerNr; //? what is this
+      PutWindowRecord(wn,NAContractr);
+    end;
+    nwn = OpenWindow("IntPercDClass",0,0,"","",IntPercr);
+  end else begin
+    MessageBox(1000000,"");
+  end;
+  
+  return;
+end;
+
+global
+procedure NAContractStatusCUDsm()
+BEGIN
+  record NAContractVc COr;
+  record RcVc RepSpec;
+  Integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,COr);
+  SetupCustPS2Rn(COr.CustCode,RepSpec);
+  RunReport(RepSpec,0);
+  RETURN;
+END;
+
+global
+function Boolean NAContractDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+  record NAContractVc NAContractr;
+  boolean res;
+  
+  res = true;
+  if rownr!=-1 and UserCanAction("OBSAllowNAContrRowChange",false)==false then begin
+    res = false;
+    GoTo LNAContractDClassActiveEditField;
+  end;
+  
+  if (wnst!=Rs_update) then begin
+    GetWindowRecord(wn,NAContractr);
+  end else begin
+    GetPrevWindowRecord(wn,NAContractr);    
+  end;
+  
+  if NAContractr.OKFlag==1 then begin
+    switch (fieldname) begin
+      //parametri tabs
+      case "ContractNr": res = true;
+      case "OwnerDocument": res = true;
+      case "OwnerDocDate": res = true;
+      case "DealType": res = true;
+      case "DealDate": res = true;
+      case "OrderNr": res = true;
+      case "OrderDate": res = true;
+      case "RightsToPriv": res = true;
+      case "IssuedToAmt": res = true;
+      case "FreeDate": res = true;
+      case "IssuedToMunDate": res = true;
+      case "COTillInfo": res = true;
+      //papildinformacijas tabs
+      case "Comment1": res = true;
+      case "Comment2": res = true;
+      case "Comment3": res = true;
+      case "Comment4": res = true;
+      case "Comment5": res = true;
+      case "CustName": res = true;
+      otherwise
+        res = false;
+    end;
+  end;
+  
+LNAContractDClassActiveEditField:;
+  NAContractDClassActiveEditField = res;
+  return;
+end;
+
+global 
+function Boolean NAContractDClassDeleteRowTest(Integer wn,Integer rownr) begin
+  Boolean res;
+  record NAContractVc NAContractr;
+  integer wnst;
+  
+  res = true;
+  if UserCanAction("OBSAllowNAContrRowChange",false)==false then begin
+    res = false;
+    GoTo LNAContractDClassDeleteRowTest;
+  end;
+  
+  wnst = WindowState(wn);
+  if (wnst!=Rs_update) then begin
+    GetWindowRecord(wn,NAContractr);
+  end else begin
+    GetPrevWindowRecord(wn,NAContractr);    
+  end;
+  
+  if NAContractr.OKFlag==1 then begin
+    res = false;
+  end;
+  
+LNAContractDClassDeleteRowTest:;
+  NAContractDClassDeleteRowTest=res;
+  return;
+end;
+
+global 
+function Boolean NAContractDClassInsertRowTest(Integer wn,Integer rownr) begin
+  Boolean res;
+  record NAContractVc NAContractr;
+  integer wnst;
+  
+  res = true;
+  if UserCanAction("OBSAllowNAContrRowChange",false)==false then begin
+    res = false;
+    GoTo LNAContractDClassInsertRowTest;
+  end;
+  
+  wnst = WindowState(wn);
+  if (wnst!=Rs_update) then begin
+    GetWindowRecord(wn,NAContractr);
+  end else begin
+    GetPrevWindowRecord(wn,NAContractr);    
+  end;
+  
+  if NAContractr.OKFlag==1 then begin
+    res = false;
+  end;
+  
+LNAContractDClassInsertRowTest:;
+  NAContractDClassInsertRowTest=res;
+  return;
+end;
+
+global 
+function string 255 NAContractSClassInv(Record NAContractVc NAContractr)
+begin
+  string 255 res;
+  record SysFormatBlock SysFormatRec;
+  val t;
+  
+  BlockLoad(SysFormatRec);
+  t=GetLastContractInvSum(NAContractr.SerNr);
+  res=ValToString(t,M4Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+  
+  NAContractSClassInv=res;
+return;
+end;
+
+global 
+function string 255 NAContractSClassDebt(Record NAContractVc NAContractr)
+begin
+  string 255 res;
+  record SysFormatBlock SysFormatRec;
+  val bal,latebal,exclsum,lateexclsum;
+  
+  BlockLoad(SysFormatRec);
+  COGetBalance(NAContractr.SerNr,CurrentDate,bal,latebal,exclsum,lateexclsum,"");
+  res=ValToString(bal,M4Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+  
+  NAContractSClassDebt=res;
+return;
+end;
+
+global
+function Boolean NAContractDClassPrint(Integer wn,Boolean previewf)
+begin
+  boolean res;
+  record NAContractVc NAContractr;
+  
+  DeselectWindow(wn,false);
+  if WindowState(wn) == Rs_normal then begin
+    res = true;
+    GetWindowRecord(wn,NAContractr);
+    PrintDocument(NAContractr,"NAContractForm",previewf);
+  end;
+  
+  NAContractDClassPrint = res;
+  return;
+end;

@@ -1,0 +1,137 @@
+global
+updating procedure ContractServIn()
+begin
+  record NAContractVc COr, CO2r;
+  row NAContractVc COrw;
+  record INVc INr;
+  String 255 AccNum, Unnassigned, TariffCode;
+  Integer rwcnt,i;
+
+  // loop through txt file
+  while (NextImportLine(false)) begin
+    AccNum = ImportField;
+    Unnassigned = ImportField;
+    TariffCode = ImportField;
+
+    if(nonblank(TariffCode)) then begin
+
+      // find customer contract
+      COr.SerNr = AccNum;
+      if(ReadFirstMain(COr,1,true)) then begin
+        RecordCopy(CO2r, COr);
+
+        // find item
+        INr.Code = TariffCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          
+          rwcnt = MatRowCnt(CO2r); // get current row
+        
+          // set item data
+          COrw.ArtCode = INr.Code;
+          COrw.Spec = INr.Name;
+          COrw.Price = INr.UPrice1;
+          COrw.QtyCoef = blankval;
+
+          // if land tariff - place price in coeff.
+          if(INr.CalcOnLandOrImp == 1) then begin
+            COrw.Price = 1;
+            COrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+          end;
+
+          MatRowPut(CO2r,rwcnt,COrw);
+        end;
+        
+        RecordUpdate(COr,CO2r,false);
+      end;
+    end;
+  end;
+
+  return;
+end;
+
+// global
+// updating procedure ContractServIn()
+// begin
+//   record NAContractVc COr, CO2r;
+//   row NAContractVc COrw;
+//   record INVc INr;
+//   String 255 AccNum, CutsName, ErfNo, Street,
+//   Owner, OwnerType, SubType, AccStat, DateOpened, DateClosed, Indegent, 
+//   Pensioner, PensionerPerc, PropCatCode, Town, Suburb, Ward, LandValue, TariffCode, Description;
+//   Integer rwcnt,i;
+
+//   // loop through txt file
+//   while (NextImportLine(false)) begin
+//     AccNum = ImportField;
+//     CutsName = ImportField;
+//     ErfNo = ImportField;
+//     Street = ImportField;
+//     Owner = ImportField;
+//     OwnerType = ImportField;
+//     SubType = ImportField;
+//     AccStat = ImportField;
+//     DateOpened = ImportField;
+//     DateClosed = ImportField;
+//     Indegent = ImportField;
+//     Pensioner = ImportField;
+//     PensionerPerc = ImportField;
+//     PropCatCode = ImportField;
+//     Town = ImportField;
+//     Suburb = ImportField;
+//     Ward = ImportField;
+//     LandValue = ImportField;
+//     TariffCode = ImportField;
+//     Description = ImportField;
+
+//     if(AccStat=="ACTIVE") then begin
+
+//       // find customer contract
+//       COr.SerNr = AccNum;
+//       if(ReadFirstMain(COr,1,true)) then begin
+//         RecordCopy(CO2r, COr);
+
+//         // find item
+//         INr.Code = TariffCode;
+//         if(ReadFirstMain(INr,1,true)) then begin
+          
+//           rwcnt = MatRowCnt(CO2r); // get current row
+          
+//           if(INr.AlternativeCode != "Land Tariffs Rates") then begin
+            
+//             // set item data
+//             COrw.ArtCode = INr.Code;
+//             COrw.Spec = INr.Name;
+//             COrw.Price = INr.UPrice1;
+//             COrw.QtyCoef = blankval;
+//             MatRowPut(CO2r,rwcnt,COrw);
+
+//             // if sewerage - add second charge (basic charge)
+//             if(INr.AlternativeCode=="Sewerage") then begin
+//               INr.Code = TariffCode & "B";
+//               if(ReadFirstMain(INr,1,true)) then begin
+//                 COrw.ArtCode = INr.Code;
+//                 COrw.Spec = INr.Name;
+//                 COrw.Price = INr.UPrice1;
+//                 rwcnt = rwcnt + 1;
+//                 MatRowPut(CO2r,rwcnt,COrw);
+//               end;
+//             end;
+//           end;
+
+//           // if land tariff - place price in coeff.
+//           if(INr.AlternativeCode == "Land Tariffs Rates") then begin
+//             COrw.ArtCode = INr.Code;
+//             COrw.Spec = INr.Name;
+//             COrw.Price = 1;
+//             COrw.QtyCoef = StringToVal(INr.UserStr2,M45Val);
+//             MatRowPut(CO2r,rwcnt,COrw);
+//           end;
+//         end;
+        
+//         RecordUpdate(COr,CO2r,false);
+//       end;
+//     end;
+//   end;
+
+//   return;
+// end;

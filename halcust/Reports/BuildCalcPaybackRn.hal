@@ -1,0 +1,239 @@
+external inner procedure HT2Per(Date,Date,var string);
+external procedure HTBuild(string,var string);
+external function val GetPayedPrepaymentSum(string,longint,date,date);
+
+procedure AddToCacher(record ItemPayHistVc ItemPayHistr,var record SMVc Cacher,integer type,val prepay)
+begin
+  row SMVc Cacherw;
+  integer rwc,i;
+  boolean foundf;
+  
+  foundf=false;
+  if type==0 then begin
+    MatRowGet(Cacher,0,Cacherw);
+    if ItemPayHistr.FileName==1 then begin
+      Cacherw.CredVal=Cacherw.CredVal + ItemPayHistr.AmtValBaseCur;
+    end else begin
+      Cacherw.DebVal=Cacherw.DebVal + ItemPayHistr.AmtValBaseCur;
+    end;
+    if prepay!=blankval then begin
+      Cacherw.DebVal=Cacherw.DebVal + prepay;
+    end;
+    MatRowPut(Cacher,0,Cacherw);
+  end;
+
+  if type==1 then begin
+    rwc=MatRowCnt(Cacher);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Cacher,i,Cacherw);
+      if (Cacherw.AccNumber==ItemPayHistr.BuildCode) and (StringToLongInt(Cacherw.Comment)==ItemPayHistr.ContrSerNr) then begin
+        foundf=true;
+        if ItemPayHistr.FileName==1 then begin
+          Cacherw.CredVal=Cacherw.CredVal + ItemPayHistr.AmtValBaseCur;
+        end else begin
+          Cacherw.DebVal=Cacherw.DebVal + ItemPayHistr.AmtValBaseCur;
+        end;
+        MatRowPut(Cacher,i,Cacherw);
+        i=rwc;
+      end;
+    end;
+    if !foundf then begin
+      ClearRow(Cacher,Cacherw,0);
+      Cacherw.AccNumber=ItemPayHistr.BuildCode;
+      Cacherw.Comment=ItemPayHistr.ContrSerNr;
+      if ItemPayHistr.FileName==1 then begin
+        Cacherw.CredVal=ItemPayHistr.AmtValBaseCur;
+      end else begin
+        Cacherw.DebVal=ItemPayHistr.AmtValBaseCur;
+      end;
+      if prepay!=blankval then begin
+        Cacherw.DebVal=Cacherw.DebVal + prepay;
+      end;
+      MatRowInsert(Cacher,rwc,Cacherw);
+    end;
+  end;
+  return;
+end;
+
+procedure AddItemPayHistSumsToCacher(longint contract,var record SMVc TotCacher,var record SMVc COCacher,integer ArtMode,date sd,date ed)
+begin
+  record ItemPayHistVc ItemPayHistr;
+  record INVc INr;
+  boolean TrHs2,TrHs,testf,firstf;
+  val prepay;
+  
+  firstf=false;
+  ResetLoop(INr);
+  TrHs2=true;
+  While LoopMain(INr,1,TrHs2) begin
+    ResetLoop(ItemPayHistr);
+    ItemPayHistr.ContrSerNr=contract;
+    ItemPayHistr.ArtCode=INr.Code;
+    ItemPayHistr.TransDate=sd;
+    TrHs=true;
+    While LoopKey("ContrSerNr",ItemPayHistr,3,TrHs) begin
+      if ItemPayHistr.ContrSerNr!=contract or ItemPayHistr.ArtCode!=INr.Code or ItemPayHistr.TransDate>ed then begin
+        TrHs=false;
+      end else begin
+        testf=true;
+        if contract==-1 then begin 
+          testf=false;
+        end;
+        if ItemPayHistr.FileName==5 then begin //Prepay
+          testf=false;
+        end;
+        if testf then begin
+          if !firstf then begin
+            prepay=GetPayedPrepaymentSum(ItemPayHistr.CustCode,ItemPayHistr.ContrSerNr,sd,ed);
+            AddToCacher(ItemPayHistr,TotCacher,0,prepay);
+            if ArtMode==1 then begin
+              AddToCacher(ItemPayHistr,COCacher,1,prepay);
+            end;
+            firstf=true;
+          end else begin
+            AddToCacher(ItemPayHistr,TotCacher,0,blankval);
+            if (ArtMode==1) and (contract!=-1) then begin
+              AddToCacher(ItemPayHistr,COCacher,1,blankval);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+  
+procedure ProceedOneBuild(string buildcode,record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record IVVc IVr;
+  boolean TrHs,testf;
+  record SMVc TotCacher,COCacher;
+  row SMVc Cacherw;
+  integer i,rwc;
+  vector boolean vecContractf;
+  
+  RecordNew(TotCacher);
+  RecordNew(COCacher);
+  
+  ResetLoop(NAContractr);
+  TrHs=true;
+  NAContractr.BuildCode=buildcode;
+  while LoopKey("BuildCode",NAContractr,1,TrHs) begin
+    if NAContractr.BuildCode!=buildcode then begin
+      TrHs=false;
+    end else begin
+      testf=true;
+      if NAContractr.OKFlag!=1 then begin
+       testf=false;
+      end;
+      if RepSpec.flags[0]==0 and testf then begin
+        if NonBlankDate(NAContractr.StartDate) and RepSpec.sEndDate<NAContractr.StartDate then begin
+          testf = false;
+        end;
+        if nonblankdate(NAContractr.EndDate) and RepSpec.sStartDate>NAContractr.EndDate then begin
+          testf = false;
+        end;
+      end;
+      if testf then begin
+        AddItemPayHistSumsToCacher(NAContractr.SerNr,TotCacher,COCacher,RepSpec.ArtMode,RepSpec.sStartDate,RepSpec.sEndDate);
+      end;
+    end;
+  end;
+  
+  // if RepSpec.ArtMode==0 then begin
+  rwc=MatRowCnt(TotCacher);
+  MatRowGet(TotCacher,0,Cacherw);
+  StartFormat(15);
+  OutString(0,0,USetStr(1001486),false);
+  OutVal(120,0,Cacherw.CredVal,M4Val,false);
+  EndFormat;
+  StartFormat(15);
+  OutString(0,0,USetStr(1001487),false);
+  OutVal(120,0,Cacherw.DebVal,M4Val,false);
+  EndFormat;
+  // end;
+  
+  if RepSpec.ArtMode==1 then begin
+    StartFormat(15);
+    EndFormat;
+    rwc=MatRowCnt(COCacher);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(COCacher,i,Cacherw);
+      
+      StartFormat(15);
+      OutString(0,"DblNAContractVc",StringToLongInt(Cacherw.Comment),false);
+      NAContractr.SerNr=StringToLongInt(Cacherw.Comment);
+      if ReadFirstMain(NAContractr,1,true) then begin
+        OutString(30,0,NAContractr.CustName,false);
+      end else begin
+        OutString(30,0,NAContractr.CustName,false);
+      end;
+      EndFormat;
+          
+      StartFormat(15);
+      OutString(0,0,USetStr(1001486),false);
+      OutVal(120,0,Cacherw.CredVal,M4Val,false);
+      EndFormat;
+      
+      StartFormat(15);
+      OutString(0,0,USetStr(1001487),false);
+      OutVal(120,0,Cacherw.DebVal,M4Val,false);
+      EndFormat;
+      
+      StartFormat(15);
+      EndFormat;
+    end;  
+  end;  
+  
+  return;
+end;
+
+global
+procedure BuildCalcPaybackRn(record RcVc RepSpec)
+begin
+  record BuildVc Buildr;
+  boolean TrHs;
+  integer rw;
+  string 255 tstr,tstr1;
+  array val arrCalcSums;
+  
+  StartReportJob(USetStr(1001485));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  if RepSpec.f1!="" then begin
+    HTBuild(RepSpec.f1,tstr1);
+    Header(rw,tstr1,1);
+    rw = rw + 1;
+  end;
+  EndHeader;
+    
+  ResetLoop(Buildr);
+  TrHs=true;
+  Buildr.Code=RepSpec.f1;  
+  While LoopMain(Buildr,1,TrHs) begin
+    if RepSpec.f1!="" and Buildr.Code!=RepSpec.f1 then begin
+      TrHs=false;
+    end else begin
+      StartFormat(15);
+        OutString(0,"DblBuildVc",Buildr.Code,false);
+        OutString(30,0,Buildr.Address,false);
+      EndFormat;
+      StartFormat(15)
+        OutString(0,0,tstr,false);
+      EndFormat;
+      StartFormat(15);
+      EndFormat;
+      ProceedOneBuild(Buildr.Code,RepSpec);
+      StartFormat(15);
+      EndFormat;
+    end;
+  end;
+  
+  EndJob;
+  
+  return;
+end;

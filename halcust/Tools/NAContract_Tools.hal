@@ -1,0 +1,808 @@
+external inner function LongInt CalculateLateDays(Date,Date,Date,Boolean,Boolean);
+external inner procedure ARRnGetInvBalance(record IVVc,var Date,Integer,var val,var val,var LongInt);
+external inner procedure SubPrePayments(record IVVc,var val,var val);
+external inner procedure SubCashRows_IVVc(record IVVc,boolean,var val,var val);
+external inner procedure SplitEclass(string,var Array string);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external procedure OBSAddRemoveObjects(string,string,string,var string);
+external updating procedure UpdateItemPayHistVcFromIVVc(Record IVVc,boolean);
+external updating procedure UpdateItemPayHistVcFromIPVc(Record IPVc,boolean,string);
+external inner updating procedure IVUpdateItemHist(record IVVc);
+external inner updating procedure IVUpdateCashupHist(record IVVc);
+external inner updating function Boolean BatchStat(record IVVc,Boolean,Boolean);
+external inner updating procedure UpdateCSFromIP(record IPVc,Boolean);
+
+global updating
+procedure UpdateNAContractCustName(string custCode,string newCustName,var integer cnt)
+begin
+  record NAContractVc NAContractr,oldNAContractr;
+  record OwnersVc Ownersr,oldOwnersr;
+  row OwnersVc Ownersrw;
+  boolean TrHs,testf,updatef;
+  date tdate;
+  integer i,rwc;
+  
+  tdate=CurrentDate;
+  TrHs=true;
+  NAContractr.CustCode=custCode;
+  While LoopKey("CustCode",NAContractr,1,TrHs) begin
+    if NAContractr.CustCode!=custCode then begin
+      TrHs=false;
+    end else begin
+      if NAContractr.OKFlag==1 then begin
+        testf=true;
+        if tdate<NAContractr.StartDate then begin
+          testf=false;
+        end;
+        if NonBlankDate(NAContractr.EndDate) and NAContractr.EndDate<tdate then begin
+          testf=false;
+        end;
+        if testf then begin
+          if NAContractr.CustName!=newCustName then begin
+            RecordCopy(oldNAContractr,NAContractr);
+            NAContractr.CustName=newCustName;
+            if RecordUpdate(oldNAContractr,NAContractr,true)!=0 then begin
+              LogText(0,"UpdateNAContractCustName ERROR :: Could not update contract " & NAContractr.SerNr);
+            end else begin
+              cnt=cnt+1;
+            end;
+          end;
+          if NonBlank(NAContractr.FlatCode) then begin
+            Ownersr.Code=NAContractr.FlatCode;
+            if ReadFirstMain(Ownersr,1,true) then begin
+              RecordCopy(oldOwnersr,Ownersr);
+              updatef=false;
+              rwc=MatRowCnt(Ownersr);
+              for (i=0;i<rwc;i=i+1) begin
+                MatRowGet(Ownersr,i,Ownersrw);
+                if (Ownersrw.CustCode==custCode) and (Ownersrw.CustName!=newCustName) then begin
+                  Ownersrw.CustName=newCustName;
+                  MatRowPut(Ownersr,i,Ownersrw);
+                  updatef=true;
+                end;
+              end;
+              if updatef then begin
+                if RecordUpdate(oldOwnersr,Ownersr,true)!=0 then begin
+                  LogText(0,"UpdateOwnersCustName ERROR :: Could not update owners " & Ownersr.Code);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  return;
+end;
+
+global
+function boolean GetActualBuildCO(string buildcode,date ondate,var record NAContractVc NAContractr)
+begin
+  boolean res,testf,wloop;
+  
+  res = false;
+  if blank(buildcode) or Blankdate(ondate) then begin
+    goto LGetActualBuildCO;
+  end;
+  ResetLoop(NAContractr);
+  NAContractr.BuildCode = buildcode;
+  wloop = true;
+  while LoopBackKey("BuildCode",NAContractr,1,wloop) begin
+    if NAContractr.BuildCode!=buildcode then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if NAContractr.FlatCode!="" then begin
+        testf=false;
+      end;
+      if NAContractr.OKFlag!=1 then begin
+        testf = false;
+      end;
+      if NonBlankDate(NAContractr.StartDate) and ondate<NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if nonblankdate(NAContractr.EndDate) and ondate>NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        wloop = false;
+        res = true;
+      end;
+    end;
+  end;
+  
+LGetActualBuildCO:;
+  GetActualBuildCO = res;
+return;
+end;
+
+global
+function boolean GetActualFlatCO(string flatcode,date ondate,var record NAContractVc NAContractr)
+begin
+  boolean res,testf,wloop;
+  
+  res = false;
+  if blank(flatCode) or Blankdate(ondate) then begin
+    goto LGetActualFlatCO;
+  end;
+  ResetLoop(NAContractr);
+  NAContractr.FlatCode = flatcode;
+  NAContractr.OKFlag = 1;
+  wloop = true;
+  while LoopKey("LastFlatCO",NAContractr,2,wloop) begin
+    if NAContractr.FlatCode != FlatCode or NAContractr.OKFlag != 1 then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if NonBlankDate(NAContractr.StartDate) and ondate < NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if nonblankdate(NAContractr.EndDate) and ondate>NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        wloop = false;
+        res = true;
+      end;
+    end;
+  end;
+  
+LGetActualFlatCO:;
+  GetActualFlatCO = res;
+return;
+end;
+
+global
+function boolean GetActualCustCO2(string custcode,date ondate,var record NAContractVc NAContractr,var longint sernr)
+begin
+  boolean res,testf,TrHs;
+  Record NAContractVc tempNAContractr;
+  longint contract,contract2;
+  
+  sernr=-1;
+  contract=-1;
+  contract2=-1;
+  TrHs=true;
+  ResetLoop(NAContractr);
+  NAContractr.CustCode=custcode;
+  while LoopKey("CustCode",NAContractr,1,TrHs) begin
+    if NAContractr.CustCode!=custcode then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if NAContractr.OKFlag!=1 then begin
+        testf=false;
+      end;
+      if NonBlankDate(NAContractr.StartDate) and ondate < NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if NonBlankDate(NAContractr.EndDate) and ondate > NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        contract=NAContractr.SerNr;
+        TrHs=false;
+      end;
+    end;
+  end;
+        
+  TrHs=true;
+  ResetLoop(NAContractr);
+  NAContractr.CustCode=custcode;
+  while LoopBackKey("CustCode",NAContractr,1,TrHs) begin
+    if NAContractr.CustCode!=custcode then begin
+      TrHs=false;
+    end else begin
+      testf = true;
+      if NAContractr.OKFlag!=1 then begin
+        testf=false;
+      end;
+      if NonBlankDate(NAContractr.StartDate) and ondate < NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if NonBlankDate(NAContractr.EndDate) and ondate > NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        contract2=NAContractr.SerNr;
+        TrHs=false;
+      end;
+    end;
+  end;
+  if contract!=-1 then begin  
+    if contract==contract2 then begin
+      sernr=contract;
+      res=true;
+    end;
+  end;
+  
+  GetActualCustCO2=res;
+  return;
+end;
+
+global
+function boolean GetActualCustCO(string custcode,date ondate,var record NAContractVc NAContractr,boolean inclunok,boolean UseOnlyContr)
+begin
+  boolean res,testf,wloop;
+  integer keycnt;
+  Record NAContractVc tempNAContractr;
+  
+  if Blank(custcode) then begin
+    goto LGetActualCustCO;
+  end;
+  if BlankDate(ondate) then begin
+    goto LGetActualCustCO;
+  end;
+  ResetLoop(NAContractr);
+  NAContractr.CustCode = custcode;
+  keycnt = 1;
+  if !inclunok then begin
+    NAContractr.OKFlag = 1;
+    keycnt=2;
+  end;
+  wloop = true;
+  while LoopKey("ActualLegalCO",NAContractr,keycnt,wloop) begin
+    if NAContractr.CustCode != custcode then begin
+      wloop = false;
+    end;
+    if !inclunok and NAContractr.OKFlag != 1 then begin
+      wloop = false;
+    end;
+    if !inclunok and (NonBlankDate(NAContractr.EndDate) and ondate > NAContractr.EndDate) then begin
+      wloop = false;
+    end;
+    if wloop then begin
+      testf = true;
+      if NonBlankDate(NAContractr.StartDate) and ondate < NAContractr.StartDate then begin
+        testf = false;
+      end;
+      if NonBlankDate(NAContractr.EndDate) and ondate > NAContractr.EndDate then begin
+        testf = false;
+      end;
+      if testf then begin
+        wloop = false;
+        res = true;
+      end;
+    end;
+  end;
+  
+  //Atgrieþ vienîgo lîgumu ja klientam ir tikai viens lîgums, ðis parametrs ignorç parametru "inclunok". Atgrieþ vienîgo neatkarîgi no apstiprinâjuma statusa.
+  if UseOnlyContr and !res then begin
+    NAContractr.CustCode = custcode;
+    if ReadFirstKey("ActualLegalCO",NAContractr,1,true) then begin
+      tempNAContractr.CustCode = custcode;
+      if ReadLastKey("ActualLegalCO",tempNAContractr,1,true) then begin
+        if tempNAContractr.SerNr==NAContractr.SerNr then begin
+          res = true;
+        end;
+      end;
+    end;
+  end;
+  
+LGetActualCustCO:;
+  GetActualCustCO = res;
+  return;
+end;
+
+global
+function boolean GetAnyLastCustCOBeforeDate(string cucode,date ondate,var record NAContractVc NAContractr)
+begin
+  boolean res,wloop,testf;
+
+  ResetLoop(NAContractr);
+  NAContractr.CustCode = cucode;
+  wloop = true;
+  while (LoopBackKey("CustCode",NAContractr,1,wloop)) begin
+    if (NAContractr.CustCode != cucode) then begin
+      wloop = false;
+    end else begin
+      testf = true;
+      if (BlankDate(NAContractr.EndDate) or (NAContractr.EndDate >= ondate)) then begin
+        testf = false;
+      end;
+      if (testf) then begin
+        res = true;
+        wloop = false;
+      end;
+    end;
+  end;
+
+  GetAnyLastCustCOBeforeDate = res;
+  return;
+end;
+
+global
+procedure COGetBalance(longint contract,date ondate,var val bal,var val latebal,var val exclsum,var val lateexclsum,string exclitems)
+Begin
+  Record IVVc IVr;
+  boolean wloop,testf;
+  LongInt latedays;
+  val rvalb1,rval;
+  Array String 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  integer arraysize,i;
+  array longint arrContractNrs;
+  
+  bal = 0;
+  exclsum = 0;
+  latebal = 0;
+  lateexclsum = 0;
+  
+  IVr.Contract = contract; 
+  IVr.InvDate = ondate;
+  wloop = true;
+  while LoopBackKey("Contract",IVr,2,wloop) begin
+    if IVr.Contract!=contract or IVr.InvDate > ondate then begin
+      wloop = false;
+    end else begin
+      if (IVr.OKFlag==0) or (IVr.Invalid==1) then begin
+        GoTo LSkipInv;
+      end;
+      latedays = CalculateLateDays(IVr.InvDate,IVr.PayDate,ondate,false,false);
+      //LogText(0,"ondate=" & ondate & " sernr=" & IVr.SerNr & " late=" & latedays);
+      rvalb1 = 0;
+      if ((IVr.InvType<>kInvoiceTypeCredit) and (IVr.InvType<>kInvoiceTypeCash)) then begin
+        rval = IVr.Sum4;
+        if (nonblank(IVr.CurncyCode)) then begin
+          rvalb1 = IVr.BaseSum4;
+        end;
+        if (rvalb1==0) then begin
+          rvalb1 = rval;
+        end;
+      end;
+      if (IVr.InvType==kInvoiceTypeCredit) then begin
+        if (IVr.CredInv==-1) then begin
+          rval = -IVr.Sum4;
+          if (nonblank(IVr.CurncyCode)) then begin
+            rvalb1 = -IVr.BaseSum4;
+          end;
+          if (rvalb1==0) then begin
+            rvalb1 = rval;
+          end;
+        end else begin
+          rval = 0;
+          rvalb1 = 0;
+        end;    
+      end;
+      if (IVr.InvType==kInvoiceTypeCash) then begin
+        rval = 0;
+        rvalb1 = 0;
+      end;
+      
+      ARRnGetInvBalance(IVr,ondate,IVr.InvType,rval,rvalb1,latedays);
+      SubPrePayments(IVr,rval,rvalb1);
+      SubCashRows_IVVc(IVr,false,rval,rvalb1);
+      
+      bal = bal + rvalb1;
+      if latedays<=0 then begin
+        latebal = latebal + rvalb1;
+      end;
+      if nonblank(exclitems) then begin
+        ArtCodeMas[0]=0;
+        GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+        arraysize=StringToInt(ArtCodeMas[0]);
+        for(i=1;i<=arraysize;i=i+1)begin
+          if SetInSet(ArtCodeMas[i],exclitems) then begin
+            exclsum = exclsum + UnPayedSumMas[i];
+            if latedays<=0 then begin
+              lateexclsum = lateexclsum + UnPayedSumMas[i];
+            end;
+          end;
+        end;  
+      end;
+      LSkipInv:;
+    end;
+  end;
+  
+return;
+end;
+
+global
+function boolean ArtCodeInNAContract(record NAContractVc NAContractr,string artcode) begin
+  row NAContractVc NAContractrw;
+  integer i,rwc;
+  boolean res;
+  
+  rwc = MatRowCnt(NAContractr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(NAContractr,i,NAContractrw);
+    if NAContractrw.ArtCode == artcode then begin
+      res = true;
+      i = rwc;
+    end;
+  end;
+  
+  ArtCodeInNAContract = res;
+return;
+end;
+
+global
+function boolean GetIPRowContract(row IPVc IPrw,date ondate,var record NAContractVc NAContractr) begin
+  record IVVc IVr;
+  boolean res;
+  
+  if IPrw.InvoiceNr!=-1 then begin
+    IVr.SerNr = IPrw.InvoiceNr;
+    if ReadFirstMain(IVr,1,true) then begin
+      if IVr.Contract!=-1 then begin
+        NAContractr.SerNr = IVr.Contract;
+        if ReadFirstMain(NAContractr,1,true) then begin
+          res = true;
+          GoTo LGetIPRowContract;
+        end;
+      end;
+    end;
+  end else begin
+    if GetActualCustCO(IPrw.CustCode,ondate,NAContractr,true,true) then begin
+      res = true;
+    end;
+  end;
+  
+LGetIPRowContract:;
+  GetIPRowContract = res;
+return;
+end;
+
+global
+procedure GetContractAddress(record NAContractVc NAContractr,var string address)
+begin
+  record FlatsVc Flatsr;
+  record BuildVc Buildr;  
+
+  address = "";
+
+  if nonblank(NAContractr.FlatCode) then begin
+    Flatsr.FlatCode = NAContractr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      address = Flatsr.Address;
+      if nonblank(Flatsr.FlatNo) then begin
+        address = address & " - " & Flatsr.FlatNo;
+      end; 
+    end;
+  end else begin
+    Buildr.Code = NAContractr.BuildCode;
+    if ReadFirstMain(Buildr,1,true) then begin
+      address = Buildr.Address;
+    end;
+  end;
+  
+return;
+end;
+
+procedure PrintContractClass(string aclass)
+BEGIN
+  Integer i,res;
+  Array string 20 ac;
+  record CClassVc CCr;
+  record CTypeVc CTr;
+  Array string 5 crCode;
+  Array string 60 crComment;
+  Array string 5 crCType;
+  Array string 60 crTypeComment;
+  Integer cnt;
+  Boolean firstf;
+  
+  firstf = true;
+  res = 1;
+  SplitEclass(aclass,ac);
+  for (i = 0; i<40; i=i+1) begin
+    crCode[cnt] = "";
+    crComment[cnt] = "";
+    crCType[cnt] = "";
+    crTypeComment[cnt] = "";
+    if (nonblank(ac[i])) then begin
+      CCr.Code = ac[i];
+      if (ReadFirstMain(CCr,1,true)) then begin
+        CTr.Code = CCr.CType;
+        if (ReadFirstMain(CTr,1,true)) then begin
+          crTypeComment[cnt] = CTr.Comment;
+        end;  
+        crComment[cnt] = CCr.Comment;
+        crCType[cnt] = CCr.CType;
+      end;
+      crCode[cnt] = ac[i];
+      cnt = cnt + 1;
+    end;
+  end;
+  for (i = 0;i<cnt;i=i+1) begin
+    // if (firstf) then begin
+      // StartFormat(15);
+       // OutString(45,0,USetStr(2735) & ":",false);
+      // EndFormat;
+      // firstf = false;
+    // end;
+    StartFormat(15);
+    OutString(45,0,crCode[i],false);
+    OutString(85,0,crComment[i],false);
+    OutString(295,0,crCType[i],false);
+    OutString(335,0,crTypeComment[i],false);
+    EndFormat;
+  end;
+  
+  return;
+end;
+
+global
+function string 255 GetIntStatus(record NAContractVc NAContractr,var date startdate,date tondate)
+begin
+  record IntPercVc IntPercr;
+  row IntPercVc IntPercrw;
+  string 255 res;
+  integer i,rwc;
+  date ondate;
+  
+  ondate=tondate;
+  if blankdate(ondate) then begin
+    ondate=CurrentDate;
+  end;
+
+  if blank(NAContractr.IntPercCode) then begin
+    res = "-";
+  end else begin
+    IntPercr.Code=NAContractr.IntPercCode;
+    if ReadFirstMain(IntPercr,1,true) then begin
+      res = USetStr(1001702);
+      rwc=MatRowCnt(IntPercr);
+      for (i=rwc-1;i>=0;i=i-1) begin
+        MatRowGet(IntPercr,i,IntPercrw)
+        if IntPercrw.CalcWay==2 then begin
+          if (nonblankdate(IntPercrw.StartDate) and (IntPercrw.StartDate<=ondate)) or
+            (nonblankdate(IntPercrw.EndDate) and (ondate<=IntPercrw.EndDate)) then begin
+            res = USetStr(1001201);
+            // i=rwc;
+            if nonblankdate(IntPercrw.EndDate) then begin
+              startdate = AddDay(IntPercrw.EndDate,1);
+            end;
+            GoTo LGetIntStatus;
+          end;
+        end;
+      end;
+    end;
+  end;
+LGetIntStatus:;  
+  GetIntStatus = res;
+  return;
+end;
+
+global
+function string 255 GetIntStatus2(record NAContractVc NAContractr,var date startdate,date tondate)
+begin
+  record IntPercVc IntPercr;
+  row IntPercVc IntPercrw;
+  string 255 res;
+  integer i,rwc;
+  date ondate;
+  boolean testf;
+
+  ondate=tondate;
+  if blankdate(ondate) then begin
+    ondate=CurrentDate;
+  end;
+
+  if blank(NAContractr.IntPercCode) then begin
+    res = "-";
+  end else begin
+    IntPercr.Code=NAContractr.IntPercCode;
+    if ReadFirstMain(IntPercr,1,true) then begin
+      res = USetStr(1001702);
+      rwc=MatRowCnt(IntPercr);
+      for (i=rwc-1;i>=0;i=i-1) begin
+        MatRowGet(IntPercr,i,IntPercrw)
+        if IntPercrw.CalcWay==2 then begin
+          testf=true;
+          if nonblankdate(IntPercrw.StartDate) and ondate<IntPercrw.StartDate then begin
+            testf=false;
+          end;
+          if nonblankdate(IntPercrw.EndDate) and IntPercrw.EndDate<ondate then begin
+            testf=false;
+          end;
+          if testf then begin
+            res = USetStr(1001201);
+            // i=rwc;
+            if nonblankdate(IntPercrw.EndDate) then begin
+              startdate = AddDay(IntPercrw.EndDate,1);
+            end;
+            GoTo LGetIntStatus2;
+          end;
+        end;
+      end;
+    end;
+  end;
+LGetIntStatus2:;  
+  GetIntStatus2 = res;
+  return;
+end;
+
+global
+function val GetLastContractInvSum(longint sernr)
+begin
+  record IVVc IVr;
+  val res;
+  
+  res = 0.00;
+  IVr.Contract=sernr;
+  if ReadLastKey("Contract",IVr,1,true) then begin
+    res = IVr.Sum4;
+  end;
+  
+  GetLastContractInvSum = res;
+  return;
+end;
+
+updating
+procedure UpdateIPVc(record NAContractVc NAContractr,longint sernr,var vector boolean vecUsed)
+begin
+  record IPVc IPr,oldIPr;
+  record ARPayVc ARPayr,newARPayr;
+  row IPVc IPrw;
+  integer i,rwc;
+  boolean updatef,TrHs;
+  
+  if !vecUsed[sernr] then begin
+    vecUsed[sernr]=true;
+    IPr.SerNr=sernr;
+    if ReadFirstMain(IPr,1,true) then begin
+      RecordCopy(oldIPr,IPr);
+      rwc=MatRowCnt(IPr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(IPr,i,IPrw);
+        if IPrw.ContractNr==NAContractr.SerNr then begin
+          if IPrw.CustCode!=NAContractr.CustCode then begin
+            IPrw.CustCode=NAContractr.CustCode;
+            IPrw.CustName=NAContractr.CustName;
+            MatRowPut(IPr,i,IPrw)
+            updatef=true;
+          end;
+        end;
+        if IPrw.CUPNr!=-1 then begin
+          ResetLoop(ARPayr);
+          TrHs=true;
+          ARPayr.CUPNr=IPr.SerNr;
+          While LoopMain(ARPayr,1,TrHs) begin
+            if ARPayr.CUPNr!=IPrw.CUPNr then begin
+              TrHs=false;
+            end else begin
+              if ARPayr.CustCode!=NAContractr.CustCode then begin
+                RecordCopy(newARPayr,ARPayr);
+                RecordDelete(ARPayr);
+                newARPayr.CustCode=NAContractr.CustCode;
+                newARPayr.CustName=NAContractr.CustName;
+                RecordStore(newARPayr,false);
+                StepBack(ARPayr);
+              end;
+            end;
+          end;
+            
+        end;
+      end;
+      if updatef then begin
+        UpdateItemPayHistVcFromIPVc(oldIPr,true,"");
+        UpdateItemPayHistVcFromIPVc(IPr,false,"");
+        UpdateCSFromIP(oldIPr,true);
+        UpdateCSFromIP(IPr,false);
+        if RecordUpdate(oldIPr,IPr,false)!=0 then begin
+          LogText(0,"ChangeCustInvPay ERROR :: Change IPVc " & IPr.SerNr);
+        end;
+      end;
+      
+      
+    end;
+  end;
+  
+  return;
+end;
+  
+updating
+procedure UpdatePlannedPaymentVc(string filename,longint transnr,string custcode,string custname)
+begin
+  record PlannedPaymentVc PPr,oldPPr;
+  boolean TrHs;
+  
+  TrHs=true;
+  PPr.FileName = filename;
+  PPr.TransNr = transnr;  
+  while LoopKey("FileName",PPr,2,TrHs) begin
+    if (PPr.FileName!=filename) or (PPr.TransNr!=transnr) then begin
+      TrHs=true;
+    end else begin
+      if PPr.CompCode!=custcode then begin
+        RecordCopy(oldPPr,PPr);
+        PPr.CompCode=custcode;
+        PPr.CompName=custname;
+        if RecordUpdate(oldPPr,PPr,false)!=0 then begin
+          LogText(0,"ChangeCustInvPay ERROR :: Change PlannedPaymentVc " & PPr.SerNr);
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+  
+  
+global updating
+procedure ChangeCustInvPay(record NAContractVc NAContractr)
+begin
+  record IVVc IVr,oldIVr,IV2r;
+  record ARPayHistVc ARPayHistr,oldARPayHistr;
+  record ARVc ARr,oldARr;
+  record IPrsVc IPrsr,oldIPrsr,newIPrsr;
+  boolean TrHs,ihef,TrHs2;
+  vector boolean vecUsed;
+  
+  TrHs=true;
+  IVr.Contract=NAContractr.SerNr;
+  While LoopKey("Contract",IVr,1,TrHs) begin
+    if IVr.Contract!=NAContractr.SerNr then begin
+      TrHs=false;
+    end else begin
+      if IVr.CustCode!=NAContractr.CustCode then begin
+        RecordCopy(oldIVr,IVr);
+        IVr.CustCode=NAContractr.CustCode;
+        IVr.Addr0 = NAContractr.CustName;
+        if (BatchStat(oldIVr,true,true)) then begin end;
+        if (BatchStat(IVr,false,false)) then begin end;
+        UpdateItemPayHistVcFromIVVc(oldIVr,true);
+        UpdateItemPayHistVcFromIVVc(IVr,false);
+        if RecordUpdate(oldIVr,IVr,false)!=0 then begin
+          LogText(0,"ChangeCustInvPay ERROR :: Change invoice " & IVr.SerNr);
+        end;
+        ARr.InvoiceNr=IVr.SerNr;
+        if ReadFirstMain(ARr,1,true) then begin
+          if IVr.CustCode!=ARr.CustCode then begin
+            RecordCopy(oldARr,ARr);
+            ARr.CustCode=NAContractr.CustCode;
+            ARr.CustName=NAContractr.CustName;
+            if RecordUpdate(oldARr,ARr,false)!=0 then begin
+              LogText(0,"ChangeCustInvPay ERROR :: Change ARVc " & ARr.InvoiceNr);
+            end;
+          end;
+        end;
+      end;
+      ResetLoop(IPrsr);
+      TrHs2=true;
+      IPrsr.IVNr=IVr.SerNr;
+      While LoopKey("IVKey",IPrsr,1,TrHs2) begin
+        if IPrsr.IVNr!=IVr.SerNr then begin
+          TrHs2=false;
+        end else begin
+          if (IPrsr.CustCode!=NAContractr.CustCode) then begin
+            RecordCopy(newIPrsr,IPrsr);
+            RecordDelete(IPrsr);
+            newIPrsr.CustCode=NAContractr.CustCode;
+            RecordStore(newIPrsr,false);
+            StepBack(IPrsr);
+          end;
+          if IPrsr.TransType==kIPrsTransTypeReceipt then begin
+            UpdateIPVc(NAContractr,IPrsr.TransNr,vecUsed);
+            UpdatePlannedPaymentVc("IPVc",IPrsr.TransNr,NAContractr.CustCode,NAContractr.CustName);
+          end;
+        end;
+      end;
+      UpdatePlannedPaymentVc("IVVc",IVr.SerNr,NAContractr.CustCode,NAContractr.CustName);
+    end;    
+  end;
+
+  TrHs=true;
+  ARPayHistr.ContractNr=NAContractr.SerNr;
+  while LoopKey("ContractNr",ARPayHistr,1,TrHs) begin
+    if ARPayHistr.ContractNr!=NAContractr.SerNr then begin
+      TrHs=false;
+    end else begin
+      if ARPayHistr.CustCode!=NAContractr.CustCode then begin
+        RecordCopy(oldARPayHistr,ARPayHistr);
+        ARPayHistr.CustCode=NAContractr.CustCode;
+        if RecordUpdate(oldARPayHistr,ARPayHistr,false)!=0 then begin
+          LogText(0,"ChangeCustInvPay ERROR :: Cant update ARPayHistVc " & ARPayHistr.SerNr);
+        end;
+      end;
+      if ARPayHistr.FileName=="IPVc" then begin
+        UpdateIPVc(NAContractr,ARPayHistr.SerNr,vecUsed);
+        UpdatePlannedPaymentVc("IPVc",ARPayHistr.SerNr,NAContractr.CustCode,NAContractr.CustName);
+      end;  
+    end;
+  end;
+  
+  return;
+end;

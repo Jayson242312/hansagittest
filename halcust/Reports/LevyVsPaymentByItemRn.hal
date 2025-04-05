@@ -1,0 +1,427 @@
+external inner function string 255 MonthName(Date);
+
+//
+global
+procedure LevyVsPaymentByItemRn(record RcVc RepSpec)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record INVc INr;
+  record CUVc CUr; String 25 CustCode,CustName;
+  //
+  boolean wloop,found;
+  Integer arr_size,rwcnt,i,v,j;
+  date datePeriod,periodEnd;
+
+  array String 225 arr_itemcode;
+  Date sd,ed,getPreviousMonth;
+  Date sd_Over60,ed_Over60;
+  Date sd_Over90,ed_Over90;
+
+  array val arr_invoice;
+  array val arr_invoice30;
+  array val arr_invoice60;
+  array val arr_invoiceOver90;
+
+  array val arr_receipt;
+  array val arr_receipt30;
+  array val arr_receipt60;
+  array val arr_receiptOver60; 
+
+  array val arr_receipt_monthSum;
+  array val arr_receipt_itemSum;
+  array val arr_invoice_monthSum;
+  array val arr_invoice_itemSum;
+
+
+  // start report job
+  StartReportJob("Levies vs Payments Aged By Item");
+
+  // get cust.name
+  if(blank(RepSpec.f1)) then begin
+    CustName = "";
+  end else begin
+    CustCode = RepSpec.f1;
+    CUr.Code = CustCode;
+    if(ReadFirstMain(CUr,1,true)) then begin
+      CustName = CUr.Name;
+    end;
+  end;
+  
+  // no period
+  if(blank(RepSpec.f2)) then begin
+    RepSpec.f2 = CurrentDate; // default period
+  end;
+
+  // set month over 90 days (invoices)
+  datePeriod = RepSpec.f2;
+  sd_Over90 = AddMonth(datePeriod,-4);
+  ed_Over90 = sd_Over90;
+  ed_Over90.day = DaysInMonth(GetYear(sd_Over90),GetMonth(sd_Over90));
+  // set month over 60 days (receipts)
+  sd_Over60 = AddMonth(datePeriod,-3);
+  ed_Over60 = sd_Over60;
+  ed_Over60.day = DaysInMonth(GetYear(sd_Over60),GetMonth(sd_Over60));
+
+
+  // loop item-payment-history
+  wloop = true;
+  ItemPayHistr.CustCode = CustCode;
+  While LoopKey("CustCode",ItemPayHistr,1,wloop) begin
+    // stop loop if..
+    if (nonblank(RepSpec.f1) AND ItemPayHistr.CustCode!=RepSpec.f1) then begin
+      wloop = false;
+    end else begin
+      
+      // =========================================== INVOICES ===========================================
+
+      // get type invoice / credit note invoice
+      if (ItemPayHistr.FileName == 1 OR ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin
+
+        // sort invoice by date
+        j = 0;
+        While(j >= -2) begin
+          //
+          datePeriod = RepSpec.f2;
+          sd = AddMonth(datePeriod,j-1);
+          sd.day = 1;
+          ed = sd;
+          ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+          // is transaction within spec.date.range
+          if(DateInRange(ItemPayHistr.TransDate,sd,ed)) then begin
+            
+            // -> CURRENT (30)
+            if(j == 0) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice[i] = arr_invoice[i] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice[i] = arr_invoice[i] + ItemPayHistr.AmtVal;
+                  end;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice[arr_size] = arr_invoice[arr_size] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice[arr_size] = arr_invoice[arr_size] + ItemPayHistr.AmtVal;
+                  end;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+
+            // -> 30 DAYS (60)
+            if(j == -1) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice30[i] = arr_invoice30[i] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice30[i] = arr_invoice30[i] + ItemPayHistr.AmtVal;
+                  end;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice30[arr_size] = arr_invoice30[arr_size] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice30[arr_size] = arr_invoice30[arr_size] + ItemPayHistr.AmtVal;
+                  end;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+
+            // -> 60 DAYS (90)
+            if(j == -2) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice60[i] = arr_invoice60[i] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice60[i] = arr_invoice60[i] + ItemPayHistr.AmtVal;
+                  end;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  //
+                  if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                    arr_invoice60[arr_size] = arr_invoice60[arr_size] - ItemPayHistr.AmtVal;
+                  end else begin
+                    arr_invoice60[arr_size] = arr_invoice60[arr_size] + ItemPayHistr.AmtVal;
+                  end;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+          j = j-1;
+        end;
+
+        // is transaction after 90 spec.date.range
+        if(ItemPayHistr.TransDate <= ed_Over90) then begin
+          found = false;
+          for(i=0; i<arr_size; i=i+1) begin
+            // item in array
+            if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+              if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                arr_invoiceOver90[i] = arr_invoiceOver90[i] - ItemPayHistr.AmtVal;
+              end else begin
+                arr_invoiceOver90[i] = arr_invoiceOver90[i] + ItemPayHistr.AmtVal;
+              end;
+              found = true;
+            end;
+          end;
+          // if item not in array
+          if(found==false) then begin
+            arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+            //
+            if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+              if(ItemPayHistr.FileName == 2 or ItemPayHistr.FileName == 6) then begin // if credit note
+                arr_invoiceOver90[arr_size] = arr_invoiceOver90[arr_size] - ItemPayHistr.AmtVal;
+              end else begin              
+                arr_invoiceOver90[arr_size] = arr_invoiceOver90[arr_size] + ItemPayHistr.AmtVal;
+              end;
+            end;
+            arr_size = arr_size + 1;
+          end;
+        end;
+      end;
+
+      // =========================================== PAYMENTS ===========================================
+
+      // get type receipt
+      if (ItemPayHistr.FileName == 3) then begin
+
+        // sort receipt by date
+        j = 0;
+        While(j >= -2) begin
+          //
+          datePeriod = RepSpec.f2;
+          sd = AddMonth(datePeriod,j);
+          sd.day = 1;
+          ed = sd;
+          ed.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+          // is transaction within spec.date.range
+          if(DateInRange(ItemPayHistr.TransDate,sd,ed)) then begin
+            
+            // -> CURRENT
+            if(j == 0) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  arr_receipt[i] = arr_receipt[i] + ItemPayHistr.AmtVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  arr_receipt[arr_size] = arr_receipt[arr_size] + ItemPayHistr.AmtVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+
+            // -> 30 DAYS
+            if(j == -1) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  arr_receipt30[i] = arr_receipt30[i] + ItemPayHistr.AmtVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  arr_receipt30[arr_size] = arr_receipt30[arr_size] + ItemPayHistr.AmtVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+
+            // -> 60 DAYS
+            if(j == -2) then begin
+              found = false;
+              for(i=0; i<arr_size; i=i+1) begin
+                // item in array
+                if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+                  arr_receipt60[i] = arr_receipt60[i] + ItemPayHistr.AmtVal;
+                  found = true;
+                end;
+              end;
+              // if item not in array
+              if(found==false) then begin
+                arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+                //
+                if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+                  arr_receipt60[arr_size] = arr_receipt60[arr_size] + ItemPayHistr.AmtVal;
+                end;
+                arr_size = arr_size + 1;
+              end;
+            end;
+          end;
+          j = j-1;
+        end;
+
+        // is transaction after 60 spec.date.range
+        if(ItemPayHistr.TransDate <= ed_Over60) then begin
+          found = false;
+          for(i=0; i<arr_size; i=i+1) begin
+            // item in array
+            if(ItemPayHistr.ArtCode == arr_itemcode[i]) then begin
+              arr_receiptOver60[i] = arr_receiptOver60[i] + ItemPayHistr.AmtVal;
+              found = true;
+            end;
+          end;
+          // if item not in array
+          if(found==false) then begin
+            arr_itemcode[arr_size] = ItemPayHistr.ArtCode;
+            //
+            if(ItemPayHistr.ArtCode == arr_itemcode[arr_size]) then begin
+              arr_receiptOver60[arr_size] = arr_receiptOver60[arr_size] + ItemPayHistr.AmtVal;
+            end;
+            arr_size = arr_size + 1;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+
+  // get last month
+  getPreviousMonth = AddMonth(RepSpec.f2,-1);
+  DaysInMonth(GetYear(CurrentDate),GetMonth(CurrentDate));
+
+  periodEnd = RepSpec.f2;
+  periodEnd.day = DaysInMonth(GetYear(RepSpec.f2),GetMonth(RepSpec.f2));
+  
+  StartFormat(15);
+    OutString(1,0,CustName & " Levies vs Payments Aged By Item, To: " & periodEnd,true);
+  EndHeader;
+  EndFormat;
+
+  StartFormat(15); // -> show heading
+    OutString(0,0,"",false);
+    OutString(5,0,"Item Code",false);
+    OutString(20,0,"Description",false);
+    OutString(120,0,MonthName(getPreviousMonth) & " Levy",true);
+    OutString(160,0,MonthName(AddMonth(getPreviousMonth,-1)) & " Levy",true);
+    OutString(200,0,MonthName(AddMonth(getPreviousMonth,-2)) & " Levy",true);
+    OutString(240,0,"Levy Past " & MonthName(AddMonth(getPreviousMonth,-2)),true);
+    OutString(290,0,"Paid " & MonthName(RepSpec.f2),true);
+    OutString(330,0,"Paid " & MonthName(AddMonth(RepSpec.f2,-1)),true);
+    OutString(370,0,"Paid " & MonthName(AddMonth(RepSpec.f2,-2)),true);
+    OutString(410,0,"Paid Past " & MonthName(AddMonth(RepSpec.f2,-2)),true);
+    OutString(445,0,"Total Levied",true);
+    OutString(1,0,"Total Paid",true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+
+  for(i=0; i<arr_size; i=i+1) begin
+  StartFormat(15); // -> show data
+    OutString(0,0,"",false);
+    OutString(5,0,arr_itemcode[i],false);
+    // -> on account
+    if(blank(arr_itemcode[i])) then begin
+      OutString(20,0,"ON-ACCOUNT",false);
+    end else begin
+      // -> item description
+      INr.Code = arr_itemcode[i];
+      if(ReadFirstMain(INr,1,true)) then begin
+        OutString(20,0,INr.Name,false);
+      end;
+    end;
+    OutString(120,0,arr_invoice[i],true);
+    OutString(160,0,arr_invoice30[i],true);
+    OutString(200,0,arr_invoice60[i],true);
+    OutString(240,0,arr_invoiceOver90[i],true)
+    OutString(290,0,arr_receipt[i],true);
+    OutString(330,0,arr_receipt30[i],true);
+    OutString(370,0,arr_receipt60[i],true);;
+    OutString(410,0,arr_receiptOver60[i],true);
+
+    // -> item invoice total
+    arr_invoice_itemSum[i] = arr_invoice[i] + arr_invoice30[i] + arr_invoice60[i] + arr_invoiceOver90[i];
+    OutString(445,0,arr_invoice_itemSum[i],true);
+    
+    // -> item payments total
+    arr_receipt_itemSum[i] = arr_receipt[i] + arr_receipt30[i] + arr_receipt60[i] + arr_receiptOver60[i];
+    OutString(1,0,arr_receipt_itemSum[i],true);
+
+    // -> period payment total
+    arr_receipt_monthSum[0] = arr_receipt_monthSum[0] + arr_receipt[i];
+    arr_receipt_monthSum[1] = arr_receipt_monthSum[1] + arr_receipt30[i];
+    arr_receipt_monthSum[2] = arr_receipt_monthSum[2] + arr_receipt60[i];
+    arr_receipt_monthSum[3] = arr_receipt_monthSum[3] + arr_receiptOver60[i];
+
+    // -> period invoice total
+    arr_invoice_monthSum[0] = arr_invoice_monthSum[0] + arr_invoice[i];
+    arr_invoice_monthSum[1] = arr_invoice_monthSum[1] + arr_invoice30[i];
+    arr_invoice_monthSum[2] = arr_invoice_monthSum[2] + arr_invoice60[i];
+    arr_invoice_monthSum[3] = arr_invoice_monthSum[3] + arr_invoiceOver90[i];
+  EndFormat;
+  end;
+
+  Gray_Divider(0,1);
+
+  StartFormat(15); // show sum by period
+    OutString(0,0,"",false);
+    OutString(5,0,"",false);
+    OutString(20,0,"Period Total:",false); 
+    OutString(120,0,arr_invoice_monthSum[0],true);
+    OutString(160,0,arr_invoice_monthSum[1],true);
+    OutString(200,0,arr_invoice_monthSum[2],true);
+    OutString(240,0,arr_invoice_monthSum[3],true);
+    OutString(290,0,arr_receipt_monthSum[0],true);
+    OutString(330,0,arr_receipt_monthSum[1],true);
+    OutString(370,0,arr_receipt_monthSum[2],true);
+    OutString(410,0,arr_receipt_monthSum[3],true);
+    OutString(445,0,(arr_invoice_monthSum[0] + arr_invoice_monthSum[1] + arr_invoice_monthSum[2] + arr_invoice_monthSum[3]),true);
+    OutString(1,0,(arr_receipt_monthSum[0] + arr_receipt_monthSum[1] + arr_receipt_monthSum[2] + arr_receipt_monthSum[3]),true);
+  EndFormat;
+
+  Gray_Divider(0,1);
+  
+  EndJob;
+
+end;

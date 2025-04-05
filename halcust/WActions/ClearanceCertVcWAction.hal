@@ -1,0 +1,202 @@
+external inner procedure SetupCustPS2Rn(string,var record RcVc);
+
+
+// VIEW CUSTOMER STATUS
+global
+procedure ClientFinStatusm1()
+BEGIN
+  record ClearanceCertVc ClearanceCertr;
+  record RcVc RepSpec;
+  Integer wn;
+  // =====================================
+  record IVVc IVr;
+  // =====================================
+  record NotepadVc Noter;
+  record RLinkVc RLr;
+  Integer notenr;
+  notenr = 1;
+  // =====================================
+
+  wn = CurWindow;
+  GetWindowRecord(wn,ClearanceCertr);
+
+  // if(ClearanceCertr.AppFees<1) then begin // if no fees
+  //   MessageBox(0,"Required, generate application fee invoice!");
+  // goto LExitCheck1;
+  // end;
+
+  // if(ClearanceCertr.ServiceFees<1) then begin // if no fees
+  //   MessageBox(0,"Required, generate service contract fee invoice!");
+  //   goto LExitCheck1;
+  // end;
+
+  // while (ReadRecordLink(ClearanceCertr,notenr,IVr,RLr)) begin
+  //   if(IVr.OKFlag == 0) then begin      
+  //     MessageBox(0,"Firstly, Okay invoice(s) that was generated!");
+  //     goto LExitCheck1;
+  //   end;
+  //   notenr = notenr + 1;
+  // end;
+
+  SetupCustPS2Rn(ClearanceCertr.CustCode,RepSpec);
+  RunReport(RepSpec,0);
+
+LExitCheck1:;
+  RETURN;
+END;
+
+
+
+// AUTOMATICALLY POPULATE ERF, PREMISE, CUST.CODE, CUST.NAME
+function boolean ClearanceCertDClassContractEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record ClearanceCertVc ClearanceCertr;
+  record NAContractVc COr;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,ClearanceCertr);
+
+  COr.SerNr = ClearanceCertr.ContractNr;
+  if (ReadFirstMain(COr,1,true)) then begin
+    ClearanceCertr.BuildCode = COr.BuildCode; // erf.code
+    ClearanceCertr.FlatCode = COr.FlatCode; // prem.name
+    ClearanceCertr.CustCode = COr.CustCode; // cust.code
+    ClearanceCertr.CustName = COr.CustName; // cust.name
+    PutWindowRecord(wn,ClearanceCertr);
+  end;
+  
+  ClearanceCertDClassContractEFAfter = res;
+return;
+end;
+
+global
+function boolean ClearanceCertDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+ 
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "ContractNr": res = ClearanceCertDClassContractEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  ClearanceCertDClassAfterEditField = res;
+return;
+end;
+
+
+// PREVENT ENTER DATA WHEN RECORD OKAYED
+function boolean ClearanceCertDClassEFAfter(Integer wn,Integer fn,Integer rownr,Boolean changedf)
+begin
+  record ClearanceCertVc ClearanceCertr;
+  boolean res;
+
+  GetWindowRecord(wn,ClearanceCertr);
+  if(ClearanceCertr.OKFlag==1 OR ClearanceCertr.OKFlag2==1) then begin
+    res = false;
+  end else begin
+    res = true;
+  end;
+  
+  ClearanceCertDClassEFAfter = res;
+return;
+end;
+
+global
+function boolean ClearanceCertDClassActiveEditField(Integer wn, String fieldname, Integer fn, Integer wnst, Integer rownr, Integer changed)
+begin
+  boolean res;
+ 
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "ContractNr": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "CustName": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "CustCode": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "BuildCode": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "FlatCode": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "LawyerName": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "LawyerPhone": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "PeriodStartDate": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "AppFees": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "ServiceFees": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "PrevOutstanding": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "InterestOnOutstanding": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "TotalDue": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "TotalOpen": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+      case "OnAccPayment": res = ClearanceCertDClassEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  ClearanceCertDClassActiveEditField = res;
+return;
+end;
+
+
+// CHECKBOX -> PREVENT "PAYABLES FULLY PAID CHECKBOX"
+global
+function Boolean ClearanceCertDClassCBTotalDueButtonAction(Integer wn, Boolean changedf)
+begin
+  record ClearanceCertVc ClearanceCertr;
+  boolean res;
+
+  GetWindowRecord(wn,ClearanceCertr);
+  if(ClearanceCertr.OKFlag==1) then begin
+    res = false;
+  end else begin
+    res = true;
+  end;
+  ClearanceCertDClassCBTotalDueButtonAction = res;
+  return;
+end;
+
+
+
+// PRINT -> CLEARANCE CERT
+global
+function Boolean PrintClearanceCertDClass(Integer wn, Boolean previewf)
+begin
+  record ClearanceCertVc ClearanceCertr;
+  Boolean tmpf;
+  record RcVc RepSpec;
+
+  RepSpec.repname = "ClearanceCertForm";
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,ClearanceCertr);
+
+  if(WindowState(wn)==Rs_normal) then begin
+    
+    if(ClearanceCertr.OKFlag==0) then begin // if not okayed
+      MessageBox(0,"Must okay before printing Clearance Certificate!");
+      goto LExitCheck;
+    end;
+
+    if(ClearanceCertr.AppFees<1) then begin // if no fees
+      MessageBox(0,"Required, generate application fee invoice!");
+    goto LExitCheck;
+    end;
+
+    if(ClearanceCertr.ServiceFees<1) then begin // if no fees
+      MessageBox(0,"Required, generate service contract fee invoice!");
+      goto LExitCheck;
+    end;
+
+    if(blank(ClearanceCertr.TotalOpen)) then begin //
+      MessageBox(0,"Enter total payable amount field!");
+      goto LExitCheck;
+    end;
+
+    if(previewf==false) then begin
+      // MessageBox(0,"print");
+      RepSpec.f1 = ClearanceCertr.SerNr;
+      tmpf = PrintDocument(RepSpec,"ClearanceCertForm",false);
+    end else begin
+      // MessageBox(0,"preview");
+      RepSpec.f1 = ClearanceCertr.SerNr;
+      tmpf = PrintDocument(RepSpec,"ClearanceCertForm",true);
+    end;
+  end;
+
+LExitCheck:;
+  return;
+end;
+

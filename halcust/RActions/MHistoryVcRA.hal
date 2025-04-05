@@ -1,0 +1,17 @@
+
+global
+function longint MHistoryVcRecordRemoveTest(var record MHistoryVc MHr,record MHistoryVc MHr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+    if (!UserCanAction("CustomRecordDeleteMeterHistory",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteMeterHistory"));
+    goto LMHistoryVcRecordRemoveTest;
+  end;
+
+LMHistoryVcRecordRemoveTest:;
+  MHistoryVcRecordRemoveTest = res;
+  return;
+end;

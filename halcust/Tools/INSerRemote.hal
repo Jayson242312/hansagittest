@@ -1,0 +1,21 @@
+// remote artikulu numuru serijas funkcionalitate
+
+external inner procedure NextM4Number(string,var string);
+
+global
+procedure NextM4Number2(string laststr,var string newstr)
+begin
+  string 1 lastchr;
+  string 20 tstr;
+
+  lastchr = right(laststr,1);
+  if (lastchr=="9") then begin
+    tstr = left(laststr,len(laststr)-1);
+    NextM4Number2(tstr,tstr);
+    newstr = tstr & "0";
+    goto LSkip;
+  end;
+  NextM4Number(laststr,newstr);
+LSkip:;
+return;
+end;

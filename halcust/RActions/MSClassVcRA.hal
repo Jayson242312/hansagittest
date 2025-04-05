@@ -1,0 +1,18 @@
+/*
+  Telpu klasifikatoru record actions
+*/
+global
+function longint MSClassVcRecordCheck(var record MSClassVc MSClassr,record MSClassVc MSClassr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 0;
+  if MSClassr.Code=="" then begin
+    RecordCheckError(1058,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+LExitCheck:;
+  MSClassVcRecordCheck = res;
+return;
+end;

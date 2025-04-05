@@ -1,0 +1,56 @@
+//
+global
+procedure MeterClassificationsRn(record RcVc RepSpec)
+begin
+  record FlatCountersVc FlatCounterr;
+  string 255 tstr;
+  Longint pos;
+  Integer i;
+  i = 0;
+
+  // get meters classification
+  if(nonblank(RepSpec.f1)) then begin
+        
+    // start report job
+    StartReportJob("Meter Classifications Report");      
+    
+    StartFormat(15);
+      OutString(1,0,"Meter Classification: " & RepSpec.f1,true);
+    EndHeader;
+    EndFormat;
+
+    StartFormat(15); // -> show heading
+      OutString(0,0,"",false);
+      OutString(5,0,"No.",false);
+      OutString(30,0,"MeterID",false);
+      OutString(100,0,"Meter No.",false);
+      OutString(200,0,"Erf No.",false);
+      OutString(280,0,"Book No.",false);
+      OutString(360,0,"Alpha No.",false);
+      OutString(420,0,"Address",false);
+    EndFormat;
+
+    Gray_Divider(0,1);
+
+    // loop meters
+    while (LoopMain(FlatCounterr,1,true)) begin
+      while GetNextSubString(FlatCounterr.Classification,pos,",",tstr) begin
+        if(tstr==RepSpec.f1) then begin    
+          i = i + 1;
+          StartFormat(15); // -> show heading
+            OutString(0,0,"",false);
+            OutString(5,0,i & ". ",false);
+            OutString(30,"DblFlatCountersVc",FlatCounterr.SerNr,false);
+            OutString(100,0,FlatCounterr.CounterNo,false);
+            OutString(200,0,FlatCounterr.UserStr2,false);
+            OutString(280,0,FlatCounterr.UserStr1,false);
+            OutString(360,0,FlatCounterr.UserStr3,false);
+            OutString(420,0,FlatCounterr.Address,false);
+          EndFormat;
+        end;
+      end;
+      pos = 0;
+    end;
+    EndJob;
+  end;
+end;

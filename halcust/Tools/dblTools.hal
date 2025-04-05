@@ -1,0 +1,1148 @@
+remote function boolean PrevCounterRes(record CountResVc,var record CountResVc);
+remote function boolean IsTwoTypeFlatCounter(longint);
+remote function boolean GetCountResRecInPeriod(longint,string,date,date,var record CountResVc);
+remote updating function boolean CreateDblCounter(var record FlatCountersVc,string);
+external procedure PasteFlatCounterInCountRes(Record FlatCountersVc,var Record CountResVc);
+external function boolean CheckIfIVExists(date,string,string);
+remote updating function boolean CreateMergedInvMail(record RcVc,var record MailVc,longint);
+
+global
+procedure DblNAContractVc(string dblstr,string l,Integer currepwn)
+begin
+  record NAContractVc NAcontractr;
+
+  if nonblank(l) then begin
+    NAcontractr.SerNr = l;
+  end else begin
+    NAcontractr.SerNr = dblstr;
+  end;
+  if (ReadFirstMain(NAcontractr,1,true)) then begin
+    if OpenWindow("NAcontractDClass",1,0,"","",NAcontractr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure DblNAContractVcCUPS(string dblstr,string l,Integer currepwn)
+begin
+  record NAContractVc NAcontractr;
+  record RcVc RepSpec,RepSpec2;
+
+  if nonblank(l) then begin
+    NAcontractr.SerNr = l;
+  end else begin
+    NAcontractr.SerNr = dblstr;
+  end;
+  if (ReadFirstMain(NAcontractr,1,true)) then begin
+    GetWindowRecord(CurWindow,RepSpec2);
+    RepSpec.ArtMode=RepSpec2.ArtMode;
+    RepSpec.long2=NAcontractr.SerNr;
+    RepSpec.f5=NAcontractr.SerNr;
+    RepSpec.repname="ClientStatRn";
+    RunReport(RepSpec,0);
+  end;
+  return;
+end;
+
+global
+procedure DividerStr(string orgstr,string seperator,var array string arrRes,var integer size) Begin
+  String 1 strChar;
+  Integer i;
+  String 255 insstr;
+
+  insstr="";
+  for(i=0;i<len(orgstr);i=i+1)begin
+    strchar=mid(orgstr,i,1);
+    if strchar!=seperator then begin
+      insstr=insstr & strchar;
+    end else begin
+      arrRes[size]=insstr;
+      size=size+1;
+      insstr="";
+    end;
+  end;
+
+  arrRes[size]=insstr;
+  size=size+1;
+  insstr="";
+
+return;
+end;
+
+// global
+// procedure dblDocSetSer(string dblstr,string l,Integer currepwn)
+// begin
+//   record BBSDocSetVc DocSetr;
+
+//   if nonblank(l) then begin
+//     DocSetr.SerNr = l;
+//   end else begin
+//     DocSetr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstKey("SerNr",DocSetr,1,true)) then begin
+//     if OpenWindow("BBSDocSetDClass",1,0,"","",DocSetr) then begin end;
+//   end;
+// return;
+// end;
+
+// global
+// procedure dblBBSDocSetVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record BBSDocSetVc DocSetr;
+
+//   if nonblank(l) then begin
+//     DocSetr.MailSerNr = l;
+//   end else begin
+//     DocSetr.MailSerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(DocSetr,1,true)) then begin
+//     if OpenWindow("BBSDocSetDClass",1,0,"","",DocSetr) then begin end;
+//   end;
+// return;
+// end;
+
+// global
+// procedure dblFlatGroupVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record FlatGroupVc FlatGroupr;
+
+//   if nonblank(l) then begin
+//     FlatGroupr.Code = l;
+//   end else begin
+//     FlatGroupr.Code = dblstr;
+//   end;
+//   if (ReadFirstMain(FlatGroupr,1,true)) then begin
+//     if OpenWindow("FlatGroupDClass",1,0,"","",FlatGroupr) then begin end;
+//   end;
+// return;
+// end;
+
+// global
+// procedure DblNADebStatActVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record NADebStatActVc NADebStatActr;
+
+//   if nonblank(l) then begin
+//     NADebStatActr.SerNr = l;
+//   end else begin
+//     NADebStatActr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(NADebStatActr,1,true)) then begin
+//     if OpenWindow("NADebStatActDClass",1,0,"","",NADebStatActr) then begin end;
+//   end;
+// return;
+// end;
+
+// global
+// procedure dblFiDAViStaPayments(string dblstr,string l,Integer currepwn) begin
+//   record RcVc RepSpec,RepSpec2;
+
+//   ReportDefaults(RepSpec,"FiDAViStaPaymentsEClass");
+//   GetWindowRecord(CurWindow,RepSpec2);
+//   RepSpec.Period2Str = RepSpec2.Period2Str;
+//   RepSpec.sStartDate=RepSpec2.sStartDate;
+//   RepSpec.sEndDate=RepSpec2.sEndDate;
+//   RepSpec.f1 = RepSpec2.f1;
+//   RepSpec.f2 = RepSpec2.f2;
+//   RepSpec.f3 = RepSpec2.f3;
+//   RepSpec.flags[1] = RepSpec2.flags[1];
+//   RepSpec.flags[2] = RepSpec2.flags[2];
+//   RepSpec.ArtMode=RepSpec2.ArtMode;
+//   RepSpec.repname = "FiDAViStaPaymentsEn";
+//   RepSpec.Media = mtFile;
+//   //if OpenWindow("FiDAViStaPaymentsEClass",1,0,"","",RepSpec)==0 then begin end;
+//   RunExport(RepSpec,true);
+
+// return;
+// end;
+
+// global
+// updating procedure dblNewNoValid(string dblstr,string l,Integer currepwn)
+// begin
+//   record RcVc RepSpec;
+//   record FlatCountersVc FlatCountersr;
+//   string 30 CounterNo;
+//   string 20 FlatCode,CounterType;
+//   boolean wLoop;
+
+//   FlatCode = FirstInRange(l,20);
+//   CounterType = LastInRange(l,20);
+//   wLoop = true;
+//   FlatCountersr.FlatCode = FlatCode;
+//   FlatCountersr.CounterType = CounterType;
+//   while LoopKey("CounterType",FlatCountersr,2,wLoop)begin
+//     if (FlatCountersr.FlatCode<>FlatCode or FlatCountersr.CounterType<>CounterType) then begin
+//       wLoop = false;
+//     end else begin
+//       if nonblank(FlatCountersr.CounterNo) and FlatCountersr.Closedf==0 then begin
+//         CounterNo = FlatCountersr.CounterNo;
+//         wLoop = false;
+//       end;
+//     end;
+//   end;
+//   if nonblank(CounterNo) then begin
+//     GetWindowRecord(CurWindow,RepSpec);
+//     GenCountResRec(FlatCountersr.SerNr,0,RepSpec.sStartDate,RepSpec.sEndDate,false);
+//   end else begin
+//     MessageBox(0,USetStr(1000874) & " " & FlatCode & " "& USetStr(1000875) & " " & CounterType);
+//   end;
+// end;
+
+// global
+// updating procedure dblNewCountRes(string dblstr,string l,Integer currepwn)
+// begin
+//   record RcVc RepSpec;
+//   record FlatCountersVc FlatCountersr;
+//   string 30 CounterNo;
+//   string 20 FlatCode,CounterType;
+//   boolean wLoop;
+
+//   FlatCode = FirstInRange(l,20);
+//   CounterType = LastInRange(l,20);
+//   wLoop = true;
+//   FlatCountersr.FlatCode = FlatCode;
+//   FlatCountersr.CounterType = CounterType;
+//   while LoopKey("CounterType",FlatCountersr,2,wLoop)begin
+//     if (FlatCountersr.FlatCode<>FlatCode or FlatCountersr.CounterType<>CounterType) then begin
+//       wLoop = false;
+//     end else begin
+//       if nonblank(FlatCountersr.CounterNo) and FlatCountersr.Closedf==0 then begin
+//         CounterNo = FlatCountersr.CounterNo;
+//         wLoop = false;
+//       end;
+//     end;
+//   end;
+//   if nonblank(CounterNo) then begin
+//     GetWindowRecord(CurWindow,RepSpec);
+//     GenCountResRec(FlatCountersr.SerNr,0,RepSpec.sStartDate,RepSpec.sEndDate,false);
+//   end else begin
+//     MessageBox(0,USetStr(1000874) & " " & FlatCode & " "& USetStr(1000875) & " " & CounterType);
+//   end;
+// end;
+
+global
+procedure dblChangeMainCounter(string dblstr,string l,Integer currepwn)
+Begin
+  record CountResVc CountResr,pCountResr;
+  record FlatCountersVc FlatCountersr;
+  record RcVc RepSpec;
+  record SysFormatBlock SysFormatRec;
+  integer intstat,i,size,nwn;
+  date sd;
+  string 50 CounterNo,flatcode,twoTypeCounters;
+  val endbal,endbal2;
+  longint flatcounterser;
+  boolean twotypeflatcounterf;
+
+
+  BlockLoad(SysFormatRec);
+
+  if nonblank(l) then begin
+    flatcounterser = StringToLongInt(l);
+  end else begin
+    flatcounterser = StringToLongInt(dblstr);
+  end;
+  twotypeflatcounterf = IsTwoTypeFlatCounter(flatcounterser);
+
+  endbal  = 0;
+  endbal2 = 0;
+  CountResr.FlatCounterSerNr=flatcounterser;
+  CountResr.StartDate = AddYear(CurrentDate,2);
+  if !twotypeflatcounterf then begin
+    CountResr.CountResType = "";
+  end else begin
+    CountResr.CountResType = "MWH";
+  end;
+
+  if (prevCounterRes(CountResr,pCountResr)) then begin
+    if pCountResr.CounterType!="KS5" then begin
+      endbal = pCountResr.EndVal;
+    end else begin
+      endbal2 = pCountResr.EndVal;
+    end;
+  end;
+
+  if twotypeflatcounterf then begin
+    CountResr.FlatCounterSerNr=flatcounterser;
+    CountResr.StartDate = AddYear(CurrentDate,2);
+    CountResr.CountResType = "M3";
+    if (prevCounterRes(CountResr,pCountResr)) then begin
+      endbal2 = pCountResr.EndVal;
+    end;
+  end;
+
+  FlatCountersr.SerNr = flatcounterser;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    flatcode  = FlatCountersr.FlatCode;
+    counterno = FlatCountersr.CounterNo;
+  end;
+
+  // if NSr.MoveFlatCountOnChange==1 then begin
+  //   RepSpec.repname="MSChangeCountMn";
+  //   RepSpec.f3=flatcode;
+  //   RepSpec.f1=counterno;
+  //   RepSpec.long1 = flatcounterser;
+  //   RepSpec.d1=CurrentDate;
+  //   RepSpec.vals0=endbal;
+  //   nwn=OpenWindow("ChangeCountVClass",1,0,"","",RepSpec);
+  // end else begin
+    RepSpec.repname    = "MSChangeCount2Mn";
+    RepSpec.f3         = flatcode;
+    RepSpec.f1         = counterno;
+    // RepSpec.d1         = CurrentDate;
+    // RepSpec.sStartDate = CurrentDate;
+    RepSpec.f8         = ValToString(endbal,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+    RepSpec.f10        = ValToString(endbal2,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+    RepSpec.flags[0]   = 1;
+    RepSpec.long1      = flatcounterser;
+
+    nwn = OpenWindow("ChangeCount2VClass",1,0,"","",RepSpec);
+  // end;
+
+return;
+end;
+
+global
+procedure dblChangeCounter(string dblstr,string l,Integer currepwn)
+Begin
+  record FlatCountersVc FlatCountersr;
+  Record CountResVc CountResr,pCountResr;
+  integer intstat,i,size,nwn;
+  date sd;
+  string 50 tstr,counterno,flatcode;
+  array string 255 arrRes;
+  Record RcVc RepSpec;
+  val endbal,endbal2;
+  longint flatcounterser;
+  boolean twotypeflatcounterf;
+
+  record SysFormatBlock SysFormatRec;
+
+  BlockLoad(SysFormatRec);
+
+  if nonblank(l) then begin
+    flatcounterser = StringToLongInt(l);
+  end else begin
+    flatcounterser = StringToLongInt(dblstr);
+  end;
+  twotypeflatcounterf = IsTwoTypeFlatCounter(flatcounterser);
+
+  endbal=0;
+  endbal2 = 0;
+  CountResr.FlatCounterSerNr=flatcounterser;
+  CountResr.StartDate = AddYear(CurrentDate,2);
+  if !twotypeflatcounterf then begin
+    CountResr.CountResType = "";
+  end else begin
+    CountResr.CountResType = "MWH";
+  end;
+
+  // if (prevCounterRes(CountResr,pCountResr)) then begin
+    // endbal = pCountResr.EndVal;
+  // end;
+  if (prevCounterRes(CountResr,pCountResr)) then begin
+    if pCountResr.CounterType!="KS5" then begin
+      endbal = pCountResr.EndVal;
+    end else begin
+      endbal2 = pCountResr.EndVal;
+    end;
+  end;
+  if twotypeflatcounterf then begin
+    CountResr.FlatCounterSerNr=flatcounterser;
+    CountResr.StartDate = AddYear(CurrentDate,2);
+    CountResr.CountResType = "M3";
+    if (prevCounterRes(CountResr,pCountResr)) then begin
+      endbal2 = pCountResr.EndVal;
+    end;
+  end;
+
+  FlatCountersr.SerNr = flatcounterser;
+  if ReadFirstMain(FlatCountersr,1,true) then begin
+    flatcode  = FlatCountersr.FlatCode;
+    counterno = FlatCountersr.CounterNo;
+  end;
+  // if ReadLastKey("FlatCounterSerNrDate",CountResr,1,true) then begin
+    // endbal=CountResr.EndVal;
+    // flatcode = CountResr.FlatCode;
+    // counterno = CountResr.CounterNo;
+  // end else begin
+    // FlatCountersr.SerNr = StringToLongInt(tstr);
+    // if ReadFirstmain(FlatCountersr,1,true) then begin
+      // endbal = FlatCountersr.InitAmount;
+      // counterno = FlatCountersr.CounterNo;
+      // flatcode = FlatCountersr.FlatCode;
+    // end;
+  // end;
+
+//   if NSr.MoveFlatCountOnChange==1 then begin
+//     RepSpec.repname="MSChangeCountMn";
+//     RepSpec.f3=flatcode;
+//     RepSpec.f1=counterno;
+//     RepSpec.long1 = StringToLongInt(tstr);
+//     RepSpec.d1=CurrentDate;
+//     RepSpec.vals0=endbal;
+//     nwn=OpenWindow("ChangeCountVClass",1,0,"","",RepSpec);
+//   end else begin
+    RepSpec.repname="MSChangeCount2Mn";
+    RepSpec.f3=flatcode;
+    RepSpec.f1=counterno;
+    RepSpec.d1=CurrentDate;
+    // RepSpec.sStartDate = CurrentDate;
+    RepSpec.f8=ValToString(endbal,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+    RepSpec.f10=ValToString(endbal2,M45Val,SysFormatRec.thousSep,SysFormatRec.decimalPt,0);
+    RepSpec.flags[0]=1;
+    RepSpec.long1 = flatcounterser;
+
+    nwn=OpenWindow("ChangeCount2VClass",1,0,"","",RepSpec);
+//   end;
+
+return;
+end;
+
+global
+procedure dblOpenCountResVc(string dblstr,string l,Integer currepwn)
+begin
+  record FlatCountersVc FlatCountersr;
+  Record CountResVc CountResr,prevCountResr;
+  integer intstat,i,size,nwn,fromrep;
+  date sd,ed;
+  string 50 CounterNo,flatcode,countrestype;
+  string 255 warn;
+  longint counterid;
+  boolean counterdone,wloop;
+  string 1 strchar;
+  array string 255 arrRes;
+
+  size=0;
+  DividerStr(l,":",arrRes,size);
+  counterid = StringToLongInt(arrRes[0]);
+  intstat   = StringToInt(arrRes[1]);
+  sd        = StringToDate(arrRes[2]);
+  fromrep   = StringToInt(arrRes[3]);
+  countrestype = arrRes[4];
+
+  if intstat==0 then begin
+    RecordNew(CountResr);
+    CountResr.StartDate=sd;
+    CountResr.FlatCounterSerNr = counterid;
+    FlatCountersr.SerNr = counterid;
+    if (ReadFirstMain(FlatCountersr,1,true)) then begin
+      PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+      CountResr.CountResType = countrestype;
+      if (nonblank(CountResr.StartDate)) then begin
+        CountResr.EndDate = AddDay(Countresr.StartDate,-GetDay(CountResr.StartDate) + DaysInMonth(GetYear(CountResr.StartDate),GetMonth(CountResr.StartDate)));
+        if (prevCounterRes(CountResr,PrevCountResr)) then begin
+          CountResr.StartVal = PrevCountResr.EndVal;
+          CountResr.EndVal = CountResr.StartVal;
+          CountResr.Amount = 0;
+          CountResr.ResAmount = PrevCountResr.NextResAmount;
+          if (CountResr.ResAmount < 0) then begin CountResr.ResAmount=0; end;
+          if (CountResr.EndVal <=0) then begin
+            CountResr.EndVal = CountResr.StartVal;
+          end;
+        end else begin
+          CountResr.StartVal = FlatCountersr.InitAmount;
+          CountResr.EndVal = CountResr.StartVal;
+          CountResr.Amount = 0;
+        end;
+      end;
+    end;
+    if (fromrep != 0) then begin
+      CountResr.RepFlag = 1;
+    end else begin
+      warn = "";
+      // GetFlatMissingServWarn(CountResr.CounterType,CountResr.FlatCode,1,warn);
+    end;
+    nwn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+    if nonblank(warn) and fromrep==0 then begin
+      MessageBox(1000313,"");
+    end;
+    if (fromrep != 0) then begin
+      PutWindowString(nwn,"FromReportFlag","FromReportFlag");
+      WindowFieldGoto(nwn,CountResr,-1,"EndVal",true);
+    end;
+  end else begin
+    ed = sd; ed.day = DaysInMonth(GetYear(ed),GetMonth(ed));
+    if GetCountResRecInPeriod(counterid,countrestype,sd,ed,CountResr) then begin
+      nwn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+    end;
+  end;
+
+  return;
+end;
+
+// /*
+//   Opens repspec window for maintenance "ColdWaterServMn" with parameters from report "ColdWaterCalcRn"
+// */
+// global procedure dblColdWaterServMn(string dblstr,string l,Integer currepwn)
+// Begin
+//   Integer size,nwn;
+//   Record RcVc RepSpec,RepSpec2;
+//   string 30 tstr;
+
+//   GetWindowRecord(CurWindow,RepSpec2);
+
+//   RepSpec.f1=RepSpec2.f1;
+//   RepSpec.f2=RepSpec2.f2;
+//   RepSpec.f3=RepSpec2.f3;
+//   RepSpec.f4=RepSpec2.f4;
+//   RepSpec.f5=RepSpec2.f5;
+//   RepSpec.f6=RepSpec2.f6;
+//   RepSpec.Period2Str = RepSpec2.Period2Str;
+//   RepSpec.flags[1]=0;
+//   RepSpec.repname="ColdWaterServMn";
+
+//   nwn=OpenWindow("ColdWaterServVClass",1,0,"","",RepSpec);
+
+// return;
+// end;
+
+// global
+// procedure dblBuildBalanceVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record BuildBalanceVc BuildBalancer;
+
+//   if nonblank(l) then begin
+//     BuildBalancer.SerNr = StringToLongInt(l);
+//   end else begin
+//     BuildBalancer.SerNr = StringToLongInt(dblstr);
+//   end;
+//   if (ReadFirstMain(BuildBalancer,1,true)) then begin
+//     if OpenWindow("BuildBalanceDClass",1,0,"","",BuildBalancer) then begin end;
+//   end;
+//   return;
+// end;
+
+// global procedure dblCreateSDFromPUJRn(string dblstr,string l,Integer currepwn) begin
+//   Record RcVc RepSpec,oldRepSpec;
+
+//   GetWindowRecord(CurWindow,oldRepSpec);
+
+//   RepSpec.Period2Str = oldRepSpec.Period2Str;
+//   RepSpec.sStartDate = oldRepSpec.sStartDate;
+//   RepSpec.sEndDate = oldRepSpec.sEndDate;
+//   RepSpec.f1 = oldRepSpec.f1;
+//   RepSpec.f2 = oldRepSpec.f2;
+//   RepSpec.f3 = oldRepSpec.f3;
+//   RepSpec.TransStr = oldRepSpec.TransStr;
+//   RepSpec.LastAcc = oldRepSpec.LastAcc;
+//   RepSpec.Stext = oldRepSpec.Stext;
+//   RepSpec.repname = "MakeSDFromPUJMn";
+//   RepSpec.flags[1]=0;
+//   RepSpec.flags[2]=1;
+//   RepSpec.flags[5]=0;
+//   RepSpec.ArtMode=1;
+//   if OpenWindow("MakeSDFromPUJVClass",1,0,"","",RepSpec)==0 then begin end;
+
+// return;
+// end;
+
+// global
+// procedure dblSCVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record SupplierContractsVc SCr;
+
+//   if nonblank(l) then begin
+//     SCr.SerNr = l;
+//   end else begin
+//     SCr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(SCr,1,true)) then begin
+//     if OpenWindow("SupplierContractsDClass",1,0,"","",SCr) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure DblActClassFlat(string dblstr,string l,Integer currepwn)
+// begin
+//   record RcVc prevRepSpec;
+//   record RcVc RepSpec;
+//   string 255 tstr;
+
+//   if (nonblank(dblstr)) then begin
+//     GetWindowRecord(currepwn,prevRepSpec);
+//     ReportDefaults(RepSpec,"ActClassRClass");
+//     RepSpec.repname = "ActClassFlatRn";
+//     StripSpace(tstr,dblstr);
+//     RepSpec.f1 = tstr;
+//     RepSpec.f2 = l;
+//     RepSpec.sStartDate = prevRepSpec.sStartDate;
+//     RepSpec.sEndDate = prevRepSpec.sEndDate;
+//     RepSpec.Media = mtScreen;
+//     RunReport(RepSpec,0);
+//   end;
+//   return;
+// end;
+
+// global
+// procedure DblActClassBuild(string dblstr,string l,Integer currepwn)
+// begin
+//   record RcVc prevRepSpec;
+//   record RcVc RepSpec;
+//   string 255 tstr;
+
+//   if (nonblank(dblstr)) then begin
+//     GetWindowRecord(currepwn,prevRepSpec);
+//     ReportDefaults(RepSpec,"ActClassRClass");
+//     RepSpec.repname = "ActClassBuildRn";
+//     StripSpace(tstr,dblstr);
+//     RepSpec.f1 = tstr;
+//     RepSpec.f2 = l;
+//     RepSpec.sStartDate = prevRepSpec.sStartDate;
+//     RepSpec.sEndDate = prevRepSpec.sEndDate;
+//     RepSpec.Media = mtScreen;
+//     RunReport(RepSpec,0);
+//   end;
+//   return;
+// end;
+
+// global
+// procedure dblMSEstimateVc(string dblstr,string l,Integer currepwn) begin
+//   Record MSEstimateVc Estr;
+//   integer wn;
+
+//   Estr.SerNr=dblstr;
+//   if ReadFirstMain(Estr,1,true) then begin
+//     wn = OpenWindow("MSEstimateDClass",1,0,"","",Estr);
+//   end;
+
+// return;
+// end;
+
+global
+procedure DblCountResVc(string dblstr,string l,Integer currepwn)
+begin
+  record CountResVc CountResr;
+  integer wn;
+
+  if nonblank(l) then begin
+    CountResr.SerNr = l;
+  end else begin
+    CountResr.SerNr = dblstr;
+  end;
+  if (ReadFirstMain(CountResr,1,true)) then begin
+    wn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+  end;
+return;
+end;
+
+
+
+global
+procedure DblCountRes2Vc(string dblstr,string l,Integer currepwn)
+begin
+  record CountResVc CountResr;
+  integer wn;
+
+  if nonblank(l) then begin
+    CountResr.CounterNo = l;
+  end else begin
+    CountResr.CounterNo = dblstr;
+  end;
+  if (ReadFirstKey("CounterNo",CountResr,1,true)) then begin
+    wn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+  end;
+return;
+end;
+// global
+// procedure DblRepCountResVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record CountResVc CountResr;
+//   integer wn;
+
+//   if nonblank(l) then begin
+//     CountResr.SerNr = l;
+//   end else begin
+//     CountResr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(CountResr,1,true)) then begin
+//     wn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+//     PutWindowString(wn,"FromReportFlag","FromReportFlag");
+//     if (CountResr.RepFlag != 1) then begin
+//       CountResr.RepFlag = 1;
+//       PutWindowRecord(wn,CountResr);
+//       WindowFieldGoto(wn,CountResr,-1,"EndVal",true);
+//     end;
+//   end;
+
+//   return;
+// end;
+
+global
+procedure DblFlatCountersVc(string dblstr,string l,Integer currepwn)
+begin
+  record FlatCountersVc  FlatCounterr;
+  integer wn,size;
+  string 255 tstr;
+
+  if nonblank(l) then begin
+    tstr = l;
+  end else begin
+    tstr = dblstr;
+  end;
+
+  if nonblank(tstr) then begin
+    FlatCounterr.SerNr = StringToLongInt(tstr);
+    if ReadFirstMain(FlatCounterr,1,true) then begin
+      wn = OpenWindow("FlatCountersDClass",1,0,"","",FlatCounterr);
+    end;
+  end;
+
+return;
+end;
+
+global
+procedure DblBuildVc(string dblstr,string l,Integer currepwn)
+begin
+  record BuildVc Buildr;
+
+  if nonblank(l) then begin
+    Buildr.Code = l;
+  end else begin
+    Buildr.Code = dblstr;
+  end;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    if OpenWindow("BuildDClass",1,0,"","",Buildr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure DblFlatsVc(string dblstr,string l,Integer currepwn)
+begin
+  record FlatsVc Flatsr;
+
+  if nonblank(l) then begin
+    Flatsr.FlatCode = l;
+  end else begin
+    Flatsr.FlatCode = dblstr;
+  end;
+  if (ReadFirstMain(Flatsr,1,true)) then begin
+    if OpenWindow("FlatsDClass",1,0,"","",Flatsr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure DblServicePlanVc(string dblstr,string l,Integer currepwn)
+begin
+  record ServicePlanVc ServicePlanr;
+
+  if nonblank(l) then begin
+    ServicePlanr.SerNr = l;
+  end else begin
+    ServicePlanr.SerNr = dblstr;
+  end;
+  if (ReadFirstMain(ServicePlanr,1,true)) then begin
+    if OpenWindow("ServicePlanDClass",1,0,"","",ServicePlanr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure DblOwnersVc(string dblstr,string l,Integer currepwn)
+begin
+  record OwnersVc Ownersr;
+
+  if nonblank(l) then begin
+    Ownersr.Code = l;
+  end else begin
+    Ownersr.Code = dblstr;
+  end;
+  if (ReadFirstMain(Ownersr,1,true)) then begin
+    if OpenWindow("OwnersDClass",1,0,"","",Ownersr) then begin end;
+  end;
+  return;
+end;
+
+// global
+// procedure dblBuildDocVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record BuildDocVc BuildDocr;
+
+//   if nonblank(l) then begin
+//     BuildDocr.SerNr = l;
+//   end else begin
+//     BuildDocr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(BuildDocr,1,true)) then begin
+//     if OpenWindow("BuildDocDClass",1,0,"","",BuildDocr) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure DblNewBuildDocVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record BuildDocVc BuildDocr;
+//   record BuildVc Buildr;
+//   integer nwn;
+
+//   RecordNew(BuildDocr);
+//   BuildDocr.BuildCode = l;
+//   Buildr.Code = l;
+//   if ReadFirstMain(Buildr,1,true) then begin end;
+//   BuildDocr.BuildAddress = Buildr.Address;
+//   nwn = OpenWindow("BuildDocDClass",1,0,"","",BuildDocr);
+
+//   return;
+// end;
+
+// global
+// procedure DblActTypeVc(string dblstr, string l, integer currepwn)
+// begin
+//   record ActTypeVc ActTyper;
+
+//   if NonBlank(l) then begin
+//     ActTyper.Code = l;
+//   end else begin
+//     ActTyper.Code = dblstr;
+//   end;
+//   if (ReadFirstMain(ActTyper, 1, true)) then begin
+//     if OpenWindow("ActTypeDClass", 1, 0, "", "", ActTyper) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure DblCustAct2(string dblstr,string l,Integer currepwn)
+// begin
+//   record RcVc RepSpec;
+//   record RcVc curRepSpec;
+
+//   if (nonblank(dblstr)) then begin
+//     GetWindowRecord(currepwn,curRepSpec);
+//     RecordCopy(RepSpec,curRepSpec);
+//     RepSpec.repname = "ActCURn";
+//     if nonblank(l) then begin
+//       RepSpec.f1 = l;
+//     end else begin
+//       RepSpec.f1 = dblstr;
+//     end;
+//     RepSpec.Media = mtScreen;
+//     RepSpec.stoff = -1;
+//     RepSpec.flags[3] = 0;
+//     RunReport(RepSpec,0);
+//   end;
+//   return;
+// end;
+
+// global
+// procedure dblMSWorkTypeVc(string dblstr, string l, Integer currepwn) begin
+
+// 	Record MSWorkTypeVc WorkTyper;
+// 	integer wn;
+
+//   if nonblank(l) then begin
+//     WorkTyper.Code = l;
+//   end else begin
+//     WorkTyper.Code = dblstr;
+//   end;
+// 	if ReadFirstMain(WorkTyper, 1, true) then begin
+// 		wn = OpenWindow("MSWorkTypeDClass", 1, 0, "", "", WorkTyper);
+// 	end;
+
+//   return;
+// end;
+
+// global procedure DblBillsVc(string dblstr,string l,integer currepwn) begin
+//   integer wn;
+//   record BillsVc Billsr;
+
+//   ResetLoop(Billsr);
+//   Billsr.BillSerNr = dblstr;
+//   if (ReadFirstMain(Billsr,1,true)) then begin
+//     wn = OpenWindow("BillsDClass",0,0,"","",Billsr);
+//   end;
+// end;
+
+// global
+// procedure OpenCUStatusDbl(string dblstr,string l,integer currepwn)
+// begin
+//   record RcVc RepSpec;
+
+//   SetupCustPS2Rn(dblstr,RepSpec);
+//   RunReport(RepSpec,0);
+//   return;
+// end;
+
+// global
+// procedure DblPeriodicServRecVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record PeriodicServRecVc PeriodicServRecr;
+
+//   if nonblank(l) then begin
+//     PeriodicServRecr.SerNr = l;
+//   end else begin
+//     PeriodicServRecr.SerNr = dblstr;
+//   end;
+//   if (ReadFirstMain(PeriodicServRecr,1,true)) then begin
+//     if OpenWindow("PeriodicServRecDClass",1,0,"","",PeriodicServRecr) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure DblDIVc(string dblstr,string l,Integer currepwn)
+// begin
+//   record DIVc DIr;
+
+//   if nonblank(l) then begin
+//     DIr.Code = l;
+//   end else begin
+//     DIr.Code = dblstr;
+//   end;
+//   if (ReadFirstMain(DIr,1,true)) then begin
+//     if OpenWindow("DIDClass",1,0,"","",DIr) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure dblEMServicesVc(string dblstr,string l,Integer currepwn)
+// begin
+//   Record EMServicesVc EMServicesr;
+
+//   if nonblank(l) then begin
+//     EMServicesr.SerNr = StringToLongInt(l);
+//   end else begin
+//     EMServicesr.SerNr = StringToLongInt(dblstr);
+//   end;
+//   if (ReadFirstMain(EMServicesr,1,true)) then begin
+//     if OpenWindow("EMServicesDClass",1,0,"","",EMServicesr) then begin end;
+//   end;
+//   return;
+// end;
+
+// global
+// procedure dblPrepInvMn()
+// begin
+//   record RcVc RepSpec,RepSpec2;
+
+//   ReportDefaults(RepSpec,"PrepInvVClass");
+//   GetWindowRecord(CurWindow,RepSpec2);
+//   RepSpec.Period2Str = RepSpec2.Period2Str;
+//   RepSpec.f1 = RepSpec2.f1;
+//   RepSpec.f2 = RepSpec2.f2;
+//   RepSpec.RegDate = RepSpec2.RegDate;
+//   RepSpec.flags[0] = 1;
+//   RepSpec.flags[4] = 1;
+//   RepSpec.flags[2] = 1;
+//   RepSpec.repname = "PrepInvMn";
+//   if OpenWindow("PrepInvVClass",1,0,"","",RepSpec)==0 then begin end;
+
+//   return;
+// end;
+
+// global
+// procedure dblMSFlatServInv3Mn(string dblstr,string l,Integer currepwn) Begin
+//   record RcVc RepSpec,RepSpec2;
+
+//   ReportDefaults(RepSpec,"MSFlatServInvVClass");
+//   GetWindowRecord(CurWindow,RepSpec2);
+//   RepSpec.Period2Str = RepSpec2.Period2Str;
+//   RepSpec.f1 = l;
+//   RepSpec.f2 = "";
+//   RepSpec.f3 = "";
+//   RepSpec.RegDate = RepSpec2.RegDate;
+//   RepSpec.flags[0] = 1;
+//   RepSpec.flags[2] = 1;
+//   RepSpec.flags[16] = RepSpec2.flags[16];
+//   RepSpec.repname = "MSFlatServInvNSMn";
+//   if CheckIfIVExists(RepSpec2.RegDate,RepSpec2.f1,l) begin
+//     if OpenWindow("MSFlatServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+//   end;
+// return;
+// end;
+
+global
+procedure dblMSFlatServInv2Mn(string dblstr,string l,Integer currepwn) Begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"MSFlatServInvVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  RepSpec.f1 = RepSpec2.f1;
+  RepSpec.f2 = l;
+  RepSpec.f3 = "";
+  RepSpec.RegDate = RepSpec2.RegDate;
+  RepSpec.flags[0] = 1;
+  RepSpec.flags[2] = 1;
+  RepSpec.flags[16] = RepSpec2.flags[16];
+  RepSpec.flags[29] = RepSpec2.flags[29];
+  RepSpec.repname = "MSFlatServInvNSMn";
+  if CheckIfIVExists(RepSpec2.RegDate,RepSpec2.f1,l) begin
+    if OpenWindow("MSFlatServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+  end;
+return;
+end;
+
+global
+procedure dblMSBuildServInv2Mn(string dblstr,string l,Integer currepwn) Begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"MSBuildServInvVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  RepSpec.f1 = l;
+  RepSpec.f2 = "";
+  RepSpec.f3 = "";
+  RepSpec.RegDate = RepSpec2.RegDate;
+  RepSpec.flags[0] = 1;
+  RepSpec.flags[2] = 1;
+  RepSpec.flags[16] = RepSpec2.flags[16];
+  RepSpec.repname = "MSBuildServInvNSMn";
+  // if CheckIfIVExists(RepSpec2.RegDate,RepSpec2.f1,l) begin
+    if OpenWindow("MSBuildServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+  // end;
+
+return;
+end;
+
+global
+procedure dblMSFlatServInvMn()
+begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"MSFlatServInvVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  RepSpec.f1 = RepSpec2.f1;
+  RepSpec.f2 = RepSpec2.f2;
+  RepSpec.f3 = RepSpec2.f3;
+  RepSpec.RegDate = RepSpec2.RegDate;
+  RepSpec.flags[0] = 1;
+  RepSpec.flags[2] = 1;
+  RepSpec.flags[16] = RepSpec2.flags[16];
+  RepSpec.flags[29] = RepSpec2.flags[29];
+  RepSpec.repname = "MSFlatServInvNSMn";
+  if CheckIfIVExists(RepSpec.RegDate,RepSpec.f1,RepSpec.f2) begin
+    if OpenWindow("MSFlatServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+  end;
+
+  return;
+end;
+
+global
+procedure dblMSBuildServInvMn()
+begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"MSBuildServInvVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  RepSpec.f1 = RepSpec2.f1;
+  RepSpec.f2 = RepSpec2.f2;
+  RepSpec.f3 = RepSpec2.f3;
+  RepSpec.RegDate = RepSpec2.RegDate;
+  RepSpec.flags[0] = 1;
+  RepSpec.flags[2] = 1;
+  RepSpec.flags[16] = RepSpec2.flags[16];
+  RepSpec.repname = "MSBuildServInvNSMn";
+  // if CheckIfIVExists(RepSpec.RegDate,RepSpec.f1,RepSpec.f2) begin
+    if OpenWindow("MSBuildServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+  // end;
+
+  return;
+end;
+
+global
+procedure DblFlatGroupVc(string dblstr,string l,Integer currepwn)
+begin
+  record FlatGroupVc FlatGroupr;
+
+  if nonblank(l) then begin
+    FlatGroupr.Code = l;
+  end else begin
+    FlatGroupr.Code = dblstr;
+  end;
+  if (ReadFirstMain(FlatGroupr,1,true)) then begin
+    if OpenWindow("FlatGroupDClass",1,0,"","",FlatGroupr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure DblBuildGroupVc(string dblstr,string l,Integer currepwn)
+begin
+  record BuildGroupVc BuildGroupr;
+
+  if nonblank(l) then begin
+    BuildGroupr.Code = l;
+  end else begin
+    BuildGroupr.Code = dblstr;
+  end;
+  if (ReadFirstMain(BuildGroupr,1,true)) then begin
+    if OpenWindow("BuildGroupDClass",1,0,"","",BuildGroupr) then begin end;
+  end;
+  return;
+end;
+
+global
+procedure dblMSMergegServInvMn(string dblstr,string l,Integer currepwn)
+begin
+  record RcVc RepSpec,RepSpec2;
+
+  ReportDefaults(RepSpec,"MSMergegServInvVClass");
+  GetWindowRecord(CurWindow,RepSpec2);
+  RepSpec.Period2Str = RepSpec2.Period2Str;
+  if NonBlank(l) then begin
+    RepSpec.f1 = RepSpec2.f1;
+  end else begin
+    RepSpec.f1 = RepSpec2.f1;
+  end;
+  RepSpec.f2 = RepSpec2.f2;
+  RepSpec.RegDate = RepSpec2.RegDate;
+  RepSpec.flags[4] = 1;
+  RepSpec.flags[29] = RepSpec2.flags[29];
+  RepSpec.repname = "MSMergegServInvMn";
+  // if CheckIfIVExists(RepSpec.RegDate,RepSpec.f1,RepSpec.f2) begin
+    if OpenWindow("MSMergegServInvVClass",1,0,"","",RepSpec)==0 then begin end;
+  // end;
+
+  return;
+end;
+
+global updating
+procedure DblCreateFC(string dblstr,string l,Integer currepwn)
+begin
+  record FlatCountersVc FCr;
+  string 20 flatcode;
+  
+  if NonBlank(l) then begin
+    flatcode = l;
+  end else begin
+    flatcode = dblstr;
+  end;
+  
+  if CreateDblCounter(FCr,flatcode) then begin
+    if OpenWindow("FlatCountersDClass",1,0,"","",FCr)==0 then begin end;
+  end;
+  
+  return;
+end;
+
+global updating
+procedure DblInvMerge(string dblstr,string l,Integer currepwn)
+begin
+  record RcVc RepSpec;
+  record MailVc Mailr;
+  integer nwn;
+  longint ivsernr;
+    
+  if NonBlank(l) then begin
+    ivsernr = StringToLongInt(l);
+  end else begin
+    ivsernr = StringToLongInt(dblstr);
+  end;
+  
+  if ivsernr!=-1 then begin
+    GetWindowRecord(CurWindow,RepSpec);
+    if CreateMergedInvMail(RepSpec,Mailr,ivsernr) then begin
+      nwn=OpenWindow("MailDClass",1,0,"","",Mailr);
+    end;
+  end;
+  
+  return;
+end;

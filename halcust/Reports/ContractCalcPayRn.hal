@@ -1,0 +1,343 @@
+external inner procedure HT2Per(Date,Date,var string);
+external procedure GetIntPercArtCode(var string);
+// external function integer GetNAContractStatVal(longint,date);
+
+function val GetUnUsedPrepaymentSum(string custcode,longint contract,date sd,date ed)
+begin
+  Record ARPayHistVc ARPayHistr,tARPayHistr;
+  record IVVc IVr;
+  boolean TrHs,testf,TrHs2;
+  integer keycnt;
+  val res;
+  
+  res=0;
+  TrHs=true;
+  ResetLoop(ARPayHistr);
+  if nonblankdate(sd) then begin
+    keycnt=2;
+    ARPayHistr.TransDate=sd;
+  end else begin
+    keycnt=1;
+  end;
+  ARPayHistr.CustCode=custcode;
+  While LoopKey("CustCode",ARPayHistr,keycnt,TrHs) begin
+    if ARPayHistr.CustCode!=custcode or (nonblankdate(ed) and (ed<ARPayHistr.TransDate)) then begin
+      TrHs=false;
+    end else begin
+      if ARPayHistr.FileName=="IPVc" then begin
+        res = res + ARPayHistr.Val;
+        
+        TrHs2=true;
+        ResetLoop(tARPayHistr);
+        tARPayHistr.CUPNr=ARPayHistr.CUPNr;
+        tARPayHistr.FileName="IVVc";
+        While LoopMain(tARPayHistr,2,TrHs2) begin
+          if tARPayHistr.CUPNr!=ARPayHistr.CUPNr or tARPayHistr.FileName!="IVVc" then begin
+            TrHs2=false;
+          end else begin
+            if tARPayHistr.FileName=="IVVc" then begin
+              res = res - tARPayHistr.Val;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;   
+  
+  GetUnUsedPrepaymentSum=res;
+  return;
+end;
+
+procedure GetContractItemSums(longint conr,string artcode,date ondate,var val bal,boolean inclnegcalc)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  Record ItemPayStatVc ItemPayStatr;
+  boolean wloop;
+  date td,sd;
+  
+  if ondate.day == DaysInMonth(GetYear(ondate),GetMonth(ondate)) then begin
+    //find balance on last day of month, so look for next month balance on 1st date (thats how it is stored in supp reg)
+    td = AddDay(ondate,1);
+  end else begin
+    td = ondate;
+  end;
+
+  bal=0;
+  ItemPayStatr.ContrSerNr = conr;
+  ItemPayStatr.ArtCode = artcode;
+  ItemPayStatr.TransDate = td;
+  if ReadFirstMain(ItemPayStatr,3,true) begin
+    bal = ItemPayStatr.DebtVal;
+    GoTo LGetCOItemBalance;
+  end;
+
+  sd.day=1; sd.month=1; sd.year=1980;
+  ItemPayStatr.ContrSerNr = conr;
+  ItemPayStatr.ArtCode = artcode;
+  ItemPayStatr.TransDate = td;
+  if ReadLastMain(ItemPayStatr,3,false) then begin
+    if ItemPayStatr.ContrSerNr == conr and ItemPayStatr.ArtCode == artcode and ItemPayStatr.TransDate < td then begin
+      bal = ItemPayStatr.DebtVal;
+      sd = ItemPayStatr.TransDate;
+    end;
+  end;
+
+  ItemPayHistr.TransDate=sd;
+  ItemPayHistr.ContrSerNr=conr;
+  ItemPayHistr.ArtCode=artcode;
+  wloop = true;
+  While LoopKey("ContrSerNr",ItemPayHistr,3,wloop) begin
+    if ItemPayHistr.ContrSerNr!=conr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate>ondate then begin
+      wloop = false;
+    end else begin
+      Switch (ItemPayHistr.FileName) begin
+        Case 1:
+          if inclnegcalc or ItemPayHistr.AmtValBaseCur>0 then begin
+            bal = bal + ItemPayHistr.AmtValBaseCur;
+          end;
+        Case 2:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 3:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 4:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 5:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+        Case 6:
+          bal = bal - ItemPayHistr.AmtValBaseCur;
+      end;
+    end;
+  end;
+
+LGetCOItemBalance:;
+return;
+end;
+
+procedure GetContractItemSumsPer(longint conr,string artcode,date sd,date ed,var val calc,var val pay,boolean inclnegcalc)
+begin
+  Record ItemPayHistVc ItemPayHistr;
+  boolean wloop;
+
+  calc=0;
+  pay=0;
+
+  ItemPayHistr.TransDate=sd;
+  ItemPayHistr.ContrSerNr=conr;
+  ItemPayHistr.ArtCode=artcode;
+  wloop = true;
+  While LoopKey("ContrSerNr",ItemPayHistr,3,wloop) begin
+    if ItemPayHistr.ContrSerNr!=conr or ItemPayHistr.ArtCode!=artcode or ItemPayHistr.TransDate>ed then begin
+      wloop = false;
+    end else begin
+      Switch (ItemPayHistr.FileName) begin
+        Case 1:
+          if inclnegcalc or ItemPayHistr.AmtValBaseCur>0 then begin
+            calc = calc + ItemPayHistr.AmtValBaseCur;
+          end;
+        Case 2:
+          pay = pay + ItemPayHistr.AmtValBaseCur;
+        Case 3:
+          pay = pay + ItemPayHistr.AmtValBaseCur;
+        Case 4:
+          pay = pay + ItemPayHistr.AmtValBaseCur;
+        Case 5:
+          pay = pay + ItemPayHistr.AmtValBaseCur;
+        Case 6:
+          pay = pay + ItemPayHistr.AmtValBaseCur;
+      end;
+    end;
+  end;
+
+LGetCOItemBalance:;
+return;
+end;
+
+procedure CalcContractSums(record RcVc RepSpec,record NAContractVc NAContractr,string IntPercCodes,array string arrItems,var array val arrSum)
+begin
+  val bal,calc,pay;
+  boolean intpercf;
+  integer i;
+  
+  ClearArray(arrSum);
+  
+  // if NAContractr.MergedInvFlag==1 then begin
+    // LogText(0,"NAContractr.SerNr: " & NAContractr.SerNr);
+  // end;
+  //0 - pamat
+  //1 - %
+  //2 - pamat calc
+  //3 - % cals
+  //4 - pamat pay
+  //5 - %  pay
+  //6 - pamat saldo 
+  //7 - %  pay
+  
+  for (i=0;i<arrItems.length;i=i+1) begin
+    intpercf=false;
+    if SetInSet(arrItems[i],IntPercCodes) then begin
+      intpercf=true;
+    end;
+    GetContractItemSums(NAContractr.SerNr,arrItems[i],AddDay(RepSpec.sStartDate,-1),bal,true);
+    GetContractItemSumsPer(NAContractr.SerNr,arrItems[i],RepSpec.sStartDate,RepSpec.sEndDate,calc,pay,true);
+    
+  
+    if intpercf then begin
+      arrSum[1] = arrSum[1] + bal;
+      arrSum[3] = arrSum[3] + calc;
+      arrSum[5] = arrSum[5] + pay;
+    end else begin
+      arrSum[0] = arrSum[0] + bal;
+      arrSum[2] = arrSum[2] + calc;
+      arrSum[4] = arrSum[4] + pay;
+    end;
+  end;
+  
+  
+  arrSum[4] = arrSum[4] + GetUnUsedPrepaymentSum(NAContractr.CustCode,NAContractr.SerNr,RepSpec.sStartDate,RepSpec.sEndDate);
+  
+  arrSum[6] = arrSum[0] + arrSum[2] - arrSum[4];
+  arrSum[7] = arrSum[1] + arrSum[3] - arrSum[7];
+  
+  return;
+end;
+
+global
+procedure ContractCalcPayRn(record RcVc Repspec)
+begin
+  record NAContractVc NAContractr;
+  record INVc INr;
+  integer rw,stat;
+  string 255 tstr;
+  array integer colx;
+  boolean testf,TrHs;
+  array val arrSum,arrTotSum;
+  string 255 IntPercCodes;
+  array string 20 arrItems;
+  
+  StartReportJob(USetstr(1001778));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw, tstr, 1);
+  rw = rw + 1;
+  EndHeader;
+  
+  GetIntPercArtCode(IntPercCodes)
+  
+  colx[0]=0;
+  colx[1]=30;
+  colx[2]=60;
+  colx[3]=166;
+  colx[4]=212;
+  colx[5]=252;
+  colx[6]=300;
+  colx[7]=342;
+  colx[8]=390;
+  colx[9]=433;
+  colx[10]=1;
+  
+  StartFormat(15);
+  EndFormat;
+  tstr = USetstr(1001779) & DateToString(Repspec.sStartDate,"DD/MM/YYYY") & USetstr(1001780) & DateToString(Repspec.sEndDate,"DD/MM/YYYY");
+  StartFormat(15);
+  OutString(colx[0],0,tstr,false);
+  EndFormat;
+  StartFormat(15);
+  EndFormat;
+  StartFormat(15);
+  OutString(colx[0],0,"",false);
+  OutString(colx[1],0,"",false);
+  OutString(colx[2],0,"",false);
+  OutString(colx[3],0,USetstr(1001731),true);
+  OutString(colx[4],0,"",true);
+  OutString(colx[5],0,USetstr(1000196),true);
+  OutString(colx[6],0,"",true);
+  OutString(colx[7],0,USetstr(1001781),true);
+  OutString(colx[8],0,"",true);
+  OutString(colx[9],0,USetstr(1001733),true);
+  OutString(colx[10],0,"",true);
+  EndFormat;
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(colx[0],0,USetstr(1000377),false);
+  OutString(colx[1],0,USetstr(1000434),false);
+  OutString(colx[2],0,USetstr(1001782),false);
+  OutString(colx[3],0,USetstr(1001396),true);
+  OutString(colx[4],0,USetstr(1001783),true);
+  OutString(colx[5],0,USetstr(1001396),true);
+  OutString(colx[6],0,USetstr(1001783),true);
+  OutString(colx[7],0,USetstr(1001396),true);
+  OutString(colx[8],0,USetstr(1001783),true);
+  OutString(colx[9],0,USetstr(1001396),true);
+  OutString(colx[10],0,USetstr(1001783),true);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  INr.Code="";
+  While LoopMain(INr,1,true) begin
+    arrItems[arrItems.length]=INr.Code;
+  end;
+  
+  TrHs=true;
+  NAContractr.SerNr=-1;
+  While LoopMain(NAContractr,1,TrHs) begin
+    // testf=true;
+    // if NAContractr.SerNr!=1014293 then begin
+      // testf=false;
+    // end;
+    // if testf then begin
+      testf=true;
+      CalcContractSums(RepSpec,NAContractr,IntPercCodes,arrItems,arrSum);
+      if RepSpec.flags[0]==1 and arrSum[0]==0 and arrSum[1]==0 and arrSum[2]==0 
+        and arrSum[3]==0 and arrSum[6]==0 and arrSum[6]==0 then begin
+        testf=false;
+      end;
+      if testf then begin
+        StartFormat(15);
+        OutString(colx[0],"DblNAContractVc",NAContractr.SerNr,false);
+        // stat = GetNAContractStatVal(NAContractr.SerNr,RepSpec.sStartDate);
+        OutString(colx[1],0,StringFromSet(1074,stat),false);
+        OutString(colx[2],0,NAContractr.CustName,false);
+        OutVal(colx[3],0,arrSum[0],M4Val,true);
+        OutVal(colx[4],0,arrSum[1],M4Val,true);
+        OutVal(colx[5],0,arrSum[2],M4Val,true);
+        OutVal(colx[6],0,arrSum[3],M4Val,true);
+        OutVal(colx[7],0,arrSum[4],M4Val,true);
+        OutVal(colx[8],0,arrSum[5],M4Val,true);
+        OutVal(colx[9],0,arrSum[6],M4Val,true);
+        OutVal(colx[10],0,arrSum[7],M4Val,true);
+        EndFormat;
+        arrTotSum[0] = arrTotSum[0] + arrSum[0];
+        arrTotSum[1] = arrTotSum[1] + arrSum[1];
+        arrTotSum[2] = arrTotSum[2] + arrSum[2];
+        arrTotSum[3] = arrTotSum[3] + arrSum[3];
+        arrTotSum[4] = arrTotSum[4] + arrSum[4];
+        arrTotSum[5] = arrTotSum[5] + arrSum[5];
+        arrTotSum[6] = arrTotSum[6] + arrSum[6];
+        arrTotSum[7] = arrTotSum[7] + arrSum[7];
+      end;
+    // end;
+  end;
+  
+  Black_Divider(0,1);
+  StartFormat(15);
+  OutString(colx[0],0,"",false);
+  OutString(colx[1],0,"",false);
+  OutString(colx[2],0,"",false);
+  OutVal(colx[3],0,arrTotSum[0],M4Val,true);
+  OutVal(colx[4],0,arrTotSum[1],M4Val,true);
+  OutVal(colx[5],0,arrTotSum[2],M4Val,true);
+  OutVal(colx[6],0,arrTotSum[3],M4Val,true);
+  OutVal(colx[7],0,arrTotSum[4],M4Val,true);
+  OutVal(colx[8],0,arrTotSum[5],M4Val,true);
+  OutVal(colx[9],0,arrTotSum[6],M4Val,true);
+  OutVal(colx[10],0,arrTotSum[7],M4Val,true);
+  EndFormat;
+
+
+  
+  
+  EndJob;
+
+
+  return;
+end;

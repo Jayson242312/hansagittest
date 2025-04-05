@@ -1,0 +1,73 @@
+global updating 
+procedure PDFInvRemakeMn(Record RcVc RepSpec) begin
+  Record IVVc IVr;
+  boolean testf,wloop,buildf;
+  record RLinkVc RLr;
+  record Attach2Vc Attachr;
+  integer i,cnr;
+  string 255 fname;
+  string 50 docname;
+  string 15 ckey;
+  
+  IVr.InvDate=RepSpec.sStartDate;
+  buildf=false;
+  if NonBlank(RepSpec.f1) then begin
+    buildf=true;
+    IVr.BuildCode=RepSpec.f1;
+    ckey="BuildCode";
+    cnr=2;
+  end else begin
+    ckey="InvDate";
+    cnr=1;
+  end;
+  
+  wloop=true;
+  While LoopKey(ckey,IVr,cnr,wloop) begin
+    if IVr.InvDate>RepSpec.sEndDate then begin
+      wloop=false;
+    end else begin
+      testf=true;
+      if buildf and IVr.BuildCode!=RepSpec.f1 then begin
+        wloop=false;
+        testf=false;
+      end;
+      if testf then begin
+        //deleting previous pdf printout
+        i=1;
+        While (ReadRecordLink(IVr,i,Attachr,RLr)) begin
+          if (Right(Attachr.FileName,4)==".pdf") and (Attachr.FileName== IVr.SerNr & ".pdf") then begin
+            LogText(0,"Deleting attachment " & Attachr.FileName & " for invoice " & IVr.SerNr);
+            RecordDelete(RLr);
+            i=i-1;
+          end;
+          i=i+1;
+        end;
+        
+        //creating new pdf file and attaching it to invoice
+        fname = "tmp/" & IVr.SerNr & ".pdf";
+        SetDocumentFilename(fname);
+        SetMedia(mtPdf);
+        docname = "InvForm";
+        switch (IVr.InvType) begin
+          case 2: docname = "CashInvForm";
+          case 3: docname = "CredInvForm";
+          case 4: docname = "IIInvForm";
+        end;
+        if ((IVr.InvType==1) or (IVr.InvType==6)) then begin
+          if (nonblank(IVr.PRCode)) then begin    
+           docname = "ProjInvForm";
+          end;
+        end;
+        PrintDocument(IVr,docname,false);
+        if (FileExists(fname)) then begin
+          RecordLinkFile(fname,0,IVr,CurrentCompany);
+          SetDocumentFilename("");            
+          Delete_File(fname);
+        end;
+        
+      end;
+    end;
+  end;
+  
+return;
+end;

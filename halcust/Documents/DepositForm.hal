@@ -1,0 +1,70 @@
+external inner procedure OutAddress(string,string,string,string,string,string,string);
+
+//
+global
+procedure DoDepositForm(record RcVc RepSpec)
+begin
+	record CLInVc Clr;
+	record CUVc CUr;
+	record NAContractVc COr;
+	StartPrintDialogGroup
+	Clr.SerNr = RepSpec.f1;
+	if (ReadFirstMain(Clr,1,true)) then begin
+		if (OpenForm("DEPFORM")==true) then begin
+			OutFormField("DEP_CUSTNAME",Clr.CUName);
+			OutAddress("DEP_ADDRESS",Clr.CUName,Clr.Addr0,Clr.Addr1,Clr.Addr2,Clr.Addr3,Clr.Addr4);
+			CUr.Code = Clr.CUCode;
+			ReadFirstMain(CUr,1,true);
+			OUTFORMFIELD("DEP_PHONE",CUr.Phone);
+	
+			COr.CustCode = Clr.CUCode;
+			while (LoopKey("CustCode", COr, 1, true)) begin
+				if (COr.CustCode == Clr.CUCode) then begin
+					OUTFORMFIELD("DEP_CONTRACTNR",COr.ContractNr);
+				end;
+			end;
+			OUTFORMFIELD("DEP_TOTAL",Clr.Total);
+			OUTFORMFIELD("DEP_NR",Clr.SerNr);
+			OUTFORMFIELD("DEP_DATE",Clr.TransDate);
+			OUTFORMFIELD("DEP_REFERENCE",Clr.RefStr);
+		CloseForm;
+	 EndPrintDialogGroup;
+		end;
+		end;
+  return;
+end;
+
+//
+global
+procedure DoDepositOutForm(record RcVc RepSpec)
+begin
+	record ClOutVc Clr;
+	record CUVc CUr;
+	record NAContractVc COr;
+
+	Clr.SerNr = RepSpec.f1;
+	StartPrintDialogGroup;
+	if (ReadFirstMain(Clr,1,true)) then begin
+		if (OpenForm("DEPOUTFORM")==true) then begin
+				OutFormField("DEP_CUSTNAME",Clr.CUName);
+				OutAddress("DEP_ADDRESS",Clr.CUName,Clr.Addr0,Clr.Addr1,Clr.Addr2,Clr.Addr3,Clr.Addr4);
+				CUr.Code = Clr.CUCode;
+				ReadFirstMain(CUr,1,true);
+				OUTFORMFIELD("DEP_PHONE",CUr.Phone);
+
+				COr.CustCode = Clr.CUCode;
+				while (LoopKey("CustCode", COr, 1, true)) begin
+						if (COr.CustCode == Clr.CUCode) then begin
+							OUTFORMFIELD("DEP_CONTRACTNR",COr.ContractNr);
+						end;
+				end;
+				OUTFORMFIELD("DEP_TOTAL",Clr.Total);
+				OUTFORMFIELD("DEP_NR",Clr.SerNr);
+				OUTFORMFIELD("DEP_DATE",Clr.TransDate);
+				OUTFORMFIELD("DEP_REFERENCE",Clr.RefStr);
+		CloseForm;  
+	EndPrintDialogGroup;
+  end;
+	end;
+return;
+end;

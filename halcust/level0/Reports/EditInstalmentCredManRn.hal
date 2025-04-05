@@ -1,0 +1,170 @@
+external procedure PrintLeft(string,string,string,string);
+external procedure PrintRight(string,string,string,string,string,string);
+
+global 
+procedure getsPayed(record CredManVc CredManr,date invoiceTransDate,date invoiceDueDate,var val payed)
+begin
+  record CredManEventVc CredManEventr;
+  row CredManEventVc CredManEventrw;
+  integer i,rwcnt;
+  date PaymentDate ;
+  val sums, sum;
+  payed = 0;
+  sums = 0;
+  sum = 0;
+  CredManEventr.CredManNr = CredManr.SerNr;
+
+  while (LoopMain(CredManEventr, 1, true)) begin
+    if (CredManEventr.CredManNr == CredManr.SerNr) then begin
+      if (CredManEventr.FileName == "IPVc") then begin  // need to sort later 
+          PaymentDate = CredManEventr.TransDate; // dates of payment
+    end;
+     if (DateInRange(PaymentDate,invoiceTransDate,invoiceDueDate)) then begin   
+          rwcnt = MatRowCnt(CredManEventr);
+          for (i = 0; i < rwcnt; i = i + 1) begin
+            MatRowGet(CredManEventr, i, CredManEventrw);
+            sums = CredManEventrw.Sum + sums;
+          end;
+          if (sums >= CredManr.agreedInstallmentAmount) then begin
+          payed = payed + 1;
+         end;
+     end;
+     end;
+  end;
+End;
+
+
+global 
+procedure getCredManPaidStatus(record CredManVc CredManr,date invoiceTransDate,date invoiceDueDate,var string status,var val sum) 
+begin
+  record CredManEventVc CredManEventr;
+  row CredManEventVc CredManEventrw;
+  integer i,rwcnt;
+  boolean found;
+  date PaymentDate;
+  val sums;
+  
+  sum = 0; // initialise sum
+  status = "Not Paid"; // default staus
+
+  found = true;
+  CredManEventr.CredManNr = CredManr.SerNr;
+  CredManEventr.FileName = "IPVc";  
+  while (LoopMain(CredManEventr, 2, found)) begin
+    if ((CredManEventr.CredManNr == CredManr.SerNr) and (CredManEventr.FileName == "IPVc")) then begin  // need to sort later 
+      PaymentDate = CredManEventr.TransDate;
+     if (DateInRange(PaymentDate,invoiceTransDate,invoiceDueDate)) then begin   
+        rwcnt = MatRowCnt(CredManEventr);
+        for (i = 0; i < rwcnt; i = i + 1) begin
+          MatRowGet(CredManEventr, i, CredManEventrw);
+          sums = CredManEventrw.Sum + sums;
+        end;
+        sum = sums;
+        if (sum > CredManr.agreedInstallmentAmount) then begin
+          status = "Overpaid";
+        end else begin
+          if (sum < CredManr.agreedInstallmentAmount) then begin
+            status = "Not Fully paid";
+          end else begin
+            if (sum == CredManr.agreedInstallmentAmount) then begin
+              status = "Fully paid";
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
+// Calculate installment dates
+procedure calcInstal(record CredManVc CredManr, var date startdate, var date enddate, var val agreedInstallmentAmount, var val totalInstal,var val totalInstalAgreedAmount) 
+begin
+  integer k;
+  date date1;
+  string 255 status;
+  val sum,payed,payedSum;
+  Val arrears;
+  record CredManEventVc CredManEventr;
+  row CredManEventVc CredManEventrw;
+  totalInstal = 0; 
+  totalInstalAgreedAmount = 0;
+  arrears = 0;
+  payed = 0;
+  payedSum = 0;
+  CredManEventr.CredManNr = CredManr.SerNr;
+
+  while (LoopMain(CredManEventr, 1, true)) begin
+      if (((CredManEventr.CredManNr == CredManr.SerNr) and (CredManEventr.Comment == "Instalment")) ) then begin 
+        StartFormat(15);
+        OutDate(6, 0, CredManEventr.TransDate, false);
+        OutDate(7, 0, CredManEventr.DueDate, false);
+        OutVal(8, 0, CredManr.agreedInstallmentAmount, M4Val, false);
+        getCredManPaidStatus(CredManr,CredManEventr.TransDate,CredManEventr.DueDate,status,sum);
+        getsPayed(CredManr,CredManEventr.TransDate,CredManEventr.DueDate,payed);
+        OutString(9, 0, sum, false); // sum
+        OutString(400, 0, status, false); // status
+        Gray_Divider(0, 1);
+        EndFormat;  
+        payedSum = payedSum + payed;
+        arrears = CredManr.InstalmentMonths - payedSum;
+        totalInstal = totalInstal + sum; // Accumulate the sum
+        totalInstalAgreedAmount = totalInstalAgreedAmount + CredManr.agreedInstallmentAmount;
+  agreedInstallmentAmount = CredManr.agreedInstallmentAmount;
+      end;
+  end;
+
+return;
+end;
+
+
+global
+procedure EditInstalmentCredManRn(record RcVc RepSpec)
+begin
+  record CredManVc CredManr;
+  Boolean foundf,testf,instfoundf;
+  val agreedInstallmentAmount,totalInstal,totalInstalAgreedAmount;
+  Date date1,startdate,enddate; 
+  integer k;
+//   totv = 0;
+//   instfoundf = false;
+  StartReportJob(USetStr(7800));  
+  EndHeader;
+  SetRepCol(2,80);
+  SetRepCol(3,160);
+  SetRepCol(4,280);
+  SetRepCol(5,380);
+  SetRepCol(6,40);
+  SetRepCol(7,100);
+  SetRepCol(8,200);
+  SetRepCol(9,300);
+  CredManr.SerNr = RepSpec.long1;
+  if (ReadFirstMain(CredManr,1,true)) then begin
+    StartFormat(15);
+    PrintLeft(USetStr(17317),CredManr.SerNr,"Start Date",CredManr.startDate);
+    PrintLeft("Account Number",CredManr.CustCode,"Customer Name",CredManr.Addr0);
+    // OutLongInt(0,"CredManVc",""CredManr.SerNr,false);
+    // OutString(4,0,"CredManr.InvDate",false);
+    // OutString(5,0,"CredManr.PayDate",false);
+    // OutVal(1,0,"CredManr.Sum4",M4Val,true);
+    EndFormat;
+    StartFormat(15);
+    OutString(6,0,"Start Date",false); // start Date   
+    OutString(7,0,"Due Date",false);  // due date
+    OutString(8,0,"Agreed Instal. Amount",false); // amount
+    OutString(9,0,"Amount Paid",false); // amount
+    OutString(400,0,"Status",false); // amount
+    EndFormat;
+    Gray_Divider(0,1);
+    calcInstal(CredManr,startdate,enddate,agreedInstallmentAmount,totalInstal,totalInstalAgreedAmount);
+
+    StartFormat(15);
+    OutString(20,0,"Totals",false); // start Date   
+    OutString(8,0,totalInstalAgreedAmount,false); // amount
+    OutString(9,0,totalInstal,false); // total instalment sum  
+    OutString(400,0,"Outstanding: "&totalInstalAgreedAmount-totalInstal,false); // amount
+
+    EndFormat
+  end;
+  EndJob;
+  return;
+end;

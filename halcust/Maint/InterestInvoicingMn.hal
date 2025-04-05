@@ -1,0 +1,206 @@
+global updating
+procedure InterestInvoicingMn(record RcVc RepSpec)
+begin
+  Record NAContractVc COr;
+  record ARVc ARr;
+  record INVc INr; //items
+  record ITVc ITr; // item.groups
+  record IVVc IVr,IV2r; //invoice
+  row IVVc IVrw;
+  record CredManSetBlock CredManSetRec;
+  date sd,due_date;
+  boolean testf;
+  longint count;
+  val x,i,rw;
+  //
+  String 25 ITEM_CODE;
+  String 25 ITEM_NAME;
+  String 25 ITEM_VAT;
+  String 25 ITEM_ACC;
+  //
+  array String 25 ARR_CUSTCODE;
+  array String 25 ARR_CONTRACT;
+  array String 25 ARR_BUILDCODE;
+  array String 25 ARR_FLATCODE;
+  array String 25 ARR_CUSTNAME;
+  array String 25 ARR_INVNUM;
+  array boolean ARR_IS_DISPUTED;
+  array val ARR_BALANCE;
+  val SUM_TOTAL;
+  boolean INCLUDE_INTEREST_INV;
+  // interest block settings
+  record IIBlock IIRec; 
+  val block_rate;
+  String 25 block_item;
+  // credit agreement setting block
+  BlockLoad(CredManSetRec);
+
+
+  // get interest settings
+  BlockLoad(IIRec);
+  if(nonblank(IIRec.IntRate)) then begin
+    block_rate = IIRec.IntRate;
+  end else begin
+    MessageBox(0,"Enter interest rate in Settings -> Interest");
+    goto BreakL2;
+  end;
+  //
+  if(nonblank(IIRec.ArtCode)) then begin
+    block_item = IIRec.ArtCode;
+  end else begin
+    MessageBox(0,"Select interest item in Settings -> Interest");
+    goto BreakL2;
+  end;
+
+
+  // get interest item
+  INr.Code = block_item;
+  if(ReadFirstMain(INr,1,true)) then begin
+    ITEM_CODE = INr.Code;
+    ITEM_NAME = INr.Name;
+    ITEM_VAT = INr.VATCode;
+
+    ITr.Code = INr.Group;
+    if(ReadFirstMain(ITr,1,true)) then begin
+      ITEM_ACC = ITr.SalesAcc;
+    end;
+  end;
+
+
+  // set invoice due-date
+  sd = AddMonth(CurrentDate,1);
+  due_date = sd;
+  due_date.day = DaysInMonth(GetYear(sd),GetMonth(sd));
+
+
+  // if user selection
+  if (nonblank(RepSpec.f1)) then begin
+    ARr.CustCode = RepSpec.f1;
+  end;
+
+  // if include interest for int.invoices
+  INCLUDE_INTEREST_INV = false;
+  if (RepSpec.flags[0]==1) then begin
+    INCLUDE_INTEREST_INV = true;
+  end;
+  
+
+  // loop outstanding invoices -> arvc
+  x = 0;
+  testf = true;
+  While LoopKey("CustCode",ARr,1,testf) begin
+    // if user selection
+    if(nonblank(RepSpec.f1) AND ARr.CustCode != RepSpec.f1) then begin
+      testf=false;
+    end else begin
+      // if past due date and min value condition met
+      if(CurrentDate>ARr.DueDate) then begin
+        if(nonblank(IIRec.MinInt) AND ARr.RVal<IIRec.MinInt) then begin
+        end else begin
+          //
+          if(INCLUDE_INTEREST_INV) then begin
+            //
+            IVr.SerNr = ARr.InvoiceNr;
+            if (ReadFirstMain(IVr,1,true)) then begin
+              ARR_CUSTCODE[x] = ARr.CustCode;
+              ARR_INVNUM[x] = ARr.InvoiceNr;
+              ARR_BALANCE[x] = ARr.RVal;
+              //
+              ARR_CONTRACT[x] = IVr.Contract;
+              ARR_BUILDCODE[x] = IVr.BuildCode;
+              ARR_FLATCODE[x] = IVr.FlatCode;
+              ARR_CUSTNAME[x] = IVr.Addr0;
+              //
+              if(IVr.DisputedFlag == 1) then begin
+                ARR_IS_DISPUTED[x] = true;
+              end;
+              x = x + 1;
+            end;
+          end else begin
+            //
+            IVr.SerNr = ARr.InvoiceNr;
+            if (ReadFirstMain(IVr,1,true)) then begin
+              if(IVr.InvType != 4) then begin
+                ARR_CUSTCODE[x] = ARr.CustCode;
+                ARR_INVNUM[x] = ARr.InvoiceNr;
+                ARR_BALANCE[x] = ARr.RVal;
+                //
+                ARR_CONTRACT[x] = IVr.Contract;
+                ARR_BUILDCODE[x] = IVr.BuildCode;
+                ARR_FLATCODE[x] = IVr.FlatCode;
+                ARR_CUSTNAME[x] = IVr.Addr0;
+                //
+                if(IVr.DisputedFlag == 1) then begin
+                  ARR_IS_DISPUTED[x] = true;
+                end;
+                x = x + 1;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+
+  count = 0;
+  // loop saved data
+  for(i=0; i<x; i=i+1) begin
+
+    // if new cust
+    if(i==0 OR ARR_CUSTCODE[i] != ARR_CUSTCODE[i-1]) then begin
+      RecordNew(IVr);
+      rw = 0;
+    end;
+
+    IVrw.ArtCode = ARR_INVNUM[i];
+    IVrw.Spec = ITEM_NAME &" - "& ARR_INVNUM[i];
+    IVrw.Quant = block_rate;
+    IVrw.BasePrice = ARR_BALANCE[i];
+    IVrw.vRebate = block_rate;
+    IVrw.Sum = (ARR_BALANCE[i] * (block_rate/100));
+    SUM_TOTAL = SUM_TOTAL + (ARR_BALANCE[i] * (block_rate/100)); //
+    IVrw.OrdRow = 1;
+    IVrw.stp = 4; // row type interet invoice
+    IVrw.SalesAcc = ITEM_ACC;
+    IVrw.VATCode = "0";
+    IVr.Sum3 = blankval; // vat
+    MatRowPut(IVr,rw,IVrw);
+    rw = rw + 1;
+
+    // if cust is new
+    if(ARR_CUSTCODE[i] != ARR_CUSTCODE[i+1]) then begin
+      //
+      if(ARR_IS_DISPUTED[i] == true) then begin
+        IVr.DisputedFlag = 1;
+        IVr.InvComment = "Interest On Disputed Invoices";
+        IVr.ARAcc = CredManSetRec.CredManAcc;
+      end else begin
+        IVr.DisputedFlag = 0;
+			  IVr.InvComment = "Interest On Normal Invoices";
+      end;
+      //
+      IVr.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+      IVr.CredMark = "I"; // mark as interest.inv
+      IVr.InvType = 4; // mark as interest.inv
+      IVr.Location = "HQ";
+      IVr.Objects = "SJ,DEPT10,HQ";
+      IVr.Contract = ARR_CONTRACT[i];
+      IVr.CustCode = ARR_CUSTCODE[i];
+      IVr.BuildCode = ARR_BUILDCODE[i];
+      IVr.FlatCode = ARR_FLATCODE[i];
+      IVr.Addr0 = ARR_CUSTNAME[i];
+      IVr.PayDate = due_date;
+      IVr.Sum1 = SUM_TOTAL;
+      IVr.Sum4 = SUM_TOTAL;
+      RecordStore(IVr,true);
+      //
+      SUM_TOTAL = 0;
+      count = count + 1;
+    end;
+  end;
+
+  MessageBox(0, "Interest invoice(s) created: " & count);
+
+BreakL2:;
+end;

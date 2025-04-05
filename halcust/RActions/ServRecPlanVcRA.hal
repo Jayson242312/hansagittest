@@ -1,0 +1,266 @@
+/* dalîto pakalpojumu record actioni */
+external function boolean OBS_PeriodInPeriod(date,date,date,date);
+
+global
+function longint ServRecPlanVcRecordCheck(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  Record BuildVc Buildr;
+  Record BuildGroupVc BuildGroupr;
+  Record FlatGroupVc FlatGroupr;
+  Record ServRecPlanVc tmpServRecPlanr;
+  row ServRecPlanVc ServRecPlanrw,ServRecPlan2rw;
+  longint res,FoundBlankDateInRow;
+  integer cnt,i,rw,i2;
+  boolean foundf,wloop;
+
+  res = 0;
+  if (ServRecPlanr.SerNr<=0) then begin
+    ServRecPlanr.SerNr = NextSerNr("ServRecPlanVc",CurrentDate,-1,false,"");
+  end;
+  if (blankDate(ServRecPlanr.TransDate)) then begin
+    RecordCheckError(1058,"",-1,"TransDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if blank(ServRecPlanr.CalcServPlan) then begin
+    RecordCheckError(1058,"",-1,"CalcServPlan");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  cnt=0;
+  if nonblank(ServRecPlanr.BuildCode) then begin
+    cnt=cnt+1;
+    Buildr.Code=ServRecPlanr.BuildCode;
+    if !ReadFirstMain(Buildr,1,true) then begin
+      RecordCheckError(1000914,"",-1,"BuildCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if nonblank(ServRecPlanr.BuildGroupCode) then begin
+    cnt=cnt+1;
+    BuildGroupr.Code=ServRecPlanr.BuildGroupCode;
+    if !ReadfirstMain(BuildGroupr,1,true) then begin
+      RecordCheckError(1000972,"",-1,"BuildGroupCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if nonblank(ServRecPlanr.FlatGroupCode) then begin
+    cnt=cnt+1;
+    FlatGroupr.Code=ServRecPlanr.FlatGroupCode;
+    if !ReadfirstMain(FlatGroupr,1,true) then begin
+      RecordCheckError(1000973,"",-1,"FlatGroupCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if cnt!=1 then begin
+    RecordCheckError(1000937,"",-1,"BuildCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  rw = MatRowCnt(ServRecPlanr);
+  for(i=0;i<rw;i=i+1)begin
+    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+    if blankdate(ServRecPlanrw.EDate) then begin
+      if FoundBlankDateInRow<>-1 then begin
+        RecordCheckError(1000429,"",FoundBlankDateInRow,"EDate");
+        res = -1;
+        goto LExitCheck;
+      end else begin
+        FoundBlankDateInRow = i;
+      end;
+    end;
+    
+    //Pârbauda vai nepârklâjas periodi
+    if (i+1!=rw) then begin
+      for(i2=i+1;i2<rw;i2=i2+1)begin
+        MatRowGet(ServRecPlanr,i2,ServRecPlan2rw);
+        if OBS_PeriodInPeriod(ServRecPlanrw.SDate,ServRecPlanrw.EDate,ServRecPlan2rw.SDate,ServRecPlan2rw.EDate) then begin
+          RecordCheckError(1000739,"",i,"SDate");
+          res = -1;
+          goto LExitCheck;
+        end;
+      end;
+    end;
+    
+  end;
+
+  if nonblank(ServRecPlanr.BuildCode) then begin
+    ResetLoop(tmpServRecPlanr);
+    wloop=true; foundf=false;
+    tmpServRecPlanr.CalcServPlan=ServRecPlanr.CalcServPlan;
+    While LoopKey("CalcServPlan",tmpServRecPlanr,1,wloop)begin
+      if tmpServRecPlanr.CalcServPlan!=ServRecPlanr.CalcServPlan then begin
+        wloop=false;
+      end else begin
+        if tmpServRecPlanr.BuildCode==ServRecPlanr.BuildCode and tmpServRecPlanr.SerNr!=ServRecPlanr.SerNr then begin
+          foundf=true;
+          wloop=false;
+        end;
+      end;
+    end;
+    if foundf then begin
+      RecordCheckError(1000977," " & tmpServRecPlanr.SerNr,-1,"BuildCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if nonblank(ServRecPlanr.BuildGroupCode) then begin
+    ResetLoop(tmpServRecPlanr);
+    wloop=true; foundf=false;
+    tmpServRecPlanr.CalcServPlan=ServRecPlanr.CalcServPlan;
+    While LoopKey("CalcServPlan",tmpServRecPlanr,1,wloop)begin
+      if tmpServRecPlanr.CalcServPlan!=ServRecPlanr.CalcServPlan then begin
+        wloop=false;
+      end else begin
+        if tmpServRecPlanr.BuildGroupCode==ServRecPlanr.BuildGroupCode and tmpServRecPlanr.SerNr!=ServRecPlanr.SerNr then begin
+          foundf=true;
+          wloop=false;
+        end;
+      end;
+    end;
+    if foundf then begin
+      RecordCheckError(1000977," " & tmpServRecPlanr.SerNr,-1,"BuildGroupCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if nonblank(ServRecPlanr.FlatGroupCode) then begin
+    ResetLoop(tmpServRecPlanr);
+    wloop=true; foundf=false;
+    tmpServRecPlanr.CalcServPlan=ServRecPlanr.CalcServPlan;
+    While LoopKey("CalcServPlan",tmpServRecPlanr,1,wloop)begin
+      if tmpServRecPlanr.CalcServPlan!=ServRecPlanr.CalcServPlan then begin
+        wloop=false;
+      end else begin
+        if tmpServRecPlanr.FlatGroupCode==ServRecPlanr.FlatGroupCode and tmpServRecPlanr.SerNr!=ServRecPlanr.SerNr then begin
+          foundf=true;
+          wloop=false;
+        end;
+      end;
+    end;
+    if foundf then begin
+      RecordCheckError(1000977," " & tmpServRecPlanr.SerNr,-1,"FlatGroupCode");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+
+  if ServRecPlanr.UpdateFromVIVc==1 and blank(ServRecPlanr.BuildCode) then begin
+    RecordCheckError(1000938,"",-1,"BuildCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+LExitCheck:;
+  ServRecPlanVcRecordCheck = res;
+return;
+end;
+
+global
+function longint ServRecPlanVcRecordDefaults(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  longint res;
+
+  if (servingclient==false) then begin
+    ServRecPlanr.SerNr = NextSerNr("ServRecPlanVc",CurrentDate,-1,false,"");
+  end;
+  ServRecPlanr.TransDate = CurrentDate;
+  ServRecPlanVcRecordDefaults = res;
+  return;
+end;
+
+global
+function longint ServRecPlanVcRecordDuplicate(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  longint res;
+
+  ServRecPlanr.SerNr = -1;
+  if (servingclient==false) then begin
+    ServRecPlanr.SerNr = NextSerNr("ServRecPlanVc",CurrentDate,-1,false,"");
+  end;
+  ServRecPlanVcRecordDuplicate = res;
+  return;
+end;
+
+global
+function longint ServRecPlanVcRecordSave(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  longint res;
+
+  if nonblank(ServRecPlanr.BuildCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.BuildCode;
+    ServRecPlanr.RecType=1;
+    goto EndServRecPlanVcRecordSave;
+  end;
+  if nonblank(ServRecPlanr.BuildGroupCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.BuildGroupCode;
+    ServRecPlanr.RecType=2;
+    goto EndServRecPlanVcRecordSave;
+  end;
+  if nonblank(ServRecPlanr.FlatGroupCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.FlatGroupCode;
+    ServRecPlanr.RecType=3;
+    goto EndServRecPlanVcRecordSave;
+  end;
+
+EndServRecPlanVcRecordSave:;
+  ServRecPlanVcRecordSave=res;
+  return;
+end;
+
+global
+function longint ServRecPlanVcRecordUpdate(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  longint res;
+
+  if nonblank(ServRecPlanr.BuildCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.BuildCode;
+    ServRecPlanr.RecType=1;
+    goto EndServRecPlanVcRecordUpdate;
+  end;
+  if nonblank(ServRecPlanr.BuildGroupCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.BuildGroupCode;
+    ServRecPlanr.RecType=2;
+    goto EndServRecPlanVcRecordUpdate;
+  end;
+  if nonblank(ServRecPlanr.FlatGroupCode) then begin
+    ServRecPlanr.CodeField=ServRecPlanr.FlatGroupCode;
+    ServRecPlanr.RecType=3;
+    goto EndServRecPlanVcRecordUpdate;
+  end;
+
+EndServRecPlanVcRecordUpdate:;
+  ServRecPlanVcRecordUpdate=res;
+  return;
+end;
+
+global
+function longint ServRecPlanVcRecordImport(var record ServRecPlanVc ServRecPlanr,record ServRecPlanVc ServRecPlanr2,longint a,longint b)
+begin
+  longint res;
+
+  if ServRecPlanr.RecType==0 then begin
+    if nonblank(ServRecPlanr.BuildCode) then begin
+      ServRecPlanr.CodeField=ServRecPlanr.BuildCode;
+      ServRecPlanr.RecType=1;
+      goto EndServRecPlanVcRecordImport;
+    end;
+    if nonblank(ServRecPlanr.BuildGroupCode) then begin
+      ServRecPlanr.CodeField=ServRecPlanr.BuildGroupCode;
+      ServRecPlanr.RecType=2;
+      goto EndServRecPlanVcRecordImport;
+    end;
+    if nonblank(ServRecPlanr.FlatGroupCode) then begin
+      ServRecPlanr.CodeField=ServRecPlanr.FlatGroupCode;
+      ServRecPlanr.RecType=3;
+      goto EndServRecPlanVcRecordImport;
+    end;
+  end;
+
+EndServRecPlanVcRecordImport:;
+  return;
+end;

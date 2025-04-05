@@ -1,0 +1,212 @@
+external inner function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+global 
+procedure PrintDeedOfDonationFields(record DeedOfDonationVc DeedofDonationr)
+begin
+  record CUVc CUr;
+  record buildVc buildr;
+  record ExtensionVc Extensionr;
+  record DivisionVc Divisionr;
+  record TitleVc Titler;
+  integer erf;
+  string 255 maritalStatus,vat;
+
+
+  if(FieldInForm("CUST_ZONE")) then begin
+    OUTFORMFIELD("CUST_ZONE",DeedofDonationr.Zoning);
+  end;
+
+
+  if(FieldInForm("CUST_VAT")) then begin
+    if (DeedofDonationr.VatRadioButton == 0) then begin vat = "Excluding" ;end ; 
+    if (DeedofDonationr.VatRadioButton == 1) then begin vat = "Including" ;end ; 
+    OUTFORMFIELD("CUST_VAT",vat);
+  end;
+
+
+  if(FieldInForm("CUST_REPRESENTATIVE")) then begin
+    OUTFORMFIELD("CUST_REPRESENTATIVE",DeedofDonationr.Representative);
+  end;
+
+  if(FieldInForm("CUST_DEEDNO")) then begin
+    OUTFORMFIELD("CUST_DEEDNO",DeedofDonationr.SerNr);
+  end;
+  if(FieldInForm("CUST_TITLE")) then begin
+    Titler.Code = DeedofDonationr.Title;
+    if (ReadFirstMain(Titler,1,true)) then begin
+        OUTFORMFIELD("CUST_TITLE",Titler.Name);
+    end;
+  end;
+
+  if(FieldInForm("CUST_HODNAME")) then begin
+    OUTFORMFIELD("CUST_HODNAME",DeedofDonationr.HoDName);
+  end;
+  if(FieldInForm("CUST_DONEE")) then begin
+    OUTFORMFIELD("CUST_DONEE",DeedofDonationr.DoneeName);
+  end;
+  if(FieldInForm("CUST_CUSTNAME")) then begin
+    OUTFORMFIELD("CUST_CUSTNAME",DeedofDonationr.DoneeName);
+  end;
+
+  // CONTACT INFORMATION 
+  CUr.Code = DeedofDonationr.DoneeCode;
+  if(ReadFirstMain(CUr,1,true)) then begin
+    if(FieldInForm("CUST_IDNO")) then begin
+      OUTFORMFIELD("CUST_IDNO",CUr.PassportNr);
+      if blank(CUr.PassportNr) then begin       OUTFORMFIELD("CUST_IDNO","N/A");end;
+
+    end;
+   if(FieldInForm("CUST_MARITAL_STATUS")) then begin
+      switch (CUR.MarStatus) begin
+        case 0 : maritalStatus = "Single";
+        case 1 : maritalStatus = "Married";;
+        case 2 : maritalStatus = "Divorced";;
+        case 3 : maritalStatus = "Widowed";;
+      end;
+      OUTFORMFIELD("CUST_MARITAL_STATUS",maritalStatus);
+    end;
+   if(FieldInForm("CUST_CITIZENSHIP")) then begin
+      OUTFORMFIELD("CUST_CITIZENSHIP",CUr.Nationality);
+      if blank(CUr.Nationality) then begin       OUTFORMFIELD("CUST_CITIZENSHIP","N/A");end;
+    end;
+    
+   if(FieldInForm("CUST_RESIDADDR")) then begin
+      OUTFORMFIELD("CUST_RESIDADDR",DeedofDonationr.Address);
+    end;
+
+   if(FieldInForm("CUST_POSTALADDR")) then begin
+      OUTFORMFIELD("CUST_POSTALADDR",CUr.InvAddr0);
+      if blank(CUr.InvAddr0) then begin       OUTFORMFIELD("CUST_POSTALADDR","N/A");end;
+
+    end;
+   if(FieldInForm("CUST_CELL")) then begin
+      OUTFORMFIELD("CUST_CELL",CUr.Mobile);
+      if blank(CUr.Mobile) then begin       OUTFORMFIELD("CUST_CELL","N/A");end;
+    end;
+
+   if(FieldInForm("CUST_EMPLOYER")) then begin
+      OUTFORMFIELD("CUST_EMPLOYER",CUr.PreviousEmployer);
+      if blank(CUr.PreviousEmployer) then begin       OUTFORMFIELD("CUST_EMPLOYER","N/A");end;
+    end;
+
+   if(FieldInForm("CUST_NEXTOFKIN")) then begin
+      OUTFORMFIELD("CUST_NEXTOFKIN",CUr.Person);
+      if blank(CUr.Person) then begin       OUTFORMFIELD("CUST_NEXTOFKIN","N/A");end;
+    end;  
+  //
+
+  if(FieldInForm("CUST_ERF")) then begin
+    buildr.Code = DeedofDonationr.BuildCode;
+    if (ReadFirstMain(buildr,1,true)) then begin
+      erf = StringToInt(buildr.LotNo);
+    end;
+    OUTFORMFIELD("CUST_ERF","ERF " & erf);
+  end;
+  if(FieldInForm("CUST_TOWNSHIP")) then begin
+    OUTFORMFIELD("CUST_TOWNSHIP",DeedofDonationr.Township);
+  end;
+  if(FieldInForm("CUST_EXTENSION")) then begin
+    OUTFORMFIELD("CUST_EXTENSION","Extension " & StringToInt(DeedofDonationr.Extension));
+  end;
+  if(FieldInForm("CUST_DIVISION")) then begin
+    OUTFORMFIELD("CUST_DIVISION",DeedofDonationr.Division);
+  end;
+  if(FieldInForm("CUST_LANDSIZE")) then begin
+    OUTFORMFIELD("CUST_LANDSIZE",DeedofDonationr.LandSize & " m2 in extend, and");
+  end;
+  if(FieldInForm("CUST_DONATIONVAL")) then begin
+    OUTFORMFIELD("CUST_DONATIONVAL", "N$"&DeedofDonationr.DonationVal);
+  end;
+  if(FieldInForm("CUST_DONATIONSTRING")) then begin
+    OUTFORMFIELD("CUST_DONATIONSTRING","(In words: " & DeedofDonationr.DonationString & ")");
+  end;
+  if(FieldInForm("CUST_DATEDONEESIGNED")) then begin
+    OUTFORMFIELD("CUST_DATEDONEESIGNED",DeedofDonationr.DateDoneeSign);
+  end; 
+  if(FieldInForm("CUST_DATEKATIMASIGN")) then begin
+    OUTFORMFIELD("CUST_DATEKATIMASIGN",DeedofDonationr.DateKatimaSign);
+  end; 
+end;
+end;
+
+
+
+global 
+procedure DeedOfDonationForm(record RcVc RepSpec) 
+begin
+  record DeedOfDonationVc DeedOfDonationr;
+  
+  if (blank(RepSpec.f1)) then begin
+    goto LDeedOfDonationForm;
+  end;
+  
+  DeedOfDonationr.SerNr = StringToLongInt(RepSpec.f1);
+  if (ReadFirstMain(DeedOfDonationr,1,true)) then begin
+    PrintDocument(DeedOfDonationr,"DeedOfDonationForm",false);
+  end;
+  
+LDeedOfDonationForm:;
+  return;
+end;
+
+
+global
+procedure DoDeedOfDonationForm(record RcVc RepSpec,record DeedOfDonationVc DeedOfDonationr)
+BEGIN
+  Integer i,rwcnt;
+  Boolean printf,testf;
+  Integer intdocnr;
+  string 30 formcode,langcode;
+  record FormDefVc FDr;
+  row FormDefVc FDrw;
+  
+  testf = true;
+  FDr.repname = RepSpec.repname;
+  FDr.shortname = RepSpec.shortname;
+
+   if (DeedOfDonationr.OKFlag==0) then begin
+      MessageBox(0,"Cant Print Unokayed record");
+      testf = false;
+  end;
+
+  if (ReadFirstMain(FDr,1,true)==false) then begin
+    MessageBox(1624, " " & USetStr(1623));
+    testf = false;
+  end;
+  if testf then begin
+    langcode = "";
+    intdocnr = 1;
+    printf = true; //ff
+    rwcnt = MatRowCnt(FDr);
+    while (printf) begin
+      formcode = "";
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(FDr,i,FDrw);
+        if (Getformcode(i,FDrw.intdocnr,FDrw.FPCode,FDrw.UserGroup,FDrw.LangCode,FDrw.SerNr,-1,FDrw.PrintGroupCode,
+                          langcode,intdocnr,"",formcode)) then
+          begin
+          goto LBREAKPrint;
+        end;
+      end;
+  LBREAKPrint:;
+      
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          PrintDeedOfDonationFields(DeedOfDonationr);
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);  
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));  
+        end;
+      end;
+      intdocnr = intdocnr + 1;
+    end;
+  end;
+
+  return;
+end;

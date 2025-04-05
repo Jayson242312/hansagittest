@@ -1,0 +1,140 @@
+external inner procedure HT2Per(Date,Date,var string);
+external procedure HTBuild(string,var string);
+
+global
+procedure CounterResCheckRn(record RcVc RepSpec)
+begin
+  record FlatsVc Flatsr;
+  record FlatCountersVc FlatCountersr;
+  record CountResVc CountResr;
+  boolean TrHs,TrHs2,testf,foundf,foundCounterf,firstf;
+  string 100 HeaterCounters,HotWaterCounters;
+  string 255 types,tstr;
+  vector val vecTotAmount;
+  string 20 type;
+  longint pos;
+  
+  if !NonBlank(RepSpec.f1) then begin
+    goto LCounterResCheckRn;
+  end;
+  
+  HeaterCounters = "S09,S10";
+  HotWaterCounters = "S03,S04";
+  
+  if RepSpec.flags[1]==1 then begin
+    types=HeaterCounters;
+  end;
+  if RepSpec.flags[2]==1 then begin
+    if nonblank(types) then begin
+      types = types & "," & HotWaterCounters;
+    end else begin
+      types = HotWaterCounters;
+    end;
+  end;
+    
+  StartReportJob(USetStr(1001336));
+    HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+    Header(1,tstr,1);
+    if NonBlank(RepSpec.f1) then begin
+      HTBuild(RepSpec.f1,tstr);
+      Header(2,tstr,1);
+    end;
+    if nonblank(types) then begin
+      Header(3,USetStr(1001337) & types,1);
+    end;
+  EndHeader;
+  
+  SetRepCol(2,10);
+  SetRepCol(3,80);
+  SetRepCol(4,220);
+  SetRepCol(5,280);
+  SetRepCol(6,360);
+  
+  StartFormat(15);
+    OutString(2,0,USetStr(1001031),false);
+    OutString(3,0,USetStr(1000181),false);
+    OutString(4,0,USetStr(1000431),false);
+    OutString(5,0,USetStr(1001338),false);
+    OutString(6,0,USetStr(1000640),false);
+  EndFormat;
+  Black_Divider(1,0);
+    
+  ResetLoop(Flatsr);
+  TrHs=true;
+  While LoopKey("BuildCodeIntFlatNo:" & RepSpec.f1,Flatsr,1,TrHs) begin
+    ResetLoop(FlatCountersr);
+    foundCounterf=false;
+    TrHs2=true;
+    FlatCountersr.Code=Flatsr.Code;
+    FlatCountersr.FlatCode=Flatsr.FlatCode;
+    While LoopKey("BuildCodeType",FlatCountersr,2,TrHs2) begin
+      if (FlatCountersr.Code!=Flatsr.Code) or (FlatCountersr.FlatCode!=Flatsr.FlatCode) then begin
+        TrHs2=false;
+      end else begin
+        testf=true;
+        if nonblank(types) then begin
+          if !SetInSet(FlatCountersr.CounterType,types) then begin
+            testf=false;
+          end;
+        end;
+        if testf then begin
+          foundCounterf=true;
+          CountResr.FlatCounterSerNr=FlatCountersr.SerNr;
+          CountResr.StartDate=RepSpec.sStartDate;
+          CountResr.EndDate=RepSpec.sEndDate;
+          foundf=false;
+          if ReadFirstKey("FlatCountStartEndDate",CountResr,3,true) then begin
+            foundf=true;
+          end;
+          if foundf then begin
+            StartFormat(15);
+              OutString(2,"DblFlatsVc",Flatsr.FlatCode,false);
+              OutString(3,0,Flatsr.Address & " - " & Flatsr.FlatNo,false);
+              OutStringID(4,"DblFlatCountersVc",FlatCountersr.CounterNo,0,FlatCountersr.SerNr);
+              OutString(5,0,FlatCountersr.CounterType,false);
+              OutVal(6,0,CountResr.InvAmount,M4Val,false);
+            EndFormat;
+            vecTotAmount[FlatCountersr.CounterType]=vecTotAmount[FlatCountersr.CounterType]+CountResr.InvAmount;
+          end else begin
+            StartFormat(15);
+              OutString(2,"DblFlatsVc",Flatsr.FlatCode,false);
+              OutString(3,0,Flatsr.Address & " - " & Flatsr.FlatNo,false);
+              OutStringID(4,"DblFlatCountersVc",FlatCountersr.CounterNo,0,FlatCountersr.SerNr);
+              OutString(5,0,FlatCountersr.CounterType,false);
+              OutString(6,0,USetStr(1001340),false);
+            EndFormat;
+          end;
+        end;
+      end;
+    end;
+    if !foundCounterf then begin
+      StartFormat(15);
+        OutString(2,"DblFlatsVc",Flatsr.FlatCode,false);
+        OutString(3,0,Flatsr.Address & " - " & Flatsr.FlatNo,false);
+        OutString(4,0,USetStr(1001339),false);
+      EndFormat; 
+    end;
+  end;
+  
+  while (GetNextSubstring(types,pos,",",type)) begin
+    if nonblank(type) then begin
+      if vecTotAmount[type]!=0 then begin
+        if !firstf then begin
+          Black_Divider(0,1);
+          StartFormat(15);
+            OutString(4,0,USetStr(16016),false);
+          EndFormat;
+          firstf=true;
+        end;
+        StartFormat(15);
+          OutString(5,0,type,false);
+          OutVal(6,0,vecTotAmount[type],M4Val,false);
+        EndFormat; 
+      end;
+    end;
+  end;
+  EndJob;
+  
+LCounterResCheckRn:;
+  return;
+end;

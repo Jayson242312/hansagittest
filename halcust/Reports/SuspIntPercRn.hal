@@ -1,0 +1,89 @@
+external inner procedure HT2Per(Date, Date , var string);
+external function boolean OBS_PeriodInPeriod(date,date,date,date);
+
+global
+procedure SuspIntPercRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record IntPercVc IntPercr;
+  row IntPercVc IntPercrw;
+  boolean TrHs,testf,firstf;
+  string 255 tstr;
+  integer rw,i,rwc;
+  array string 20 arrPer;
+
+  
+  StartReportJob(USetStr(1001717));
+  rw=1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  EndHeader;
+  
+  StartFormat(15);
+  OutString(0,0,USetStr(1000122),false);
+  OutString(40,0,USetStr(1000182),false);
+  OutString(180,0,USetStr(1000181),false);
+  OutString(400,0,USetStr(1000499),false);
+  EndFormat;
+  Black_Divider(0,1);
+  
+  TrHs=true;
+  NAContractr.FlatAddress="";
+  While LoopKey("FlatAddress",NAContractr,1,TrHs) begin
+    testf = true;
+    if NAContractr.OKFlag==0 then begin
+      testf = false;
+    end;
+    // if NAContractr.MergedInvFlag==1 then begin
+      // testf = false;
+    // end;
+    if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>RepSpec.sEndDate then begin
+      testf = false;
+    end;
+    if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<RepSpec.sStartDate then begin
+      testf = false;
+    end;
+    if blank(NAContractr.IntPercCode) then begin
+      testf=false;
+    end;
+    if testf then begin
+      ClearArray(arrPer)
+      IntPercr.Code = NAContractr.IntPercCode;
+      if ReadFirstMain(IntPercr,1,true) then begin
+        rwc=MatRowCnt(IntPercr);
+        for (i=0;i<rwc;i=i+1) begin
+          MatRowGet(IntPercr,i,IntPercrw);
+          if IntPercrw.CalcWay==2 then begin
+            if OBS_PeriodInPeriod(RepSpec.sStartDate,RepSpec.sEndDate,IntPercrw.StartDate,IntPercrw.EndDate) then begin
+              arrPer[arrPer.length] = IntPercrw.StartDate & ":" & IntPercrw.EndDate;
+            end;
+          end;
+        end;
+      end;
+      if arrPer.length>0 then begin
+        firstf=false;
+        for (i=0;i<arrPer.length;i=i+1) begin
+          StartFormat(15);
+          if !firstf then begin
+            OutString(0,"DblNAContractVc",NAContractr.SerNr,false);
+            OutString(40,0,NAContractr.CustName,false);
+            OutString(180,0,NAContractr.FlatAddress,false);
+            firstf=true;
+          end else begin
+            OutString(0,0,"",false);
+            OutString(40,0,"",false);
+            OutString(180,0,"",false);
+          end;
+          OutString(400,0,arrPer[i],false);
+          EndFormat;
+        end;
+      end;
+    end;
+  end;
+  Black_Divider(0,1);
+  
+  EndJob;
+  
+  return;
+end;

@@ -1,0 +1,630 @@
+/*
+  skait�t�ju r�d�jumu rekord actions
+  k� ar� skait�t�ja r�d�jumu p�rr��ina proced�ra CountResSumUp
+*/
+external inner function Boolean Date2Test(string,Date,string,Integer);
+external inner function Boolean DateWarned(Date,string);
+external function LongInt RecordRemoveTest(date,LongInt);
+external function boolean IsTwoTypeFlatCounter(longint);
+external procedure SumUpCountResVc(var Record CountResVc,val,val);
+external procedure GetCountResPeriod(var date,var date);
+external inner function LongInt MonthDiff(Date,Date);
+
+updating procedure CheckIfMHrExists(var record CountResVc CountResr)
+begin
+  record MHistoryVc MHr , oldMHr;
+  MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+  //If meter history does not exist then we create a history
+  if (ReadFirstMain(MHr,1,true) == false) then begin
+    RecordNew(MHr);
+    MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+    MHr.MeterNo = CountResr.CounterNo;
+    MHr.FlatCode = CountResr.FlatCode; //
+    MHr.BuildCode = CountResr.BuildCode;
+    MHr.currReading = CountResr.EndVal;
+    MHr.currConsumption = CountResr.Amount;
+    MHr.StartDate = CountResr.StartDate;
+    MHr.EndDate = CountResr.EndDate;
+    MHr.ContractNr = CountResr.ContractNr;
+    if(RecordStore(MHr,false)) then begin end;
+  end else begin
+    //If meter history exists and the dates are blank we just update the values
+     if (ReadFirstMain(MHr,1,true)) then begin
+       if (BlankDate(MHr.StartDate)and BlankDate(MHr.EndDate)) then begin
+        RecordCopy(oldMHr,MHr);  
+        MHr.StartDate = CountResr.StartDate;
+        MHr.EndDate = CountResr.EndDate;
+        MHr.currConsumption = CountResr.Amount;
+        MHr.currReading = CountResr.EndVal;
+        if(RecordUpdate(oldMHr,MHr,true)) then begin end; 
+       end;
+     end;
+  end;
+  return;
+end;
+
+
+global
+function longint CheckCountResExistsInPeriod(record CountResVc CountResr)
+begin
+  record CountResVc tmpCountResr;
+  longint res;
+  boolean wLoop;
+  //Jh Modification so that the period is from 15-15
+  date tmpDate,CountResrDate,mStartDate;
+  record MhistoryVc MHr;
+
+  wLoop = true;
+  tmpCountResr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+
+  MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+  if (ReadFirstMain(MHr,1,true)) then begin
+    mStartDate = MHr.StartDate;
+    end;
+
+  while LoopKey("FlatCounterSerNr",tmpCountResr,1,wLoop) begin  //loop through meters using MeterId
+    if tmpCountResr.FlatCounterSerNr != CountResr.FlatCounterSerNr then begin
+      wLoop = false;
+    end else begin
+      if CountResr.SerNr<>tmpCountResr.SerNr and CountResr.CountResType==tmpCountResr.CountResType and
+        (DateInRange(CountResr.StartDate,tmpCountResr.StartDate,tmpCountResr.EndDate) or
+         DateInRange(CountResr.EndDate,tmpCountResr.StartDate,tmpCountResr.EndDate) or
+         (CountResr.StartDate < mStartDate) or    //jh cannot import readings if the readings are older then the date in mhistory
+         (CountResr.StartDate < tmpCountResr.StartDate and CountResr.EndDate > tmpCountResr.EndDate)) then begin
+          res = tmpCountResr.SerNr;
+          wLoop = false;
+      end;
+    end;
+  end;
+  CheckCountResExistsInPeriod = res;
+  return;
+end;
+
+
+// function has to run aftersave after delete etc
+global
+updating procedure createVerifyMeterHistory(var record CountResVc CountResr)
+begin
+  record CountresVc CountResr2;
+  record MHistoryVc MHr, oldMHr;
+  record FlatCountersVc FlatCountersr,OldFlatCountersr;
+  boolean testf;
+
+  CheckIfMHrExists(CountResr);
+  // first loop through all the readings for that meter
+  testf = true;
+  CountResr2.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+
+  while (LoopKey("FlatCounterSerNr", CountResr2, 2, testf)) begin   
+    if (CountResr2.FlatCounterSerNr<>CountResr.FlatCounterSerNr) then begin testf = false;  end;    
+    if (testf) then begin
+      MHr.FlatCounterSerNr = CountResr2.FlatCounterSerNr;
+      if (ReadFirstMain(MHr,1,true)) then begin
+        if (MHr.StartDate<CountResr2.StartDate) then begin // update the values
+          RecordCopy(oldMHr,MHr);
+          MHr.oldConsumption = MHr.prevConsumption;
+          MHr.oldReading = MHr.prevReading; 
+          MHr.prevConsumption = MHr.currConsumption;
+          MHr.prevReading = MHr.currReading;
+          MHr.currConsumption = CountResr2.Amount;
+          MHr.currReading = CountResr2.EndVal;
+          MHr.StartDate = CountResr2.StartDate;
+          MHr.EndDate = CountResr2.EndDate;
+          if(RecordUpdate(oldMHr,MHr,true)) then begin end; 
+        end;
+      end;
+    end;
+ end;
+     return;
+end;
+
+
+//Jh
+global 
+updating procedure updateMHistory(var record CountResVc CountResr) 
+begin
+  record MhistoryVc MHr,oldMHr;
+  record FlatCountersVc FlatCountersr,  OldFlatCountersr;
+  date cd,MHrTd,CountResTd,td1,td2;
+
+  CountResTd = CountResr.StartDate;
+  // Get into the Meter register
+  MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+
+  if (ReadFirstMain(MHr,1,true)) then begin
+    if (Blank(MHr.StartDate) AND Blank(MHr.EndDate)) then begin
+      RecordCopy(oldMHr,MHr);  
+      MHr.StartDate = CountResr.StartDate;
+      MHr.EndDate = CountResr.EndDate;
+      MHr.currConsumption = CountResr.Amount;
+      MHr.currReading = CountResr.EndVal;
+      if(RecordUpdate(oldMHr,MHr,true)) then begin end; 
+      goto Lexit;
+    end;
+        MHrTd = MHr.StartDate;
+      switch (MonthDiff(CountResTd,MHrTd)) begin
+        case 0: goto LMonthBack;
+        case 1: goto L1MonthBack;
+        case 2: goto L2MonthsBack;
+      end;
+LMonthBack:;
+      RecordCopy(oldMHr,MHr);  // In Current Month So we update the CurrentValues [DATE DOES NOT CHANGE] // UPDATE VALUES
+      if(MHr.StartDate < CountResr.StartDate) then begin
+        MHr.StartDate = CountResr.StartDate;
+        MHr.EndDate = CountResr.EndDate;
+        MHr.currConsumption = CountResr.Amount;
+        MHr.currReading = CountResr.EndVal;
+        FlatCountersr.SerNr = CountResr.FlatCounterSerNr; 
+      end else begin
+      if(MHr.StartDate == CountResr.StartDate) then begin
+        MHr.currConsumption = CountResr.Amount;
+        MHr.currReading = CountResr.EndVal;
+      end;
+      // update prev
+      if(MonthDiff(CountResr.StartDate,MHr.StartDate) == 1 ) then begin
+      MHr.prevConsumption = CountResr.Amount;
+      MHr.prevReading = CountResr.EndVal;
+      end;
+
+      if(MonthDiff(CountResr.StartDate,MHr.StartDate) == 2 ) then begin
+      MHr.oldConsumption = CountResr.Amount;
+      MHr.oldReading = CountResr.EndVal;
+      end;
+      end;
+			if(RecordUpdate(oldMHr,MHr,true)) then begin end; 
+      goto Lexit;
+L1MonthBack:; // one month back so we update the prevConsumption and prevReading //could update other things
+      RecordCopy(oldMHr,MHr);
+			MHr.prevConsumption = CountResr.Amount;
+      MHr.prevReading = CountResr.EndVal;
+			if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+      goto Lexit;
+L2MonthsBack:; // two months back so update old
+      RecordCopy(oldMHr,MHr);
+      MHr.oldConsumption = CountResr.Amount;
+      MHr.oldReading = CountResr.EndVal;
+			if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+
+Lexit:;
+
+end;
+end;
+
+//
+ 
+
+global 
+updating procedure DeleteMHistory(var record CountResVc CountResr) 
+begin
+  record MhistoryVc MHr,oldMHr;
+  record CountResVc CountResr2;
+  record FlatCountersVc FlatCountersr,OldFlatCountersr;
+  date cd,MHrTd,CountResTd,td1,td2;
+  boolean testf;
+  integer i;
+
+  array date StartDate,EndDate;
+  array integer Reading,Consumption;
+  i = 0;
+  testf = true;
+  CountResr2.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+
+  while (LoopKey("FlatCounterSerNr", CountResr2, 2, testf)) begin   
+    if (CountResr2.FlatCounterSerNr<>CountResr.FlatCounterSerNr) then begin testf = false;  end;
+      if (testf) then begin
+        StartDate[i] = CountResr2.StartDate;
+        EndDate[i] = CountResr2.EndDate;
+        Reading[i] = CountResr2.EndVal ;
+        Consumption[i] = CountResr2.Amount ;
+        i = i + 1;
+        end;
+    end; 
+    MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+    if (ReadFirstMain(MHr,1,true)) then begin
+      RecordCopy(oldMHr,MHr);
+      // current
+      MHr.StartDate = StartDate[StartDate.Length-1];
+      MHr.EndDate = EndDate[EndDate.Length-1];
+      MHr.currReading = Reading[Reading.Length-1];
+      MHr.currConsumption = Consumption[Consumption.Length-1];
+      //prev
+      MHr.prevReading = Reading[Reading.Length-2];
+      MHr.prevConsumption = Consumption[Consumption.Length-2];
+      //
+      MHr.oldReading = Reading[Reading.Length-3];
+      MHr.oldConsumption = Consumption[Consumption.Length-3];
+      //
+      if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+    end;  
+END;
+
+
+
+// Jh i dont think we need this so we could delete this
+global 
+updating procedure updateEstimates(var record CountResVc CountResr)
+begin
+  record CountResVc tempCountResr,oldCountResr;
+  boolean testf;
+  date cd, td, sd, sd2;
+  val testMonths;
+  testf = true;
+  tempCountResr.FlatCounterSerNr = Countresr.FlatCounterSerNr;
+    while (loopKey("FlatCounterSerNr",tempCountResr,1,testf)) begin
+      if(CountResr.Itype == 1) then begin   // 0 = actual , 1 = estimate
+        testf = false;
+        end;
+      if(tempCountResr.Itype == 1) then begin
+    //    StopAlert(tempCountResr.StartDate);
+        testMonths = MonthDiff(tempCountResr.StartDate,CountResr.StartDate);
+        if (testMonths == 1) then begin 
+        RecordCopy(oldCountResr,tempCountResr);
+        // tempCountResr.Amount = tempCountResr.Amount * -1;
+        if(RecordUpdate(oldCountResr,tempCountResr,false)) then begin end; // One month back
+        RecordCopy(oldCountResr,CountResr);
+        if(RecordUpdate(oldCountResr,CountResr,false)) then begin end;
+       end;
+        if (testMonths == 2) then begin 
+        RecordCopy(oldCountResr,tempCountResr);
+        // tempCountResr.Amount = tempCountResr.Amount * -1;
+        if(RecordUpdate(oldCountResr,tempCountResr,false)) then begin end; // Two month back
+        RecordCopy(oldCountResr,CountResr);
+      //  CountResr.EndVal = tempCountResr.EndVal - CountResr.EndVal;
+      //  CountResr.Amount = CountResr.EndVal - CountResr.StartVal;
+        if(RecordUpdate(oldCountResr,CountResr,false)) then begin end;
+       end;
+        if (testMonths == 3) then begin
+        RecordCopy(oldCountResr,tempCountResr);
+        // tempCountResr.Amount = tempCountResr.Amount * -1;
+        if(RecordUpdate(oldCountResr,tempCountResr,false)) then begin end; // Three months back
+
+        RecordCopy(oldCountResr,CountResr);
+       // CountResr.EndVal = tempCountResr.EndVal - CountResr.EndVal;
+      //  CountResr.Amount = CountResr.EndVal - CountResr.StartVal;       
+        if(RecordUpdate(oldCountResr,CountResr,false)) then begin end;
+       end;           
+      end;
+      end;
+    return;
+  end;
+
+global
+updating function LongInt CountResVcRecordRemoveTest(var record CountResVc CountResr,record CountResVc CountRes2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  date cd,rDate;
+  record MhistoryVc MHr; //jh
+  res = 1;
+
+  res = RecordRemoveTest(CountResr.RegDate,long3);
+
+ //jh
+  MHr.FlatCounterSerNr = CountResr.FlatCounterSerNr;
+  if(ReadFirstMain(MHr,1,true)) then begin
+    if (MHr.StartDate > CountResr.StartDate) then begin
+          res = 0;
+          MessageBox(0,"You can only delete the most recent reading");
+          goto LCountResVcRecordRemoveTest;
+    end;
+  end;
+//
+
+  if res==1 and long3>0 then begin
+    if (DateWarned(CountResr.RegDate,"CountResVc")) then begin
+      MessageBox(1045,"");
+    end;
+  end;
+// JH Permission to delete meter readings
+  if (!UserCanAction("CustomRecordDeleteMeterReadings",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteMeterReadings"));
+    goto LCountResVcRecordRemoveTest;
+  end else begin
+      // DeleteMHistory(CountResr);
+      res = 1;
+  end;
+//
+LCountResVcRecordRemoveTest:;
+  CountResVcRecordRemoveTest = res;
+  RETURN;
+END;
+
+
+global
+function longint CountResVcRecordDefaults(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+  date sd,ed;
+  
+  CountResr.RegDate = CurrentDate; // this might need to change
+  if (SingleUserMode) then begin
+    CountResr.SerNr = NextSerNr("CountResVc",currentDate,-1,false,"");
+  end;
+
+  GetCountResPeriod(sd,ed);
+  CountResr.StartDate = sd;
+  CountResr.EndDate = ed;
+
+  CountResVcRecordDefaults = res;
+return;
+end;
+
+global
+function longint CountResVcRecordDuplicate(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+
+  CountResr.RegDate = CurrentDate;
+  CountResr.Amount = 0;
+  CountResr.ResAmount = 0;
+  CountResr.OKFlag = 0;
+  if (SingleUserMode) then begin
+    CountResr.SerNr = NextSerNr("CountResVc",CountResr.StartDate,-1,false,"");
+  end else begin
+    CountResr.SerNr = -1;
+  end;
+
+  CountResVcRecordDuplicate = res;
+return;
+end;
+
+
+global
+updating function longint CountResVcRecordCheck(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  record CountResVc MainCountResr,MainCountRes2r;
+  record FlatCountersVc FlatCountersr;
+  // Record NApsSetBlock NApsSetr;
+
+  Date cd, sd, midMonth;
+  integer i;
+  longint res,nr;
+  val totamount;
+  boolean Trhs;
+
+  cd = currentDate;
+
+  sd = cd;
+  sd.day = 15;
+  midMonth = sd;
+
+  res = 0;
+  // BlockLoad(NApsSetr);
+  if (CountResr.SerNr <= 0) then begin
+    CountResr.SerNr = NextSerNr("CountResVc",CountResr.StartDate,-1,false,"");
+  end;
+  if (CountResr.SerNr <= 0) then begin
+    RecordCheckError(1000765,"",-1,"SerNr");
+    res = -1;
+    goto LExitCheck;
+  end;
+//Jh
+  if (CountResr.StartDate > cd) then begin
+    RecordCheckError(1001806,"",-1,"StartDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+//
+  if (Date2Test("CountResVc",CountResr.RegDate,"RegDate",-1)==false) then begin
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  if CountResr.CounterNo=="" then begin
+    RecordCheckError(1058,"",-1,"CounterNo");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if blankDate(CountResr.StartDate) then begin
+    RecordCheckError(1058,"",-1,"StartDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if blankdate(CountResr.EndDate) then begin
+    RecordCheckError(1058,"",-1,"EndDate");
+    res = -1;
+    goto LExitCheck;
+  end else begin
+    if CountResr.StartDate>CountResr.EndDate or (GetYear(CountResr.StartDate)<>GetYear(CountResr.EndDate) or GetMonth(CountResr.StartDate)<>GetMonth(CountResr.EndDate)) then begin
+      RecordCheckError(1142,"",-1,"EndDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+
+  
+  // ======================= CUSTOM CODE =======================
+  // if((currentDate < midMonth) AND (midMonth < CountResr.EndDate)) then begin
+  //   MessageBox(0,"Specified months reading cannot be entered yet!");
+  //   res = -1;
+  //   goto LExitCheck;
+  // end;
+  // ======================= END OF CUSTOM CODE =======================
+  
+  nr = CheckCountResExistsInPeriod(CountResr);
+  if nr<>-1 then begin
+    RecordCheckError(1001051,nr,-1,"StartDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if CountResr.FlatCounterSerNr!=-1 then begin
+    FlatCountersr.SerNr = CountResr.FlatCounterSerNr;
+    if (readfirstmain(FlatCountersr,1,true)) then begin
+      if FlatCountersr.Closedf <> 0 then begin
+        RecordCheckError(1000978,"",-1,"CounterNo");
+        res = -1;
+        goto LExitCheck;
+      end;
+      // if NApsSetr.DonotAllowCountResMonth>0 then begin
+      //   if nonblankdate(FlatCountersr.ValidUntil) and nonblankdate(CountResr.EndDate) and FlatCountersr.ValidUntil<AddMonth(CountResr.EndDate,-NApsSetr.DonotAllowCountResMonth) then begin
+      //     RecordCheckError(1000357,"",-1,"EndDate");
+      //     res = -1;
+      //     goto LExitCheck;
+      //   end;
+      // end;
+    end else begin
+      RecordCheckError(1120,CountResr.CounterNo,-1,"CounterNo");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+  if NonBlank(CountResr.CountResType) then begin
+    // if !IsTwoTypeFlatCounter(CountResr.FlatCounterSerNr) begin
+    //   RecordCheckError(1001353,"",-1,"CountResType");
+    //   res = -1;
+    //   goto LExitCheck;
+    // end;  // COMMENTED OUT BY JH causing unknown error
+  end;
+
+  SumUpCountResVc(CountResr,0,0);
+
+LExitCheck:;
+  CountResVcRecordCheck = res;
+return;
+end;
+
+global
+updating function longint CountResVcRecordSave(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+  record MHistoryVc MHr, oldMHr, newMHr;
+  boolean testf;
+  date s, e,cd,tdate;
+  
+  updateEstimates(CountResr);
+
+  if nonblank(CountResr.BuildCode) then begin
+    CountResr.CodeField=CountResr.BuildCode;
+    CountResr.RecType=1;
+    goto EndCountResVcRecordSave;
+  end;
+  if nonblank(CountResr.BuildGroupCode) then begin
+    CountResr.CodeField=CountResr.BuildGroupCode;
+    CountResr.RecType=2;
+    goto EndCountResVcRecordSave;
+  end;
+  if nonblank(CountResr.FlatGroupCode) then begin
+    CountResr.CodeField=CountResr.FlatGroupCode;
+    CountResr.RecType=3;
+    goto EndCountResVcRecordSave;
+  end;
+
+EndCountResVcRecordSave:;
+  CountResVcRecordSave=res;
+  return;
+end;
+
+
+
+
+global
+updating function LongInt CountResVcRecordRemoveAfter(var record CountResVc CountResr,record CountResVc CountResr2,LongInt stat,LongInt long4)
+begin
+  longInt res;
+
+  DeleteMHistory(CountResr);
+  CountResVcRecordRemoveAfter = res;
+  RETURN;
+END;
+
+
+
+
+global
+updating function longint CountResVcRecordSaveAfter(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+
+  createVerifyMeterHistory(CountResr);
+
+  CountResVcRecordSaveAfter=res;
+  return;
+end;
+
+
+global
+updating function longint CountResVcRecordUpdate(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+
+  updateMHistory(CountResr);
+
+  if nonblank(CountResr.BuildCode) then begin
+    CountResr.CodeField=CountResr.BuildCode;
+    CountResr.RecType=1;
+    goto EndCountResVcRecordUpdate;
+  end;
+  if nonblank(CountResr.BuildGroupCode) then begin
+    CountResr.CodeField=CountResr.BuildGroupCode;
+    CountResr.RecType=2;
+    goto EndCountResVcRecordUpdate;
+  end;
+  if nonblank(CountResr.FlatGroupCode) then begin
+    CountResr.CodeField=CountResr.FlatGroupCode;
+    CountResr.RecType=3;
+    goto EndCountResVcRecordUpdate;
+  end;
+
+
+
+EndCountResVcRecordUpdate:;
+  CountResVcRecordUpdate=res;
+  return;
+end;
+
+global
+function longint CountResVcRecordImport(var record CountResVc CountResr,record CountResVc CountResr2,longint a,longint b)
+begin
+  longint res;
+  Record FlatCountersVc FlatCountersr;
+  boolean wloop;
+
+  if CountResr.FlatCounterSerNr==-1 then begin
+    FlatCountersr.CounterNo = CountResr.CounterNo;
+    FlatCountersr.FlatCode = CountResr.FlatCode;
+    if ReadLastKey("CounterNo",FlatCountersr,2,true) then begin
+      if CountResr.CodeField==FlatCountersr.CodeField and CountResr.RecType==FlatCountersr.RecType then begin
+        CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+      end;
+    end else begin
+      FlatCountersr.CounterNo = CountResr.CounterNo;
+      wloop = true;
+      While LoopKey("WinCounterNo",FlatCountersr,1,wloop) begin
+        if FlatCountersr.CounterNo != CountResr.CounterNo then begin
+          wloop = false;
+        end else begin
+          if FlatCountersr.FlatCode == CountResr.FlatCode and FlatCountersr.Closedf==1 then begin
+            CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+            wloop = false;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  if CountResr.RecType==0 then begin
+    if nonblank(CountResr.BuildCode) then begin
+      CountResr.CodeField=CountResr.BuildCode;
+      CountResr.RecType=1;
+      goto EndCountResVcRecordImport;
+    end;
+    if nonblank(CountResr.BuildGroupCode) then begin
+      CountResr.CodeField=CountResr.BuildGroupCode;
+      CountResr.RecType=2;
+      goto EndCountResVcRecordImport;
+    end;
+    if nonblank(CountResr.FlatGroupCode) then begin
+      CountResr.CodeField=CountResr.FlatGroupCode;
+      CountResr.RecType=3;
+      goto EndCountResVcRecordImport;
+    end;
+  end;
+
+  // if blank(CountResr.InvAmount) then begin
+  //   CountResr.InvAmount = CountResr.Amount;
+  // end;
+
+EndCountResVcRecordImport:;
+  return;
+end;

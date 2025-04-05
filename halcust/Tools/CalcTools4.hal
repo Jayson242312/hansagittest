@@ -1,0 +1,976 @@
+external inner function longint datediff(date,date);
+external inner procedure CUGetEndBalance(record CUVc,string,string,Date,var val,Boolean);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function val FindVAT(string,val,Integer,Integer);
+external procedure OBS_RemoveCharFromString(var string,string);
+external procedure GetObjectsFromString(string,var array string,var integer);
+external procedure OBS_TAX_objturnover(string,date,date,string,var Val,var Val,string);
+external procedure GetCUPrepayAmount(Record CUVc,date,date,var val,var val,var val,boolean);
+external function string 60 GetBFlatFieldValueByName(record BuildVc,string,date,date);
+external function boolean GetFlatCounterValidDate(LongInt,var date);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+external function boolean GetActualFlatCO(string,date,var record NAContractVc);
+external function string 255 OBS_NormalizeString(string,string);
+external function val GetBuildFieldValueByName(record BuildVc,string,date,date);
+
+function val IPrsSumForArtCode(string flatcode,string artcode,date sd,date ed) begin
+  val res;
+  Record IPrsVc IPrsr;
+  Record IPVc IPr;
+  Row IPVc IPrw;
+  integer i,rwc;
+  boolean wloop2,wloop,testf;
+  Record NAContractVc NAContractr;
+
+  NAContractr.FlatCode=flatcode;
+  wloop=true;
+  While LoopKey("FlatCode",NAContractr,1,wloop)begin
+    if NAContractr.FlatCode!=flatcode begin
+      wloop=false;
+    end else begin
+      testf=true;
+      if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>ed then begin
+        testf=false;
+      end;
+      if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<sd then begin
+        testf=false;
+      end;
+      if testf then begin
+        ResetLoop(IPrsr);
+        IPrsr.CustCode=NAContractr.CustCode;
+        IPrsr.TransDate=sd;
+        wloop2=true;
+        While LoopKey("CustTransKey",IPrsr,2,wloop2) begin
+          if IPrsr.CustCode!=NAContractr.CustCode or IPrsr.TransDate>ed then begin
+            wloop2=false;
+          end else begin
+            if IPrsr.TransType==1 then begin //TransType==1 maksâjumi
+              IPr.SerNr=IPrsr.TransNr;
+              if ReadFirstMain(IPr,1,true) then begin
+                rwc=MatRowCnt(IPr);
+                for(i=0;i<rwc;i=i+1)begin
+                  MatRowGet(IPr,i,IPrw);
+                  if IPrw.CustCode==NAContractr.CustCode and IPrw.rkRecNumber==artcode then begin
+                    res=res+IPrw.RecVal;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  IPrsSumForArtCode=res;
+return;
+end;
+
+global 
+function val GetPAYEDSUM(string code,date sd,date ed,string wexp,integer type) begin
+  Record FlatsVc Flatsr;
+  string 50 artcode,tstr;
+  boolean wloop;
+  val res;
+  integer i,rwc;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+
+  res=0;
+  artcode = wexp;
+  OBS_RemoveCharFromString(artcode,"\"");
+  
+  if nonblank(artcode) then begin
+    Switch (type) begin
+      Case 1: //çka
+        Flatsr.Code=code;
+        wloop=true;
+        While LoopKey("Code",Flatsr,1,wloop)begin
+          if Flatsr.Code!=code then begin
+            wloop=false;
+          end else begin
+            res=res+IPrsSumForArtCode(Flatsr.FlatCode,artcode,sd,ed);
+          end;
+        end;
+      Case 2: //çku grupa
+        BuildGroupr.Code=code;
+        if ReadFirstMain(BuildGroupr,1,true)then begin
+          rwc=MatRowCnt(BuildGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(BuildGroupr,i,BuildGrouprw);
+            ResetLoop(Flatsr);
+            Flatsr.Code=BuildGrouprw.RowCode;
+            wloop=true;
+            While LoopKey("Code",Flatsr,1,wloop)begin
+              if Flatsr.Code!=BuildGrouprw.RowCode then begin
+                wloop=false;
+              end else begin
+                res=res+IPrsSumForArtCode(Flatsr.FlatCode,artcode,sd,ed);
+              end;
+            end;
+          end;
+        end;
+      Case 3: //telpu grupa
+        FlatGroupr.Code=code;
+        if ReadFirstMain(FlatGroupr,1,true) then begin
+          rwc=MatRowCnt(FlatGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(FlatGroupr,i,FlatGrouprw);
+            res=res+IPrsSumForArtCode(FlatGrouprw.RowCode,artcode,sd,ed);
+          end;
+        end;
+    end;
+  end;
+
+  GetPAYEDSUM=res;
+end;
+
+global 
+procedure GetDatePeriods(date sd,date ed,var array date arrsd,var array date arred,var integer size) begin
+  date tmpsd,tmped;
+
+  tmpsd=sd;
+  tmpsd.day=1;
+  while tmpsd<=ed begin
+    tmped=tmpsd;
+    tmped.day=DaysInMonth(getyear(tmped),getmonth(tmped));
+    arrsd[size]=tmpsd;
+    arred[size]=tmped;
+    size=size+1;
+    tmpsd=addmonth(tmpsd,1);
+  end;
+
+
+end;
+
+function val GetTotBuildQty(string fieldname,date sd,date ed) begin
+  val res;
+  Record BuildVc Buildr;
+  Boolean testf;
+
+  res=0;
+  Buildr.Code=0;
+  While LoopMain(Buildr,1,true)begin
+    testf=true;
+    if nonblankdate(Buildr.StartDate) and Buildr.StartDate>ed then begin
+      testf=false;
+    end;
+    if nonblankdate(Buildr.EndDate) and Buildr.EndDate<sd then begin
+      testf=false;
+    end;
+    if testf then begin
+      res = res + StringToVal(GetBFlatFieldValueByName(Buildr,fieldname,sd,ed),M4Val);
+    end;
+  end;
+
+  GetTotBuildQty=res;
+end;
+
+function val GetBuildQty(string fieldname,string code,date sd,date ed) begin
+  val res;
+  Record BuildVc Buildr;
+  Boolean testf;
+
+  res=0;
+  Buildr.Code=code;
+  if ReadFirstMain(Buildr,1,true) then begin
+    testf=true;
+    if nonblankdate(Buildr.StartDate) and Buildr.StartDate>ed then begin
+      testf=false;
+    end;
+    if nonblankdate(Buildr.EndDate) and Buildr.EndDate<sd then begin
+      testf=false;
+    end;
+    if testf then begin
+      res = res + StringToVal(GetBFlatFieldValueByName(Buildr,fieldname,sd,ed),M4Val);
+    end;
+  end;
+
+  GetBuildQty=res;
+end;
+
+global 
+function val GetBUILDACCTO(string code,date sd,date ed,string wexp,string obj) begin
+  val res,res1,res2,sum;
+  string 50 account,fieldname,fieldtype,objnotincl;
+  date tmpsd,tmped;
+  array date arrsd,arred;
+  integer size,i,cnt;
+  array string 50 VarArray;
+
+  res=0; size=0;
+  account = wexp;
+  OBS_RemoveCharFromString(account,"\"");
+  
+  GetObjectsFromString(account,VarArray,Size);
+  account=VarArray[0]; fieldname=VarArray[1]; objnotincl=VarArray[2];
+
+  if nonblank(account) and nonblank(fieldname) then begin
+    size=0;
+    GetDatePeriods(sd,ed,arrsd,arred,size);
+    for(i=0;i<size;i=i+1)begin
+      OBS_TAX_objturnover(obj,arrsd[i],arred[i],account,res1,res2,"0");
+      sum=res1-res2;
+      //stopalert(sum);
+      if nonblank(objnotincl) then begin
+        res1=0; res2=0;
+        OBS_TAX_objturnover(objnotincl,arrsd[i],arred[i],account,res1,res2,"0");
+        sum=sum-(res1-res2);
+      end;
+      res1=GetTotBuildQty(fieldname,arrsd[i],arred[i]);
+      res2=GetBuildQty(fieldname,code,arrsd[i],arred[i]);
+      if res1!=0 and res1!=blankval then begin
+        res=res+(sum/res1)*res2;
+      end;
+      cnt=cnt+1;
+    end;
+  end;
+
+
+  GetBUILDACCTO=Round(res/cnt,SetRoundModeD(2));
+end;
+
+global 
+function val GetAVRSERVPLAN(string buildcode,date sd,date ed,string wexp,integer type)
+begin
+  record BuildGroupVc BuildGroupr;
+  row BuildGroupVc BuildGrouprw;
+  val res;
+  array date arrsd,arred;
+  integer size,i,rw,rwc,mcnt;
+  Boolean found,frow,testf,TrHs;
+  Record INVc INr;
+  Record ServicePlanVc ServicePlanr;
+  Row ServicePlanVc ServicePlanrw;
+  string 50 artcode;
+
+  res=0;
+  artcode = wexp;
+  OBS_RemoveCharFromString(artcode,"\"");
+  
+  ServicePlanr.CodeField=buildcode;
+  ServicePlanr.RecType=type;
+  ServicePlanr.ServType=artcode;
+  found=ReadFirstKey("CodeServType",ServicePlanr,3,true);
+  
+  if !found and type==1 then begin
+    ResetLoop(BuildGroupr);
+    BuildGroupr.Code="";
+    TrHs=true;
+    While LoopMain(BuildGroupr,1,TrHs) begin
+      rwc=MatRowCnt(BuildGroupr);
+      for (i=0;i<rwc;i=i+1) begin
+        MatRowGet(BuildGroupr,i,BuildGrouprw);
+        if BuildGrouprw.RowCode==buildcode then begin
+          
+          ServicePlanr.CodeField=BuildGroupr.Code;
+          ServicePlanr.RecType=2;
+          ServicePlanr.ServType=artcode;
+          found=ReadFirstKey("CodeServType",ServicePlanr,3,true);
+          
+          i=rwc;
+          TrHs=false;
+        end;
+      end;
+    end;
+  end;
+  
+  if found then begin
+    rwc=MatRowCnt(ServicePlanr);
+    size=0; mcnt=0;
+    GetDatePeriods(sd,ed,arrsd,arred,size);
+    for(i=0;i<size;i=i+1)begin
+      frow=false;
+      for(rw=0;rw<rwc;rw=rw+1)begin
+        MatRowGet(ServicePlanr,rw,ServicePlanrw);
+        testf=true;
+        if nonblankdate(ServicePlanrw.StartDate) and arrsd[i]<ServicePlanrw.StartDate then begin
+          testf=false;
+        end;
+        if nonblankdate(ServicePlanrw.EndDate) and arred[i]>ServicePlanrw.EndDate then begin
+          testf=false;
+        end;
+        if testf then begin
+          res=res+ServicePlanrw.RealPrice;
+          frow=true;
+        end;
+      end;
+      if !frow then begin
+        INr.Code = artcode;
+        if ReadFirstMain(INr,1,true) then begin
+          res=res+INr.UPrice1;
+        end;
+      end;
+    end;
+    res=res/size;
+  end else begin
+    ServicePlanr.ServType=artcode;
+    if ReadFirstKey("ServTypeGlobal",ServicePlanr,1,true) then begin
+      rwc=MatRowCnt(ServicePlanr);
+      size=0; mcnt=0;
+      GetDatePeriods(sd,ed,arrsd,arred,size);
+      for(i=0;i<size;i=i+1)begin
+        frow=false;
+        for(rw=0;rw<rwc;rw=rw+1)begin
+          MatRowGet(ServicePlanr,rw,ServicePlanrw);
+          testf=true;
+          if nonblankdate(ServicePlanrw.StartDate) and arrsd[i]<ServicePlanrw.StartDate then begin
+            testf=false;
+          end;
+          if nonblankdate(ServicePlanrw.EndDate) and arred[i]>ServicePlanrw.EndDate then begin
+            testf=false;
+          end;
+          if testf then begin
+            res=res+ServicePlanrw.RealPrice;
+            frow=true;
+          end;
+        end;
+        if !frow then begin
+          INr.Code=artcode;
+          if ReadFirstMain(INr,1,true) then begin
+            res=res+INr.UPrice1;
+          end;
+        end;
+      end;
+      res=res/size;
+    end else begin
+      INr.Code=artcode;
+      if ReadFirstMain(INr,1,true) then begin
+        res=INr.UPrice1;
+      end;
+    end;
+  end;
+
+  GetAVRSERVPLAN=Round(res,SetRoundModeD(5));
+end;
+
+global
+function val GetCustOpenPrepayments(Record CUVc CUp,date ed) begin
+  val res,prepayval,usedprepayval,unusedprepay;
+  date sd;
+
+  res=0; prepayval=0; usedprepayval=0; unusedprepay=0; //init values to 0
+  sd.day=1; sd.month=1; sd.year=1980;
+  sd=Addday(ed,1);
+
+  GetCUPrepayAmount(CUp,sd,ed,prepayval,usedprepayval,unusedprepay,false);
+
+  res=unusedprepay;
+  GetCustOpenPrepayments=res;
+return;
+end;
+
+global
+function val GetBUILDDEB(string buildcode,date sd,date ed,string wexp,integer type)
+begin
+  val res,t,openprepay;
+  Record FlatsVc Flatsr;
+  Record CUVc CUr;
+  Record NAContractVc NAContractr;
+  Boolean wloop,wloopCO;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+  integer i,rwc;
+  string 10 functype;
+
+  functype = wexp;
+  OBS_RemoveCharFromString(functype,"\"");
+
+  Switch (type) begin
+    Case 1: //çka
+      Flatsr.Code=buildcode;
+      wloop=true;
+      While LoopKey("Code",Flatsr,1,wloop) begin
+        if Flatsr.Code!=buildcode then begin
+          wloop=false;
+        end else begin
+          ResetLoop(NAContractr);
+          NAContractr.FlatCode=Flatsr.FlatCode;
+          wloopCO=true;
+          While LoopKey("FlatCode",NAContractr,1,wloopCO) begin
+            if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+              wloopCO=false;
+            end else begin
+              CUr.Code=NAContractr.CustCode;
+              if ReadFirstMain(CUr,1,true) then begin
+                t=0;
+                CUGetEndBalance(CUr,"balance","",ed,t,false);
+                if functype=="1" then begin
+                  openprepay=GetCustOpenPrepayments(CUr,ed);
+                  t=t+openprepay;
+                end;
+                res=res+t;
+              end;
+            end;
+          end;
+        end;
+      end;
+    Case 2: //çku grupas
+      BuildGroupr.Code=buildcode;
+      if ReadFirstMain(BuildGroupr,1,true) then begin
+        rwc=MatRowCnt(BuildGroupr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(BuildGroupr,i,BuildGrouprw);
+          ResetLoop(Flatsr);
+          Flatsr.Code=BuildGrouprw.RowCode;
+          wloop=true;
+          While LoopKey("Code",Flatsr,1,wloop) begin
+            if Flatsr.Code!=BuildGrouprw.RowCode then begin
+              wloop=false;
+            end else begin
+              ResetLoop(NAContractr);
+              NAContractr.FlatCode=Flatsr.FlatCode;
+              wloopCO=true;
+              While LoopKey("FlatCode",NAContractr,1,wloopCO) begin
+                if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+                  wloopCO=false;
+                end else begin
+                  CUr.Code=NAContractr.CustCode;
+                  if ReadFirstMain(CUr,1,true) then begin
+                    t=0;
+                    CUGetEndBalance(CUr,"balance","",ed,t,false);
+                    if functype=="1" then begin
+                      openprepay=GetCustOpenPrepayments(CUr,ed);
+                      t=t+openprepay;
+                    end;
+                    res=res+t;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    Case 3: //telpu grupas
+      FlatGroupr.Code=buildcode;
+      if ReadFirstMain(FlatGroupr,1,true)then begin
+        rwc=MatRowCnt(FlatGroupr);
+        for(i=0;i<rwc;i=i+1)begin
+          MatRowGet(FlatGroupr,i,FlatGrouprw);
+          Flatsr.FlatCode=FlatGrouprw.RowCode;
+          if ReadFirstMain(Flatsr,1,true) then begin
+            ResetLoop(NAContractr);
+            NAContractr.FlatCode=Flatsr.FlatCode;
+            wloopCO=true;
+            While LoopKey("FlatCode",NAContractr,1,wloopCO) begin
+              if NAContractr.FlatCode!=Flatsr.FlatCode then begin
+                wloopCO=false;
+              end else begin
+                CUr.Code=NAContractr.CustCode;
+                if ReadFirstMain(CUr,1,true) then begin
+                  t=0;
+                  CUGetEndBalance(CUr,"balance","",ed,t,false);
+                  if functype=="1" then begin
+                    openprepay=GetCustOpenPrepayments(CUr,ed);
+                    t=t+openprepay;
+                  end;
+                  res=res+t;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+  end;
+
+  GetBUILDDEB=res;
+end;
+
+function val DebtOnDateWF(string buildcode,date ondate,string artcode) begin
+  val res;
+  Record IVVC IVr;
+  Record FlatsVc Flatsr;
+  Record NAContractVc NAContractr;
+  integer size,i;
+  boolean wloopIV,testf,wloop;
+  Array val UnPayedSumMas;
+  Array String 20 ArtCodeMas;
+  array longint arrContractNrs;
+
+  ResetLoop(NAContractr);
+  NAContractr.SerNr=0;
+  wloop=true;
+  While LoopMain(NAContractr,1,true) begin
+    testf=true;
+    if Left(NAContractr.FlatCode,4)!=buildcode then begin
+      testf=false;
+    end;
+    if NAContractr.OKFlag==0 then begin
+      testf=false;
+    end;
+    Flatsr.FlatCode=NAContractr.FlatCode;
+    if ReadFirstMain(Flatsr,1,true) then begin
+      testf=false;
+    end;
+    if testf then begin
+      // LogText(0,"DebtOnDateWF: Contract=" & NAContractr.SerNr & " Build=" & buildcode & " Flat=" & NAContractr.FlatCode & " CustCode=" & NAContractr.CustCode);
+      ResetLoop(IVr);
+      IVr.CustCode = NAContractr.CustCode;
+      wLoopIV=true;
+      while LoopKey("CustCode",IVr,1,wLoopIV) begin
+        if IVr.CustCode!=NAContractr.CustCode then begin
+          wLoopIV=false;
+        end else begin
+          testf=true;
+          if IVr.InvDate>ondate then begin
+            testf=false;
+          end;
+          if IVr.OKFlag==0 then begin
+            testf=false;
+          end;
+          if IVr.InvType==3 then begin
+            testf=false;
+          end;
+          if IVr.Invalid==1 then begin
+            testf=false;
+          end;
+          if testf then begin
+            ArtCodeMas[0]=0;
+            //custhasdebt=false;
+            GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+            size=StringToInt(ArtCodeMas[0]);
+            for(i=1;i<=size;i=i+1)begin
+              if UnPayedSumMas[i]>0 and ArtCodeMas[i]==artcode then begin
+                res=res+UnPayedSumMas[i];
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  DebtOnDateWF=res;
+return;
+end;
+
+function val DebtOnDate(string flatcode,date ondate,string artcode) begin
+  val res;
+  Record IVVC IVr;
+  Record NAContractVc NAContractr;
+  integer size,i;
+  boolean wloopIV,testf,wloop;
+  Array val UnPayedSumMas;
+  Array String 20 ArtCodeMas;
+  array longint arrContractNrs;
+
+  NAContractr.FlatCode=FlatCode;
+  wloop=true;
+  While Loopkey("FlatCode",NAContractr,1,wloop) begin
+    if NAContractr.FlatCode!=FlatCode then begin
+      wloop=false;
+    end else begin
+      testf=true;
+      if NAContractr.OKFlag==0 then begin
+        //testf=false;
+      end;
+      if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>ondate then begin
+        testf=false;
+      end;
+      if testf then begin
+        ResetLoop(IVr);
+        IVr.CustCode = NAContractr.CustCode;
+        wLoopIV=true;
+        while LoopKey("CustCode",IVr,1,wLoopIV) begin
+          if IVr.CustCode!=NAContractr.CustCode then begin
+            wLoopIV=false;
+          end else begin
+            testf=true;
+            if IVr.InvDate>ondate then begin
+              testf=false;
+            end;
+            if IVr.OKFlag==0 then begin
+              testf=false;
+            end;
+            if IVr.InvType==3 then begin
+              testf=false;
+            end;
+            if IVr.Invalid==1 then begin
+              testf=false;
+            end;
+            if testf then begin
+              ArtCodeMas[0]=0;
+              //custhasdebt=false;
+              GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+              size=StringToInt(ArtCodeMas[0]);
+              for(i=1;i<=size;i=i+1)begin
+                if UnPayedSumMas[i]>0 and ArtCodeMas[i]==artcode then begin
+                  res=res+UnPayedSumMas[i];
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  DebtOnDate=res;
+  return;
+end;
+
+global function val GetDEBTONPERENDDATEWF(string buildcode,date sd, date ed,string wexp,integer type) begin
+  val res;
+  Record FlatsVc Flatsr;
+  string 255 varbl,artcode;
+  date ondate;
+  array string 255 VarArray;
+  integer size,i,rwc;
+  boolean wloop;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+
+  res=0;
+  artcode = wexp;
+  OBS_RemoveCharFromString(artcode,"\"");
+  ondate=ed;
+  if nonblank(artcode) and nonblankdate(ondate) then begin
+    Switch (type) begin
+      Case 1: //çka
+          res=res+DebtOnDateWF(buildcode,ondate,artcode);
+      Case 2: //çku grupa
+        BuildGroupr.Code=buildcode;
+        if readFirstMain(BuildGroupr,1,true) then begin
+          rwc=MatRowCnt(BuildGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(BuildGroupr,i,BuildGrouprw);
+            res=res+DebtOnDateWF(BuildGrouprw.RowCode,ondate,artcode);
+          end;
+        end;
+      Case 3: //telpu grupa
+        /*
+        FlatGroupr.Code=buildcode;
+        if ReadFirstMain(FlatGroupr,1,true) then begin
+          rwc=MatRowCnt(FlatGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(FlatGroupr,i,FlatGrouprw);
+            Flatsr.FlatCode=FlatGrouprw.RowCode;
+            if ReadFirstMain(Flatsr,1,true) then begin
+              res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+            end;
+          end;
+        end;
+        */
+    end;
+  end;
+
+  GetDEBTONPERENDDATEWF=res;
+return;
+end;
+
+global function val GetDEBTONDATE(string buildcode,date sd,date ed,string wexp,integer type) begin
+  val res;
+  Record FlatsVc Flatsr;
+  string 255 varbl,artcode;
+  date ondate;
+  array string 255 VarArray;
+  integer size,i,rwc;
+  boolean wloop;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+
+  res=0;
+  varbl = wexp;
+  OBS_RemoveCharFromString(varbl,"\"");
+  GetObjectsFromString(varbl,VarArray,Size);
+  artcode=VarArray[0]; ondate=StringToDate(VarArray[1]);
+  if nonblank(artcode) and nonblankdate(ondate) then begin
+    Switch (type) begin
+      Case 1: //çka
+        Flatsr.Code=buildcode;
+        wloop=true;
+        While LoopKey("Code",Flatsr,1,wLoop) begin
+          if Flatsr.Code!=buildcode then begin
+            wLoop=false;
+          end else begin
+            res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+          end;
+        end;
+      Case 2: //çku grupa
+        BuildGroupr.Code=buildcode;
+        if readFirstMain(BuildGroupr,1,true) then begin
+          rwc=MatRowCnt(BuildGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(BuildGroupr,i,BuildGrouprw);
+            ResetLoop(Flatsr);
+            Flatsr.Code=BuildGrouprw.RowCode;
+            wloop=true;
+            While LoopKey("Code",Flatsr,1,wLoop) begin
+              if Flatsr.Code!=BuildGrouprw.RowCode then begin
+                wLoop=false;
+              end else begin
+                res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+              end;
+            end;
+          end;
+        end;
+      Case 3: //telpu grupa
+        FlatGroupr.Code=buildcode;
+        if ReadFirstMain(FlatGroupr,1,true) then begin
+          rwc=MatRowCnt(FlatGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(FlatGroupr,i,FlatGrouprw);
+            Flatsr.FlatCode=FlatGrouprw.RowCode;
+            if ReadFirstMain(Flatsr,1,true) then begin
+              res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+            end;
+          end;
+        end;
+    end;
+  end;
+
+  GetDEBTONDATE=res;
+end;
+
+global 
+function val GetDEBTONPERENDDATE(string buildcode,date sd,date ed,string wexp,integer type) begin
+  val res;
+  Record FlatsVc Flatsr;
+  string 255 varbl,artcode;
+  date ondate;
+  array string 255 VarArray;
+  integer size,i,rwc;
+  boolean wloop;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+
+  res=0;
+  artcode = wexp;
+  OBS_RemoveCharFromString(artcode,"\"");
+  ondate=ed;
+  if nonblank(artcode) and nonblankdate(ondate) then begin
+    Switch (type) begin
+      Case 1: //çka
+        Flatsr.Code=buildcode;
+        wloop=true;
+        While LoopKey("Code",Flatsr,1,wLoop) begin
+          if Flatsr.Code!=buildcode then begin
+            wLoop=false;
+          end else begin
+            res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+          end;
+        end;
+      Case 2: //çku grupa
+        BuildGroupr.Code=buildcode;
+        if readFirstMain(BuildGroupr,1,true) then begin
+          rwc=MatRowCnt(BuildGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(BuildGroupr,i,BuildGrouprw);
+            ResetLoop(Flatsr);
+            Flatsr.Code=BuildGrouprw.RowCode;
+            wloop=true;
+            While LoopKey("Code",Flatsr,1,wLoop) begin
+              if Flatsr.Code!=BuildGrouprw.RowCode then begin
+                wLoop=false;
+              end else begin
+                res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+              end;
+            end;
+          end;
+        end;
+      Case 3: //telpu grupa
+        FlatGroupr.Code=buildcode;
+        if ReadFirstMain(FlatGroupr,1,true) then begin
+          rwc=MatRowCnt(FlatGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(FlatGroupr,i,FlatGrouprw);
+            Flatsr.FlatCode=FlatGrouprw.RowCode;
+            if ReadFirstMain(Flatsr,1,true) then begin
+              res=res+DebtOnDate(Flatsr.FlatCode,ondate,artcode);
+            end;
+          end;
+        end;
+    end;
+  end;
+
+  GetDEBTONPERENDDATE=res;
+end;
+
+function val FlatsWithServices(Record NAContractVc NAContractr,string artcode1,string artcode2,date sd,date ed) begin
+  boolean testf,testf2;
+  Row NAContractVc NAContractrw;
+  val res;
+  integer i,rwc;
+
+  testf=false; testf2=false;
+  rwc=MatRowCnt(NAContractr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(NAContractr,i,NAContractrw);
+    if NAContractrw.ArtCode==artcode1 then begin
+      testf=true;
+      if nonblankdate(NAContractrw.ServStartDate) and NAContractrw.ServStartDate>ed then begin
+        testf=false;
+      end;
+      if nonblankdate(NAContractrw.ServEndDate) and NAContractrw.ServEndDate<sd then begin
+        testf=false;
+      end;
+    end;
+    if NAContractrw.ArtCode==artcode2 then begin
+      testf2=true;
+      if nonblankdate(NAContractrw.ServStartDate) and NAContractrw.ServStartDate>ed then begin
+        testf2=false;
+      end;
+      if nonblankdate(NAContractrw.ServEndDate) and NAContractrw.ServEndDate<sd then begin
+        testf2=false;
+      end;
+    end;
+    if testf and testf2 then begin
+      res=res+1; i=rwc;
+    end;
+  end;
+
+  FlatsWithServices=res;
+return;
+end;
+
+global function val GetPAKNOPAK(string code,date sd,date ed,string exp,integer type) begin
+  val res;
+  Record NAContractVc NAContractr;
+  Boolean wloop;
+  Integer i,rwc,Size;
+  string 255 tstr;
+  array string 255 VarArray;
+  Record BuildGroupVc BuildGroupr;
+  Row BuildGroupVc BuildGrouprw;
+  Record FlatGroupVc FlatGroupr;
+  Row FlatGroupVc FlatGrouprw;
+
+  res=0;
+  tstr = exp;
+  OBS_RemoveCharFromString(tstr,"\"");
+  GetObjectsFromString(tstr,VarArray,Size);
+
+  if nonblank(VarArray[0]) and nonblank(VarArray[1]) then begin
+    Switch (type) begin
+      Case 1: //çka
+        NAContractr.BuildCode = code;
+        wloop = true;
+        While LoopKey("BuildCode",NAContractr,1,wloop) begin
+          if NAContractr.BuildCode!=code then begin
+            wloop = false;
+          end else begin
+            res=res+FlatsWithServices(NAContractr,VarArray[0],VarArray[1],sd,ed);
+          end;
+        end;
+      Case 2: //çku grupa
+        BuildGroupr.Code=code;
+        if ReadFirstMain(BuildGroupr,1,true) then begin
+          rwc=MatrowCnt(BuildGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            MatRowGet(BuildGroupr,i,BuildGrouprw);
+            ResetLoop(NAContractr);
+            NAContractr.BuildCode = BuildGrouprw.RowCode;
+            wloop = true;
+            While LoopKey("BuildCode",NAContractr,1,wloop) begin
+              if NAContractr.BuildCode!=BuildGrouprw.RowCode then begin
+                wloop = false;
+              end else begin
+                res=res+FlatsWithServices(NAContractr,VarArray[0],VarArray[1],sd,ed);
+              end;
+            end;
+          end;
+        end;
+      Case 3: //telpu grupa
+        FlatGroupr.Code=code;
+        if ReadFirstMain(FlatGroupr,1,true) begin
+          rwc=MatRowCnt(FlatGroupr);
+          for(i=0;i<rwc;i=i+1)begin
+            Matrowget(FlatGroupr,i,FlatGrouprw);
+            if GetActualFlatCO(FlatGrouprw.RowCode,sd,NAContractr) then begin
+              res=res+FlatsWithServices(NAContractr,VarArray[0],VarArray[1],sd,ed);
+            end;
+          end;
+        end;
+    end;
+  end;
+
+  GetPAKNOPAK = res;
+end;
+
+global 
+procedure TAX_turnoverTO2(date d1,date d2,string acc,var Val res1,var Val res2,integer vattype)
+begin
+  record TRVc TRr;
+  record MainVc Mainr;
+  row TRVc TRrw;
+  integer i,amrow;
+  Boolean TrHs,testf;
+  string 21 keyname,acc1,acc2;
+  Val DSum,CSum,debvat,credvat;
+
+  TrHs=True;
+  DSum=0;
+  CSum=0;
+  acc1=FirstInRange(acc,10);
+  acc2=LastInRange(acc,10);
+  keyname="TransDate";
+  Mainr.AccNumber=acc1;
+  Mainr.TransDate=d1;
+  while (LoopMain(Mainr,2,TrHs)==True) begin
+    testf=true;
+    if (Mainr.AccNumber>acc2) then begin
+      TrHs = false;
+      testf=false;
+    end;
+    if (Mainr.TransDate<d1) or (Mainr.TransDate>d2) then begin testf=false;end;
+      if (testf==True) then begin
+        TRr.Number=Mainr.TransNr;
+        TRr.IntYc=Mainr.IntYc;
+        if (ReadFirstMain(TRr,2,true)) then begin
+          if (Mainr.TransDate==TRr.TransDate) then begin
+            amrow=MatRowCnt(TRr);
+            for (i=0;i<amrow;i=i+1) begin
+              MatRowGet(TRr,i,TRrw);
+              if (TRrw.ovst==0) and (TRrw.stp==1) then begin
+                if (TRrw.AccNumber==Mainr.AccNumber) then begin
+                  DSum=DSum+TRrw.DebVal;
+                  CSum=CSum+TRrw.CredVal;
+                  if nonblank(TRrw.VATCode) then begin
+                    debvat=FindVAT(TRrw.VATCode,TRrw.DebVal,vattype,0);
+                    credvat=FindVAT(TRrw.VATCode,TRrw.CredVal,vattype,0);
+                    DSum=DSum+debvat;
+                    CSum=CSum+credvat;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+     end;
+  end;
+
+  res1=DSum;
+  res2=CSum;
+  return;
+end;
+
+global
+function val GetEKASVER(string bcode,date sd,date ed,string varbl)
+Begin
+  Record BuildVc Buildr;
+  string 50 fieldname;
+  array string 50 VarArray;
+  val res;
+  integer size;
+  
+  res=0;
+  //vararray[0]-lauka nosaukums
+  fieldname = OBS_NormalizeString(varbl,"\""); //"
+  GetObjectsFromString(fieldname,VarArray,Size);
+  Buildr.Code = bcode;
+  if ReadFirstMain(Buildr,1,true) and nonblank(vararray[0]) then begin
+    res = GetBuildFieldValueByName(Buildr,vararray[0],sd,ed);
+  end;
+  GetEKASVER = res;
+return;
+end;

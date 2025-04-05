@@ -1,0 +1,473 @@
+external function boolean IsTwoTypeFlatCounter(longint);
+external function boolean KS5Check(longint);
+external procedure GetCountResPeriod(var date,var date);
+
+
+global
+function boolean MSMergegServInvVClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  
+  if blankdate(RepSpec.RegDate) then begin
+    MessageBox(1000653,"");
+    res = false;
+    GoTo LMSMergegServInvVClassOnOKWindow;
+  end;
+  
+  if blankdate(RepSpec.sStartDate) or blankdate(RepSpec.sEndDate) then begin
+    MessageBox(10693,"");
+    res = false;
+    GoTo LMSMergegServInvVClassOnOKWindow;
+  end;
+  
+  if blank(RepSpec.f1) and blank(RepSpec.f2) then begin
+    MessageBox(1001347,"");
+    res = false;
+    GoTo LMSMergegServInvVClassOnOKWindow;
+  end;
+
+  // if !DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) /*and NApsSetr.AllowOutOfPer==0*/ then begin
+  //   MessageBox(0,USetStr(1000651) & " " & RepSpec.RegDate & " " & USetStr(1000652) & " " & RepSpec.Period2Str);
+  //   res = false;
+  //   GoTo LMSMergegServInvVClassOnOKWindow;
+  // end;
+  
+LMSMergegServInvVClassOnOKWindow:;
+  MSMergegServInvVClassOnOKWindow = res;
+  return;
+end;
+
+global
+function boolean MSMergegServInvRClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  
+  if blankdate(RepSpec.RegDate) then begin
+    MessageBox(1000653,"");
+    res = false;
+    GoTo LMSMergegServInvRClassOnOKWindow;
+  end;
+  
+  if blankdate(RepSpec.sStartDate) or blankdate(RepSpec.sEndDate) then begin
+    MessageBox(10693,"");
+    res = false;
+    GoTo LMSMergegServInvRClassOnOKWindow;
+  end;
+  
+  if blank(RepSpec.f1) and blank(RepSpec.f2) then begin
+    MessageBox(1001347,"");
+    res = false;
+    GoTo LMSMergegServInvRClassOnOKWindow;
+  end;
+
+  // if !DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) /*and NApsSetr.AllowOutOfPer==0*/ then begin
+  //   MessageBox(0,USetStr(1000651) & " " & RepSpec.RegDate & " " & USetStr(1000652) & " " & RepSpec.Period2Str);
+  //   res = false;
+  //   GoTo LMSMergegServInvRClassOnOKWindow;
+  // end;
+  
+LMSMergegServInvRClassOnOKWindow:;
+  MSMergegServInvRClassOnOKWindow = res;
+  return;
+end;
+
+global 
+procedure MSMergegServInvRClassReportDefaults(integer wn) begin
+  record RcVc RepSpec;
+  date td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSMergegServInvRClass");
+  RepSpec.flags[1]=1;
+  RepSpec.flags[29]=1;
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  
+  PutWindowRecord(wn,RepSpec);
+  
+  return;
+end;
+
+global 
+procedure MSMergegServInvVClassReportDefaults(integer wn) begin
+  record RcVc RepSpec;
+  date td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSMergegServInvVClass");
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  RepSpec.flags[29]=1;
+  
+  PutWindowRecord(wn,RepSpec);
+  
+  return;
+end;
+
+global 
+procedure CalcServPlanVClassReportDefaults(integer wn) begin
+  record RcVc RepSpec;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"CalcServPlanVClass");
+  RepSpec.flags[0]=1;
+  RepSpec.flags[1]=1;
+  RepSpec.flags[2]=1;
+  RepSpec.flags[3]=1;
+  RepSpec.flags[4]=1;
+  RepSpec.flags[5]=1;
+  RepSpec.flags[10]=1;
+  PutWindowRecord(wn,RepSpec);
+  
+  return;
+end;
+
+global
+function Boolean CalcServPlanVClassOnOKWindow(integer wn) begin
+  Record RcVc RepSpec;
+  Boolean res;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  res = true;
+  if RepSpec.flags[10]==0 and blank(RepSpec.f1) and blank(RepSpec.f4) and blank(RepSpec.f5) and blank(RepSpec.f2) then begin
+    MessageBox(1001012,"");
+    res = false;
+    GoTo LCalcServPlanVClassOnOKWindow;
+  end;
+  if RepSpec.flags[1]==0 and RepSpec.flags[2]==0 and RepSpec.flags[3]==0 then begin
+    MessageBox(1000830,"");
+    res = false;
+    GoTo LCalcServPlanVClassOnOKWindow;
+  end;
+  
+  if GetDay(RepSpec.sStartDate)<>1 or GetDay(RepSpec.sEndDate)<>DaysInMonth(GetYear(RepSpec.sEndDate),GetMonth(RepSpec.sEndDate)) or GetYear(RepSpec.sStartDate)<>GetYear(RepSpec.sEndDate) or GetMonth(RepSpec.sStartDate)<>GetMonth(RepSpec.sEndDate) then begin
+    MessageBox(1001027,"");
+    res = false;
+    GoTo LCalcServPlanVClassOnOKWindow;
+  end;
+  
+LCalcServPlanVClassOnOKWindow:;
+  CalcServPlanVClassOnOKWindow=res;
+  return;
+end;
+
+global
+function boolean MSFlatServInvVClassOnOKWindow(integer wn)
+begin
+  // Record NApsSetBlock NApsSetr;
+  record RcVc RepSpec;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  
+  if blankdate(RepSpec.RegDate) then begin
+    MessageBox(1000653,"");
+    res = false;
+    GoTo LMSFlatServInvVClassOnOKWindow;
+  end;
+  
+  if blankdate(RepSpec.sStartDate) or blankdate(RepSpec.sEndDate) then begin
+    MessageBox(10693,"");
+    res = false;
+    GoTo LMSFlatServInvVClassOnOKWindow;
+  end;
+  
+  // if blank(RepSpec.f1) and blank(RepSpec.f3) and blank(RepSpec.f2) then begin
+    // MessageBox(1000808,"");
+    // res = false;
+    // GoTo LMSFlatServInvVClassOnOKWindow;
+  // end;
+  
+  // BlockLoad(NApsSetr);
+  // if !DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) /*and NApsSetr.AllowOutOfPer==0*/ then begin
+  //   MessageBox(0,USetStr(1000651) & " " & RepSpec.RegDate & " " & USetStr(1000652) & " " & RepSpec.Period2Str);
+  //   res = false;
+  //   GoTo LMSFlatServInvVClassOnOKWindow;
+  // end;
+  
+LMSFlatServInvVClassOnOKWindow:;
+  MSFlatServInvVClassOnOKWindow = res;
+  return;
+end;
+
+global
+procedure MSFlatServInvRClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date sd,td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSFlatServInvRClass");
+  RepSpec.flags[1] = 1;
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  RepSpec.flags[29] = 1;
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+global
+procedure MSFlatServInvVClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date sd,td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSFlatServInvVClass");
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  RepSpec.flags[29] = 1;
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+global
+function boolean MSFlatServInvRClassOnOKWindow(integer wn)
+begin
+  // Record NApsSetBlock NApsSetr;
+  record RcVc RepSpec;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  
+  if blankdate(RepSpec.RegDate) then begin
+    MessageBox(1000653,"");
+    res = false;
+    GoTo LMSFlatServInvRClassOnOKWindow;
+  end;
+  
+  if blankdate(RepSpec.sStartDate) or blankdate(RepSpec.sEndDate) then begin
+    MessageBox(10693,"");
+    res = false;
+    GoTo LMSFlatServInvRClassOnOKWindow;
+  end;
+  
+  if blank(RepSpec.f1) and blank(RepSpec.f3) and blank(RepSpec.f2) then begin
+    MessageBox(1000808,"");
+    res = false;
+    GoTo LMSFlatServInvRClassOnOKWindow;
+  end;
+  
+  // BlockLoad(NApsSetr);
+  // if !DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) /*and NApsSetr.AllowOutOfPer==0*/ then begin
+  //   MessageBox(0,USetStr(1000651) & " " & RepSpec.RegDate & " " & USetStr(1000652) & " " & RepSpec.Period2Str);
+  //   res = false;
+  //   GoTo LMSFlatServInvRClassOnOKWindow;
+  // end;
+  
+LMSFlatServInvRClassOnOKWindow:;
+  MSFlatServInvRClassOnOKWindow = res;
+  return;
+end;
+
+global
+function Boolean ChangeCount2VClassOnOKWindow(integer wn)
+begin
+  record RcVc RepSpec;
+  boolean res,testf,KS5f;
+  
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  if RepSpec.f2=="" then begin
+    MessageBox(1001299,"");
+    WindowFieldGoto(wn,RepSpec,-1,"f2",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;  
+  if IsTwoTypeFlatCounter(RepSpec.long1) then begin
+    testf=true;
+  end;
+  if KS5Check(RepSpec.long1) then begin
+    KS5f=true;
+  end;
+  if RepSpec.f9=="" and !KS5f then begin
+    MessageBox(1001298,"");
+    WindowFieldGoto(wn,RepSpec,-1,"f9",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+  if (testf and RepSpec.f11=="") or (KS5f and RepSpec.f11=="") then begin
+    MessageBox(1001298,"");
+    WindowFieldGoto(wn,RepSpec,-1,"f11",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+  if (RepSpec.vals1==blankval) and !KS5f then begin
+    MessageBox(1001298,"");
+    WindowFieldGoto(wn,RepSpec,-1,"vals1",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+  if (testf and RepSpec.vals2==blankval) or (KS5f and RepSpec.vals2==blankval) then begin
+    MessageBox(1001298,"");
+    WindowFieldGoto(wn,RepSpec,-1,"vals2",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+  if !NonBlankDate(RepSpec.d1) then begin
+    MessageBox(1001190,"");
+    WindowFieldGoto(wn,RepSpec,-1,"d1",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+  if !NonBlankDate(RepSpec.d2) then begin
+    MessageBox(1001190,"");
+    WindowFieldGoto(wn,RepSpec,-1,"d2",true);
+    res=false;
+    goto LChangeCount2VClassOnOKWindow;
+  end;
+
+  
+LChangeCount2VClassOnOKWindow:;  
+  ChangeCount2VClassOnOKWindow = res;
+  return;
+end;
+
+global
+function boolean MSBuildServInvVClassOnOKWindow(integer wn)
+begin
+  // Record NApsSetBlock NApsSetr;
+  record RcVc RepSpec;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,RepSpec);
+  
+  if blankdate(RepSpec.RegDate) then begin
+    MessageBox(1000653,"");
+    res = false;
+    GoTo LMSBuildServInvVClassOnOKWindow;
+  end;
+  
+  if blankdate(RepSpec.sStartDate) or blankdate(RepSpec.sEndDate) then begin
+    MessageBox(10693,"");
+    res = false;
+    GoTo LMSBuildServInvVClassOnOKWindow;
+  end;
+  
+  // if blank(RepSpec.f1) and blank(RepSpec.f3) /*and blank(RepSpec.f2)*/ then begin
+    // MessageBox(1000808,"");
+    // res = false;
+    // GoTo LMSBuildServInvVClassOnOKWindow;
+  // end;
+ 
+  // BlockLoad(NApsSetr);
+  // if !DateInRange(RepSpec.RegDate,RepSpec.sStartDate,RepSpec.sEndDate) /*and NApsSetr.AllowOutOfPer==0*/ then begin
+  //   MessageBox(0,USetStr(1000651) & " " & RepSpec.RegDate & " " & USetStr(1000652) & " " & RepSpec.Period2Str);
+  //   res = false;
+  //   GoTo LMSBuildServInvVClassOnOKWindow;
+  // end;
+  
+LMSBuildServInvVClassOnOKWindow:;
+  MSBuildServInvVClassOnOKWindow = res;
+  return;
+end;
+
+global
+procedure MSBuildServInvRClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date sd,td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSBuildServInvRClass");
+  RepSpec.flags[1] = 1;
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+global
+procedure MSBuildServInvVClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date sd,td;
+
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MSBuildServInvVClass");
+  if nonblankdate(RepSpec.sEndDate) then begin
+    // td = AddMonth(RepSpec.sEndDate,1);
+    // td.day = 1;
+    td = RepSpec.sEndDate;
+    td.day = DaysInMonth(GetYear(td),GetMonth(td)); 
+    RepSpec.RegDate = td;
+  end;
+  
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+global
+procedure CounterResCheckRClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"CounterResCheckRClass");
+  RepSpec.flags[1] = 1;
+  RepSpec.flags[2] = 1;
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+// jh
+
+global
+procedure ReadingsIClassReportDefaults(integer wn)
+begin
+  record RcVc RepSpec;
+  date periodStartDate, periodEndDate;
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"ReadingsIClass");
+  GetCountResPeriod(periodStartDate,periodEndDate); 
+  RepSpec.d1 = periodStartDate;
+  RepSpec.d2 = periodEndDate;
+  PutWindowRecord(wn,RepSpec)
+  
+  return;
+end;
+
+//

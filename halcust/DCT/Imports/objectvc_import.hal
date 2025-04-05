@@ -1,0 +1,68 @@
+event startup
+begin
+
+  SetLangMode(LangEnglish,"ENG",0);
+  Import("Items",ItemIn,ItemIn,modDCT);
+
+  return;
+end;
+
+
+// global
+// updating procedure ObjectsIn()
+// BEGIN
+//   string 255 InLine;
+//   record ObjVc oldObjectr;
+//   record ObjVc Objectr;
+//   record RcVc RepSpec;
+//   string 255 tstr,t2;
+//   Boolean testf,opt;
+
+//   // optional delete first
+// //  RecordNew(RepSpec);
+// //  DelNotUsedINMn(RepSpec);
+
+//  // SetDOSFlag(true);
+//   while (TestEOF()==false) begin
+//     InLine = ImportField();
+//     if(nonblank(InLine)) then begin
+//       opt = true; // load
+//       Objectr.Code = InLine;
+//       if (ReadFirstMain(Objectr,1,true)) then begin
+//         opt = false;  // amend
+//         goto LSKIP;
+
+//         RecordCopy(oldObjectr,Objectr);
+//       end
+//       else begin
+//         RecordNew(Objectr);
+//         Objectr.Code = InLine; //Object Code 
+//       end;
+
+//       InLine = ImportField();              //Comment
+//       Objectr.Comment = InLine;
+//       InLine = ImportField();              //Object Type
+//       Objectr.OTCode = InLine; 
+//       InLine = ImportField();              //Hierarchical Objects
+//       Objectr.AutoObjects = InLine;
+      
+    
+//       if (opt==true) then begin    // load
+//         if (RecordStore(Objectr,true)) then begin
+//         end;
+//       end
+//       else begin                   // amend
+//         if (RecordUpdate(oldObjectr,Objectr,true)==0) then begin
+//         end;
+//       end;
+
+//     end;
+//     UserTrace(Objectr.Code,M4Str);
+
+//     LSKIP:;
+
+//     testf = NextImportLine(true);
+//   end;
+// //  SetDOSFlag(false);
+//   RETURN;
+// END;

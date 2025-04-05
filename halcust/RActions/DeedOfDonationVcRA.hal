@@ -1,0 +1,162 @@
+
+global
+updating function LongInt DeedOfDonationVcRecordCheck(Var Record DeedOfDonationVc DeedOfDontionr, Record DeedOfDonationVc DeedOfDontion2r, LongInt stat, LongInt check)
+begin
+  Integer insertmode,updatemode;
+  boolean unokf,okf,unokf2,okf2;
+  longint res;
+  res = 0;
+  
+  // ==================================== PERMISSIONS  ==================================
+
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+
+  if (DeedOfDontionr.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (DeedOfDontion2r.OKFlag==1) then begin
+        unokf = true;
+      end;
+    end;
+  end;
+  // Permission to unok
+  if (unokf) then begin
+    if(UserCanAction("CustomRecordUnOkDeedOfSale",false)==false) then begin 
+     res = -1;
+     MessageBox(1274,StringFromStringSet(3,"CustomRecordUnOkDeedOfSale"));
+    goto LExitCheck;
+    end;
+  end;
+  //
+  if (DeedOfDontionr.OKFlag==1) then begin
+    if (stat==updatemode) then begin
+      if (DeedOfDontion2r.OKFlag==0) then begin
+        okf = true;
+      end;
+    end;
+    if (stat==insertmode) then begin
+      okf = true;
+    end;
+  end;
+  //
+  if okf then begin
+    // Permission to ok
+    if(UserCanAction("CustomRecordOkDeedOfSale",false)==false) then begin 
+      res = -1;
+      MessageBox(1274,StringFromStringSet(3,"CustomRecordOkDeedOfSale"));
+    goto LExitCheck;
+    end;
+  end;
+
+  // ============================== PERMISSIONS - OK - TRANSFER  ==============================
+
+  if (blank(DeedOfDontionr.SerNr)) then begin
+    RecordCheckError(100190,"",-1,"SerNr");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DeedNo)) then begin
+    RecordCheckError(100202,"",-1,"DeedNo");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DateDoneeSign)) then begin
+    RecordCheckError(100207,"",-1,"DateDoneeSign");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DateKatimaSign)) then begin
+    RecordCheckError(100204,"",-1,"DateKatimaSign");
+    res = -1;
+    goto LExitCheck;
+  end;
+  //
+  if (blank(DeedOfDontionr.Title)) then begin
+    RecordCheckError(100195,"",-1,"Title");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DoneeCode)) then begin
+    RecordCheckError(100211,"",-1,"DoneeCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.HoD)) then begin
+    RecordCheckError(100197,"",-1,"HoD");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.Rep)) then begin
+    RecordCheckError(100198,"",-1,"Rep");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.BuildCode)) then begin
+    RecordCheckError(100199,"",-1,"BuildCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DonationVal)) then begin
+    RecordCheckError(100209,"",-1,"DonationVal");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.DonationString)) then begin
+    RecordCheckError(100210,"",-1,"DonationString");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(DeedOfDontionr.Zoning)) then begin
+    DeedOfDontionr.Zoning = "N/A";
+  end;
+  if (blank(DeedOfDontionr.Township)) then begin
+    DeedOfDontionr.Township = "N/A";
+  end;
+  if (blank(DeedOfDontionr.Extension)) then begin
+    DeedOfDontionr.Extension = "N/A";
+  end;
+  if (blank(DeedOfDontionr.Division)) then begin
+    DeedOfDontionr.Division = "N/A";
+  end;
+  if (blank(DeedOfDontionr.Address)) then begin
+    DeedOfDontionr.Address = "N/A";
+  end;
+  if (blank(DeedOfDontionr.LandSize)) then begin
+    DeedOfDontionr.LandSize = 0;
+  end;
+
+LExitCheck:;
+  DeedOfDonationVcRecordCheck = res;
+end;
+
+
+global
+function LongInt DeedOfDonationVcRecordDefaults(Var Record DeedOfDonationVc DeedOfDontionr, Record DeedOfDonationVc DeedOfDontion2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  DeedOfDontionr.SerNr = NextSerNr("DeedOfDonationVc",CurrentDate,-1,false,"");
+  DeedOfDonationVcRecordDefaults = res;
+  return;
+end;
+
+
+
+// CustomRecordDeleteDeedOfDonation
+global
+function longint DeedOfDonationVcRecordRemoveTest(var record DeedOfDonationVc DeedOfDonationr,record DeedOfDonationVc DeedOfDonationr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!UserCanAction("CustomRecordDeleteDeedOfDonation",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteDeedOfDonation"));
+    goto LDeedOfDonationVcRecordRemoveTest;
+  end;
+
+LDeedOfDonationVcRecordRemoveTest:;
+  DeedOfDonationVcRecordRemoveTest = res;
+  return;
+end;

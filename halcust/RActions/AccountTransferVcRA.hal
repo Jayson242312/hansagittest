@@ -1,0 +1,221 @@
+global
+updating function LongInt AccountTransferVcRecordCheck(Var Record AccountTransferVc AccountTransferr, Record AccountTransferVc AccountTransfe2r, LongInt long3, LongInt long4)
+begin
+  record FlatCountersVc FlatCountersr,FlatCounters2r; // Meters
+  record ClearanceCertVc ClearanceCertr,ClearanceCert2r;
+  record NAContractVc NAContractOldr,NAContractOldr2,NAContractNewr;
+  row NAContractVc NAContractOldrw, NAContractNewrw;
+  record MHistoryVc MHr,MHr2;
+  Integer rwcnt,i;
+  Boolean testf;
+  Date ed;
+  longint res;
+  res = 0;
+ 
+  if (!UserCanAction("CustomRecordOkAccTransfer",false)) then begin
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordOkAccTransfer"));
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  // input validation
+  if (blank(AccountTransferr.SerNr)) then begin
+    MessageBox(0, "Code is required!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.ContractNr)) then begin
+    MessageBox(0, "Please enter contract number!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.BuildCode)) then begin
+    MessageBox(0, "Erf code missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.CustNameFrom)) then begin
+    MessageBox(0, "Customer name missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.CustCodeFrom)) then begin
+    MessageBox(0, "Customer id missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.CustNameTo)) then begin
+    MessageBox(0, "Customer name missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if (blank(AccountTransferr.CustCodeTo)) then begin
+    MessageBox(0, "Customer id missing!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  // was transfer already completed
+  if (AccountTransferr.OKFlag == 1) then begin
+    MessageBox(0, "Transfer already completed!");
+    res = -1;
+    goto LExitCheck;
+  end;
+  // if the two clients -> the same
+  if(AccountTransferr.CustCodeFrom == AccountTransferr.CustCodeTo) then begin
+    MessageBox(0, "Erroneous customers field input!");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+
+  testf = true;
+  // check if current customer has payments outstanding
+  while (LoopMain(ClearanceCertr,1,testf)) begin
+    if(ClearanceCertr.ContractNr == AccountTransferr.ContractNr) then begin
+
+      ed = AddMonth(ClearanceCertr.PeriodEndDate,1);// plus 1 month after period
+      if(DateInRange(CurrentDate,ClearanceCertr.PeriodStartDate,ed)) then begin
+
+        // if not okayed
+        if(ClearanceCertr.OKFlag==0) then begin
+          MessageBox(0, "Clearance Certificate not okayed!");
+          res = -1;
+          testf = false;
+          goto LExitCheck;
+        end;
+
+        // account already transferred
+        if (ClearanceCertr.OKFlag2 == 1) then begin
+          MessageBox(0, "Account already transferred!");
+          res = -1;
+          goto LExitCheck;
+        end;
+
+        // if payments not made in full
+        if(ClearanceCertr.CBTotalDue == 1) then begin
+
+          // set contract is transferred
+          RecordCopy(ClearanceCert2r,ClearanceCertr);
+          ClearanceCert2r.OKFlag2 = 1;
+          RecordUpdate(ClearanceCertr,ClearanceCert2r,false);
+          
+          testf = false;
+          goto LSkip;
+        end else begin
+          MessageBox(0, "Payment(s) outstanding! Verify all owner payments are made, then tick checkbox in Clearance Certifcate record.");
+          res = -1;
+          goto LExitCheck;
+        end;
+      end;
+    end;
+  end;
+  MessageBox(0, "No clearance certificate application was found!");
+  res = -1;
+  goto LExitCheck;
+  LSkip:; //
+
+
+  // -> new owner contract
+  NAContractOldr.SerNr = AccountTransferr.ContractNr;
+  if (ReadFirstMain(NAContractOldr,1,true)) then begin
+
+    // create new contract
+    RecordNew(NAContractNewr);
+    NAContractNewr.SerNr = NextSerNr("NAContractVc",CurrentDate,-1,false,"");
+    NAContractNewr.ContractNr = NAContractNewr.SerNr;
+    NAContractNewr.CustCode = AccountTransferr.CustCodeTo;
+    NAContractNewr.CustName = AccountTransferr.CustNameTo;
+    NAContractNewr.CODate =  CurrentDate;
+    NAContractNewr.StartDate = CurrentDate;
+    // duplicate old contract data
+    NAContractNewr.FlatCode = NAContractOldr.FlatCode;
+    NAContractNewr.FlatAddress = NAContractOldr.FlatAddress;
+    NAContractNewr.BuildCode = NAContractOldr.BuildCode;
+    NAContractNewr.INPayPriority = NAContractOldr.INPayPriority;
+    NAContractNewr.AccStatus = "1";
+    NAContractNewr.OKFlag = 1;
+    // NAContractNewr.AccountType = NAContractOldr.AccountType;
+    // NAContractNewr.OwnerType = NAContractOldr.OwnerType;
+    // NAContractNewr.ZoningCode = NAContractOldr.ZoningCode;
+    
+    // copy contract row data
+    rwcnt = MatRowCnt(NAContractOldr);
+    for(i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(NAContractOldr,i,NAContractOldrw);
+      NAContractNewrw.ArtCode = NAContractOldrw.ArtCode;
+      NAContractNewrw.Spec = NAContractOldrw.Spec;
+      NAContractNewrw.QtyCoef = NAContractOldrw.QtyCoef;
+      NAContractNewrw.Price = NAContractOldrw.Price;
+      MatRowPut(NAContractNewr,i,NAContractNewrw);
+    end;
+    RecordImportStore(NAContractNewr,false);
+    MessageBox(0, "New customer contract created!");
+
+    // de-activate old contract
+    RecordCopy(NAContractOldr2,NAContractOldr);
+    NAContractOldr2.OKFlag = 0;
+    NAContractOldr2.AccStatus = 2;
+    NAContractOldr2.EndDate = CurrentDate;
+    RecordUpdate(NAContractOldr,NAContractOldr2,false);
+    MessageBox(0, "Old customer contract ended!");
+
+    // update meter
+    if(nonblank(AccountTransferr.MeterID)) then begin
+      FlatCountersr.SerNr = AccountTransferr.MeterID;
+      if (ReadFirstMain(FlatCountersr,1,true)) then begin
+        RecordCopy(FlatCounters2r,FlatCountersr);
+        FlatCounters2r.Contract = NAContractNewr.ContractNr;
+        RecordUpdate(FlatCountersr,FlatCounters2r,true);
+      end;
+      // update contract.no in meter.history
+      MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+      if (ReadFirstMain(MHr,1,true)) then begin
+        RecordCopy(MHr2,MHr);
+        MHr2.ContractNr = NAContractNewr.ContractNr;
+        RecordUpdate(MHr,MHr2,true);
+      end;
+      MessageBox(0, "Meter Transferred!");
+    end;
+
+    AccountTransferr.ContractNrNew = NAContractNewr.ContractNr;
+    AccountTransferr.TransferDate = CurrentDate;
+    AccountTransferr.OKFlag = 1;
+    MessageBox(0, "Transfer Complete!");
+  end;
+
+LExitCheck:;
+  AccountTransferVcRecordCheck = res;
+end;
+
+
+global
+function LongInt AccountTransferVcRecordDefaults(Var Record AccountTransferVc AccountTransferr, Record AccountTransferVc AccountTransfe2r, LongInt long3, LongInt long4)
+begin
+  LongInt res;
+  res = -1;
+
+  AccountTransferr.SerNr = NextSerNr("AccountTransferVc",CurrentDate,-1,false,"");
+  AccountTransferr.TransferDate = CurrentDate;
+  
+  AccountTransferVcRecordDefaults = res;
+  return;
+end;
+
+
+// CustomRecordDeleteAccountTransferHistory
+global
+function longint AccountTransferVcRecordRemoveTest(var record AccountTransferVc AccountTransferr,record AccountTransferVc AccountTransferr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!UserCanAction("CustomRecordDeleteAccountTransferHistory",false)) then begin
+    res = 0;
+    MessageBox(1274,StringFromStringSet(3,"CustomRecordDeleteAccountTransferHistory"));
+    goto LAccountTransferVcRecordRemoveTest;
+  end;
+
+LAccountTransferVcRecordRemoveTest:;
+  AccountTransferVcRecordRemoveTest = res;
+  return;
+end;

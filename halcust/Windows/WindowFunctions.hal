@@ -1,0 +1,258 @@
+
+global
+procedure DrawSelectionButtonsFlatCounters(real starth,real startv,integer btnwidth,integer btnheight,
+                               string btn1name,string btn2name,string btn3name,string btn4name,
+                               string btn5name,string btn6name) begin
+  real h,v;
+  string 255 subset;
+  
+  subset = GetWindowSubset(CurWindow);
+  
+  h = starth; v = startv;
+  Switch (subset) begin
+    Case "1":
+      ColourPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name,2);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name);
+    Case "2":
+      HalPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name);
+      ColourPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name,2);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name);
+    Case "3":
+      HalPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name);
+      ColourPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name,2);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name);
+    Case "4":
+      HalPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name);
+      ColourPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name,2);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name);
+    Case "5":
+      HalPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name);
+      ColourPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name,2);
+    otherwise
+      HalPushButton(h,v,h+=btnwidth,v+btnheight,"FlatCountersFlatBtn",btn1name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildBtn",btn2name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersBuildGroupBtn",btn3name);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersFlatGroupBtn",btn4name);
+      ColourPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersAllBtn",btn5name,2);
+      HalPushButton(h+=10,v,h+=btnwidth,v+btnheight,"FlatCountersClosedBtn",btn6name);
+  end;
+  
+return;
+end;
+
+// function string 100 UserDefFlatsVc(string field) begin
+//   string 100 res;
+//   record BBSUserDefBlock UserDefr;
+
+//   res="";
+//   BlockLoad(UserDefr);
+
+//   Switch (field) begin
+//     Case "FlatStr1": res=UserDefr.FlatStr1;
+//     Case "FlatStr2": res=UserDefr.FlatStr2;
+//     Case "FlatStr3": res=UserDefr.FlatStr3;
+//     Case "FlatVal1": res=UserDefr.FlatVal1;
+//     Case "FlatVal2": res=UserDefr.FlatVal2;
+//     Case "FlatVal3": res=UserDefr.FlatVal3;
+//     Case "FlatVal4": res=UserDefr.FlatVal4;
+//     Case "FlatVal5": res=UserDefr.FlatVal5;
+//     Case "FlatDate1": res=UserDefr.FlatDate1;
+//     Case "FlatDate3": res=UserDefr.FlatDate3;
+//     Case "FlatDate3": res=UserDefr.FlatDate3;
+//   end;
+
+//   UserDefFlatsVc=res;
+// end;
+
+// function string 100 USerDefBuildVc(string field) begin
+//   string 100 res;
+//   record BBSUserDefBlock UserDefr;
+
+//   res="";
+//   BlockLoad(UserDefr);
+
+//   Switch (field) begin
+//     Case "BuildStr1": res=UserDefr.BuildStr1;
+//     Case "BuildStr2": res=UserDefr.BuildStr2;
+//     Case "BuildStr3": res=UserDefr.BuildStr3;
+//     Case "BuildStr4": res=UserDefr.BuildStr4;
+//     Case "BuildStr5": res=UserDefr.BuildStr5;
+//     Case "BuildStr6": res=UserDefr.BuildStr6;
+//     Case "BuildVal1": res=UserDefr.BuildVal1;
+//     Case "BuildVal2": res=UserDefr.BuildVal2;
+//     Case "BuildVal3": res=UserDefr.BuildVal3;
+//     Case "BuildVal4": res=UserDefr.BuildVal4;
+//     Case "BuildVal5": res=UserDefr.BuildVal5;
+//     Case "BuildDate1": res=UserDefr.BuildDate1;
+//     Case "BuildDate3": res=UserDefr.BuildDate3;
+//     Case "BuildDate3": res=UserDefr.BuildDate3;
+//   end;
+
+//   USerDefBuildVc=res;
+// end;
+
+
+global
+procedure ShowBFlatFields(var integer tilenr,record BFlatFieldSetBlock BFlatFieldSetBlr,real h,real h2)
+begin
+  row BFlatFieldSetBlock BFlatFieldSetBlrw;
+  real h1,vs,v;
+  integer i,rw;
+
+  v = 6;
+  vs = 20;
+  BlockLoad(BFlatFieldSetBlr);
+  rw = MatRowCnt(BFlatFieldSetBlr);
+  if rw>0 then begin
+    Tile(tilenr,(rw/2+1+Mod(rw,2))*20,false,"",Code); tilenr = tilenr + 1;
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(BFlatFieldSetBlr,i,BFlatFieldSetBlrw);
+      if Mod(i,2)==0 then begin
+        SoftEditField(h,v,70,BFlatFieldSetBlrw.Name,ViewOnly,"FF_B" & i+1,true,0,M4Str,20);
+      end else begin
+        SoftEditField(h2,v,70,BFlatFieldSetBlrw.Name,ViewOnly,"FF_B" & i+1,true,0,M4Str,20);
+        v = v + 20;
+      end;
+    end;
+  end;
+end;
+
+global
+procedure ShowFlatFields(string textstr)
+begin
+  record FlatFieldSetBlock FlatFieldSetBlr;
+  row FlatFieldSetBlock FlatFieldSetBlrw;
+  real h,h1,h2,vs,v;
+  integer i,rw;
+
+  h=200; h1=320; h2=500;
+  v = 30;
+  vs = 20;
+  BlockLoad(FlatFieldSetBlr);
+  rw = MatRowCnt(FlatFieldSetBlr);
+  if rw>0 then begin
+    Tile(2,(rw/2+1+Mod(rw,2))*20,false,"2",FlatCode);
+    StaticText(120,20,textstr,false);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(FlatFieldSetBlr,i,FlatFieldSetBlrw);
+      if Mod(i,2)==0 then begin
+        SoftEditField(h,v,70,FlatFieldSetBlrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+      end else begin
+        SoftEditField(h2,v,70,FlatFieldSetBlrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+        v = v + 20;
+      end;
+    end;
+  end;
+end;
+
+global
+procedure ShowBuildFields(var integer tilenr,record BuildFieldSetBlock BuildFieldSetBlr,real h,real h2,string textstr)
+begin
+  row BuildFieldSetBlock BuilFieldSetBlrw;
+  real h1,vs,v;
+  integer i,rw;
+
+  v = 30;
+  vs = 20;
+  BlockLoad(BuildFieldSetBlr);
+  rw = MatRowCnt(BuildFieldSetBlr);
+  if rw>0 then begin
+    Tile(tilenr,(rw/2+1+Mod(rw,2))*20,false,"2",Code); tilenr = tilenr+1;
+    StaticText(h,20,textstr,false);
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(BuildFieldSetBlr,i,BuilFieldSetBlrw);
+      if Mod(i,2)==0 then begin
+        SoftEditField(h,v,70,BuilFieldSetBlrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+      end else begin
+        SoftEditField(h2,v,70,BuilFieldSetBlrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+        v = v + 20;
+      end;
+    end;
+  end;
+end;
+
+global
+procedure ShowCOFields(real v,real h,real h3)
+begin
+  record COFieldSetBlock COFieldSetr;
+  row COFieldSetBlock COFieldSetrw;
+  real vs,v2;
+  integer i,rw;
+  
+  BlockLoad(COFieldSetr);
+  rw=MatRowCnt(COFieldSetr);
+  if rw>0 then begin
+    v2=v+7;
+    for(i=0;i<rw;i=i+1)begin
+      MatRowGet(COFieldSetr,i,COFieldSetrw);
+      if Mod(i,2)==0 then begin
+        SoftEditField(h,v2,70,COFieldSetrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+      end else begin
+        SoftEditField(h3,v2,70,COFieldSetrw.Name & " (*)",ViewOnly,"FF_" & i+1,true,0,M4Str,20);
+        v2 = v2 + 20;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global 
+function integer CountCOFields(boolean testf) begin
+  record COFieldSetBlock COFieldSetr;
+  integer rw;
+    
+  BlockLoad(COFieldSetr);
+  rw=MatRowCnt(COFieldSetr);
+  if !testf then begin
+    rw = rw/2 + Mod(rw,2) + 2;
+  end;
+  
+  CountCOFields=rw;
+return;
+end;
+
+// global
+// procedure BBSShowRoomAreas(real h,real v)
+// begin
+//   integer wn,roomcnt,i;
+//   real h1,v1;  
+  
+//   roomcnt = 8;
+//   h1 = h; v1 = v;
+//   for (i=0;i<roomcnt;i=i+1) begin
+//     SoftEditField(h1,v1,80,USetStr(1001165) & i+1,ViewOnly,"RoomNr" & i,true,0,M4Str,20);
+//     v1 = v1 + 20;
+//   end;
+//   SoftEditField(h1,v1,80,USetStr(1001184),ViewOnly,"TotRoomArea",true,0,M4Str,20);
+  
+//   return;
+// end;
+
+// global
+// function boolean AddActivityFields() begin
+//   record NApsSetBlock NApsSetr;
+  
+//   BlockLoad(NApsSetr);
+//   AddActivityFields = (NApsSetr.AddActFields==1);
+// return;
+// end;
+
+

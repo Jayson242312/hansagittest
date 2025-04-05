@@ -1,0 +1,13 @@
+
+global
+function Boolean CredManEventDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  
+  res = true;
+//   switch (fieldname) begin
+//     case "AccNumber": res = AccDClassAccNumberEFActive(wn,fn,wnst,rownr,changed);
+//   end;
+  CredManEventDClassActiveEditField = res;
+  RETURN;
+END;

@@ -1,0 +1,178 @@
+begin  
+  
+  RecordAddBegin(IVVc,"jur_IVVc");
+  RecordField(Contract,M4Long,0,0);  //OBS
+  RecordField(BuildCode,M4Str,60,0);  //OBS
+  RecordField(FlatCode,M4Code,20,0);  //OBS
+  RecordField(IntFlatNo,M4Int,0,0);  //OBS
+  RecordField(IntSumControlStr,M4Str,20,0);//OBS
+  RecordField(MergedInvFlag,M4Int,0,0);//OBS
+  RecordField(ServInvf,M4Int,0,0);  //OBS
+  RecordField(ServPeriod,M4Str,60,0); //OBS
+  RecordField(OBS_EInvFlag,M4Int,0,0);  // OBS
+  RecordField(OBS_EInvDate,M4Date,0,0); // OBS
+  RecordField(InvStatus,M4Int,0,0);
+
+  RecordField(PrevReading,M4str,255,0) //jh
+  RecordField(CurrReading,M4str,255,0) //jh
+  RecordField(ReadingType,M4str,255,0) //jh
+  RecordField(Consumption,M4str,255,0) //jh
+  RecordField(DateOfReading,M4Date,0,0) //jh
+
+
+  RecordField(ServInvSendf,M4Int,0,0);
+  RecordField(AdditInvDate,M4Date,0,0);
+  RecordField(UINFlag,M4Mark,0,0);
+  // RecordField(DepColf,M4Int,0,0); //OBS
+  // RecordField(DepColIntSumf,M4Int,0,0); //OBS
+  
+  ArrayField(CounterSerNr,M4Long,0,0); //OBS
+  ArrayField(SourceType,M4Set,1037,0); //OBS
+  ArrayField(SourceTransNr,M4Str,20,0); //OBS
+  ArrayField(PerServRecSerNr,M4Long,0,0); //OBS
+  ArrayField(ContractNr,M4Long,0,0);  //OBS
+  ArrayField(QtyCoef,M4UVal,0,0); //OBS
+  ArrayField(PriceWORound,M45Val,0,0); //OBS
+  ArrayField(CredInvDebtColStat,M4Set,1071,0); //OBS
+  
+  RecordField(MeterNo,M4Str,255,0) //jh
+  KeyBegin(Contract);
+  KeySegment(Contract);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+
+  KeyBegin(BuildCode);
+  KeySegment(BuildCode);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+
+  KeyBegin(FlatCode);
+  KeySegment(FlatCode);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+
+  KeyBegin(Addr1);
+  KeySegment(Addr1);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+ 
+  KeyBegin(UnOkRefStr); //jh key used for oking billing invoices
+  KeySegment(InvComment);
+  KeySegment(OKFlag);
+  KeySegment(SerNr);
+
+
+  //has recordinindex
+  SubSetKeyBegin2(OBS_SerNr);
+  StoreInBaseKey;
+  AppendFieldToKeyName("Contract");
+  KeySegment(SerNr);
+
+  //has recordinindex
+  SubSetKeyBegin2(OBS_OKFlag);
+  StoreInBaseKey;
+  AppendFieldToKeyName("Contract");
+  KeySegment(OKFlag);
+  KeySegment(SerNr);
+
+  //has recordinindex
+  SubSetKeyBegin2(OBS_InvDate);
+  StoreInBaseKey;
+  AppendFieldToKeyName("Contract");
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+  EndRecordAdd;
+  
+
+  // used only for import
+  RecordAddBegin(VIVc,"jur_VIVc");
+  KeyBegin(reference_sort);
+  KeySegment(RefStr);
+  KeySegment(SerNr);
+  EndRecordAdd;
+
+
+  RecordAddBegin(INVc,"jur_INVc");
+  RecordField(ServQuantInCalc,M4Int,0,0); //OBS
+  RecordField(ServCycle,M4Int,0,0); //OBS
+  RecordField(Tariff,M4Int,0,0);  //OBS
+  RecordField(FlatFieldCode,M4Code,20,0); //OBS
+  RecordField(SeqOrderNr,M4Long,0,0); //OBS
+  RecordField(NegItemPayPr,M4Long,0,0); // OBS
+  RecordField(BuildFieldCode,M4Code,20,0); //OBS
+  RecordField(IVTemplatef,M4Int,0,0); //OBS
+  RecordField(AdditCountersItem,M4Code,20,0); // OBS
+  RecordField(CalcOnLandOrImp,M4Int,0,0); // CUSTOM
+  EndRecordAdd;
+  
+  RecordAddBegin(CUVc,"jur_CUVc");
+  RecordField(OBS_eMail1,M4Str,100,0); //OBS
+  RecordField(OBS_eMail2,M4Str,100,0); //OBS
+  RecordField(OBS_eMail3,M4Str,100,0); //OBS
+  RecordField(OBS_eMail4,M4Str,100,0); //OBS
+  RecordField(OBS_eMail5,M4Str,100,0); //OBS
+  RecordField(DoNotPrintDoc,M4Int,0,0); //OBS
+  RecordField(BBSPDFPrint,M4Int,0,0); //OBS
+  
+  SubsetKeyBegin2(InvAddr0);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(InvAddr0);
+  KeySegment(Code);
+  EndRecordAdd;
+  
+  RecordAddBegin(IPVc,"jur_IPVc");
+  ChangeField(Comment,M4Str,255,0);
+  RecordField(INPayPriority,M4Long,0,0);
+  RecordField(PrePayPriority,M4Long,0,0);
+  RecordField(DebtRepAgreeNr,M4Long,0,0); //OBS
+  RecordField(FidaRowID,M4Str,30,0); //OBS
+  RecordField(KeepChange,M4Int,0,0); //TMK
+	RecordField(PayVal,M4Val,0,0);  //TMK
+	RecordField(ChangeVal,M4Val,0,0);  //TMK
+	RecordField(SalesMan,M4Code,20,0); //TMK
+
+  RecordField(CreditVal,M4Val,0,0); //JH
+  RecordField(UseCredit,M4Int,0,0); //JH
+  //ArrayField(ArtCode,M4Code,20,0);  //TMK it is called recNumber
+  ArrayField(ArtCodeName,M4Str,255,0);
+  ArrayField(CustAddress,M4Str,255,0);
+  ArrayField(ContractNr,M4Long,0,0);
+  KeyBegin(INPayPriority);
+  KeySegment(INPayPriority);
+  KeySegment(SerNr);
+  KeyBegin(PrePayPriority);
+  KeySegment(PrePayPriority);
+  KeySegment(SerNr);
+  KeyBegin(FidaRowID);
+  KeySegment(FidaRowID);
+  KeySegment(SerNr);
+  EndRecordAdd;
+  
+  RecordAddBegin(ARPayHistVc,"obs_ARPayHist");
+  RecordField(ContractNr,M4Long,0,NAContractVc); //OBS
+  
+  KeyBegin(ContractNr);
+  KeySegment(ContractNr);
+  KeySegment(TransDate);
+  KeySegment(CUPNr);
+  KeySegment(FileName);
+  KeySegment(SerNr);
+  
+  EndRecordAdd;
+    
+  RecordAddBegin(CClassVc,"jur_CClassVc");
+  SubSetKeyBegin2(Code2);
+  StoreInBaseKey;
+  AppendFieldToKeyName("CType");
+  KeySegment(Code);
+  SubSetKeyBegin2(Comment2);
+  StoreInBaseKey;
+  AppendFieldToKeyName("CType");
+  KeySegment(Comment);
+  KeySegment(Code);
+  EndRecordAdd;
+  
+  return;
+end;

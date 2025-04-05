@@ -1,0 +1,480 @@
+external function string 100 GetNextCounterNo();
+/*
+Dzivoklu skaititaju rekord actioni
+*/
+
+
+// ============================ CUSTOM CODE =========================== 
+global
+function LongInt FlatCountersVcRecordDefaults(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  LongInt res;
+  res = -1;
+  
+  if FlatCountersr.SerNr == -1 then begin
+    FlatCountersr.SerNr = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+  end;
+  
+  FlatCountersVcRecordDefaults = res;
+  return;
+end;
+// ======================== END OF CUSTOM CODE ======================== 
+
+ 
+global
+function longint FlatCountersVcRecordCheck(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  Record FlatCountersVc FlatCounters2r, FlatCounters3r;
+  record INVc INr;
+  longint res,oldsernr;
+  record BuildVc Buildr;
+  integer cnt,wn;
+  boolean wloop;
+
+  // ============== is contract already linked to meter ==============
+  
+  wn = CurWindow;
+  if (WindowState(wn)!=Rs_update) then begin
+    wloop=true;
+    FlatCounters3r.FlatCode = FlatCountersr.FlatCode;
+    While LoopKey("FlatCode",FlatCounters3r,1,wloop) begin
+      if (FlatCountersr.FlatCode != FlatCounters3r.FlatCode) then begin
+        wloop=false;
+      end else begin
+        if(FlatCountersr.Contract == FlatCounters3r.Contract) then begin
+          MessageBox(0,"A meter already exists for specified contract!");
+          res = -1;
+          goto LExitCheck;
+        end;
+      end;
+    end;
+    wloop=false;
+  end;
+  // =================================================================
+ 
+  res = 0;
+  oldsernr = FlatCountersr.SerNr;
+  if FlatCountersr.SerNr == -1 then begin
+    FlatCountersr.SerNr = NextSerNr("FlatCountersVc",CurrentDate,-1,false,"");
+  end;
+  Buildr.Code = Flatcountersr.Code;
+  if (Readfirstmain(Buildr,1,true)==false) and nonblank(Flatcountersr.Code) then begin
+    RecordCheckError(1001037,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  if a==Rs_Insert then begin
+    if blank(FlatCountersr.CounterNo) then begin
+      FlatCountersr.CounterNo = GetNextCounterNo;
+    end;
+  end; 
+  //Jh added mandatory fields
+
+  if FlatCountersr.UserStr1 =="" then begin // BookNo
+    RecordCheckError(1001808,"",-1,"UserStr1");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  if FlatCountersr.UserStr2 =="" then begin // SeqNo
+    RecordCheckError(1001809,"",-1,"UserStr2");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+
+  if FlatCountersr.UserStr3 =="" then begin // AlphaNo
+    RecordCheckError(10018010,"",-1,"UserStr3");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+//
+  if FlatCountersr.CounterNo=="" then begin
+    RecordCheckError(1058,"",-1,"CounterNo");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if nonblank(Flatcountersr.Code) then begin
+    cnt=cnt+1;
+  end;
+  if nonblank(Flatcountersr.BuildGroupCode) then begin
+    cnt=cnt+1;
+  end;
+  if nonblank(Flatcountersr.FlatGroupCode) then begin
+    cnt=cnt+1;
+  end;
+  if cnt!=1 then begin
+    RecordCheckError(1000937,"",-1,"Code");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if nonblank(Flatcountersr.FlatCode) and nonblank(Flatcountersr.FlatGroupCode) then begin
+    RecordCheckError(1000941,"",-1,"FlatCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if nonblank(Flatcountersr.FlatCode) and nonblank(Flatcountersr.BuildGroupCode) then begin
+    RecordCheckError(1000941,"",-1,"FlatCode");
+    res = -1;
+    goto LExitCheck;
+  end;
+
+  //look for flatcounter with same number and not changed
+  if FlatCountersr.Changed!=1 and FlatCountersr.Closedf!=1 then begin
+    if nonblank(Flatcountersr.FlatCode) then begin
+      FlatCounters2r.CounterNo = Flatcountersr.CounterNo;
+      FlatCounters2r.FlatCode = Flatcountersr.FlatCode;
+      wloop = true;
+      While LoopBackKey("CounterNo",FlatCounters2r,2,wloop) begin
+        if FlatCounters2r.CounterNo != Flatcountersr.CounterNo or FlatCounters2r.FlatCode != Flatcountersr.FlatCode then begin
+          wloop = false;
+        end else begin
+          if FlatCounters2r.SerNr != Flatcountersr.SerNr and FlatCounters2r.Changed==0 then begin
+            // RecordCheckError(1000046,"",-1,"CounterNo"); //disabled for now
+            // res = -1;
+            // goto LExitCheck; 
+          end;
+        end;
+      end;
+    end else begin
+      if nonblank(FlatCountersr.Code) then begin
+        FlatCounters2r.CounterNo = Flatcountersr.CounterNo;
+        FlatCounters2r.CodeField = Flatcountersr.Code;
+        FlatCounters2r.RecType = 1;
+        wloop = true;
+        While LoopBackKey("CodeIndex",FlatCounters2r,3,wloop) begin
+          if FlatCounters2r.CounterNo != Flatcountersr.CounterNo or FlatCounters2r.CodeField != Flatcountersr.Code or FlatCounters2r.RecType != 1 then begin
+            wloop = false;
+          end else begin
+            if FlatCounters2r.SerNr != Flatcountersr.SerNr and FlatCounters2r.Changed==0 then begin
+              RecordCheckError(1000046,"",-1,"CounterNo");
+              res = -1;
+              goto LExitCheck;
+            end;
+          end;
+        end;
+      end;
+      if nonblank(FlatCountersr.BuildGroupCode) then begin
+        FlatCounters2r.CounterNo = Flatcountersr.CounterNo;
+        FlatCounters2r.CodeField = Flatcountersr.BuildGroupCode;
+        FlatCounters2r.RecType = 2;
+        wloop = true;
+        While LoopBackKey("CodeIndex",FlatCounters2r,3,wloop) begin
+          if FlatCounters2r.CounterNo != Flatcountersr.CounterNo or FlatCounters2r.CodeField != Flatcountersr.BuildGroupCode or FlatCounters2r.RecType != 2 then begin
+            wloop = false;
+          end else begin
+            if FlatCounters2r.SerNr != Flatcountersr.SerNr and FlatCounters2r.Changed==0 then begin
+              RecordCheckError(1000046,"",-1,"CounterNo");
+              res = -1;
+              goto LExitCheck;
+            end;
+          end;
+        end;
+      end;
+      if nonblank(FlatCountersr.FlatGroupCode) then begin
+        FlatCounters2r.CounterNo = Flatcountersr.CounterNo;
+        FlatCounters2r.CodeField = Flatcountersr.FlatGroupCode;
+        FlatCounters2r.RecType = 3;
+        wloop = true;
+        While LoopBackKey("CodeIndex",FlatCounters2r,3,wloop) begin
+          if FlatCounters2r.CounterNo != Flatcountersr.CounterNo or FlatCounters2r.CodeField != Flatcountersr.FlatGroupCode or FlatCounters2r.RecType != 3 then begin
+            wloop = false;
+          end else begin
+            if FlatCounters2r.SerNr != Flatcountersr.SerNr and FlatCounters2r.Changed==0 then begin
+              RecordCheckError(1000046,"",-1,"CounterNo");
+              res = -1;
+              goto LExitCheck;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  // if (FlatCountersr.FlatNo<>"" and FlatCountersr.MainCounter=="") then begin
+  //   INr.Code = FlatCountersr.CounterType;
+  //   if (readfirstmain(INr,1,true)) then begin
+  //     // if (CounterTyper.DontAskMainCounter==0) then begin
+  //     //   RecordCheckError(1001042,"",-1,"MainCounter");
+  //     //   res = -1;
+  //     //   goto LExitCheck;
+  //     // end;
+  //   end else begin
+  //     RecordCheckError(1058,"",-1,"CounterType");
+  //     res = -1;
+  //     goto LExitCheck;
+  //   end;
+  // end;
+
+  if (nonblankdate(FlatCountersr.AvgStartDate) or nonblankdate(FlatCountersr.AvgEndDate)) and FlatCountersr.DontCalcAvgCountRes==0 then begin
+    RecordCheckError(1000305,"",-1,"AvgEndDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if nonblankdate(FlatCountersr.AvgStartDate) and blankdate(FlatCountersr.AvgEndDate) then begin
+    RecordCheckError(1058,"",-1,"AvgEndDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if blankdate(FlatCountersr.AvgStartDate) and nonblankdate(FlatCountersr.AvgEndDate) then begin
+    RecordCheckError(1058,"",-1,"AvgStartDate");
+    res = -1;
+    goto LExitCheck;
+  end;
+  if nonblankdate(FlatCountersr.AvgStartDate) and nonblankdate(FlatCountersr.AvgEndDate) then begin
+    if GetDay(FlatCountersr.AvgStartDate)!=1 then begin
+      RecordCheckError(1000038,"",-1,"AvgStartDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    if GetDay(FlatCountersr.AvgEndDate)!=DaysInMonth(Getyear(FlatCountersr.AvgEndDate),GetMonth(FlatCountersr.AvgEndDate)) then begin
+      RecordCheckError(1000039,"",-1,"AvgEndDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+    if FlatCountersr.AvgEndDate<FlatCountersr.AvgStartDate then begin
+      RecordCheckError(1000810,"",-1,"AvgEndDate");
+      res = -1;
+      goto LExitCheck;
+    end;
+  end;
+
+LExitCheck:;
+  if res==-1 then begin
+    FlatCountersr.SerNr = oldsernr;
+  end;
+  FlatCountersVcRecordCheck = res;
+return;
+end;
+
+
+global
+function longint FlatCountersVcRecordDuplicate(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  FlatCountersr.PrevCounterNo = "";
+  FlatCountersr.SerNr = -1;
+  FlatCountersVcRecordDuplicate = 0;
+return;
+end;
+
+
+global
+function LongInt FlatCountersVcRecordInIndex(record FlatCountersVc FlatCounterr,string indexname)
+begin
+  LongInt res;
+  boolean testf;
+  string 255 tstr;
+
+  res = 1;
+  if FlatCounterr.Closedf==1 then begin
+    //if FlatCounter is closed then add only to main index and indexes that begin with "Close"
+    if indexname!="SerNr" and Left(indexname,5)!="Close" and Left(indexname,3)!="Win" then begin
+      res = 0;
+    end;
+  end else begin
+    // testf=true;
+    // if blank(FlatCounterr.Code) then begin //�ka
+    //   testf=false;
+    // end;
+    // if nonblank(FlatCounterr.FlatCode) or nonblank(FlatCounterr.FlatGroupCode) or nonblank(FlatCounterr.BuildGroupCode) then begin //telpa, �ku grupa, telpu grupa
+    //   testf=false;
+    // end;
+
+    if nonblank(FlatCounterr.FlatCode) then begin
+      if (indexname=="HeadCounterNo")  then begin res = 0; end;
+      if (indexname=="HeadCode")  then begin res = 0; end;
+      if (indexname=="HeadAddress")  then begin res = 0; end;
+      if (indexname=="HeadCounterType")  then begin res = 0; end;
+      if (indexname=="HeadCounterCode")  then begin res = 0; end;
+      if (indexname=="HeadCounterSerNr")  then begin res = 0; end;
+    end;
+  end;
+
+  FlatCountersVcRecordInIndex = res;
+  return;
+end;
+
+procedure SetRecTypeForLClassWinField(var Record FlatCountersVc FlatCountersr) begin
+
+  if nonblank(FlatCountersr.FlatCode) then begin
+    FlatCountersr.RecTypeForLClassWin = "1";
+  end;
+  if blank(FlatCountersr.FlatCode) and nonblank(FlatCountersr.Code) then begin
+    FlatCountersr.RecTypeForLClassWin = "2";
+  end;
+  if blank(FlatCountersr.FlatCode) and nonblank(FlatCountersr.BuildGroupCode) then begin
+    FlatCountersr.RecTypeForLClassWin = "3";
+  end;
+  if blank(FlatCountersr.FlatCode) and nonblank(FlatCountersr.FlatGroupCode) then begin
+    FlatCountersr.RecTypeForLClassWin = "4";
+  end;
+  if FlatCountersr.Closedf==1 then begin
+    FlatCountersr.RecTypeForLClassWin = "5";
+  end;
+
+  return;
+end;
+
+Global
+updating procedure createMHistory1(var record FlatCountersVc FlatCountersr)
+begin
+  record MHistoryVc MHr, oldMHr, newMHr;
+  boolean testf;
+  date s, e,cd,tdate;
+
+  // Code to save to Mhr storage register
+  testf = true ;
+  // If the reading already exists in temp register testf ==fals;
+
+  cd = CurrentDate;
+  s = cd ;
+  s.day = 1;
+  e = s;
+  e.day = DaysInMonth(GetYear(e),GetMonth(e));
+  MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+
+  if (ReadFirstMain(MHr,1,true) == false) then begin
+    // StopAlert("In the first Main");
+    RecordNew(newMHr);
+    newMHr.FlatCounterSerNr = FlatCountersr.SerNr;
+    newMHr.StartDate = s;
+		newMHr.EndDate = e;
+    if(RecordStore(newMHr,false)) then begin end;
+  end else begin
+    RecordCopy(oldMHr,MHr);
+    MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+    MHr.StartDate = s;
+		MHr.EndDate = e;
+    if(RecordUpdate(oldMHr,MHr,true)) then begin end;
+  end;
+  return;
+end;
+
+//jh
+updating procedure CheckIfMHrExistsForMeters(var record FlatCountersVc FlatCountersr)
+begin
+  record MHistoryVc MHr;
+  MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+  if (ReadFirstMain(MHr,1,true) == false) then begin
+    RecordNew(MHr);
+    MHr.FlatCounterSerNr = FlatCountersr.SerNr;
+    MHr.MeterNo = FlatCountersr.CounterNo;
+    MHr.FlatCode = FlatCountersr.FlatCode;
+    MHr.BuildCode = FlatCountersr.Code;
+    MHr.ContractNr = FlatCountersr.Contract;
+    if(RecordStore(MHr,false)) then begin end;
+  end else begin
+  end;
+     return;
+end;
+//
+global
+updating function longint FlatCountersVcRecordSave(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  longint res;
+  boolean testf;
+
+  CheckIfMHrExistsForMeters(FlatCountersr);
+  SetRecTypeForLClassWinField(FlatCountersr);
+
+  if nonblank(FlatCountersr.Code) then begin
+    FlatCountersr.CodeField=FlatCountersr.Code;
+    FlatCountersr.RecType=1;
+    goto EndFlatCountersVcRecordSave;
+  end;
+  if nonblank(FlatCountersr.BuildGroupCode) then begin
+    FlatCountersr.CodeField=FlatCountersr.BuildGroupCode;
+    FlatCountersr.RecType=2;
+    goto EndFlatCountersVcRecordSave;
+  end;
+  if nonblank(FlatCountersr.FlatGroupCode) then begin
+    FlatCountersr.CodeField=FlatCountersr.FlatGroupCode;
+    FlatCountersr.RecType=3;
+    goto EndFlatCountersVcRecordSave;
+  end;
+
+EndFlatCountersVcRecordSave:;
+  FlatCountersVcRecordSave=res;
+  return;
+end;
+
+global
+function longint FlatCountersVcRecordUpdate(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  longint res;
+
+  SetRecTypeForLClassWinField(FlatCountersr);
+
+  if nonblank(FlatCountersr.Code) then begin
+    FlatCountersr.CodeField=FlatCountersr.Code;
+    FlatCountersr.RecType=1;
+    goto EndFlatCountersVcRecordUpdate;
+  end;
+  if nonblank(FlatCountersr.BuildGroupCode) then begin
+    FlatCountersr.CodeField=FlatCountersr.BuildGroupCode;
+    FlatCountersr.RecType=2;
+    goto EndFlatCountersVcRecordUpdate;
+  end;
+  if nonblank(FlatCountersr.FlatGroupCode) then begin
+    FlatCountersr.CodeField=FlatCountersr.FlatGroupCode;
+    FlatCountersr.RecType=3;
+    goto EndFlatCountersVcRecordUpdate;
+  end;
+
+EndFlatCountersVcRecordUpdate:;
+  FlatCountersVcRecordUpdate=res;
+  return;
+end;
+
+global
+function longint FlatCountersVcRecordImport(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  longint res;
+
+  if blank(FlatCountersr.RecTypeForLClassWin) then begin
+    SetRecTypeForLClassWinField(FlatCountersr);
+  end;
+
+  if FlatCountersr.RecType==0 then begin
+    if nonblank(FlatCountersr.Code) then begin
+      FlatCountersr.CodeField=FlatCountersr.Code;
+      FlatCountersr.RecType=1;
+      goto EndFlatCountersVcRecordImport;
+    end;
+    if nonblank(FlatCountersr.BuildGroupCode) then begin
+      FlatCountersr.CodeField=FlatCountersr.BuildGroupCode;
+      FlatCountersr.RecType=2;
+      goto EndFlatCountersVcRecordImport;
+    end;
+    if nonblank(FlatCountersr.FlatGroupCode) then begin
+      FlatCountersr.CodeField=FlatCountersr.FlatGroupCode;
+      FlatCountersr.RecType=3;
+      goto EndFlatCountersVcRecordImport;
+    end;
+  end;
+
+EndFlatCountersVcRecordImport:;
+  return;
+end;
+
+
+global
+function longint FlatCountersVcRecordRemoveTest(var record FlatCountersVc FlatCountersr,record FlatCountersVc FlatCountersr2,longint a,longint b)
+begin
+  longint res;
+
+  res = 1;
+  if (!Importing and !IsMaintenance) then begin
+    if (!UserCanAction("OBSAllowDeleteMeters",false)) then begin
+      res = 0;
+      MessageBox(1274,StringFromStringSet(3,"OBSAllowDeleteMeters"));
+      goto LFlatCountersVcRecordRemoveTest;
+    end;
+  end;
+
+LFlatCountersVcRecordRemoveTest:;
+  FlatCountersVcRecordRemoveTest = res;
+  return;
+end;

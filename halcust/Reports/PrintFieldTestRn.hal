@@ -1,0 +1,125 @@
+external inner function Boolean FindStringInString(string,string);
+
+procedure PrintOneCustomer(record RcVc RepSpec,record NAContractVc NAContractr,date ondate)
+begin
+  record OwnersVc Ownersr;
+  row OwnersVc Ownersrw;
+  integer i,rwc,cnt;
+  boolean outf,testf,custf,printf,mulfticust;
+  string 255 tstr;
+  
+  printf=false;
+  
+  Ownersr.Code=NAContractr.FlatCode;
+  if ReadFirstMain(Ownersr,1,true) then begin
+    // tstr = NAContractr.CustName;
+    tstr = "";
+    outf=true;
+    cnt=0;
+    rwc=MatRowCnt(Ownersr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(Ownersr,i,Ownersrw);
+      testf=true;
+      if NonBlank(Ownersrw.StartDate) and ondate<Ownersrw.StartDate then begin
+        testf=false;
+      end;
+      if NonBlank(Ownersrw.EndDate) and ondate>Ownersrw.EndDate then begin
+        testf=false;
+      end;
+      // if NAContractr.CustCode==Ownersrw.CustCode then begin
+        // custf=true;
+        // testf=false;
+      // end;
+      if testf then begin
+        if nonblank(tstr) then begin
+          tstr = tstr & ",";
+          mulfticust=true;
+        end;
+        cnt = cnt + 1;
+        tstr = tstr & Ownersrw.CustName;
+        // i=rwc;
+      end;
+    end;
+  end;
+  
+  if RepSpec.flags[0]==1 and mulfticust then begin
+    printf=true;
+  end;
+  if RepSpec.flags[1]==1 and blank(tstr) then begin
+    printf=true;
+  end;
+  if RepSpec.flags[2]==1 and nonblank(tstr) and !FindStringInString(tstr,",") then begin
+    printf=true;
+  end;
+    
+  if printf then begin
+    StartFormat(15);
+    OutString(0,"DblNAContractVc",NAContractr.SerNr,false);
+    OutString(40,"DblFlatsVc",NAContractr.FlatCode,false);
+    OutString(80,0,NAContractr.FlatAddress,false);
+    OutString(180,0,NAContractr.CustName,false);
+    OutString(300,0,tstr,false);
+    EndFormat;
+  end;
+
+  return;
+end;
+
+global
+procedure PrintFieldTestRn(record RcVc RepSpec)
+begin
+  record NAContractVc NAContractr;
+  record BuildVc Buildr;
+  boolean wLoop,wLoopNAContractf,testf;
+  date ondate;
+  
+  if blankdate(RepSpec.d1) then begin
+    ondate=CurrentDate;
+  end else begin
+    ondate=RepSpec.d1;
+  end;
+  
+  StartReportNoHeaderJob(USetStr(1001632));
+  wLoop=true;
+  ResetLoop(Buildr);
+  while LoopMain(Buildr,1,wLoop) begin
+    testf = true;
+    if Buildr.Closedf==1 then begin
+      testf = false;
+    end;
+    if testf then begin
+      ResetLoop(NAContractr);
+      wLoopNAContractf = true;
+      NAContractr.BuildCode = Buildr.Code;
+      While LoopKey("BuildCode",NAContractr,1,wLoopNAContractf) begin
+        if NAContractr.BuildCode != Buildr.Code then begin
+            wLoopNAContractf = false;
+        end else begin
+          testf = true;
+          if NAContractr.OKFlag==0 then begin
+            testf = false;
+          end;
+          // if NAContractr.MergedInvFlag==1 then begin
+            // testf = false;
+          // end;
+          if nonblankdate(NAContractr.StartDate) and NAContractr.StartDate>ondate then begin
+            testf = false;
+          end;
+          if nonblankdate(NAContractr.EndDate) and NAContractr.EndDate<ondate then begin
+            testf = false;
+          end;
+          if blank(NAContractr.FlatCode) then begin //rēķinus uz ēku veido citā atskaitē / apkalpošanā
+            testf = false;
+          end;
+          if testf then begin
+            PrintOneCustomer(RepSpec,NAContractr,ondate);
+          end;
+        end;
+      end;
+    end;
+  end;
+    
+  EndJob;
+  
+  return;
+end;

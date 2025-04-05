@@ -1,0 +1,87 @@
+//
+global
+procedure DoContractForm(record RcVc RepSpec)
+begin
+  record NAContractVc COr;
+  row NAContractVc COrw;
+  record CUVc CUr;
+  record INVc INr;
+  record BuildVc ERFMasterr;
+  record AccountTypeVc AccountTyper;
+  record OwnerTypeVc OwnerTyper;
+  record ZoneVc Zoner;
+  integer i,rwcnt;
+
+  StartPrintDialogGroup;
+  //
+  COr.SerNr = RepSpec.f1;
+  if (ReadFirstMain(COr,1,true)) then begin
+    //
+    if(OpenForm("CONTRACT")==true) then begin
+      OUTFORMFIELD("CONTRACTNR","CONTRACT NO: " & COr.SerNr);
+      OUTFORMFIELD("CUSTNAME",COr.CustName);
+      OUTFORMFIELD("STARTDATE",COr.StartDate);
+      OUTFORMFIELD("ENDDATE",COr.EndDate);
+
+      // -> customer contact
+      CUr.Code = COr.CustCode;
+      if (ReadFirstMain(CUr,1,true)) then begin
+        OUTFORMFIELD("ADDRESS0",CUr.InvAddr0);
+        OUTFORMFIELD("ADDRESS1",CUr.InvAddr1);
+        OUTFORMFIELD("ADDRESS2",CUr.InvAddr2);
+        OUTFORMFIELD("ADDRESS4",CUr.InvAddr4);
+        OUTFORMFIELD("PHONE","Tel: " & CUr.Phone);
+        OUTFORMFIELD("FAX","Fax: " & CUr.Fax);
+        OUTFORMFIELD("EMAIL","Email: " & CUr.eMail);
+      end;
+
+      // -> zoning
+      Zoner.Code = COr.ZoningCode; 
+      if(ReadFirstMain(Zoner,1,true)) then begin
+        OUTFORMFIELD("ZONING",Zoner.Name);
+      end;
+
+      // -> erf master
+      ERFMasterr.Code = COr.BuildCode; 
+      if(ReadFirstMain(ERFMasterr,1,true)) then begin
+        OUTFORMFIELD("ERF",ERFMasterr.Erf);
+      end;
+
+      // -> account-type
+      AccountTyper.Code = COr.AccountType; 
+      if(ReadFirstMain(AccountTyper,1,true)) then begin
+        OUTFORMFIELD("ACCTYPE",AccountTyper.Name);
+      end;
+    
+      // -> owner-type
+      OwnerTyper.Code = COr.OwnerType; 
+      if(ReadFirstMain(OwnerTyper,1,true)) then begin
+        OUTFORMFIELD("OWNERTYPE",OwnerTyper.Name);
+      end;
+      
+      rwcnt = MatRowCnt(COr);
+      for (i=0; i<rwcnt; i=i+1) begin
+        MatRowGet(COr,i,COrw);
+
+        // -> items
+        INr.Code = COrw.ArtCode;
+        if(ReadFirstMain(INr,1,true)) then begin
+          OUTFORMFIELD("ITEMCODE",INr.Code);
+          OUTFORMFIELD("ITEMNAME",INr.Name);
+
+          if(INr.CalcOnLandOrImp == 1) then begin
+            OUTFORMFIELD("ITEMPRICE",INr.UserStr2);
+          end else begin
+            OUTFORMFIELD("ITEMPRICE",COrw.Price);
+          end;
+        end;
+        ENDFORMROW;
+      end;
+    end;
+
+    CloseForm;
+    EndPrintDialogGroup;
+  end;
+
+  return;
+end;

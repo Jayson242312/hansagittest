@@ -1,0 +1,30 @@
+
+global function longint CalcServicePlanVcRecordCheck(var record CalcServicePlanVc CalcServicePlanr,record CalcServicePlanVc CalcServicePlanr2,longint aa,longint b)
+Begin
+  longint res;
+  integer count,i,rwc,a;
+  Row CalcServicePlanVc CalcServicePlanrw;
+  string 1 strChar;
+  
+  res=0;
+  rwc=MatRowCnt(CalcServicePlanr);
+  for(a=0;a<rwc;a=a+1)begin
+    MatRowGet(CalcServicePlanr,a,CalcServicePlanrw);
+    count=0;
+    for(i=0;i<len(CalcServicePlanrw.Formula);i=i+1)begin
+      strChar=mid(CalcServicePlanrw.Formula,i,1);
+      if strchar=="-" or strchar=="+" or strchar=="*" or strchar=="/" or strchar=="=" then begin 
+        count=count+1;
+      end;
+      if count>=80 then begin
+        RecordCheckError(1000989,"",a,"Formula");
+        res=-1;
+        GoTo EndCalcServicePlanVcRecordCheck;
+      end;
+    end;
+  end;
+  
+EndCalcServicePlanVcRecordCheck:;
+  CalcServicePlanVcRecordCheck=res;
+return;
+end;

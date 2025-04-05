@@ -1,0 +1,30 @@
+
+global 
+function longint BBSIVCommentVcRecordCheck(var record BBSIVCommentVc BBSIVCommentr,record BBSIVCommentVc BBSIVCommentr2,longint a,longint b)
+Begin
+  Longint res;
+  
+  res=0;
+  if BBSIVCommentr.SerNr==-1 then begin
+    if CountRecords("BBSIVCommentVc")==0 then begin
+      BBSIVCommentr.SerNr=1;
+    end else begin
+      BBSIVCommentr.SerNr=NextSerNr("BBSIVCommentVc",CurrentDate,-1,false,"");
+    end;
+  end;
+  
+EndRecordCheck:;
+  BBSIVCommentVcRecordCheck = res;
+return;
+end;
+
+global
+function longint BBSIVCommentVcRecordDuplicate(var record BBSIVCommentVc BBSIVCommentr,record BBSIVCommentVc BBSIVComment2r,longint a,longint b)
+begin
+  longint res;
+
+  BBSIVCommentr.SerNr = -1;
+ 
+  BBSIVCommentVcRecordDuplicate = res;
+  return;
+end;

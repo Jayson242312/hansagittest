@@ -1,0 +1,499 @@
+/* dzivoklu skaititaju window actioni */
+remote function longint CheckCountResExistsInPeriod(record CountResVc);
+remote procedure PasteFlatCounterInCountRes(Record FlatCountersVc,var Record CountResVc);
+remote procedure GetCountResPeriod(var date,var date);
+
+procedure PasteFlatCounterInCountResLoc(Record FlatCountersVc FlatCountersr,var Record CountResVc CountResr,date sd,date ed) begin
+
+  RecordNew(CountResr);
+  CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+  CountResr.StartDate = sd;
+  CountResr.EndDate = ed;
+  CountResr.ContractNr = FlatCountersr.Contract;
+  PasteFlatCounterInCountRes(FlatCountersr,CountResr);
+  //
+  // LogText(0," ====> " & CountResr.ContractNr & " => " & FlatCountersr.Contract);
+  
+  return;
+end;
+
+global
+procedure CreateCountResLSm() begin
+  Record CountResVc CountResr;
+  Record FlatCountersVc FlatCountersr;
+  // Record NApsSetBlock NApsSetr;
+  integer wn,nwn;
+  longint nr;
+  
+  wn = curwindow;
+  if (ReadMarkedRecord(wn,FlatCountersr)) then begin
+    // BlockLoad(NApsSetr);
+    // if nonblankdate(NApsSetr.d1) and nonblankdate(NApsSetr.d2) then begin
+    //   CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+    //   CountResr.StartDate = NApsSetr.d1;
+    //   CountResr.EndDate = NApsSetr.d2;
+    //   nr = -1;
+    //   nr = CheckCountResExistsInPeriod(CountResr);
+    //   if nr==-1 then begin
+    //     PasteFlatCounterInCountResLoc(FlatCountersr,CountResr,NApsSetr.d1,NApsSetr.d2);
+    //     nwn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+    //     WindowFieldGoto(nwn,CountResr,-1,"EndVal",true);
+    //   end else begin
+    //     MessageBox(1001171," (" & nr & ")");
+    //   end;
+    // end else begin
+      MessageBox(1000003,"");
+    // end;
+  end;
+  
+return;
+end;
+
+global
+procedure CreateCountResDSm() begin
+  Record CountResVc CountResr;
+  Record FlatCountersVc FlatCountersr;
+  integer wn,nwn;
+  longint nr;
+  date sd,ed;
+  
+  wn = curwindow;
+  if (WindowState(wn) == Rs_normal) then begin
+    GetWindowRecord(wn,FlatCountersr);
+    CountResr.FlatCounterSerNr = FlatCountersr.SerNr;
+    GetCountResPeriod(sd,ed);
+    CountResr.StartDate = sd;
+    CountResr.EndDate = ed;
+    CountResr.CounterType = FlatCountersr.CounterType;
+    nr = -1;
+    nr = CheckCountResExistsInPeriod(CountResr);
+    if nr==-1 then begin
+      PasteFlatCounterInCountResLoc(FlatCountersr,CountResr,CountResr.StartDate,CountResr.EndDate);
+      nwn = OpenWindow("CountResDClass",1,0,"","",CountResr);
+      WindowFieldGoto(nwn,CountResr,-1,"EndVal",true);
+    end else begin
+      MessageBox(1001171," (" & nr & ")");
+    end;
+  end else begin
+    beep;
+    MessageBox(1000763,"");
+  end;
+  
+return;
+end;
+
+global
+procedure FlatCountersFlatBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"1");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+global
+procedure FlatCountersBuildBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"2");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+global
+procedure FlatCountersBuildGroupBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"3");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+global
+procedure FlatCountersFlatGroupBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"4");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+global
+procedure FlatCountersAllBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+global
+procedure FlatCountersClosedBtn()
+begin
+record FlatCountersVc FlatCountersr;
+integer wn,nwn;
+
+  wn = CurWindow;
+  SetWindowSubSet(wn,"5");
+  ReRunWindowDef(wn);
+
+return;
+end;
+
+function boolean FlatCountersDClassCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,FlatCountersr);
+  Buildr.Code = FlatCountersr.Code;
+  if (ReadFirstMain(Buildr,1,true)) then begin
+    FlatCountersr.Address = Buildr.Address;
+    PutWindowRecord(wn,FlatCountersr);
+  end else begin
+    beep;
+  end;
+  FlatCountersDClassCodeEFAfter  = res;
+return;
+end;
+
+// ================================== CUSTOM CODE ==================================
+
+function boolean FlatCountersDClassContractEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatCountersVc FlatCountersr;
+  record FlatCountersVc FlatCountersr2;
+  record NAContractVc COr;
+  row NAContractVc COrw; // contract row
+  record BuildVc ERFMasterr;
+  record INVc INr; // items
+  Integer rwcnt, i;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,FlatCountersr);
+  COr.SerNr = FlatCountersr.Contract;
+  if (ReadFirstMain(COr,1,true)) then begin
+    FlatCountersr.Code = COr.BuildCode; // builidng
+    FlatCountersr.FlatCode = COr.FlatCode; // premises
+    FlatCountersr.Address = COr.FlatAddress; // address
+
+    // find lot.no
+    ERFMasterr.Code = COr.BuildCode;
+    if (ReadFirstMain(ERFMasterr,1,true)) then begin 
+      // FlatCountersr.CounterNo = ERFMasterr.LotNo; // meter.no 
+      FlatCountersr.UserStr2 = ERFMasterr.LotNo; // Seq No
+      FlatCountersr.UserStr3 = ERFMasterr.ExtensionNo;  // Alpha No                                         
+                                                  //
+    end;
+
+    // find meter item
+    i = 0; rwcnt = 0;
+    rwcnt = MatRowCnt(COr);
+    while (i<rwcnt) begin
+      // read each item row
+      MatRowGet(COr,i,COrw);
+      // find item
+      INr.Code = COrw.ArtCode;
+      if(ReadFirstMain(INr,1,true)) then begin
+        if(INr.ServQuantInCalc == 2) then begin
+          FlatCountersr.CounterType = INr.Code;
+          goto LineBreak; // break loop
+        end;
+      end;
+      if(i==(rwcnt-1)) then begin
+        FlatCountersr.CounterType = blankval;
+        FlatCountersr.Code = blankval; // builidng
+        FlatCountersr.FlatCode = blankval; // premises
+        FlatCountersr.Address = blankval; // address
+        FlatCountersr.CounterNo = blankval; // meter.no
+        // FlatCountersr.Contract = blankval; // comtract.no
+        MessageBox(0,"No meter levy in contract selected");
+      end;
+      i = i + 1;
+    end;
+    LineBreak:;
+    PutWindowRecord(wn,FlatCountersr);
+  end else begin
+    beep;
+  end;
+  LineBreak_2:;
+  FlatCountersDClassContractEFAfter  = res;
+return;
+end;
+
+// ================================== END OF CUSTOM CODE ==================================
+
+
+function boolean FlatCountersDClassBuildGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildGroupVc BuildGroupr;
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,FlatCountersr);
+  BuildGroupr.Code = FlatCountersr.BuildGroupCode;
+  if (ReadFirstMain(BuildGroupr,1,true)) then begin
+    FlatCountersr.Address = BuildGroupr.Comment;
+    PutWindowRecord(wn,FlatCountersr);
+  end else begin
+    beep;
+  end;
+  FlatCountersDClassBuildGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean FlatCountersDClassFlatGroupCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatGroupVc FlatGroupr;
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,FlatCountersr);
+  FlatGroupr.Code = FlatCountersr.FlatGroupCode;
+  if (ReadFirstMain(FlatGroupr,1,true)) then begin
+    FlatCountersr.Address = FlatGroupr.Comment;
+    PutWindowRecord(wn,FlatCountersr);
+  end else begin
+    beep;
+  end;
+  FlatCountersDClassFlatGroupCodeEFAfter  = res;
+return;
+end;
+
+function boolean FlatCountersDClassFlatCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatsVc Flatr;
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,FlatCountersr);
+  Flatr.FlatCode = FlatCountersr.FlatCode;
+  if (ReadFirstMain(Flatr,1,true)) then begin
+    FlatCountersr.Address = Flatr.Address;
+    FlatCountersr.Code = Flatr.Code;
+    FlatCountersr.FlatNo = Flatr.FlatNo;
+    PutWindowRecord(wn,FlatCountersr);
+  end else begin
+    beep;
+  end;
+  FlatCountersDClassFlatCodeEFAfter  = res;
+return;
+end;
+
+function boolean FlatCountersDClassInstallDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+  // Record NApsSetBlock NSr;
+
+  res = true;
+  // GetWindowRecord(wn,FlatCountersr);
+  // BlockLoad(NSr);
+  // if NSr.FlatCountYears>0 and nonblankdate(FlatCountersr.InstallDate) and NSr.CountStartDateFromVerDate==0 then begin
+    // FlatCountersr.ValidUntil=AddDay(AddYear(FlatCountersr.InstallDate,NSr.FlatCountYears),-1);
+    // PutWindowRecord(wn,FlatCountersr);
+  // end;
+  FlatCountersDClassInstallDateEFAfter  = res;
+return;
+end;
+
+
+function boolean FlatCountersDClassVerificationDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record FlatCountersVc FlatCountersr;
+  boolean res;
+  // Record NApsSetBlock NSr;
+
+  res = true;
+  // GetWindowRecord(wn,FlatCountersr);
+  // BlockLoad(NSr);
+  // if NSr.FlatCountYears>0 and nonblankdate(FlatCountersr.VerificationDate) and NSr.CountStartDateFromVerDate==1 then begin
+  //   FlatCountersr.ValidUntil=AddDay(AddYear(FlatCountersr.VerificationDate,NSr.FlatCountYears),-1);
+  //   PutWindowRecord(wn,FlatCountersr);
+  // end;
+  FlatCountersDClassVerificationDateEFAfter  = res;
+return;
+end;
+
+global
+function boolean FlatCountersDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "Code": res = FlatCountersDClassCodeEFAfter(wn,fn,rownr,changed);
+      case "Contract": res = FlatCountersDClassContractEFAfter(wn,fn,rownr,changed); // Added
+      case "BuildGroupCode": res = FlatCountersDClassBuildGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatGroupCode": res = FlatCountersDClassFlatGroupCodeEFAfter(wn,fn,rownr,changed);
+      case "FlatCode": res = FlatCountersDClassFlatCodeEFAfter(wn,fn,rownr,changed);
+      case "InstallDate": res = FlatCountersDClassInstallDateEFAfter(wn,fn,rownr,changed);
+      case "VerificationDate": res = FlatCountersDClassVerificationDateEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  FlatCountersDClassAfterEditField = res;
+return;
+end;
+
+global
+procedure CountResRnsm()
+begin
+  record RcVc RepSpec;
+  record FlatCountersVc FlatCounterr;
+  integer wn;
+  date sd,ed;
+  
+  sd.day = 1; sd.month=1; sd.year=1990;
+  ed.day=31; ed.month=12; ed.year=2040;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,FlatCounterr);
+  RepSpec.repname = "MSCountListRn";
+  ReportDefaults(RepSpec,"MSCountListRClass");
+  RepSpec.Media = mtScreen;
+  RepSpec.f2 = FlatCounterr.CounterNo;
+  RepSpec.f5 = FlatCounterr.FlatCode;
+  Repspec.long1 = FlatCounterr.SerNr;
+  RepSpec.flags[1] = FlatCounterr.Closedf;
+  RepSpec.sStartDate = sd;
+  RepSpec.sEndDate = ed;
+  RepSpec.Period2Str = sd & ":" & ed;
+  RunReport(RepSpec,0);
+  return;
+end;
+
+global
+procedure CountResRnFlatCountersLsm()
+begin
+  record RcVc RepSpec;
+  record FlatCountersVc FlatCounterr;
+  integer wn;
+  date sd,ed;
+
+  wn = CurWindow;
+  if (ReadMarkedRecord(wn,FlatCounterr)) then begin
+    sd.day = 1; sd.month=1; sd.year=1990;
+    ed.day=31; ed.month=12; ed.year=2040;
+    RepSpec.repname = "MSCountListRn";
+    ReportDefaults(RepSpec,"MSCountListRClass");
+    RepSpec.Media = mtScreen;
+    RepSpec.f2 = FlatCounterr.CounterNo;
+    Repspec.long1 = FlatCounterr.SerNr;
+    RepSpec.flags[1] = FlatCounterr.Closedf;
+    RepSpec.sStartDate = sd;
+    RepSpec.sEndDate = ed;
+    RepSpec.Period2Str = sd & ":" & ed;
+    RunReport(RepSpec,0);
+  end;
+  return
+end;
+
+// global
+// procedure CounterListRnsm()
+// begin
+//   record RcVc RepSpec;
+//   record FlatCountersVc FlatCounterr;
+//   integer wn;
+
+//   wn = CurWindow;
+//   GetWindowRecord(wn,FlatCounterr);
+//   if nonblank(FlatCounterr.Code) and blank(FlatCounterr.FlatCode) then begin
+//     RepSpec.repname = "MSCounterListRn";
+//     ReportDefaults(RepSpec,"MSCounterListRClass");
+//     RepSpec.Media = mtScreen;
+//     RepSpec.f1 = FlatCounterr.CounterNo;
+//     RepSpec.f3 = FlatCounterr.Code;
+//     //RepSpec.f4 = FlatCounterr.CounterType;
+//     RunReport(RepSpec,0);
+//   end else begin
+//     MessageBox(1000049,"");
+//   end;
+// return;
+// end;
+
+// global
+// updating procedure UpdateCountResSm()
+// begin
+//   record RcVc RepSpec;
+//   record FlatCountersVc FlatCountersr;
+//   integer wn;
+
+//   wn = curwindow;
+//   if (WindowState(wn) == Rs_normal) then begin
+//     GetWindowRecord(wn,FlatCountersr);
+//     if (FlatCountersr.SerNr != -1) then begin
+//       RepSpec.repname = "UpdCountResRecsForFlatCounter";
+//       RepSpec.long1 = FlatCountersr.SerNr;
+//       RunMaintenance(RepSpec);
+//     end;
+//   end else begin
+//     beep;
+//     MessageBox(1000763,"");
+//   end;
+  
+//   return;
+// end;
+
+//overwrite F2 function
+global
+updating procedure FlatCountersSClassFunctionKey(LongInt keycode,Boolean shflag,Boolean ctrlflag)
+begin
+  record FlatCountersVc FlatCounterr;
+  integer wn,nwn;
+  
+  if keycode==2 and !shflag and !ctrlflag then begin
+    wn = CurWindow;
+    if (ReadMarkedRecord(wn,FlatCounterr)) then begin
+      nwn = OpenWindow("FlatCountersDClass",1,0,"","",FlatCounterr);
+    end;
+  end;
+  
+  return;
+end;
+
+
+global
+procedure ChangeFlatCounterTypeDSm()
+begin
+  record FlatCountersVc FlatCountersr;
+  record RcVc RepSpec;
+  integer wn,nwn;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,FlatCountersr);
+  RepSpec.long1=FlatCountersr.SerNr;
+  RepSpec.f2=FlatCountersr.CounterNo;
+  RepSpec.f3=FlatCountersr.CounterType;
+  RepSpec.flags[1]=1; 
+  RepSpec.flags[2]=1;
+  RepSpec.repname = "ChangeFlatCounterTypeMn";  
+  nwn=OpenWindow("ChangeFlatCounterTypeVClass",1,0,"","",RepSpec);
+
+  return;
+end;

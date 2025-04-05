@@ -1,0 +1,282 @@
+procedure BBSFindPeriod(Record ServRecPlanVc ServRecPlanr,var record RcVc RepSpec)
+Begin
+  Row ServRecPlanVc ServRecPlanrw;
+  Integer i,rwc;
+  date sd,ed;
+  boolean found;
+
+  rwc=MatRowCnt(ServRecPlanr);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(ServRecPlanr,i,ServRecPlanrw);
+    found=true;
+    if blankdate(sd) or ServRecPlanrw.SDate>sd then begin
+      sd=ServRecPlanrw.SDate;
+      ed=ServRecPlanrw.EDate;
+    end;
+    if blankdate(ed) or ServRecPlanrw.EDate>ed then begin
+      sd=ServRecPlanrw.SDate;
+      ed=ServRecPlanrw.EDate;
+    end;
+  end;
+
+  if blankdate(ed) then begin
+    if AddMonth(CurrentDate,-1)>sd then begin
+      sd = AddMonth(CurrentDate,-1);
+      sd.day = 1;
+    end;
+    ed = sd;
+    ed.day = DaysInMonth(ed.year,ed.month);
+  end;
+  if found then begin
+    RepSpec.Period2Str=DateToString(sd,"DD.MM.YYYY") & ":" & DateToString(ed,"DD.MM.YYYY");
+    RepSpec.sStartDate=sd;
+    RepSpec.sEndDate=ed;
+  end;
+return;
+end;
+
+// global updating procedure CalcServPlanSm() Begin
+  // record ServRecPlanVc SercRecPlanr;
+  // record RcVc RepSpec2;
+
+  // GetWindowRecord(CurWindow,SercRecPlanr);
+  // RepSpec2.repname = "CalcServPlanRn";
+  // RepSpec2.Media = mtScreen;
+  // RepSpec2.long1 = SercRecPlanr.SerNr;
+  // RunReport(RepSpec2,0);
+
+// return;
+// end;
+
+global updating procedure CheckServCalcSm() Begin
+  Record RcVc RepSpec;
+  Record ServRecPlanVc ServRecPlanr;
+  Integer wn;
+  string 50 tstr;
+  date sd,ed;
+  
+  wn = CurWindow;
+  if WindowState(wn)==0 then begin
+    GetWindowRecord(wn,ServRecPlanr);
+    RepSpec.f1 = ServRecPlanr.CalcServPlan;
+    RepSpec.f2 = ServRecPlanr.BuildCode;
+    RepSpec.f4 = ServRecPlanr.BuildGroupCode;
+    RepSpec.f3 = ServRecPlanr.FlatGroupCode;
+    BBSFindPeriod(ServRecPlanr,RepSpec);
+    wn = OpenWindow("CheckServCalcVClass",1,0,"","",RepSpec);
+  end else begin
+    beep;
+  end;
+
+return;
+end;
+
+function boolean ServRecPlanDClassCounterTypeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record ServRecPlanVc ServRecPlanr;
+  record INVc INr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServRecPlanr);
+  INr.Code = ServRecPlanr.CounterType;
+  if ReadFirstMain(INr,1,true) then begin
+    ServRecPlanr.QtyForm = INr.EUCodex;
+    ServRecPlanr.Description = INr.Name;
+    PutWindowRecord(wn,ServRecPlanr);
+  end else begin
+    MessageBox(1001063,"");
+  end;
+  
+  ServRecPlanDClassCounterTypeEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassBuildCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServRecPlanVc ServRecPlanr;
+  boolean res;
+
+  res = true;
+  GetWindowRecord(wn,ServRecPlanr);
+  Buildr.Code = ServRecPlanr.BuildCode;
+  if nonblank(ServRecPlanr.BuildCode) then begin
+    if (ReadFirstMain(Buildr,1,true)) then begin
+      ServRecPlanr.Address = Buildr.Address;
+      PutWindowRecord(wn,ServRecPlanr);
+    end else begin
+      beep;
+    end;
+  end;
+  ServRecPlanDClassBuildCodeEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassStartDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServRecPlanVc ServRecPlanr;
+  boolean res;
+  Date ed;
+  // Record NApsSetBlock NApsSetr;
+
+  res = true;
+  // BlockLoad(NApsSetr);
+  GetWindowRecord(wn,ServRecPlanr);
+  if nonblankdate(ServRecPlanr.StartDate) /*and NApsSetr.Int6==1*/ then begin
+    ed = ServRecPlanr.StartDate; ed.day = 1; ed = addmonth(ed,1); ed = addday(ed,-1);
+    ServRecPlanr.EndDate = ed;
+    PutWindowRecord(wn,ServRecPlanr);
+  end;
+  ServRecPlanDClassStartDateEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassCalcServPlanEFAfter(Integer wn,Integer fn,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServRecPlanVc ServRecPlanr;
+  Record CalcServicePlanVc CalcServicePlanr;
+  boolean res;
+  Date ed;
+
+  res = true;
+
+  GetWindowRecord(wn,ServRecPlanr);
+  CalcServicePlanr.Code = ServRecPlanr.CalcServPlan;
+  if ReadFirstMain(CalcServicePlanr,1,true) then begin
+    ServRecPlanr.Description = CalcServicePlanr.Name;
+    PutWindowRecord(wn,ServRecPlanr);
+  end;
+
+  ServRecPlanDClassCalcServPlanEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassBuildGroupCodeEFAfter(Integer wn,Integer fn,Integer changed)
+begin
+  record ServRecPlanVc ServRecPlanr;
+  Record BuildGroupVc BuildGroupr;
+  boolean res;
+  Date ed;
+
+  res = true;
+
+  GetWindowRecord(wn,ServRecPlanr);
+  if nonblank(ServRecPlanr.BuildGroupCode) then begin
+    BuildGroupr.Code=ServRecPlanr.BuildGroupCode;
+    if ReadFirstMain(BuildGroupr,1,true) then begin
+      ServRecPlanr.Address = BuildGroupr.Comment;
+      PutWindowRecord(wn,ServRecPlanr);
+    end else begin
+      beep;
+    end;
+  end;
+
+  ServRecPlanDClassBuildGroupCodeEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassFlatGroupCodeEFAfter(Integer wn,Integer fn,Integer changed)
+begin
+  record ServRecPlanVc ServRecPlanr;
+  Record FlatGroupVc FlatGroupr;
+  boolean res;
+  Date ed;
+
+  res = true;
+
+  GetWindowRecord(wn,ServRecPlanr);
+  FlatGroupr.Code=ServRecPlanr.FlatGroupCode;
+  if nonblank(ServRecPlanr.FlatGroupCode) then begin
+    if ReadFirstMain(FlatGroupr,1,true) then begin
+      ServRecPlanr.Address = FlatGroupr.Comment;
+      PutWindowRecord(wn,ServRecPlanr);
+    end else begin
+      beep;
+    end;
+  end;
+
+  ServRecPlanDClassFlatGroupCodeEFAfter  = res;
+  return;
+end;
+
+function boolean ServRecPlanDClassSDateEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record BuildVc Buildr;
+  record ServRecPlanVc ServRecPlanr;
+  row ServRecPlanVc ServRecPlanrw;
+  boolean res;
+  Date ed;
+  // Record NApsSetBlock NApsSetr;
+
+  res = true;
+  // BlockLoad(NApsSetr);
+  GetWindowRecord(wn,ServRecPlanr);
+  if rownr>=0 then begin
+    MatRowGet(ServRecPlanr,rownr,ServRecPlanrw);
+    if nonblankdate(ServRecPlanrw.SDate) /*and NApsSetr.Int6==1*/ then begin
+      ed = ServRecPlanrw.SDate; ed.day = 1; ed = addmonth(ed,1); ed = addday(ed,-1);
+      ServRecPlanrw.EDate = ed;
+      MatRowPut(ServRecPlanr,rownr,ServRecPlanrw);
+      PutWindowRecord(wn,ServRecPlanr);
+    end;
+  end;
+  ServRecPlanDClassSDateEFAfter  = res;
+  return;
+end;
+
+global
+function boolean ServRecPlanDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "CounterType": res = ServRecPlanDClassCounterTypeEFAfter(wn,fn,rownr,changed);
+      case "BuildCode": res = ServRecPlanDClassBuildCodeEFAfter(wn,fn,rownr,changed);
+      case "StartDate": res = ServRecPlanDClassStartDateEFAfter(wn,fn,rownr,changed);
+      case "SDate": res = ServRecPlanDClassSDateEFAfter(wn,fn,rownr,changed);
+      case "CalcServPlan": res = ServRecPlanDClassCalcServPlanEFAfter(wn,fn,changed);
+      case "BuildGroupCode": res = ServRecPlanDClassBuildGroupCodeEFAfter(wn,fn,changed);
+      case "FlatGroupCode": res = ServRecPlanDClassFlatGroupCodeEFAfter(wn,fn,changed);
+    end;
+  end;
+  ServRecPlanDClassAfterEditField = res;
+  return;
+end;
+
+procedure SetSubsetFromVIDClass(integer wn,integer mwn,integer rownr) begin
+  Record VIVc Vir;
+  Row VIVc VIrw;
+
+  GetWindowRecord(mwn,VIr);
+  // if rownr>=0 then begin
+  //   MatRowGet(VIr,rownr,VIrw);
+  //   if nonblank(VIrw.BuildCodeRow) then begin
+  //     SetWindowSubSet(wn,VIrw.BuildCodeRow);
+  //   end else begin
+  //     if nonblank(VIr.BuildCode) then begin
+  //       SetWindowSubSet(wn,VIr.BuildCode);
+  //     end;
+  //   end;
+  // end;
+
+return;
+end;
+
+global
+function Boolean ServRecPlanSClassOnOpenWindow(Integer wn)
+begin
+  Integer mwn,rownr;
+
+  mwn = MotherWindow(wn);
+  rownr = WindowActiveRow(mwn);
+
+  switch (GetWindowFileName(mwn)) begin
+    Case "VIVc": SetSubsetFromVIDClass(wn,mwn,rownr);
+  end;
+
+  ServRecPlanSClassOnOpenWindow=false;
+end;

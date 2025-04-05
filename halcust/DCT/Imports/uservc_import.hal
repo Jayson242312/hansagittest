@@ -1,0 +1,76 @@
+event startup
+begin
+
+  SetLangMode(LangEnglish,"ENG",0);
+  Import("Items",ItemIn,ItemIn,modDCT);
+
+  return;
+end;
+
+global
+updating procedure UsersIn()
+BEGIN
+  string 255 InLine;
+  record UserVc oldUserr;
+  record UserVc Userr;
+  record RcVc RepSpec;
+  string 255 tstr,t2;
+  Boolean testf,opt;
+
+  // optional delete first
+//  RecordNew(RepSpec);
+//  DelNotUsedINMn(RepSpec);
+
+ // SetDOSFlag(true);
+  while (TestEOF()==false) begin
+    InLine = ImportField();
+    if(nonblank(InLine)) then begin
+      opt = true; // load
+      Userr.Code = InLine;
+      if (ReadFirstMain(Userr,1,true)) then begin
+        opt = false;  // amend
+        goto LSKIP;
+
+        RecordCopy(oldUserr,Userr);
+      end
+      else begin
+        RecordNew(Userr);
+        Userr.Code = InLine; //User Code 
+      end;
+
+      InLine = ImportField();              //Name
+      Userr.Name = InLine;
+      InLine = ImportField();              //Standard ID
+      Userr.LoginEmailAddr = InLine; 
+      InLine = ImportField();              //Access Group 
+      Userr.AccessGroup = InLine;
+      InLine = ImportField();              //limitedAccess
+      Userr.limitedAccess = StringToInt(InLine);
+      InLine = ImportField();              //TypeOfUser
+      Userr.TypeOfUser = StringToInt(InLine);
+      InLine = ImportField();              //Location
+      Userr.Location = InLine; 
+      InLine = ImportField();              //Email Address
+      Userr.emailAddr = InLine; 
+      InLine = ImportField();              //Person Object
+      Userr.PersObjx = InLine;
+    
+      if (opt==true) then begin    // load
+        if (RecordStore(Userr,true)) then begin
+        end;
+      end
+      else begin                   // amend
+        if (RecordUpdate(oldUserr,Userr,true)==0) then begin
+        end;
+      end;
+
+    end;
+    UserTrace(Userr.Code,M4Str);
+
+    LSKIP:;
+
+    testf = NextImportLine(true);
+  end;
+//  SetDOSFlag(false);
+  RETURN;
+END;

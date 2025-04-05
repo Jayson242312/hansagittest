@@ -1,0 +1,629 @@
+external inner function Boolean GetAccName(string,var string,Integer);
+external inner procedure ConvertSalesAcc(var string,Integer);
+external inner procedure GetItemSalesAcc(string,Integer,var string);
+external inner function Boolean NegativeAmountsOnIVTrans(Integer,val);
+external inner function Integer GetAccNamCurVAT(string,var string,var string,Integer,string);
+external inner function val MulRateToBase1(var string,val,val,val,val,val,val,roundmode);
+external inner function Boolean CheckTTRPerRow(string,string,string,Boolean,var string,Integer);
+external inner procedure AddEuroCurncyTrRow(record TRVc,string,string,string,string,val,Boolean,Boolean,var val,string,val,val,val,val,val,val,val,LongInt,Boolean,string);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external function boolean GetMSIntPercRec(longint,var Record IntPercVc,string);
+external function val GetInvoiceSelfPayedSum(record IVVc,string);
+
+global
+function boolean AnnulmentPayMode(string PayMode)
+begin
+  record AnnulmentPMBlock APMBl;
+  boolean res;
+  
+  BlockLoad(APMBl);
+  
+  if nonblank(APMBl.PayModes) and nonblank(PayMode) then begin
+    if SetInSet(PayMode,APMBl.PayModes) then begin
+      res = true;
+    end;
+  end;
+  
+  AnnulmentPayMode = res;
+  return;
+end;
+
+global
+function string 255 GetAllLSItemTRItems()
+begin
+  record LSItemTRBlock Bl;
+  row LSItemTRBlock Blrw;
+  integer i,rwc;
+  string 255 res;
+  
+  BlockLoad(Bl);
+  rwc=MatRowCnt(Bl);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Bl,i,BLrw);
+    if nonblank(BLrw.ArtCode) and !SetInSet(BLrw.ArtCode,res) then begin
+      if nonblank(res) then begin
+        res = res & ",";
+      end;
+      res = res & BLrw.ArtCode;
+    end;
+  end;
+      
+  GetAllLSItemTRItems = res;
+  return;
+end;
+
+global
+function boolean HasLSItemTR(string artcode)
+begin
+  record LSItemTRBlock Bl;
+  row LSItemTRBlock Blrw;
+  integer i,rwc;
+  boolean res;
+
+  BlockLoad(Bl);
+  rwc=MatRowCnt(Bl);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Bl,i,BLrw);
+    if BLrw.ArtCode==artcode then begin
+      if nonblank(BLrw.SLAcc) and nonblank(BLrw.ARAcc) and nonblank(BLrw.PayAcc) then begin
+        res = true;
+        i=rwc;
+      end;
+    end;
+  end;
+  
+  HasLSItemTR = res;
+  return;
+end;
+
+function boolean GetLSItemTR(string artcode,var string SLAcc,var string ARAcc,var string PayAcc)
+begin
+  record LSItemTRBlock Bl;
+  row LSItemTRBlock Blrw;
+  integer i,rwc;
+  boolean res;
+  
+  SLAcc="";
+  ARAcc="";
+  PayAcc="";
+  
+  BlockLoad(Bl);
+  rwc=MatRowCnt(Bl);
+  for (i=0;i<rwc;i=i+1) begin
+    MatRowGet(Bl,i,BLrw);
+    if BLrw.ArtCode==artcode then begin
+      if nonblank(BLrw.SLAcc) and nonblank(BLrw.ARAcc) and nonblank(BLrw.PayAcc) then begin
+        SLAcc=BLrw.SLAcc;
+        ARAcc=BLrw.ARAcc;
+        PayAcc=BLrw.PayAcc;
+        res = true;
+        i=rwc;
+      end;
+    end;
+  end;
+  
+  GetLSItemTR = res;
+  return;
+end;
+
+function string 10 GetSalesAcc(record IVVc IVr,record AccBlock ARAccb,string artcode) begin
+  row IVVc IVrw;
+  integer i,rwc;
+  string 10 res;
+  
+  //res = ARAccb.ARAcc; //was
+  res = IVr.ARAcc;
+  if blank(res) then begin
+     res = ARAccb.ARAcc;
+  end;
+  // rwc = MatRowCnt(IVr);
+  // for(i=0;i<rwc;i=i+1)begin
+    // MatRowGet(IVr,i,IVrw);
+    // if IVrw.stp==kInvoiceRowTypeNormal and IVrw.ArtCode==artcode then begin
+      // res = IVrw.SalesAcc;
+      // if (blank(res)) then begin
+        // GetItemSalesAcc(IVrw.ArtCode,IVr.ExportFlag,res);
+      // end;
+      // if (blank(res)) then begin
+        // res = ARAccb.DomSalesAcc;
+        // res = ARAccb.ARAcc;
+      // end;
+      // ConvertSalesAcc(res,IVr.ExportFlag);
+      // i = rwc;
+    // end;
+  // end;
+  
+  GetSalesAcc = res;
+  return;
+end;
+
+function longint ProcAddPenaltyTRRowsIP(record IPVc IPp,row IPVc IPrw,var record TRVc gTRp,record IVVc IVr,Boolean dc1,Boolean dc2,var val TotSum,record AccBlock ARAccb,boolean AnnulmentPayModef,
+                                string SLAcc,string ARAcc,string PayAcc,boolean LSItemTRf,var val nilv,string PenAccCode)
+begin
+  longint res;
+  val rs;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  string 100 revacc,tstr,taccnumber;
+  
+  res = 0;
+  if LSItemTRf then begin
+    if !AnnulmentPayModef then begin
+      revacc = GetSalesAcc(IVr,ARAccb,IPrw.rkRecNumber);
+      GetFullCurncyRate(IPrw.RecCurncy,IPp.TransDate,frrate,torate1,torate2,baserate1,baserate2);
+      rs = MulRateToBase1(IPrw.RecCurncy,IPrw.RecVal,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+      if (GetAccName(revacc,tstr,60)==false) then begin
+        res = 2137;
+        goto LProcAddPenaltyTRRowsIP;
+      end;
+      if (CheckTTRPerRow("IPVc",revacc,"",dc2,taccnumber,0)) then begin end;      
+
+      AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc2,TotSum,
+                        IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+                        
+      revacc = PayAcc;
+      if (GetAccName(revacc,tstr,60)==false) then begin
+        res = 2137;
+        goto LProcAddPenaltyTRRowsIP;
+      end;
+      if (CheckTTRPerRow("IPVc",revacc,"",dc1,taccnumber,0)) then begin end;      
+
+      AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc1,TotSum,
+                        IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+    end;
+    
+    revacc = ARAcc;
+    GetFullCurncyRate(IPrw.RecCurncy,IPp.TransDate,frrate,torate1,torate2,baserate1,baserate2);
+    rs = MulRateToBase1(IPrw.RecCurncy,IPrw.RecVal,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+    if (GetAccName(revacc,tstr,60)==false) then begin
+      res = 2137;
+      goto LProcAddPenaltyTRRowsIP;
+    end;
+    if (CheckTTRPerRow("IPVc",revacc,"",dc2,taccnumber,0)) then begin end;      
+
+
+    AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc2,TotSum,
+                      IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+    revacc = SLAcc;
+    if (GetAccName(revacc,tstr,60)==false) then begin
+      res = 2137;
+      goto LProcAddPenaltyTRRowsIP;
+    end;
+    if (CheckTTRPerRow("IPVc",revacc,"",dc1,taccnumber,0)) then begin end;      
+
+    AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc1,TotSum,
+                      IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+  end else begin
+    if nonblank(PenAccCode) then begin
+      revacc = GetSalesAcc(IVr,ARAccb,IPrw.rkRecNumber);
+      GetFullCurncyRate(IPrw.RecCurncy,IPp.TransDate,frrate,torate1,torate2,baserate1,baserate2);
+      rs = MulRateToBase1(IPrw.RecCurncy,IPrw.RecVal,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+      
+      if (GetAccName(revacc,tstr,60)==false) then begin
+        res = 2137;
+        goto LProcAddPenaltyTRRowsIP;
+      end;
+      if (CheckTTRPerRow("IPVc",revacc,"",dc2,taccnumber,0)) then begin end;      
+
+      AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc2,TotSum,
+                        IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+                        
+      revacc = PenAccCode;
+      if (GetAccName(revacc,tstr,60)==false) then begin
+        res = 2137;
+        goto LProcAddPenaltyTRRowsIP;
+      end;
+      if (CheckTTRPerRow("IPVc",revacc,"",dc1,taccnumber,0)) then begin end;      
+
+      AddEuroCurncyTrRow(gTRp,revacc,"L" & IVr.Contract,"",tstr,rs,false,dc1,TotSum,
+                        IPrw.RecCurncy,frrate,torate1,torate2,baserate1,baserate2,IPrw.RecVal,nilv,-1,false,taccnumber);
+    end;
+  end;
+LProcAddPenaltyTRRowsIP:;  
+  ProcAddPenaltyTRRowsIP=res;
+  return;
+end;
+
+global
+function longint AddPenaltyTRRowsIP(record IPVc IPp,var record TRVc gTRp,Boolean dc1,Boolean dc2,var val TotSum,record AccBlock ARAccb)
+begin
+  longint res;
+  row IPVc IPrw;
+  record IVVc IVr;
+  record IntPercVc IntPercr;
+  integer i,rwc;
+  record NApsSetBlock NApsSetr;
+  val nilv,rs;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  string 100 revacc,tstr,taccnumber;
+  boolean LSItemTRf,AnnulmentPayModef;
+  string 10 SLAcc,ARAcc,PayAcc;
+  
+  res = 0;
+  nilv = -1;
+  
+  BlockLoad(NApsSetr);
+  
+  if AnnulmentPayMode(IPp.PayMode) then begin
+    AnnulmentPayModef = true;
+  end;
+  
+  rwc = MatRowCnt(IPp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IPp,i,IPrw);
+    if IPrw.InvoiceNr!=-1 then begin
+      IVr.SerNr = IPrw.InvoiceNr;
+      if ReadFirstMain(IVr,1,true) then begin
+        if GetMSIntPercRec(IVr.Contract,IntPercr,"") then begin
+          if IPrw.rkRecNumber == IntPercr.IntItem and nonblank(IntPercr.IntItem) and IPrw.RecVal>0 then begin
+            LSItemTRf = GetLSItemTR(IntPercr.IntItem,SLAcc,ARAcc,PayAcc);
+            res = ProcAddPenaltyTRRowsIP(IPp,IPrw,gTRp,IVr,dc1,dc2,TotSum,ARAccb,AnnulmentPayModef,SLAcc,ARAcc,PayAcc,LSItemTRf,nilv,NApsSetr.PenAccCode);
+            if res!=0 then begin
+              GoTo LAddPenaltyTRRowsIP;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+LAddPenaltyTRRowsIP:;
+  AddPenaltyTRRowsIP = res;
+  return;
+end;
+
+global
+function longint AddPenaltyTRRowsIPProc(record IPVc IPp,var record TRVc gTRp,Boolean dc1,Boolean dc2,var val TotSum,record AccBlock ARAccb)
+begin
+  longint res;
+  row IPVc IPrw;
+  record IVVc IVr;
+  record IntPercVc IntPercr;
+  integer i,rwc;
+  record NApsSetBlock NApsSetr;
+  val nilv,rs;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  string 100 itemList;
+  boolean LSItemTRf,AnnulmentPayModef;
+  string 10 SLAcc,ARAcc,PayAcc;
+  
+  res = 0;
+  nilv = -1;
+  
+  BlockLoad(NApsSetr);
+  
+  if AnnulmentPayMode(IPp.PayMode) then begin
+    AnnulmentPayModef = true;
+  end;
+  
+  itemList="T01,T02";
+  
+  rwc = MatRowCnt(IPp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IPp,i,IPrw);
+    if IPrw.InvoiceNr!=-1 then begin
+      IVr.SerNr = IPrw.InvoiceNr;
+      if ReadFirstMain(IVr,1,true) then begin
+        if SetInSet(IPrw.rkRecNumber,itemList) and nonblank(IPrw.rkRecNumber) and IPrw.RecVal>0 then begin
+          if GetLSItemTR(IPrw.rkRecNumber,SLAcc,ARAcc,PayAcc) then begin
+            res = ProcAddPenaltyTRRowsIP(IPp,IPrw,gTRp,IVr,dc1,dc2,TotSum,ARAccb,AnnulmentPayModef,SLAcc,ARAcc,PayAcc,true,nilv,"");
+            if res!=0 then begin
+              GoTo LAddPenaltyTRRowsIPProc;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+LAddPenaltyTRRowsIPProc:;
+  AddPenaltyTRRowsIPProc = res;
+  return;
+end;
+
+function longint DoAddPenaltyTRRows(record IVVc IVp,row IVVc IVrw,var record TRVc gTRp,val frrate,val torate1,val torate2,val baserate1,val baserate2,Boolean dc1,Boolean dc2,var val TotSum,
+                            record AccBlock ARAccb,string artcode,string PenAccCode,var val nilv,boolean LSItemTRf,string SLAcc,string ARAcc,string PayAcc)
+begin      
+  integer i,rwc;
+  val payedpensum,rs,prepaysum,rs1,diffval;
+  string 255 objstr,revacc,tstr,tstr2,taccnumber;
+  boolean negamf,foundf,prepayf;
+  longint res;
+  res=0;
+  if (IVp.InvType==kInvoiceTypeCredit) or (IVp.InvType==kInvoiceTypeCreditSpecialSales) then begin
+    if IVrw.stp==kInvoiceRowTypeNormal then begin
+      if LSItemTRf then begin
+        rs = MulRateToBase1(IVp.CurncyCode,IVrw.Sum,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+        if (ARAccb.SkipObjectsOnIVFromHeader==0) then begin
+          objstr = IVp.Objects;
+        end;
+        //add two rows
+        revacc = SLAcc;
+        ConvertSalesAcc(revacc,IVp.ExportFlag);
+        
+        negamf = NegativeAmountsOnIVTrans(IVp.InvType,payedpensum);
+        if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode)!=0 then begin
+          res = 1901;
+          goto LDoAddPenaltyTRRows;
+        end;
+        if (CheckTTRPerRow("IVVc",revacc,objstr,dc1,taccnumber,0)) then begin end;  
+        AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc1,TotSum,
+                           IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);          
+                           
+        revacc = ARAcc;
+        if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode) then begin
+          res = 1901;
+          goto LDoAddPenaltyTRRows;
+        end;
+                
+        if (CheckTTRPerRow("IVVc",revacc,objstr,dc2,taccnumber,0)) then begin end;  
+        AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc2,TotSum,
+                           IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);
+      end;
+    end;
+  end else begin
+    if IVrw.stp==kInvoiceRowTypeNormal then begin
+      if LSItemTRf then begin
+        rs = MulRateToBase1(IVp.CurncyCode,IVrw.Sum,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+        if (ARAccb.SkipObjectsOnIVFromHeader==0) then begin
+          objstr = IVp.Objects;
+        end;
+        //add two rows
+        revacc = SLAcc;
+        ConvertSalesAcc(revacc,IVp.ExportFlag);
+        
+        negamf = NegativeAmountsOnIVTrans(IVp.InvType,payedpensum);
+        if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode)!=0 then begin
+          res = 1901;
+          goto LDoAddPenaltyTRRows;
+        end;
+        if (CheckTTRPerRow("IVVc",revacc,objstr,dc1,taccnumber,0)) then begin end;  
+        AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc1,TotSum,
+                           IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);          
+                           
+        revacc = ARAcc;
+        
+        if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode) then begin
+          res = 1901;
+          goto LDoAddPenaltyTRRows;
+        end;
+                
+        if (CheckTTRPerRow("IVVc",revacc,objstr,dc2,taccnumber,0)) then begin end;  
+        AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc2,TotSum,
+                           IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);
+      end;
+      
+      payedpensum = GetInvoiceSelfPayedSum(IVp,artcode);
+      if payedpensum>0 then begin  
+        rs = MulRateToBase1(IVp.CurncyCode,payedpensum,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+        if !LSItemTRf then begin
+
+          if (ARAccb.SkipObjectsOnIVFromHeader==0) then begin
+            objstr = IVp.Objects;
+          end;
+          
+          revacc = IVrw.SalesAcc;
+          if (blank(revacc)) then begin
+            GetItemSalesAcc(IVrw.ArtCode,IVp.ExportFlag,revacc);
+          end;
+          if (blank(revacc)) then begin
+            revacc = ARAccb.DomSalesAcc;
+          end;
+          ConvertSalesAcc(revacc,IVp.ExportFlag);
+          
+          negamf = NegativeAmountsOnIVTrans(IVp.InvType,payedpensum);
+          if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode)!=0 then begin
+            res = 1901;
+            goto LDoAddPenaltyTRRows;
+          end;
+          if (CheckTTRPerRow("IVVc",revacc,objstr,dc1,taccnumber,0)) then begin end;  
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc1,TotSum,
+                             IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);          
+                             
+          revacc = PenAccCode;
+          if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode) then begin
+            res = 1901;
+            goto LDoAddPenaltyTRRows;
+          end;
+                  
+          if (CheckTTRPerRow("IVVc",revacc,objstr,dc2,taccnumber,0)) then begin end;  
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc2,TotSum,
+                             IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);          
+        
+        end else begin
+          objstr="";
+          if (ARAccb.SkipObjectsOnIVFromHeader==0) then begin
+            objstr = IVp.Objects;
+          end;
+          //add diff sum
+          revacc = GetSalesAcc(IVp,ARAccb,artcode);
+          rs1 = MulRateToBase1(IVp.CurncyCode,/* IVrw.Sum- */payedpensum,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff);
+          diffval = /* IVrw.Sum- */payedpensum;
+          if (GetAccName(revacc,tstr,60)==false) then begin
+            res = 2137;
+            goto LDoAddPenaltyTRRows;
+          end;
+          if (CheckTTRPerRow("IVVc",revacc,"",dc2,taccnumber,0)) then begin end;      
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,"",tstr,rs1,false,dc1,TotSum,
+                            IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,diffval,nilv,-1,false,taccnumber);
+          revacc = PayAcc;
+          if (GetAccName(revacc,tstr,60)==false) then begin
+            res = 2137;
+            goto LDoAddPenaltyTRRows;
+          end;
+          if (CheckTTRPerRow("IVVc",revacc,"",dc1,taccnumber,0)) then begin end;      
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,"",tstr,rs1,false,dc2,TotSum,
+                            IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,diffval,nilv,-1,false,taccnumber);
+          //
+          
+          
+          revacc = ARAcc;
+          negamf = NegativeAmountsOnIVTrans(IVp.InvType,payedpensum);
+          if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode)!=0 then begin
+            res = 1901;
+            goto LDoAddPenaltyTRRows;
+          end;
+          if (CheckTTRPerRow("IVVc",revacc,objstr,dc1,taccnumber,0)) then begin end;  
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc1,TotSum,
+                             IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber);          
+                             
+          revacc = SLAcc;
+          if GetAccNamCurVAT(revacc,tstr,tstr2,60,IVp.CurncyCode) then begin
+            res = 1901;
+            goto LDoAddPenaltyTRRows;
+          end;
+                  
+          if (CheckTTRPerRow("IVVc",revacc,objstr,dc2,taccnumber,0)) then begin end;  
+          AddEuroCurncyTrRow(gTRp,revacc,objstr,tstr2,tstr,rs,false,dc2,TotSum,
+                             IVp.CurncyCode,frrate,torate1,torate2,baserate1,baserate2,payedpensum,nilv,-1,negamf,taccnumber); 
+        end;
+      end;
+    end;
+  end;
+  
+LDoAddPenaltyTRRows:;
+  DoAddPenaltyTRRows = res;
+  return;
+end;
+
+global
+function longint AddPenaltyTRRows(record IVVc IVp,var record TRVc gTRp,val frrate,val torate1,val torate2,val baserate1,val baserate2,Boolean dc1,Boolean dc2,
+                                  var val TotSum,record AccBlock ARAccb)
+begin
+  longint res;
+  record NApsSetBlock NApsSetr;
+  record IntPercVc IntPercr;
+  row IVVc IVrw;
+  row TRVc TRrw;
+  integer i,rwc;
+  val nilv;
+  boolean LSItemTRf,foundf;
+  string 10 SLAcc,ARAcc,PayAcc;
+  
+  res = 0;
+  nilv = -1;
+  
+  if IVp.InvType!=kInvoiceTypeNormal and IVp.InvType!=kInvoiceTypeCredit and IVp.InvType!=kInvoiceTypeCreditSpecialSales then begin
+    GoTo LAddPenaltyTRRows;
+  end;
+
+  if !GetMSIntPercRec(IVp.Contract,IntPercr,"") then begin
+    rwc=MatRowCnt(IVp);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(IVp,i,IVrw);
+      if IVrw.stp==kInvoiceTypeNormal and IVrw.ArtCode=="LS" then begin
+        i=rwc;
+        IntPercr.Code="1";
+        if ReadFirstMain(IntPercr,1,true) then begin
+          foundf=true;
+        end;
+      end;
+    end;
+    // if !foundf then begin
+    //   LogText(0,"AddPenaltyTRRows ERROR :: Could not find IntPercVc record for invoice " & IVp.SerNr & " contract " & IVp.Contract);
+    //   GoTo LAddPenaltyTRRows; //commented out by jh
+    // end;
+  end;
+  
+  // if blank(IntPercr.IntItem) then begin
+  //   LogText(0,"AddPenaltyTRRows ERROR :: Blank penalty item for IntPercVc record " & IntPercr.Code);
+  //   GoTo LAddPenaltyTRRows; //commented out by jh
+  // end;
+    
+  LSItemTRf = GetLSItemTR(IntPercr.IntItem,SLAcc,ARAcc,PayAcc);
+  if !LSItemTRf then begin
+    BlockLoad(NApsSetr);
+    if blank(NApsSetr.PenAccCode) then begin
+      GoTo LAddPenaltyTRRows;
+    end;
+  end;
+  
+  rwc = MatRowCnt(IVp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVp,i,IVrw);
+    if IVrw.ArtCode==IntPercr.IntItem then begin
+      res = DoAddPenaltyTRRows(IVp,IVrw,gTRp,frrate,torate1,torate2,baserate1,baserate2,dc1,dc2,TotSum,
+                         ARAccb,IntPercr.IntItem,NApsSetr.PenAccCode,nilv,LSItemTRf,SLAcc,ARAcc,PayAcc);
+      if res!=0 then begin    
+        goto LAddPenaltyTRRows;
+      end;
+    end;
+  end;
+
+LAddPenaltyTRRows:;
+  AddPenaltyTRRows = res;
+  return;
+end;
+
+global
+function longint AddPenaltyTRRowsProc(record IVVc IVp,var record TRVc gTRp,val frrate,val torate1,val torate2,val baserate1,val baserate2,Boolean dc1,Boolean dc2,
+                                      var val TotSum,record AccBlock ARAccb)
+begin
+  longint res;
+  record NApsSetBlock NApsSetr;
+  record IntPercVc IntPercr;
+  row IVVc IVrw;
+  integer i,rwc;
+  val nilv;
+  boolean LSItemTRf,foundf,firstf;
+  string 60 SLAcc,ARAcc,PayAcc,itemList;
+  
+  res = 0;
+  nilv = -1;
+  
+  if IVp.InvType!=kInvoiceTypeNormal and IVp.InvType!=kInvoiceTypeCredit and IVp.InvType!=kInvoiceTypeCreditSpecialSales then begin
+    GoTo LAddPenaltyTRRowsProc;
+  end;
+  itemList="T01,T02";
+  rwc = MatRowCnt(IVp);
+  for(i=0;i<rwc;i=i+1)begin
+    MatRowGet(IVp,i,IVrw);
+    if nonblank(IVrw.ArtCode) and SetInSet(IVrw.ArtCode,itemList) then begin
+      if GetLSItemTR(IVrw.ArtCode,SLAcc,ARAcc,PayAcc) then begin
+        res = DoAddPenaltyTRRows(IVp,IVrw,gTRp,frrate,torate1,torate2,baserate1,baserate2,dc1,dc2,TotSum,
+                               ARAccb,IVrw.ArtCode,"",nilv,true,SLAcc,ARAcc,PayAcc);
+        if res!=0 then begin    
+          goto LAddPenaltyTRRowsProc;
+        end;
+      end;
+    end;
+  end;
+    
+LAddPenaltyTRRowsProc:;
+  AddPenaltyTRRowsProc = res;
+  return;
+end;
+
+global
+function val GetLSItemTRIVSum(record IVVc IVr)
+begin
+  row IVVc IVrw;
+  integer i,rwc;
+  val res;
+  boolean testf;
+  string 255 ItemList;
+  
+  res=0;
+  ItemList=GetAllLSItemTRItems;
+  if nonblank(ItemList) then begin
+    rwc=MatRowCnt(IVr);
+    for (i=0;i<rwc;i=i+1) begin
+      MatRowGet(IVr,i,IVrw);
+      testf=true;
+      if IVrw.stp!=kInvoiceTypeNormal then begin
+        testf=false;
+      end;
+      if IVrw.ovst!=0 then begin
+        testf=false;
+      end;
+      if !SetInSet(IVrw.ArtCode,ItemList) then begin
+        testf=false;
+      end;
+      if testf then begin
+       res = res + IVrw.Sum;
+      end;
+    end;
+  end;
+  
+  GetLSItemTRIVSum = res;
+  return;
+end;

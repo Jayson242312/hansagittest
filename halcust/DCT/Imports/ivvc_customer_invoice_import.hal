@@ -1,0 +1,266 @@
+//VER 6.2 100727
+//event startup
+//begin
+//
+//  SetLangMode(LangEnglish,"ENG",0);
+//
+//  
+//  //Import("Customer Open Credit Notes",0,CUCredIn,modDCT);
+//  //Import("Customer Receipts",0,ReceiptIN,modDCT);
+//
+//  return;
+//end;
+
+// v5.1 external inner function Boolean PasteCust2InInv(var record IVVc,string,var string,var string,var string,var string,var string);
+external inner function Boolean PasteCust2InInv(var record IVVc,record LocalMachineBlock,string,Boolean,var string,var string,var string,var string,var string);
+
+// v5.1 external inner updating function Boolean PasteVendInVI(record VIVc,var string);
+external inner function Boolean PasteVendInVI(record VIVc,var string,Boolean);
+
+// v5.1 external inner updating procedure VICalcEReb(record VIVc);
+external inner procedure VICalcEReb(record VIVc);
+
+external inner procedure VIGetRate(var record VIVc);
+external inner procedure IVSumup(var record IVVc,Boolean);
+remote inner function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,var string,Boolean,var Integer);
+
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean IPVc_PasteCustCode(var record IPVc,Integer);
+external inner procedure IPSumup(var record IPVc);
+external inner procedure IVVc_PastePrice(var record IVVc,record IVVc,Integer,var string);      //JRX - 100731
+
+
+//JRX - 100802
+external function Boolean ImportPriceValue(var val, Integer);
+external function Boolean ImportItemCode(var string);
+
+
+//Import File Format for Invoices:
+//Invoice Number, Customer Code, Invoice Date, Due Date, Invoice Value, Currency Code
+
+global
+updating procedure CUINvIn()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record IVVc IVr,IVr2;
+  row IVVc IVrw,IVrw2;
+  string 255 inputLine;
+  string 255 tstr,inwarning,warning;
+  Integer err1,err2;
+  Val Totalimport;
+  Integer sernrf;
+  record LocalMachineBlock LMb;
+
+  //will remove this later on
+/*  while (LoopMain(IVr,1,true)) begin
+    //RecordDelete(IVr);
+   // StepBack(IVr);
+   MatRowGet(IVr,0,IVrw);
+   logtext(0," Before Starting: totals: " & IVrw.Price);
+  end;
+  */
+/*
+  while (LoopMain(IVr,1,true)) begin
+    RecordDelete(IVr);
+    StepBack(IVr);
+  end;
+*/
+Totalimport = 0;
+  while (TestEOF==false) begin
+
+    RecordNew(IVr);
+    //IVr.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+    inputLine = ImportField; //Invoice Number 
+    IVr.SerNr = StringToLongInt(inputLine); 
+    //inputLine = ImportField;  //Invoice Nr (Our Ref)
+    // IVr.SerNr = inputLine;  //  Uncomment this line to have the original invoice number imported set.
+    //IVr.OfficialSerNr = inputLine; //Invoice Number
+    inputLine = ImportField;
+   // IVr.RefStr = inputLine; //Old System Debtors Account Numbers 
+    IVr.CustCode = inputLine; 
+    //JRX - 100920  IVr.Location = "KLI";   //JRX - 100723   manual add for Alan
+   // inputLine = ImportField;  //Customer
+    //CUr.Code = inputLine;
+    //JRX - 100920  IVr.Objects = "HANSA,SV,KLI";
+  /*  if(ReadFirstMain(CUr,1,true))then begin
+      if(CUr.CUType<>1)then begin //Convert to customer
+        RecordCopy(OldCUr,CUr);
+        CUr.CUType = 1;
+        if(RecordUpdate(OldCUr,CUr,false))then begin end;
+      end;
+    end else begin
+      RecordNew(CUr);
+      CUr.Code = inputLine;
+      CUr.Name = "Open Invoice Customer";
+      if(RecordStore(CUr,false))then begin end;
+    end;
+    IVr.CustCode = inputLine;
+
+    // v5.1 if (PasteCust2InInv(IVr,"",tstr,tstr,tstr,tstr,tstr)) then begin end;
+    if (PasteCust2InInv(IVr,LMb,"",false,tstr,tstr,tstr,tstr,tstr)) then begin end;
+    */
+    inputLine = ImportField;  //Invoice Date
+    IVr.InvDate = inputLine;
+    IVr.TransDate = IVr.InvDate;  // transaction date = invoice date
+    inputLine = ImportField;  //Payment Term
+    IVr.PayDeal = inputLine;
+     inputLine = ImportField;  //Location
+    IVr.Location = inputLine;
+    //JRX - 100920 IVr.PayDate = AddDay(IVr.InvDate,30);  //adding 30 days to Invoice Date  OVER RIDING IT
+
+    IVrw.ArtCode = "9999";
+    MatRowPut(IVr,0,IVrw);
+    if(IVVc_PasteArtCode(IVr,0,inwarning,inwarning,false,sernrf)) then begin
+    end;
+    MatRowGet(IVr,0,IVrw);
+    IVrw.Quant = 1;
+    inputLine = ImportField;
+    //ImportPriceValue(IVrw.Price,M4Val);       //JRX - 100802  ImportPriceValue
+    IVrw.Price = StringToVal(inputLine,M4Val); 
+    inputLine = ImportField;               // Currency Code 
+    if (nonblank(inputLine)) then begin 
+      IVr.CurncyCode = inputLine;
+    end;
+    IVrw.Sum = IVrw.Price;
+    Totalimport = Totalimport + IVrw.Sum;
+    IVrw.VATCode = "0";
+    MatRowPut(IVr,0,IVrw);
+   // MatRowInsert(IVr,0,IVrw);
+    //Logtext(0,"Price: 1 " & IVrw.Price );
+    IVVc_PastePrice(IVr,IVr2,0,warning);  //JRX - 100731
+    IVSumup(IVr,true);  //JRX - 100730   Alan wanted this out .. to get negative invoice imported
+  //  Logtext(0,"Price: 2 " & IVrw.Price );
+    if (IVrw.Price <> 0) then begin
+      if (RecordStore(IVr,true)) then begin end;
+    end else begin
+      LogText(0,"Open Customer Invoice: Import >> Sum Value Zero: " & IVr.OurContact & " ");
+    end;
+    if (NextImportLine(true)) then begin end;
+  end;
+
+  Messagebox(0,"Total Value Import: R " & Totalimport);
+  RETURN;
+END;
+
+//Import File Format for Invoices (Credit Items):
+//Invoice Number, Customer Code, Invoice Date, Due Date, Invoice Value
+
+global
+updating procedure CUCredIn()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record IVVc IVr;
+  row IVVc IVrw,IVrw2;
+  string 255 inputLine;
+  string 255 tstr,inwarning;
+  Integer err1,err2;
+  Integer sernrf;
+  record LocalMachineBlock LMb;
+
+  while (TestEOF==false) begin
+
+    RecordNew(IVr);
+    IVr.SerNr = NextSerNr("IVVc",CurrentDate,-1,false,"");
+    inputLine = ImportField;  //Credit Note Nr (Our Ref)
+    IVr.OurContact = inputLine;
+
+    inputLine = ImportField;  //Customer
+    CUr.Code = inputLine;
+    if(ReadFirstMain(CUr,1,true))then begin
+      if(CUr.CUType<>1)then begin //Convert to customer
+        RecordCopy(OldCUr,CUr);
+        CUr.CUType = 1;
+        if(RecordUpdate(OldCUr,CUr,false))then begin end;
+      end;
+    end else begin
+      RecordNew(CUr);
+      CUr.Code = inputLine;
+      CUr.Name = "Open Invoice Customer";
+      if(RecordStore(CUr,false))then begin end;
+    end;
+    IVr.CustCode = inputLine;
+
+    // v5.1 if (PasteCust2InInv(IVr,"",tstr,tstr,tstr,tstr,tstr)) then begin end;
+    if (PasteCust2InInv(IVr,LMb,"",false,tstr,tstr,tstr,tstr,tstr)) then begin end;
+
+    inputLine = ImportField;  //Invoice Date
+    IVr.InvDate = StringToDate(inputLine);
+    IVr.TransDate = IVr.InvDate;
+    inputLine = ImportField;
+    IVr.PayDate = StringToDate(inputLine);
+
+    IVrw.ArtCode = "99999";
+    MatRowPut(IVr,0,IVrw);
+    if(IVVc_PasteArtCode(IVr,0,inwarning,inwarning,false,sernrf)) then begin
+    end;
+    MatRowGet(IVr,0,IVrw);
+    IVrw.Quant = 1;
+    inputLine = ImportField;  //value
+    IVrw.Price = StringToVal(inputLine,M4Val);
+    IVrw.Sum = IVrw.Price;
+    IVrw.VATCode = "2";
+    MatRowPut(IVr,0,IVrw);
+
+    IVr.PayDeal = "CN";
+    ClearRow(IVr,IVrw2,3);
+    MatRowInsert(IVr,0,IVrw2);
+    IVr.InvType = 3;
+    IVSumup(IVr,true);
+    if (RecordStore(IVr,true)) then begin end;
+    if (NextImportLine(true)) then begin end;
+  end;
+  RETURN;
+END;
+
+//Import File Format for Receipts:
+//Receipt #, Customer Code, Receipt Date, Pay Value
+
+global
+updating procedure ReceiptIN()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  string 255 inputLine;
+  string 255 tstr,inwarning;
+  Integer err1,err2;
+
+  while (TestEOF==false) begin
+
+    RecordNew(IPr);
+    IPr.SerNr = NextSerNr("IPVc",CurrentDate,-1,false,"");
+    inputLine = ImportField;  //Receipt Nr (Reference)
+    IPr.RecNumber = inputLine;
+
+    inputLine = ImportField;  //Customer
+    CUr.Code = inputLine;
+    if(ReadFirstMain(CUr,1,true))then begin
+      if(CUr.CUType<>1)then begin //Convert to customer
+        RecordCopy(OldCUr,CUr);
+        CUr.CUType = 1;
+        if(RecordUpdate(OldCUr,CUr,false))then begin end;
+      end;
+    end else begin
+      RecordNew(CUr);
+      CUr.Code = inputLine;
+      CUr.Name = "Open Invoice Customer";
+      if(RecordStore(CUr,false))then begin end;
+    end;
+    IPrw.CustCode = inputLine;
+    MatRowPut(IPr,0,IPrw);
+    if(IPVc_PasteCustCode(IPr,0)) then begin end;
+    MatRowGet(IPr,0,IPrw);
+    inputLine = ImportField;  //Receipt Date
+    IPrw.PayDate = StringToDate(inputLine);
+    inputLine = ImportField;  //value
+    IPrw.BankVal = StringToVal(inputLine,M4Val);
+    IPrw.RecVal = StringToVal(inputLine,M4Val);
+    MatRowPut(IPr,0,IPrw);
+
+    IPSumup(IPr);
+    if (RecordStore(IPr,true)) then begin end;
+    if (NextImportLine(true)) then begin end;
+  end;
+  RETURN;
+END;
+

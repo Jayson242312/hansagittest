@@ -1,0 +1,81 @@
+external inner procedure SetupCustPS2Rn(string,var record RcVc);
+
+// VIEW CUSTOMER STATUS
+global
+procedure ClientFinStatusm2()
+BEGIN
+  record InstallmentAgreementVc Agreementr;
+  record RcVc RepSpec;
+  Integer wn;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Agreementr);
+
+  SetupCustPS2Rn(Agreementr.CustCode,RepSpec);
+  RunReport(RepSpec,0);
+  RETURN;
+END;
+
+
+// AUTOMATICALLY POPULATE CUST.CODE, CUST.NAME
+function boolean InstallmentAgreementDClassContractEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record InstallmentAgreementVc Agreementr;
+  record NAContractVc COr;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,Agreementr);
+  COr.SerNr = Agreementr.ContractNr;
+  if (ReadFirstMain(COr,1,true)) then begin
+    Agreementr.CustCode = COr.CustCode; // cust.code
+    Agreementr.CustName = COr.CustName; // cust.name
+    PutWindowRecord(wn,Agreementr);
+  end;
+  
+  InstallmentAgreementDClassContractEFAfter = res;
+return;
+end;
+
+
+// FORMAT PAYMENT DATE PERIOD
+function boolean InstallmentAgreementDClassPeriodEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin
+  record InstallmentAgreementVc Agreementr;
+  date s,e;
+  boolean res;
+  res = true;
+
+  GetWindowRecord(wn,Agreementr);
+  if(nonblank(Agreementr.PeriodStartDate)) then begin
+    s = AddMonth(Agreementr.PeriodStartDate,0);
+    s.day = 1;
+    Agreementr.PeriodStartDate = s;
+  end;
+  if(nonblank(Agreementr.PeriodEndDate)) then begin
+    e = AddMonth(Agreementr.PeriodEndDate,0);
+    e.day = DaysInMonth(GetYear(e),GetMonth(e)); 
+    Agreementr.PeriodEndDate = e;
+  end;
+  PutWindowRecord(wn,Agreementr);
+  
+  InstallmentAgreementDClassPeriodEFAfter = res;
+return;
+end;
+
+
+global
+function boolean InstallmentAgreementDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+
+  if (changed <> 0) then begin
+    switch (fieldname) begin
+      case "ContractNr": res = InstallmentAgreementDClassContractEFAfter(wn,fn,rownr,changed);
+      case "PeriodStartDate": res = InstallmentAgreementDClassPeriodEFAfter(wn,fn,rownr,changed);
+      case "PeriodEndDate": res = InstallmentAgreementDClassPeriodEFAfter(wn,fn,rownr,changed);
+    end;
+  end;
+  InstallmentAgreementDClassAfterEditField = res;
+return;
+end;

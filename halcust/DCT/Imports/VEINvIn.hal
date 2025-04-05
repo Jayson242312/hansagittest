@@ -1,0 +1,385 @@
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner function Boolean PasteVendInVI(record VIVc,var string,Boolean);
+external inner procedure VIGetRate(var record VIVc);
+external inner procedure VICalcEReb(record VIVc);
+external inner function val CalculateVINettVal(record VIVc,Boolean);
+remote inner procedure VICalcVals(var record VIVc);
+external inner procedure VISumup(record VIVc,var val);
+
+//VER 6.2 100727
+/*
+event startup
+begin
+
+  SetLangMode(LangEnglish,"ENG",0);
+
+  Import("Supplier Open Invoices",0,VEINvIn,modDCT);
+
+  return;
+end;*/
+
+
+//TM
+
+procedure StripSpaces(string source,var string res)
+begin
+  integer i,l;
+  boolean testf;
+  l = len(source);
+  for (i = 0; i < l; i= i +1) begin
+    testf = true;
+    if (mid(source,i,1)==" ") then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      res = res & mid(source,i,1);
+    end;
+  end;
+return;
+end;
+
+global
+function Boolean ImportPriceValue(var val Field, Integer Format )
+begin
+  Boolean res;
+  string 255 tstr,tstr2;
+
+  tstr2 = "";
+  tstr = ImportField;
+  StripSpaces(tstr,tstr2);
+  if (nonblank(tstr2)) then begin
+    Field = StringToVal(tstr2,Format);
+   // LogText(0,"Import Code: after Spaces stripped: " & Field);
+    res = true;
+  end;
+
+  ImportPriceValue = res;
+  return;
+end;
+//TM
+//JRX - 100802
+//external function Boolean ImportPriceValue(var val, Integer);
+
+//KC Supplier Invoice Import, the file format should be as follows:
+
+//1.  Supplier code
+//2.  Invoice Date
+//3.  Due Date
+//4.  Supp Invoice Number
+//5.  Payment Term
+//6.  Blank (Order Nr)
+//7.  Inv Value
+//7.  Vat
+
+
+// ============================================== CUSTOM ==============================================
+
+global
+updating procedure VEINvIn()
+BEGIN
+  record CUVc CUr,OldCUr;
+  record VIVc IVr;
+  row VIVc IVrw,IVrw2;
+  string 255 inputLine,test;
+  string 5 payterm;
+  string 255 tstr;
+  string 5 curncycode;
+  val from,to1,to2,base1,base2,vat,ct,Totalimport;
+  Integer NoError,num;
+
+  NoError = 0;
+  Totalimport = 0;
+  while (TestEOF==false) begin
+    RecordNew(IVr);
+
+    inputLine = ImportField;  //Supplier  ---------------------------2
+    IVr.VECode = "S" & inputLine;
+
+    CUr.Code = IVr.VECode;
+
+    inputLine = ImportField;  
+    IVr.VEName = inputLine; //Supplier Name
+
+    if(ReadFirstMain(CUr,1,true))then begin
+      if(CUr.VEType<>1)then begin
+        RecordCopy(OldCUr,CUr);
+        CUr.VEType = 1;
+        if(blank(CUr.InvAddr0))then begin
+          LogText(0,"Supplier Invoice: Import >> Supplier Invoice Address Blank: " & CUr.Code & " Please Check");
+        end;
+        if(blank(CUr.Phone))then begin
+          CUr.Phone = "000000";
+          LogText(0,"Supplier Invoice: Import >> Supplier Phone Number Blank: " & CUr.Code & " Please Check");
+        end;
+        if(blank(CUr.DelAddr0))then begin
+          CUr.DelAddr0 = "TEST";
+          LogText(0,"Supplier Invoice: Import >> Supplier Delivery Address Blank: " & CUr.Code & " Please Check");
+        end;
+        if(blank(CUr.PayDeal))then begin
+          CUr.PayDeal = "10";
+          CUr.CreditLimit = 999999;
+          LogText(0,"Supplier Invoice: Import >> Supplier PayDeal Blank: " & CUr.Code & " Please Check: Default: \"10\" AND credit Limit set to: 999999");
+        end;
+        if(RecordUpdate(OldCUr,CUr,false))then begin end;
+      end;
+
+       inputLine = ImportField;   //Supplier Inv nr  -------------------4
+       IVr.InvoiceNr = inputLine;
+
+       inputLine = ImportField;  //Invoice Date  ----------------------3
+       IVr.InvDate = StringToDate(inputLine);
+       IVr.TransDate = StringToDate(inputLine);
+       num = StringToInt(inputLine); 
+      //adding 30 days to Invoice Date
+       IVr.DueDate = AddDay(IVr.InvDate,num);
+       inputLine = ImportField;  //Payment Terms 
+       IVr.PayDeal = inputLine; 
+       IVr.RcvDate = IVr.InvDate;  // receiving date
+
+       inputLine = ImportField;   //Order Nr  --------------------------6
+       IVr.POSerNr = inputLine;
+
+      if(blank(CUr.VECurncyCode)) then begin
+         IVr.CurncyCode = "NAD";
+         curncycode = "NAD";
+      end else begin
+         IVr.CurncyCode = CUr.VECurncyCode;
+         curncycode     = CUr.VECurncyCode;
+      end;
+
+      GetFullCurncyRate(curncycode,IVr.TransDate,from,to1,to2,base1,base2);
+      IVr.CurncyCode = curncycode;
+      IVr.FrRate = from;
+      IVr.ToRateB1 = to1;
+      IVr.ToRateB2 = to2;
+      IVr.BaseRate1 = base1;
+      IVr.BaseRate2 = base2;
+      IVr.APAcc = "80000";  //CREDITOR control
+
+
+      if (payterm=="CN") then begin
+        IVr.PayDeal = "CN";
+        IVr.InvType = 3;
+        IVr.CredMark = "C";
+      //end else begin
+        //IVr.PayDeal = "01"; //-----------------KC taking out payterm, will supp default
+      end;
+ 
+      IVrw.AccNumber = "80000";  //CREDITOR control
+      IVrw.qty = 1;
+      IVrw.Comment = "Open Invoices Take-on";
+    //  IVrw.Sum = StringToVal(inputLine,M4Val);
+      ImportPriceValue(IVrw.Sum,M4Val);
+      Totalimport = Totalimport + IVrw.Sum;
+      IVr.PayVal = IVrw.Sum + vat;  //JRX - 100714  mod
+      IVr.VATVal = vat; //JRX - 100714
+      IVrw.VATCode = "2";
+      IVr.TransDate = IVr.InvDate;
+
+      MatRowPut(IVr,0,IVrw);
+
+      VISumup(IVr,ct);   //JRX - 100714
+      VICalcVals(IVr);  //JRX - 100714
+
+      IVr.SerNr = NextSerNr("VIVc",CurrentDate,-1,false,""); //CurrentDate
+      if (IVrw.Sum <> 0) then begin
+        if (RecordStore(IVr,true)) then begin end;
+      end else begin
+       LogText(0,"Open Supplier Invoice: Import >> Sum Value Zero: " & IVr.VECode & " ");
+      end;
+    end else begin
+      LogText(0,"Missing Supplier: " &  IVr.VECode & " " & "name: " & IVr.VEName);
+      NoError = NoError + 1;
+    end; 
+    if (NextImportLine(true)) then begin end;
+  end;
+  if (NoError > 0) then begin
+    // Messagebox(0,NoError & " Supplier Open Invoices were NOT Imported. They do not exist in Supplier Register: Please Check hansa.log");
+  end;
+   Messagebox(0," Total Value Import: R " & Totalimport);
+  RETURN;
+END;
+
+// ============================================== END OF CUSTOM ==============================================
+
+
+
+// global
+// updating procedure VEINvIn()
+// BEGIN
+//   record CUVc CUr,OldCUr;
+//   record VIVc IVr;
+//   row VIVc IVrw,IVrw2;
+//   string 255 inputLine;
+//   string 5 payterm;
+//   string 255 tstr;
+//   string 5 curncycode;
+//   val from,to1,to2,base1,base2,vat,ct,Totalimport;
+//   Integer NoError,num;
+
+// /*
+//   while (LoopMain(IVr,1,true)) begin
+//     RecordDelete(IVr);
+//     StepBack(IVr);
+//   end;
+// */
+//   NoError = 0;
+// Totalimport = 0;
+//   while (TestEOF==false) begin
+
+//     RecordNew(IVr);
+
+//     //payterm = ImportField;
+
+//     inputLine = ImportField;  //Supplier  ---------------------------2
+
+//     IVr.VECode = inputLine;
+
+//     CUr.Code = IVr.VECode;
+//     if(ReadFirstMain(CUr,1,true))then begin
+//       if(CUr.VEType<>1)then begin
+//         RecordCopy(OldCUr,CUr);
+//         CUr.VEType = 1;
+//         if(blank(CUr.InvAddr0))then begin
+//           LogText(0,"Supplier Invoice: Import >> Supplier Invoice Address Blank: " & CUr.Code & " Please Check");
+//         end;
+//         if(blank(CUr.Phone))then begin
+//           CUr.Phone = "000000";
+//           LogText(0,"Supplier Invoice: Import >> Supplier Phone Number Blank: " & CUr.Code & " Please Check");
+//         end;
+//         if(blank(CUr.DelAddr0))then begin
+//           CUr.DelAddr0 = "TEST";
+//           LogText(0,"Supplier Invoice: Import >> Supplier Delivery Address Blank: " & CUr.Code & " Please Check");
+//         end;
+//         if(blank(CUr.PayDeal))then begin
+//           CUr.PayDeal = "10";
+//           CUr.CreditLimit = 999999;
+//           LogText(0,"Supplier Invoice: Import >> Supplier PayDeal Blank: " & CUr.Code & " Please Check: Default: \"10\" AND credit Limit set to: 999999");
+//         end;
+//         if(RecordUpdate(OldCUr,CUr,false))then begin end;
+//       end;
+//       IVr.VEName = CUr.Name;
+
+
+//       // uncommented this section : //JRX - 100714
+//      // if (PasteVendInVI(IVr,tstr,true)) then begin
+//       //   VICalcEReb(IVr);
+//        // VIGetRate(IVr);
+//       //end;
+//       //JRX - 100714  end uncomment
+
+//       inputLine = ImportField;  //Invoice Date  ----------------------3
+//       IVr.InvDate = StringToDate(inputLine);
+//       IVr.TransDate = StringToDate(inputLine);
+
+//       inputLine = ImportField;  //Payment Terms 
+//       IVr.PayDeal = inputLine; 
+
+//       num = StringToInt(inputLine); 
+
+//       IVr.DueDate = AddDay(IVr.InvDate,num);  //adding 30 days to Invoice Date
+
+//       IVr.RcvDate = IVr.InvDate;  // receiving date
+
+//       //inputLine = ImportField;   //Due Date  ----------------------3
+//      // IVr.DueDate = StringToDate(inputLine); // set above
+
+//       IVr.OKPersons = "TM";
+
+
+//       if(blank(CUr.VECurncyCode)) then begin
+//          IVr.CurncyCode = "USD";
+//          curncycode = "USD";
+//       end else begin
+//          IVr.CurncyCode = CUr.VECurncyCode;
+//          curncycode     = CUr.VECurncyCode;
+//       end;
+
+//       //JRX - 100714  ----over riding the above check, and using ZAR for all import
+//      // curncycode = "ZAR";
+
+
+//      // VIGetRate(IVr);   //JRX - 100714  added
+//      // CalculateVINettVal(IVr,true);  //JRX - 100714 added
+
+//       GetFullCurncyRate(curncycode,IVr.TransDate,from,to1,to2,base1,base2);
+//       IVr.CurncyCode = curncycode;
+//       IVr.FrRate = from;
+//       IVr.ToRateB1 = to1;
+//       IVr.ToRateB2 = to2;
+//       IVr.BaseRate1 = base1;
+//       IVr.BaseRate2 = base2;
+
+
+//       if (payterm=="CN") then begin
+
+//         IVr.PayDeal = "CN";
+//         IVr.InvType = 3;
+//         IVr.CredMark = "C";
+//       //end else begin
+//         //IVr.PayDeal = "01"; //-----------------KC taking out payterm, will supp default
+//       end;
+
+//       inputLine = ImportField;   //Supplier Inv nr  -------------------4
+//       IVr.InvoiceNr = inputLine;
+
+//      // payterm = ImportField;     //Payterm  --------------------------5
+//      // if (blank(payterm)) then begin
+//      //   payterm = "30";
+//      // end;
+//      // IVr.PayDeal = payterm;
+
+
+//       inputLine = ImportField;   //Order Nr  --------------------------6
+//       IVr.RefStr = inputLine;
+
+
+//      // inputLine = ImportField;   //value  -----------------------------7
+
+//       IVrw.AccNumber = "80000";  //CREDITOR control
+//       IVrw.qty = 1;
+//       IVrw.Comment = "Open Invoices Take-on";
+//     //  IVrw.Sum = StringToVal(inputLine,M4Val);
+//       ImportPriceValue(IVrw.Sum,M4Val);
+//       Totalimport = Totalimport + IVrw.Sum;
+//      //not being used VAT   //JRX - 100714 uncommented for this import
+//       inputLine = ImportField;  //Vat  -------------------------------8 //JRX - 100714
+//       vat = StringToVal(inputLine,M4Val);  //JRX - 100714
+//       vat = 0;  //JRX - 100714 added
+//       IVr.PayVal = IVrw.Sum + vat;  //JRX - 100714  mod
+//       IVr.VATVal = vat; //JRX - 100714
+//       IVrw.VATCode = "2";
+
+//       IVr.TransDate = IVr.InvDate;
+
+
+//       IVrw.VATVal = StringToVal(inputLine,M4Val);
+//       IVr.CalcVATVal = StringToVal(inputLine,M4Val);
+//       MatRowPut(IVr,0,IVrw);
+
+//       VISumup(IVr,ct);   //JRX - 100714
+//       VICalcVals(IVr);  //JRX - 100714
+
+
+
+//       IVr.SerNr = NextSerNr("VIVc",CurrentDate,-1,false,""); //CurrentDate
+//       if (IVrw.Sum <> 0) then begin
+//         if (RecordStore(IVr,true)) then begin end;
+//       end else begin
+//         LogText(0,"Open Supplier Invoice: Import >> Sum Value Zero: " & IVr.VECode & " ");
+//       end;
+//     end else begin
+//       LogText(0,"Open Supplier Invoice: Import >> Supplier Does Not Exist: " & IVr.VECode & " ");
+//       NoError = NoError + 1;
+//     end;
+
+
+//     if (NextImportLine(true)) then begin end;
+//   end;
+//   if (NoError > 0) then begin
+//       Messagebox(0,NoError & " Supplier Open Invoices were NOT Imported. They do not exist in Supplier Register: Please Check hansa.log");
+//   end;
+//    Messagebox(0," Total Value Import: R " & Totalimport);
+
+//   RETURN;
+// END;

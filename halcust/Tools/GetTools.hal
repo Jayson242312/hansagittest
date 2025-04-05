@@ -1,0 +1,638 @@
+external inner function LongInt DateDiff(Date,Date);
+external inner function val FindVAT(string,val,Integer,Integer);
+external inner function roundmode SetRoundModeD(Integer);
+external inner function LongInt CalculateLateDays(Date,Date,Date,Boolean,Boolean);
+external inner procedure ARRnGetInvBalance(record IVVc,var Date,Integer,var val,var val,var LongInt);
+external inner procedure SubPrePayments(record IVVc,var val,var val);
+external inner procedure SubCashRows_IVVc(record IVVc,boolean,var val,var val);
+external procedure GetIVUnPayedArtCodeUniqMasOnDate(record IVVc,date,boolean,var array string,var array val,var array longint);
+
+global
+function val GetArtCodeUnpayedSumFromIV(Record IVVc IVr,string artcode,var boolean existsf) Begin
+  Row IVVc IVrw;
+  val res;
+  integer i,rwc;
+  array string 20 ArtCodeMas;
+  array val UnPayedSumMas;
+  array longint arrContractNrs;
+  
+  res=0; existsf=false;
+  GetIVUnPayedArtCodeUniqMasOnDate(IVr,AddYear(CurrentDate,5),false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+  rwc=StringToInt(ArtCodeMas[0]);
+  for(i=1;i<=rwc;i=i+1)Begin
+    if ArtCodeMas[i]==artcode then begin
+      res = UnPayedSumMas[i];
+      existsf = true;
+      i = rwc;
+    end;
+  end;
+  
+  GetArtCodeUnpayedSumFromIV=res;
+return;
+end;
+
+global
+function val GetArtCodeSumFromIV(Record IVVc IVr,string artcode) Begin
+  Row IVVc IVrw;
+  val res,t;
+  integer i,rwc;
+  
+  res=0;
+  
+  rwc=MatRowCnt(IVr);
+  for(i=0;i<rwc;i=i+1)Begin
+    MatRowGet(IVr,i,IVrw);
+    if IVrw.stp==1 and IVrw.ArtCode==artcode and IVrw.Sum>0 then begin
+      if IVr.InclVAT==0 then begin
+        t = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+      end else begin
+        t = IVrw.Sum;
+      end;
+      res = res + t;
+    end;
+  end;
+  
+  GetArtCodeSumFromIV=res;
+return;
+end;
+
+global 
+procedure GetCorrDates(string artcode,date sd,date ed,var date retsd,var date reted)
+begin
+  Record INVc INr;
+
+  retsd=sd;
+  reted=ed;
+
+  INr.Code=artcode;
+  if ReadFirstMain(INr,1,true) then begin
+    if INr.Tariff != 0 then begin
+      retsd=addmonth(sd,INr.Tariff);
+      reted=addday(retsd,DaysInMonth(Getyear(retsd),getmonth(retsd))-1);
+    end;
+  end;
+
+return;
+end;
+
+// global
+// function string 30 GetPeriodByCode(string Code)
+// begin
+//   record PeriodBlock PeriodBlr;
+//   row PeriodBlock PeriodBlrw;
+//   string 30 res;
+//   integer i,rw;
+
+//   BlockLoad(PeriodBlr);
+//   rw = MatRowCnt(PeriodBlr);
+//   for (i=0;i<rw;i=i+1) begin
+//     MatRowGet(PeriodBlr,i,PeriodBlrw);
+//     if (PeriodBlrw.CodeStr==Code) then begin
+//       res = PeriodBlrw.FromDate & ":" & PeriodBlrw.ToDate;
+//     end;
+//   end;
+//   GetPeriodByCode = res;
+// end;
+
+// //return Coef from FlatsVacRebate, if not found, then 0
+// global
+// function val GetFlatsVacRebateCoef(string FlatCode,date ForDate,date servSD,date servED)
+// begin
+//   record FlatsVacRebateVc FlatsVacRebater;
+//   row FlatsVacRebateVc FlatsVacRebaterw;
+//   record PersonasAbsencesVc PersonasAbsencesr;
+//   row PersonasAbsencesVc PersonasAbsencesrw;
+//   record PersonasVc Personasr;
+//   row PersonasVc Personasrw;
+//   record NApsSetBlock NApsSetbl;
+//   date sd,ed,sd2,ed2;
+//   val Coef,totCoef;
+//   integer i,rw,i2,rw2;
+  
+//   BlockLoad(NApsSetbl);  
+//   switch NApsSetbl.AbsenceRegScheme begin
+//     case 0: //prombûtnes veidojas no telpas kartiòas
+//       FlatsVacRebater.Code = FlatCode;
+//       if ReadFirstMain(FlatsVacRebater,1,true) then begin
+//         rw = MatRowCnt(FlatsVacRebater);
+//         for(i=0;i<rw;i=i+1)begin
+//           MatRowGet(FlatsVacRebater,i,FlatsVacRebaterw);
+//           coef=0; sd = servSD; ed = servED;
+//           if DateInRange(servSD,FlatsVacRebaterw.StartDate,FlatsVacRebaterw.EndDate) or
+//              DateInRange(servED,FlatsVacRebaterw.StartDate,FlatsVacRebaterw.EndDate) or
+//              DateInRange(FlatsVacRebaterw.StartDate,servSD,servED) or
+//              DateInRange(FlatsVacRebaterw.EndDate,servSD,servED) then begin
+//             //sd and ed should be in ForDate month, so correct given period to fit current month
+//             //should be taken overlaping period form servSD-servED and StartDate-EndDate
+//             if FlatsVacRebaterw.StartDate>sd then begin
+//               sd = FlatsVacRebaterw.StartDate;
+//             end;
+//             if FlatsVacRebaterw.EndDate<ed then begin
+//               ed = FlatsVacRebaterw.EndDate;
+//             end;
+//             Coef = DateDiff(ed,sd)+1;
+//             Coef = Coef/(DateDiff(servED,servSD)+1);
+//             Coef = Round(FlatsVacRebaterw.Coef*Coef,SetRoundModeD(5));
+//             //i = rw;
+//           end;
+//           totCoef=totCoef+Coef;
+//         end;
+//       end;
+//       //GetFlatsVacRebateCoef = Coef;
+//     case 1: //prombûtnes veidojas no iedzîvotâja kartiòas
+//       Personasr.SerNr=0;
+//       //[servSD;servED] - interested period
+//       while (LoopKey("MatrixFlatCode:" & FlatCode,Personasr,1,true)) begin
+//         rw=MatRowCnt(Personasr);
+//         for (i=0;i<rw;i=i+1) begin
+//           MatRowGet(Personasr,i,Personasrw);
+//           if Personasrw.FlatCode == FlatCode then begin
+//             sd = CurrentDate; ed = CurrentDate;
+//             sd.Year = 1980; ed.Year = 2050;
+//             if nonblankdate(Personasrw.StartDate) then begin
+//               sd = Personasrw.StartDate;
+//             end;
+//             // if nonblankdate(Personasrw.EndDate) then begin
+//               // ed = Personasrw.EndDate;
+//             // end;
+//             if nonblankdate(Personasrw.DeclarCancelDate) then begin
+//               ed = Personasrw.DeclarCancelDate;
+//             end;
+//             if sd<=servED and ed>=servSD then begin // service period and declaration period have at least one common day
+//               if sd<servSD then begin
+//                 sd=servSD;
+//               end;
+//               if ed>servED then begin
+//                 ed=servED;
+//               end;
+//               ResetLoop(PersonasAbsencesr);
+//               PersonasAbsencesr.SerNr=Personasr.SerNr;
+//               if ReadFirstMain(PersonasAbsencesr,1,true) then begin
+//                 rw2=MatRowCnt(PersonasAbsencesr);
+//                 for (i2=0;i2<rw2;i2=i2+1) begin
+//                   MatRowGet(PersonasAbsencesr,i2,PersonasAbsencesrw);
+//                   sd2=CurrentDate; sd2.Year=1900;
+//                   ed2=CurrentDate; ed2.Year=2099;
+//                   if nonblankdate(PersonasAbsencesrw.StartDate) then begin
+//                     sd2=PersonasAbsencesrw.StartDate;
+//                   end;
+//                   if nonblankdate(PersonasAbsencesrw.EndDate) then begin
+//                     ed2=PersonasAbsencesrw.EndDate;
+//                   end;
+//                   if sd2<=ed and ed2>=sd then begin // there is at least one day when the person was absent during pretended service usage
+//                     if sd2<sd then begin
+//                       sd2=sd;
+//                     end;
+//                     if ed2>ed then begin
+//                       ed2=ed;
+//                     end;
+//                     Coef=Coef+DateDiff(ed2,sd2)+1;
+//                   end;
+//                 end;
+//               end;
+//             end;
+//           end;
+//         end;
+//       end;
+//       Coef=Coef/(DateDiff(servED,servSD)+1);
+//       Coef=Round(Coef,SetRoundModeD(5));
+//       totCoef=Coef;
+//   end;
+
+//   GetFlatsVacRebateCoef = totCoef;
+// end;
+
+// global
+// function string 255 GetCounterTypeDescription(string Code)
+// begin
+//   record CounterTypeVc CounterTyper;
+
+//   CounterTyper.Code = Code;
+//   if ReadFirstMain(CounterTyper,1,true) then begin end;
+//   GetCounterTypeDescription = CounterTyper.Description;
+//   return;
+// end;
+
+// global
+// function string 20 GetMonthTextAccusative(date TheDate)
+// begin
+//   string 20 res;
+
+//   switch(GetMonth(TheDate))begin
+//     case 1: res = "Janvâri";
+//     case 2: res = "Februâri";
+//     case 3: res = "Martu";
+//     case 4: res = "Aprîli";
+//     case 5: res = "Maiju";
+//     case 6: res = "Jûniju";
+//     case 7: res = "Jûliju";
+//     case 8: res = "Augustu";
+//     case 9: res = "Septembri";
+//     case 10: res = "Oktobri";
+//     case 11: res = "Novembri";
+//     case 12: res = "Decembri";
+//   end;
+//   GetMonthTextAccusative = res;
+//   return;
+// end;
+
+// global
+// function string 20 GetDateTextAccusative(date TheDate)
+// begin
+//   string 20 res;
+
+//   GetDateTextAccusative = "" & GetYear(TheDate) & ". gada " & GetDay(TheDate) & ". " & GetMonthTextAccusative(TheDate);
+//   return;
+// end;
+
+// global
+// function string 255 GetDateTextLocative(date thedate)
+// begin
+//   string 255 tstr;
+
+//   tstr = GetYear(thedate) & USetStr(1000023) & " " & GetDay(thedate) & USetStr(1000244 + GetMonth(thedate));
+
+//   GetDateTextLocative = tstr;
+//   return;
+// end;
+
+// function boolean CheckIfPrevMonthArtCode(string ArtCode)
+// begin
+//   record INVc INr;
+
+//   INr.Code = ArtCode;
+//   if ReadFirstMain(INr,1,true) then begin end;
+//   CheckIfPrevMonthArtCode = INr.Internal==1;
+// end;
+
+// //almost same as AddPayedSumToIVItem, but for
+// //OverpayFlag - if PayedSum is higher then needed, then sum is still used, else not
+// //LeftPayedSum - returns leftpayedsum, could be not 0 incase of OverpayFlag=false
+// procedure AddPayedSumToUnPayedArtCodeUniqMas(var array string ArtCodeMas,var array val UnPayedSumMas,string ItemCode,val PayedSum,var val LeftPayedSum)
+// begin
+//   val Sum;
+//   integer i,rw;
+//   boolean foundf;
+
+// //  LogText(0,"$$ ItemCode=" & ItemCode & " PayedSum=" & PayedSum & " LeftPayedSum=" & LeftPayedSum);
+//   LeftPayedSum = PayedSum;
+//   if PayedSum<>0 then begin
+//     rw = StringToInt(ArtCodeMas[0]);
+//     for(i=1;i<=rw;i=i+1)begin
+//       if ArtCodeMas[i]==ItemCode then begin
+//         foundf = true;
+//         Sum = UnPayedSumMas[i];
+//         if (UnPayedSumMas[i]-LeftPayedSum)>=0 and (UnPayedSumMas[i]-LeftPayedSum)<=Sum then begin //fully added
+//           UnPayedSumMas[i] = UnPayedSumMas[i]-LeftPayedSum;
+// //          LogText(0,"$ ItemCode=" & ArtCodeMas[i] & " UnPayedSumMas[" & i & "]=" & UnPayedSumMas[i]);
+//           LeftPayedSum = 0;
+//         end else begin
+//           if (UnPayedSumMas[i]-LeftPayedSum)<0 then begin //artcode is payed
+//             LeftPayedSum = LeftPayedSum - UnPayedSumMas[i];
+//             UnPayedSumMas[i] = 0;
+//           end else begin //artcode is unpayed
+//             LeftPayedSum = LeftPayedSum + (Sum-UnPayedSumMas[i]);
+//             UnPayedSumMas[i] = Sum;
+//           end;
+//         end;
+//       end;
+//       if LeftPayedSum==0 then begin
+//         foundf = true;
+//         i = rw+1;
+//       end;
+//     end;
+//   end;
+//   // dirty :)
+//   if !foundf and LeftPayedSum <= PayedSum then begin
+//     rw = StringToInt(ArtCodeMas[0]);
+//     rw = rw + 1;
+//     ArtCodeMas[rw] = "" & ItemCode;
+//     UnPayedSumMas[rw] = 0;
+//     ArtCodeMas[0] = "" & rw;
+//   end;
+// end;
+
+// function boolean SumIsUsed(Record IVVc IVr,integer rownr) begin
+//   Row IVVc IVrw;
+//   Record IPrsVc IPrsr;
+//   boolean wloop,res;
+//   Record IPVc IPr;
+//   Row IPVc IPrw;
+//   integer i,rwc;
+
+//   res=false;
+
+//   MatRowGet(IVr,rownr,IVrw);
+
+//   wLoop = true;
+//   IPrsr.IVNr = IVr.SerNr;
+//   while LoopKey("IVKey",IPrsr,1,wLoop)begin
+//     if IPrsr.IVNr<>IVr.SerNr then begin
+//       wLoop = false;
+//     end else begin
+//       if IPrsr.TransType==0 then begin //cred
+
+//       end;
+//       if IPrsr.TransType==1 then begin //ipvc
+//         IPr.SerNr=IPrsr.TransNr;
+//         if ReadFirstMain(IPr,1,true) then begin
+//           rwc=MatRowCnt(IPr);
+//           for(i=0;i<rwc;i=i+1)begin
+//             MatRowGet(IPr,i,IPrw);
+//             if IPrw.InvoiceNr==IVr.SerNr and IPrw.rkRecNumber==IVrw.ArtCode and IPrw.InvVal==IVrw.Sum then begin
+//               res=true;
+//               wloop=false;
+//               i=rwc;
+//             end;
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+
+//   SumIsUsed=res;
+// end;
+
+global
+procedure GetPayVectorForInvItemsInPeriod(record IVVc IVr,date sd,date ed,boolean inclcreditinvoice,var vector val vecPay) begin
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  record IVVc CredIVr;
+  // Record CLInPayDistVc CLInPayDistr;
+  row IPVc IPrw;
+  row IVVc IVrw;
+  longint prevTransNr;
+  integer i,rw,prevTransType;
+  boolean wLoop,wloop2;
+  date td;
+  val t;
+
+  if IVr.InvType!=3 then begin // CRED is always payed    
+    // prevTransType,prevTransNr - used for checking the same TransNr, there is a bug, that
+    // the same nr is twice, after correction
+    //credit, payments
+    wLoop = true;
+    IPrsr.IVNr = IVr.SerNr;
+    IPrsr.TransDate = sd;
+    while LoopKey("IVKeyTransDate",IPrsr,2,wLoop)begin
+      if IPrsr.IVNr<>IVr.SerNr or IPrsr.TransDate>ed then begin
+        wLoop = false;
+      end else begin
+        //reset prevTransNr if new TransType group
+        if IPrsr.TransType<>prevTransType then begin
+          prevTransType = IPrsr.TransType;
+          prevTransNr = 0;
+        end;
+        //if not the same prevTransNr
+        if IPrsr.TransNr<>prevTransNr then begin
+          prevTransNr = IPrsr.TransNr;
+          switch(IPrsr.TransType)begin
+            case 0: //CRED IVVc
+              if IPrsr.TransNr<>IVr.SerNr and inclcreditinvoice then begin
+                CredIVr.SerNr = IPrsr.TransNr;
+                if ReadFirstMain(CredIVr,1,true) then begin
+                  rw = MatRowCnt(CredIVr);
+                  for(i=0;i<rw;i=i+1)begin
+                    MatRowGet(CredIVr,i,IVrw);
+                    if (IVrw.stp==1 and nonblank(IVrw.ArtCode)) then begin
+                      vecPay[IVr.SerNr & "::" & IVrw.ArtCode] = vecPay[IVr.SerNr & "::" & IVrw.ArtCode] + IVrw.Sum;
+                    end;
+                  end;
+                end;
+              end;
+            case 1: //IPVc
+              IPr.SerNr = IPrsr.TransNr;
+              if ReadFirstMain(IPr,1,true) then begin
+                rw = MatRowCnt(IPr);
+                for(i=0;i<rw;i=i+1)begin
+                  MatRowGet(IPr,i,IPrw);
+                  if IPrw.InvoiceNr==IVr.SerNr then begin
+                    vecPay[IVr.SerNr & "::" & IPrw.rkRecNumber] = vecPay[IVr.SerNr & "::" & IPrw.rkRecNumber] + IPrw.InvVal;
+                  end;
+                end;
+              end;
+            // Case 3: //CLInVc
+            //   ResetLoop(CLInPayDistr);
+            //   CLInPayDistr.CLInSerNr = IPrsr.TransNr;
+            //   wloop2 = true;
+            //   While LoopKey("CLInSerNr",CLInPayDistr,1,wloop2) begin
+            //     if CLInPayDistr.CLInSerNr != IPrsr.TransNr then begin
+            //       wloop2 = false;
+            //     end else begin
+            //       vecPay[IVr.SerNr & "::" & CLInPayDistr.ArtCode] = vecPay[IVr.SerNr & "::" & CLInPayDistr.ArtCode] + CLInPayDistr.InvAmt;
+            //     end;
+            //   end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global
+procedure GetPayVectorForInvItems(record IVVc IVr,boolean inclcreditinvoice,var vector val vecPay) begin
+  date sd,ed;
+  
+  sd.day = 1; sd.month=1; sd.year=1980;
+  ed = AddYear(CurrentDate,5);
+  
+  GetPayVectorForInvItemsInPeriod(IVr,sd,ed,inclcreditinvoice,vecPay);
+  
+return;
+end;
+
+// //almost same as UpdIVItemPayedSumFromPrepaymentRows, but for UnPayedArtCodeUniqMas
+// procedure AddIVPrepaymentToUnPayedArtCodeUniqMas(record IVVc IVr,boolean CurrentUnPayed,var array string ArtCodeMas,var array val UnPayedSumMas,date ondate)
+// begin
+//   row IVVc IVrw;
+//   val Sum,LeftPayedSum,totunpayedsum,totdistr,t,t2,t3;
+//   integer i,rw,masi,masrw,i2;
+//   boolean existsf;
+//   vector val vecPays;
+
+//   if !CurrentUnPayed then begin
+//     rw = MatRowCnt(IVr);
+//     for(i=0;i<rw;i=i+1)begin //get prepay total sum
+//       MatRowGet(IVr,i,IVrw);
+//       if IVrw.stp==6 then begin
+//         Sum = Sum + IVrw.Sum;
+//       end;
+//       if IVrw.Sum<0 and !SumIsUsed(IVr,i) then begin
+//         Sum = Sum - IVrw.Sum;
+//         masrw=StringToInt(ArtCodeMas[0]);
+//         for(masi=1;masi<=masrw;masi=masi+1)begin
+//           if IVrw.ArtCode==ArtCodeMas[masi] then begin
+//             UnPayedSumMas[masi] = UnPayedSumMas[masi] - IVrw.Sum;
+//             masi = masrw + 1;
+//           end;
+//         end;
+//       end;
+//     end;
+//     if Sum>0 then begin
+//       GetPayVectorForInvItems(IVr,true,vecPays); //ieliek vektorâ visas samaksâtâs summas par konkrçtâ rçíina artikuliem
+//       masrw=StringToInt(ArtCodeMas[0]);
+//       for (masi=1;masi<=masrw;masi=masi+1) begin
+//         t2 = GetArtCodeUnpayedSumFromIV(IVr,ArtCodeMas[masi],existsf);
+//         if existsf then begin
+//           //t3 - kopçjâ artikula summa ar PVN no rçíina
+//           //t2 - neapmaksâtâ artikula summa ar PVN konkrçtajam rçíinam
+//           //vecPays - visa samaksâtâ summa par rçíina artikuliem, konkrçts artikuls ir pie atslçgas == IVr.SerNr & "::" & Artcode
+//           //priekðapmaksa = t3 - t2 (E sadaïa) - vecPays[IVr.SerNr & "::" & Artcode]
+//           t3 = GetArtCodeSumFromIV(IVr,ArtCodeMas[masi]);
+//           if t3>0 then begin //negatîvas summas ðeit nav jâapskata, jo tâs tiek noòemtas iepriekð
+//             t = t3 - vecPays[IVr.SerNr & "::" & ArtCodeMas[masi]] - t2;
+//             UnPayedSumMas[masi] = UnPayedSumMas[masi] - t;
+//           end;
+//         end;
+//       end;
+//     end;
+//   end;
+  
+//   return;
+// end;
+
+// //return ivvc uniq artcode mas with unpayed sums
+// //CurrentUnPayed=true means the unpayed sum, else the artcode .sum from row
+// global
+// procedure GetIVUnPayedArtCodeUniqMas(record IVVc IVr,boolean CurrentUnPayed,boolean OnlyPrevMonthArtCodes,var array string ArtCodeMas,var array string ArtNameMas,var array val UnPayedSumMas)
+// begin
+//   row IVVc IVrw;
+//   integer i,rw,masrw,masi;
+
+//   masrw = StringToInt(ArtCodeMas[0]);
+//   if IVr.xStatFlag<>0 or !CurrentUnPayed then begin
+//     rw = MatRowCnt(IVr);
+//     for(i=0;i<rw;i=i+1)begin
+//       MatRowGet(IVr,i,IVrw);
+//       if nonblank(IVrw.ArtCode) and (IVrw.UnitYval<>0 or !CurrentUnPayed) then begin
+//         if !OnlyPrevMonthArtCodes or CheckIfPrevMonthArtCode(IVrw.ArtCode) then begin
+//           for (masi=1;masi<=masrw;masi=masi+1) begin
+//             if ArtCodeMas[masi]==IVrw.ArtCode then begin
+//               if CurrentUnPayed then begin
+//                 UnPayedSumMas[masi] = UnPayedSumMas[masi] + IVrw.UnitYval;
+//               end else begin
+//                 if IVr.InclVAT==0 then begin
+//                   UnPayedSumMas[masi] = UnPayedSumMas[masi] + IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+//                 end else begin
+//                   UnPayedSumMas[masi] = UnPayedSumMas[masi] + IVrw.Sum;
+//                 end;
+//               end;
+//               goto AddedArtCodeUniqMas;
+//             end;
+//           end;
+//           masrw = masrw + 1;
+//           ArtCodeMas[masrw] = IVrw.ArtCode;
+//           ArtNameMas[masrw] = IVrw.Spec;
+//           if CurrentUnPayed then begin
+//             UnPayedSumMas[masrw] = IVrw.UnitYval;
+//           end else begin
+//             if IVr.InclVAT==0 then begin
+//               UnPayedSumMas[masrw] = IVrw.Sum + Round(FindVAT(IVrw.VATCode,IVrw.Sum,IVr.InclVAT,IVr.NoTAXonVAT),SetRoundModeD(2));
+//             end else begin
+//               UnPayedSumMas[masrw] = IVrw.Sum;
+//             end;
+//           end;
+// AddedArtCodeUniqMas:;
+//         end;
+//       end;
+//     end;
+//   end;
+//   ArtCodeMas[0] = masrw;
+//   return;
+// end;
+
+global
+procedure OBS_CUGetBalance(string custcode,date ondate,var val bal,var val latebal,
+                            string exclstr1,var val exclbal1,var val lateexclbal1,
+                            string exclstr2,var val exclbal2,var val lateexclbal2)
+Begin
+  Record IVVc IVr;
+  boolean wloop,testf;
+  LongInt latedays;
+  val rvalb1,rval;
+  Array String 50 ArtCodeMas;
+  array val UnPayedSumMas;
+  integer arraysize,i;
+  array longint arrContractNrs;
+  
+  bal           = 0;
+  latebal       = 0;
+  exclbal1      = 0;
+  lateexclbal1  = 0;
+  exclbal2      = 0;
+  lateexclbal2  = 0;
+  
+  IVr.CustCode = custcode; 
+  IVr.InvDate = ondate;
+  wloop = true;
+  while LoopBackKey("CustDate",IVr,2,wloop) begin
+    if IVr.CustCode!=custcode or IVr.InvDate > ondate then begin
+      wloop = false;
+    end else begin
+      
+      latedays = CalculateLateDays(IVr.InvDate,IVr.PayDate,ondate,false,false);
+      //LogText(0,"ondate=" & ondate & " sernr=" & IVr.SerNr & " late=" & latedays);
+      rvalb1 = 0;
+      if ((IVr.InvType<>kInvoiceTypeCredit) and (IVr.InvType<>kInvoiceTypeCash)) then begin
+        rval = IVr.Sum4;
+        if (nonblank(IVr.CurncyCode)) then begin
+          rvalb1 = IVr.BaseSum4;
+        end;
+        if (rvalb1==0) then begin
+          rvalb1 = rval;
+        end;
+      end;
+      if (IVr.InvType==kInvoiceTypeCredit) then begin
+        if (IVr.CredInv==-1) then begin
+          rval = -IVr.Sum4;
+          if (nonblank(IVr.CurncyCode)) then begin
+            rvalb1 = -IVr.BaseSum4;
+          end;
+          if (rvalb1==0) then begin
+            rvalb1 = rval;
+          end;
+        end else begin
+          rval = 0;
+          rvalb1 = 0;
+        end;    
+      end;
+      if (IVr.InvType==kInvoiceTypeCash) then begin
+        rval = 0;
+        rvalb1 = 0;
+      end;
+      
+      ARRnGetInvBalance(IVr,ondate,IVr.InvType,rval,rvalb1,latedays);
+      SubPrePayments(IVr,rval,rvalb1);
+      SubCashRows_IVVc(IVr,false,rval,rvalb1);
+      
+      bal = bal + rvalb1;
+      if latedays<=0 then begin
+        latebal = latebal + rvalb1;
+      end;
+      if nonblank(exclstr1) or nonblank(exclstr2) then begin
+        ArtCodeMas[0]=0;
+        GetIVUnPayedArtCodeUniqMasOnDate(IVr,ondate,false,ArtCodeMas,UnPayedSumMas,arrContractNrs);
+        arraysize=StringToInt(ArtCodeMas[0]);
+        for(i=1;i<=arraysize;i=i+1)begin
+          if SetInSet(ArtCodeMas[i],exclstr1) then begin
+            exclbal1 = exclbal1 + UnPayedSumMas[i];
+            if latedays<=0 then begin
+              lateexclbal1 = lateexclbal1 + UnPayedSumMas[i];
+            end;
+          end;
+          if SetInSet(ArtCodeMas[i],exclstr2) then begin
+            exclbal2 = exclbal2 + UnPayedSumMas[i];
+            if latedays<=0 then begin
+              lateexclbal2 = lateexclbal2 + UnPayedSumMas[i];
+            end;
+          end;
+        end;  
+      end;
+    end;
+  end;
+  
+return;
+end;
+

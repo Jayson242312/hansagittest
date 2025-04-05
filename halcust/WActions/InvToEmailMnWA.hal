@@ -1,0 +1,92 @@
+remote procedure GetInvToEmailTaskBlock(var record InvToEmailTaskBlock);
+
+procedure UpdateInvToEmailTaskWClass(integer wn,var boolean runningf)
+begin
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  string 255 tstr;
+  boolean oldrunningf;
+  
+  GetInvToEmailTaskBlock(InvToEmailTaskBl);
+  PutWindowString(wn,"TransferSz",InvToEmailTaskBl.Total);
+  PutWindowString(wn,"TransferPos",InvToEmailTaskBl.Send);
+  
+  oldrunningf=runningf;
+  if InvToEmailTaskBl.RunFlag==1 then begin 
+    runningf=true;
+  end else begin
+    tstr = StringFromSet(1073,1) & " " & InvToEmailTaskBl.Send & " (" & InvToEmailTaskBl.Total & ") " & DateToString(InvToEmailTaskBl.OnDate,"DD.MM.YYYY") & " " & InvToEmailTaskBl.OnTime;
+    runningf=false;
+    if !oldrunningf then begin
+      PutWindowString(wn,"TRANSSTAT",tstr);
+    end;
+  end;
+  
+  if oldrunningf and InvToEmailTaskBl.RunFlag==0 then begin
+    ReRunWindowDef(wn);
+    PutWindowString(wn,"TRANSSTAT",tstr);
+  end;
+  
+  return;
+end;
+
+global
+function Boolean InvToEmailTaskWClassOnOpenWindow(Integer wn)
+begin
+  record InvToEmailTaskBlock InvToEmailTaskBl;
+  boolean runningf;
+  
+  UpdateInvToEmailTaskWClass(wn,runningf);
+  
+  NewPeriodicTask("InvToEmailRespTask","InvToEmailRespTask","InvToEmailRespTaskProc",wn,5,"");
+  
+  InvToEmailTaskWClassOnOpenWindow=false;
+  return;
+end;
+
+global
+function Boolean InvToEmailTaskWClassOnClose(Integer wn,Integer wn2)
+begin
+
+  if TaskExists("InvToEmailRespTask") then begin
+    RemoveTask("InvToEmailRespTask");
+  end;
+
+  InvToEmailTaskWClassOnClose = false;
+  return;
+end;
+
+global
+procedure InvToEmailRespTaskProc(string arg)
+begin
+  boolean errorf,runningf;
+  integer wn;
+    
+  wn  = StringToInt(arg);
+   
+  if wn<=0 then begin
+    LogText(0,"InvToEmailRespTaskProc ERROR :: InvToEmailTaskWClass window number 0 or lower");
+    errorf = true;
+    GoTo LInvToEmailRespTaskProc;
+  end;
+  if !WindowValid(wn) then begin
+    LogText(0,"InvToEmailRespTaskProc ERROR :: InvToEmailTaskWClass window is not valid");
+    errorf = true;
+    GoTo LInvToEmailRespTaskProc;
+  end;
+
+  if GetWindowClass(wn)!="InvToEmailTaskWClass" then begin
+    LogText(0,"InvToEmailRespTaskProc ERROR :: Wrong window where InvToEmailTaskWClass was expected");
+    errorf = true;
+    GoTo LInvToEmailRespTaskProc;
+  end;
+  
+  runningf=true;
+  UpdateInvToEmailTaskWClass(wn,runningf);
+  
+LInvToEmailRespTaskProc:;  
+  if errorf or !runningf then begin
+    RemoveTask("InvToEmailRespTask");
+  end;
+  
+  return;
+end;

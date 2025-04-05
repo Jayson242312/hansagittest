@@ -1,0 +1,77 @@
+external inner function string 60 AddObjectToObjectList(string,string);
+
+
+global
+updating procedure ItemStockIn()
+begin
+  record INVc INr;
+  String 255 Code, Group, AltCode, Description, Min, Max, WeightedAvg, Cost; 
+
+  // loops through txt file
+  while (NextImportLine(false)) begin
+    Code = ImportField;
+    Group = ImportField;
+    AltCode = ImportField;
+    Description = ImportField;
+    Min = ImportField;
+    Max = ImportField;
+    WeightedAvg = ImportField;
+    Cost = ImportField;
+
+    RecordNew(INr)
+    INr.Code = Code;
+    INr.ItemType = 1; // stock.price selected
+    INr.Name = Description;
+    // INr.UPrice1 = StringToVal(BasePrice,M4UVal); 
+    // INr.InPrice = INr.UPrice1; // cost price will equal base price
+    INr.Unittext = "EACH";
+    INr.Group = Group;
+    INr.MinLevel = StringToVal(Min,M4UVal);
+    INr.MaxLevel = StringToVal(Max,M4UVal);
+    INr.InPrice  = StringToVal(Cost,M4UVal);// cost price
+    INr.WeighedAvPrice = StringToVal(WeightedAvg,M4UVal);// weighted avrg price
+    INr.AlternativeCode = AltCode;
+    //
+    INr.Objects = AddObjectToObjectList(INr.Objects,Group);
+    INr.Objects = AddObjectToObjectList(INr.Objects,"STOCK");
+    RecordImportStore(INr,false);
+  end;
+
+  return;
+end;
+
+// global
+// updating procedure ItemStockIn()
+// begin
+//   record INVc INr;
+//   String 255 Code, Name,Group, Description, Cost, BasePrice; 
+
+//   // loops through txt file
+//   while (NextImportLine(false)) begin
+//     Group = ImportField;
+//     Code = ImportField;
+//     Description = ImportField;
+//     BasePrice = ImportField;
+
+//     RecordNew(INr)
+//     INr.Unittext = "EACH";
+
+//     switch (Group) begin
+//     case "A" : INr.Group = "AST";  
+//     case "E" : INr.Group = "EXP";  
+//     case "O" : INr.Group = "ORN";  
+//     case "R" : INr.Group = "REP";  
+//     case "S" : INr.Group = "STAT";  
+//     case "W" : INr.Group = "WRK";  
+//     end;
+
+//     INr.Name = Description;
+//     INr.UPrice1 = StringToVal(BasePrice,M4UVal); 
+//     INr.InPrice = INr.UPrice1; // cost price will equal base price
+//     // stock Price has to be Included
+//     INr.ItemType = 1;
+//     RecordImportStore(INr,false);
+//   end;
+
+//   return;
+// end;
