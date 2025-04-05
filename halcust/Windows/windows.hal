@@ -40,8 +40,8 @@ window DeedOfSaleDClass:1
   wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
 begin
   integer TileNr;
-  real h,v,vs;f
-  WindowBegin("Deed Of Sale", DeedOfSaleDClass, CGview, -);
+  real h,v,vs;
+  WindowBegin("Deed Of Sales", DeedOfSaleDClass, CGview, -);
   SetWRect(20,80,200,500);   
   Sizeable(-1,-1,0,0); 
   UseView(DeedOfSaleVc);
