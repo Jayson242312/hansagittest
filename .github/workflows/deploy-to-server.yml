@@ -1,0 +1,98 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+env:
+  SSH_PORT: 22
+  SERVER_IP: 172.21.56.243
+  SERVER_USER: f
+  APP_DIR: u1/StandardERPServer/
+  APP_CMD: ./StandardERPServer64 --port 1201 --webport 1301 --stop journaling
+  MAX_RETRIES: 5
+  RETRY_DELAY: 10
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.T}}
+
+      - name: Validate server connection
+        run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
+
+      - name: Pull main branch changes to production
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -e
+            cd $APP_DIR
+            git pull origin main
+          "
+
+      - name: Stop existing server
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -x
+            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
+            if [ -n \"\$PID\" ]; then
+              echo \"Found PID: \$PID\"
+              kill \$PID
+              sleep 5
+              if ps -p \$PID > /dev/null; then
+                echo 'Force killing process...'
+                kill -9 \$PID
+              fi
+            else
+              echo 'No running process found'
+            fi
+          "
+
+      - name: Start server
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -e
+            cd $APP_DIR
+            nohup $APP_CMD > hal.log 2>&1 &
+            echo 'Server start command executed - waiting for initialization...'
+          "
+
+      - name: Check server log
+        run: |
+          sleep 60
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+
+      - name: Verify server status
+        run: |
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            pgrep -f '$(printf "%q" "$APP_CMD")'
+          " | tr -d '\n')
+          echo "Raw PID detected: '$PID'"
+          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -z \"$PID\" ]; then 
+              echo 'No PID found'; exit 1; 
+            elif ! ps -p \"$PID\" >/dev/null; then 
+              echo 'PID $PID not running'; exit 1;
+            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
+              echo 'PID $PID command mismatch'; exit 1;
+            fi
+          "; then
+            echo "Server verified as running"
+          else
+            echo "::error::Server validation failed"
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+            exit 1
+          fi
