@@ -77,7 +77,7 @@ jobs:
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
-            git reset --hard ${{ env.MAIN_COMMIT }}
+            git pull origin main
             pkill -f '$APP_CMD' || true
             nohup $APP_CMD > main.log 2>&1 &
           "
