@@ -100,20 +100,10 @@ jobs:
             echo "Server verified as running"
           else
             echo "::error::Server validation failed"
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
             exit 1
           fi
 
-      - name: Capture failure logs
-        if: failure()
-        run: |
-          echo "::group::=== FULL ERROR LOGS ==="
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "cat $APP_DIR/hal.log"
-          echo "::endgroup::"
-          
-          echo "::error::=== ERROR HIGHLIGHTS ==="
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-          grep -i -B
-      
       - name: Rollback on failure
         if: failure()
         run: |
