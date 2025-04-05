@@ -87,14 +87,14 @@ jobs:
           " | tr -d '\n')
           
           echo "Raw PID detected: '$PID'"
-          
+                    
           # Verify PID exists and is running
           if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             if [ -z \"$PID\" ]; then 
               echo 'No PID found'; exit 1; 
             elif ! ps -p \"$PID\" >/dev/null; then 
               echo 'PID $PID not running'; exit 1;
-            elif ! grep -qF '$APP_CMD' /proc/$PID/cmdline 2>/dev/null; then
+            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
               echo 'PID $PID command mismatch'; exit 1;
             fi
           "; then
@@ -103,7 +103,6 @@ jobs:
             echo "::error::Server validation failed"
             exit 1
           fi
-
 
       - name: Capture failure logs
         if: failure()
