@@ -41,29 +41,28 @@ jobs:
             git reset --hard origin/main
           " 
 
-          - name: Stop existing server
-          run: |
-            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              set -x
-              echo 'Running processes:'
-              ps aux | grep StandardERPServer64 || true
-              echo 'Attempting to stop server...'
-              PIDS=\$(pgrep -f 'StandardERPServer64.*--port 1201')
-              if [ -n \"\$PIDS\" ]; then
-                echo \"Found PIDs: \$PIDS\"
-                kill \$PIDS
-                sleep 5
-                for PID in \$PIDS; do
-                  if ps -p \$PID > /dev/null; then
-                    echo \"Force killing PID \$PID...\"
-                    kill -9 \$PID
-                  fi
-                done
-              else
-                echo 'No running process found'
-              fi
-            "
-        
+      - name: Stop existing server
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -x
+            echo 'Running processes:'
+            ps aux | grep StandardERPServer64 || true
+            echo 'Attempting to stop server...'
+            PIDS=\$(pgrep -f 'StandardERPServer64.*--port 1201')
+            if [ -n \"\$PIDS\" ]; then
+              echo \"Found PIDs: \$PIDS\"
+              kill \$PIDS
+              sleep 5
+              for PID in \$PIDS; do
+                if ps -p \$PID > /dev/null; then
+                  echo \"Force killing PID \$PID...\"
+                  kill -9 \$PID
+                fi
+              done
+            else
+              echo 'No running process found'
+            fi
+          "
       - name: Start server
         run: |
             ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
