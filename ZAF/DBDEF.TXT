@@ -1,0 +1,27 @@
+format
+1	46	1	1	0	44	0	/	1	
+
+ProgramStatusBlock	
+Standard ERP		0	1200													1080				10		1	0				
+
+
+sysformat	
+1	0	0	1	/	.	,	
+
+
+
+ClientFormatBlock	
+1	1	1	1	/	.	,	
+
+
+
+
+ModuleBlock	
+ABA-AOC-OOO-IAC-EAA	1	0	0	0	0	0	0	1	1	1	0	0	1	1	1	1	1	1	1	1	1	1	1	0	0	0	0	0	1	0	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0				0	0	1
+
+
+
+importfiles
+
+
+

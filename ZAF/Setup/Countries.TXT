@@ -1,0 +1,482 @@
+format	1	46	1	0	0	44	0	/	1	codepage	UTF-8	HansaVersion	8.5 Development Version 2022-11-03 10:40 (build 85480814)	StandardERP	country	AFG	Afganistan									0	0	AF		0		0	0	0	0				0	0
+																								
+ALB	Albania									0	0	AL		0		0	0	0	0				0	0
+																								
+DZA	Algeria									0	0	DZ		0		0	0	0	0				0	0
+																								
+ASM	American Samoa									0	0	AS		0		0	0	0	0				0	0
+																								
+AND	Andorra									0	0	AD		0		0	0	0	0				0	0
+																								
+AGO	Angola									0	0	AO		0		0	0	0	0				0	0
+																								
+AIA	Anguilla									0	0	AI		0		0	0	0	0				0	0
+																								
+ATA	Antarctica									0	0	AQ		0		0	0	0	0				0	0
+																								
+ATG	Antigua and Barbuda									0	0	AG		0		0	0	0	0				0	0
+																								
+ARG	Argentina									0	0	AR		0		0	0	0	0				0	0
+																								
+ARM	Armenia									0	0	AM		0		0	0	0	0				0	0
+																								
+ABW	Aruba									0	0	AW		0		0	0	0	0				0	0
+																								
+AUS	Australia									0	0	AU		0		0	0	0	0				0	0
+																								
+AUT	Austria									0	0	AT		0		0	0	0	0				0	0
+																								
+AZE	Azerbaijan									0	0	AZ		0		0	0	0	0				0	0
+																								
+BHS	Bahamas									0	0	BH		0		0	0	0	0				0	0
+																								
+BHR	Bahrain									0	0	BS		0		0	0	0	0				0	0
+																								
+BGD	Bangladesh									0	0	BD		0		0	0	0	0				0	0
+																								
+BRB	Barbados									0	0	BB		0		0	0	0	0				0	0
+																								
+BLR	Belarus									0	0	BY		0		0	0	0	0				0	0
+																								
+BEL	Belgium		EUR							0	0	BE		0		0	0	0	0				0	0
+																								
+BLZ	Belize									0	0	BZ		0		0	0	0	0				0	0
+																								
+BEN	Benin									0	0	BJ		0		0	0	0	0				0	0
+																								
+BMU	Bermuda									0	0	BM		0		0	0	0	0				0	0
+																								
+BTN	Bhutan									0	0	BT		0		0	0	0	0				0	0
+																								
+BOL	Bolivia									0	0	BO		0		0	0	0	0				0	0
+																								
+BIH	Bosnia and Herzegovina									0	0	BA		0		0	0	0	0				0	0
+																								
+BWA	Botswana									0	0	BW		0		0	0	0	0				0	0
+																								
+BVT	Bouvet Island									0	0	BV		0		0	0	0	0				0	0
+																								
+BRA	Brazil									0	0	BR		0		0	0	0	0				0	0
+																								
+IOT	British Indian Ocean Territory									0	0	IO		0		0	0	0	0				0	0
+																								
+BRN	Brunei Darussalam									0	0	BN		0		0	0	0	0				0	0
+																								
+BGR	Bulgaria									0	0	BG		0		0	0	0	0				0	0
+																								
+BFA	Burkina Faso									0	0	BF		0		0	0	0	0				0	0
+																								
+BDI	Burundi									0	0	BI		0		0	0	0	0				0	0
+																								
+KHM	Cambodia									0	0	KH		0		0	0	0	0				0	0
+																								
+CMR	Cameroon									0	0	CM		0		0	0	0	0				0	0
+																								
+CAN	Canada									0	0	CA		0		0	0	0	0				0	0
+																								
+CPV	Cape Verde									0	0	CV		0		0	0	0	0				0	0
+																								
+CYM	Cayman Islands									0	0	KY		0		0	0	0	0				0	0
+																								
+CAF	Central African Republic									0	0	CF		0		0	0	0	0				0	0
+																								
+TCD	Chad									0	0	TD		0		0	0	0	0				0	0
+																								
+CHL	Chile									0	0	CL		0		0	0	0	0				0	0
+																								
+CHN	China									0	0	CN		0		0	0	0	0				0	0
+																								
+CXR	Christmas Island									0	0	CX		0		0	0	0	0				0	0
+																								
+CCK	Cocos (Keeling) Islands									0	0	CC		0		0	0	0	0				0	0
+																								
+COL	Colombia									0	0	CO		0		0	0	0	0				0	0
+																								
+COM	Comoros									0	0	KM		0		0	0	0	0				0	0
+																								
+COK	Cook Islands									0	0	CG		0		0	0	0	0				0	0
+																								
+CRI	Costa Rica									0	0	CR		0		0	0	0	0				0	0
+																								
+CIV	Côte D'Ivoire									0	0	CI		0		0	0	0	0				0	0
+																								
+HRV	Croatia									0	0	HR		0		0	0	0	0				0	0
+																								
+CUB	Cuba									0	0	CU		0		0	0	0	0				0	0
+																								
+CYP	Cyprus									0	0	CY		0		0	0	0	0				0	0
+																								
+CZE	Czech Republic									0	0	CZ		0		0	0	0	0				0	0
+																								
+PRK	Democratic People's Republic of Korea									0	0	KP		0		0	0	0	0				0	0
+																								
+COD	Democratic Republic of the Congo 									0	0	CG		0		0	0	0	0				0	0
+																								
+DNK	Denmark									0	0	DK		0		0	0	0	0				0	0
+																								
+DJI	Djibouti									0	0	DJ		0		0	0	0	0				0	0
+																								
+DMA	Dominica									0	0	DM		0		0	0	0	0				0	0
+																								
+DOM	Dominican Republic									0	0	DO		0		0	0	0	0				0	0
+																								
+TLS	East Timor									0	0	TL		0		0	0	0	0				0	0
+																								
+ECU	Ecuador									0	0	EC		0		0	0	0	0				0	0
+																								
+EGY	Egypt									0	0	EG		0		0	0	0	0				0	0
+																								
+SLV	El Salvador									0	0	SV		0		0	0	0	0				0	0
+																								
+GBR	England									0	0	GB		0		0	0	0	0				0	0
+																								
+GNQ	Equatorial Guinea									0	0	GQ		0		0	0	0	0				0	0
+																								
+ERI	Eritrea									0	0	ER		0		0	0	0	0				0	0
+																								
+EST	Estonia									0	0	EE		0		0	0	0	0				0	0
+																								
+ETH	Ethiopia									0	0	ET		0		0	0	0	0				0	0
+																								
+FLK	Falkland Islands (Malvinas)									0	0	FK		0		0	0	0	0				0	0
+																								
+FRO	Faroe Islands									0	0	FO		0		0	0	0	0				0	0
+																								
+FJI	Fiji									0	0	FJ		0		0	0	0	0				0	0
+																								
+FIN	Finland									0	0	FI		0		0	0	0	0				0	0
+																								
+FRA	France		EUR							0	0	FR		0		0	0	0	0				0	0
+																								
+GUF	French Guiana									0	0	GF		0		0	0	0	0				0	0
+																								
+PYF	French Polynesia									0	0	PF		0		0	0	0	0				0	0
+																								
+ATF	French Southern Territories									0	0	TF		0		0	0	0	0				0	0
+																								
+GAB	Gabon									0	0	GA		0		0	0	0	0				0	0
+																								
+GMB	Gambia									0	0	GM		0		0	0	0	0				0	0
+																								
+GEO	Georgia									0	0	GE		0		0	0	0	0				0	0
+																								
+DEU	Germany									0	0	DE		0		0	0	0	0				0	0
+																								
+GGY	Germany		EUR							0	0	GG		0		0	0	0	0				0	0
+																								
+GHA	Ghana									0	0	GH		0		0	0	0	0				0	0
+																								
+GIB	Gibraltar									0	0	GI		0		0	0	0	0				0	0
+																								
+GRC	Greece									0	0	GR		0		0	0	0	0				0	0
+																								
+GRL	Greenland									0	0	GL		0		0	0	0	0				0	0
+																								
+GRD	Grenada									0	0	GD		0		0	0	0	0				0	0
+																								
+GLP	Guadeloupe									0	0	GP		0		0	0	0	0				0	0
+																								
+GUM	Guam									0	0	GU		0		0	0	0	0				0	0
+																								
+GTM	Guatemala									0	0	GT		0		0	0	0	0				0	0
+																								
+GIN	Guinea									0	0	GN		0		0	0	0	0				0	0
+																								
+GNB	Guinea Bissau									0	0	GW		0		0	0	0	0				0	0
+																								
+GUY	Guyana									0	0	GY		0		0	0	0	0				0	0
+																								
+HTI	Haiti									0	0	HT		0		0	0	0	0				0	0
+																								
+HMD	Heard and McDonald Islands									0	0	HM		0		0	0	0	0				0	0
+																								
+HND	Honduras									0	0	HN		0		0	0	0	0				0	0
+																								
+HKG	Hong Kong									0	0	HK		0		0	0	0	0				0	0
+																								
+HUN	Hungary									0	0	HU		0		0	0	0	0				0	0
+																								
+ISL	Iceland									0	0	IS		0		0	0	0	0				0	0
+																								
+IND	India									0	0	IN		0		0	0	0	0				0	0
+																								
+IDN	Indonesia									0	0	ID		0		0	0	0	0				0	0
+																								
+IRN	Iran									0	0	IR		0		0	0	0	0				0	0
+																								
+IRQ	Iraq									0	0	IQ		0		0	0	0	0				0	0
+																								
+IRL	Ireland									0	0	IE		0		0	0	0	0				0	0
+																								
+ISR	Israel									0	0	IL		0		0	0	0	0				0	0
+																								
+ITA	Italy		EUR							0	0	IT		0		0	0	0	0				0	0
+																								
+JAM	Jamaica									0	0	JM		0		0	0	0	0				0	0
+																								
+JPN	Japan									0	0	JP		0		0	0	0	0				0	0
+																								
+JOR	Jordan									0	0	JO		0		0	0	0	0				0	0
+																								
+KAZ	Kazakhstan									0	0	KZ		0		0	0	0	0				0	0
+																								
+KEN	Kenya									0	0	KE		0		0	0	0	0				0	0
+																								
+KIR	Kiribati									0	0	KI		0		0	0	0	0				0	0
+																								
+KWT	Kuwait									0	0	KW		0		0	0	0	0				0	0
+																								
+KGZ	Kyrgyzstan									0	0	KG		0		0	0	0	0				0	0
+																								
+LAO	Laos									0	0	LA		0		0	0	0	0				0	0
+																								
+LVA	Latvia									0	0	LV		0		0	0	0	0				0	0
+																								
+LBN	Lebanon									0	0	LB		0		0	0	0	0				0	0
+																								
+LSO	Lesotho									0	0	LS		0		0	0	0	0				0	0
+																								
+LBR	Liberia									0	0	LR		0		0	0	0	0				0	0
+																								
+LBY	Libya									0	0	LY		0		0	0	0	0				0	0
+																								
+LIE	Liechtenstein									0	0	LI		0		0	0	0	0				0	0
+																								
+LTU	Lithuania		EUR							0	0	LT		0		0	0	0	0				0	0
+																								
+LUX	Luxembourg									0	0	LU		0		0	0	0	0				0	0
+																								
+MAC	Macau									0	0	MO		0		0	0	0	0				0	0
+																								
+MKD	Macedonia									0	0	MK		0		0	0	0	0				0	0
+																								
+MDG	Madagascar									0	0	MG		0		0	0	0	0				0	0
+																								
+MWI	Malawi									0	0	MW		0		0	0	0	0				0	0
+																								
+MYS	Malaysia									0	0	MY		0		0	0	0	0				0	0
+																								
+MDV	Maldives									0	0	MV		0		0	0	0	0				0	0
+																								
+MLI	Mali									0	0	ML		0		0	0	0	0				0	0
+																								
+MLT	Malta									0	0	MT		0		0	0	0	0				0	0
+																								
+MHL	Marshall Islands									0	0	MH		0		0	0	0	0				0	0
+																								
+MTQ	Martinique									0	0	MQ		0		0	0	0	0				0	0
+																								
+MRT	Mauritania									0	0	MR		0		0	0	0	0				0	0
+																								
+MUS	Mauritius									0	0	MU		0		0	0	0	0				0	0
+																								
+MYT	Mayotte									0	0	YT		0		0	0	0	0				0	0
+																								
+MEX	Mexico									0	0	MX		0		0	0	0	0				0	0
+																								
+FSM	Micronesia Federated States									0	0	FM		0		0	0	0	0				0	0
+																								
+MDA	Moldova									0	0	MD		0		0	0	0	0				0	0
+																								
+MCO	Monaco									0	0	MC		0		0	0	0	0				0	0
+																								
+MNG	Mongolia									0	0	MN		0		0	0	0	0				0	0
+																								
+MSR	Montserrat									0	0	MS		0		0	0	0	0				0	0
+																								
+MAR	Morocco									0	0	MA		0		0	0	0	0				0	0
+																								
+MOZ	Mozambique									0	0	MZ		0		0	0	0	0				0	0
+																								
+MMR	Myanmar									0	0	MM		0		0	0	0	0				0	0
+																								
+NAM	Namibia									0	0	NA		0		0	0	0	0				0	0
+																								
+NRU	Nauru									0	0	NR		0		0	0	0	0				0	0
+																								
+NPL	Nepal									0	0	NP		0		0	0	0	0				0	0
+																								
+NLD	Netherlands									0	0	NL		0		0	0	0	0				0	0
+																								
+NCL	New Caledonia									0	0	NC		0		0	0	0	0				0	0
+																								
+NZL	New Zealand									0	0	NZ		0		0	0	0	0				0	0
+																								
+NIC	Nicaragua									0	0	NI		0		0	0	0	0				0	0
+																								
+NER	Niger									0	0	NE		0		0	0	0	0				0	0
+																								
+NGA	Nigeria		NGN							0	0	NG		0		0	0	0	0				0	0
+																								
+NIU	Niue									0	0	NU		0		0	0	0	0				0	0
+																								
+NFK	Norfolk Island									0	0	NF		0		0	0	0	0				0	0
+																								
+MNP	Northern Mariana Islands									0	0	MP		0		0	0	0	0				0	0
+																								
+NOR	Norway		NOK							0	0	NO		0		0	0	0	0				0	0
+																								
+OMN	Oman									0	0	OM		0		0	0	0	0				0	0
+																								
+PAK	Pakistan									0	0	PK		0		0	0	0	0				0	0
+																								
+PLW	Palau									0	0	PW		0		0	0	0	0				0	0
+																								
+PSE	Palestinian Territories									0	0	PS		0		0	0	0	0				0	0
+																								
+PAN	Panama									0	0	PA		0		0	0	0	0				0	0
+																								
+PNG	Papua New Guinea									0	0	PG		0		0	0	0	0				0	0
+																								
+PRY	Paraguay									0	0	PY		0		0	0	0	0				0	0
+																								
+PER	Peru									0	0	PE		0		0	0	0	0				0	0
+																								
+PHL	Philippines									0	0	PH		0		0	0	0	0				0	0
+																								
+PCN	Pitcairn									0	0	PN		0		0	0	0	0				0	0
+																								
+POL	Poland									0	0	PL		0		0	0	0	0				0	0
+																								
+PRT	Portugal									0	0	PT		0		0	0	0	0				0	0
+																								
+PRI	Puerto Rico									0	0	PR		0		0	0	0	0				0	0
+																								
+QAT	Qatar									0	0	QA		0		0	0	0	0				0	0
+																								
+KOR	Republic of Korea									0	0	KR		0		0	0	0	0				0	0
+																								
+COG	Republic of the Congo									0	0	CG		0		0	0	0	0				0	0
+																								
+REU	Reunion									0	0	RE		0		0	0	0	0				0	0
+																								
+ROU	Romania									0	0	RO		0		0	0	0	0				0	0
+																								
+RUS	Russia									0	0	RU		0		0	0	0	0				0	0
+																								
+RWA	Rwanda									0	0	RW		0		0	0	0	0				0	0
+																								
+SHN	Saint Helena									0	0	SH		0		0	0	0	0				0	0
+																								
+KNA	Saint Kitts and Nevis									0	0	KN		0		0	0	0	0				0	0
+																								
+LCA	Saint Lucia									0	0	LC		0		0	0	0	0				0	0
+																								
+SPM	Saint Pierre and Miquelon									0	0	PM		0		0	0	0	0				0	0
+																								
+WSM	Samoa									0	0	WS		0		0	0	0	0				0	0
+																								
+SMR	San Marino									0	0	SM		0		0	0	0	0				0	0
+																								
+STP	Sao Tome and Principe									0	0	ST		0		0	0	0	0				0	0
+																								
+SAU	Saudi Arabia									0	0	SA		0		0	0	0	0				0	0
+																								
+SEN	Senegal									0	0	SN		0		0	0	0	0				0	0
+																								
+SYC	Seychelles									0	0	SC		0		0	0	0	0				0	0
+																								
+SLE	Sierra Leone									0	0	SL		0		0	0	0	0				0	0
+																								
+SGP	Singapore									0	0	SG		0		0	0	0	0				0	0
+																								
+SVK	Slovakia									0	0	SK		0		0	0	0	0				0	0
+																								
+SVN	Slovenia									0	0	SI		0		0	0	0	0				0	0
+																								
+SLB	Solomon Islands									0	0	SB		0		0	0	0	0				0	0
+																								
+SOM	Somalia									0	0	SO		0		0	0	0	0				0	0
+																								
+ZAF	South Africa									0	0	ZA		0		0	0	0	0				0	0
+																								
+ESP	Spain									0	0	ES		0		0	0	0	0				0	0
+																								
+LKA	Sri Lanka									0	0	LK		0		0	0	0	0				0	0
+																								
+VCT	St Vincent and the Grenadines									0	0	VC		0		0	0	0	0				0	0
+																								
+SGS	Sth Georgia and Sth Sandwich Islands									0	0	GS		0		0	0	0	0				0	0
+																								
+SDN	Sudan									0	0	SD		0		0	0	0	0				0	0
+																								
+SUR	Suriname									0	0	SR		0		0	0	0	0				0	0
+																								
+SJM	Svalbard and Jan Mayen									0	0	SJ		0		0	0	0	0				0	0
+																								
+SWZ	Swaziland									0	0	SZ		0		0	0	0	0				0	0
+																								
+SWE	Sweden									0	0	SE		0		0	0	0	0				0	0
+																								
+CHE	Switzerland									0	0	CH		0		0	0	0	0				0	0
+																								
+SYR	Syria									0	0	SY		0		0	0	0	0				0	0
+																								
+TWN	Taiwan									0	0	TW		0		0	0	0	0				0	0
+																								
+TJK	Tajikistan									0	0	TJ		0		0	0	0	0				0	0
+																								
+TZA	Tanzania									0	0	TZ		0		0	0	0	0				0	0
+																								
+THA	Thailand									0	0	TH		0		0	0	0	0				0	0
+																								
+TGO	Togo									0	0	TL		0		0	0	0	0				0	0
+																								
+TKL	Tokelau									0	0	TK		0		0	0	0	0				0	0
+																								
+TON	Tonga									0	0	TG		0		0	0	0	0				0	0
+																								
+TTO	Trinidad and Tobago									0	0	TT		0		0	0	0	0				0	0
+																								
+TUN	Tunisia									0	0	TN		0		0	0	0	0				0	0
+																								
+TUR	Turkey									0	0	TR		0		0	0	0	0				0	0
+																								
+TKM	Turkmenistan									0	0	TM		0		0	0	0	0				0	0
+																								
+TCA	Turks and Caicos Islands									0	0	TC		0		0	0	0	0				0	0
+																								
+TUV	Tuvalu									0	0	TV		0		0	0	0	0				0	0
+																								
+UGA	Uganda									0	0	UG		0		0	0	0	0				0	0
+																								
+UKR	Ukraine									0	0	UA		0		0	0	0	0				0	0
+																								
+ARE	United Arab Emirates									0	0	AE		0		0	0	0	0				0	0
+																								
+GBR	United Kingdom									0	0	GB		0		0	0	0	0				0	0
+																								
+USA	United States of America									0	0	US		0		0	0	0	0				0	0
+																								
+URY	Uruguay									0	0	UY		0		0	0	0	0				0	0
+																								
+UMI	US Minor Outlying Islands									0	0	UM		0		0	0	0	0				0	0
+																								
+UZB	Uzbekistan									0	0	UZ		0		0	0	0	0				0	0
+																								
+VUT	Vanuatu									0	0	VU		0		0	0	0	0				0	0
+																								
+VAT	Vatican									0	0	VA		0		0	0	0	0				0	0
+																								
+VEN	Venezuela									0	0	VE		0		0	0	0	0				0	0
+																								
+VNM	Vietnam									0	0	VN		0		0	0	0	0				0	0
+																								
+VGB	Virgin Islands (British)									0	0	VG		0		0	0	0	0				0	0
+																								
+VIR	Virgin Islands (U.S.)									0	0	VI		0		0	0	0	0				0	0
+																								
+WLF	Wallis and Futuna Islands									0	0	WF		0		0	0	0	0				0	0
+																								
+ESH	Western Sahara									0	0	EH		0		0	0	0	0				0	0
+																								
+YEM	Yemen									0	0	YE		0		0	0	0	0				0	0
+																								
+ZMB	Zambia									0	0	ZM		0		0	0	0	0				0	0
+																								
+ZWE	Zimbabwe									0	0	ZW		0		0	0	0	0				0	0
+
+
+
+
+

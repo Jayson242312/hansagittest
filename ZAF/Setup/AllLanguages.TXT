@@ -1,0 +1,5 @@
+format	1	46	1	0	0	44	0	/	1	codepage	UTF-8	HansaVersion	8.5 2022-10-22 (build 85480635)	StandardERP	language1	ENG	English		
+EST	Estonian		
+LAT	Latvian		
+LIT	Lithuanian		
+SVN	Slovenian		
