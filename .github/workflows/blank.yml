@@ -1,39 +1,130 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Deploy to Server
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches:
+      - "main"
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+env:
+  SSH_PORT: 22
+  SERVER_IP: 172.21.56.243
+  SERVER_USER: f
+  APP_DIR: u1/StandardERPServer/
+  APP_CMD: ./StandardERPServer64 --port 1201 --webport 1301 --stop journaling
+  MAX_RETRIES: 5
+  RETRY_DELAY: 10
+
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  deploy:
     runs-on: self-hosted
+    timeout-minutes: 15
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checkout the repository
       - name: Checkout repository
-        uses: actions/checkout@v3
-        
+        uses: actions/checkout@v3  # Updated to latest version
 
-      # Set up SSH
-      - name: Set up SSH key
+      - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.T}}
 
-      # Deploy files to your server
-      - name: Deploy to server
+      - name: Validate server connection
+        run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
+
+      - name: Pull latest changes
         run: |
-          ssh -o StrictHostKeyChecking=no -p 22 f@172.21.56.243 "cd /u1/StandardERPServer/ && git pull origin main"
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -e
+            cd $APP_DIR
+            git fetch origin
+            git reset --hard origin/main
+          " 
+
+      - name: Stop existing server
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -x  # Enable debugging
+            echo 'Current working directory:'
+            pwd
+            echo 'Running processes:'
+            ps aux | grep StandardERPServer64 || true
+            echo 'Attempting to stop server...'
+            
+            PID=\$(pgrep -f 'StandardERPServer64.*--port 1201' | head -1)
+            if [ -n \"\$PID\" ]; then
+              echo \"Found PID: \$PID\"
+              kill \$PID
+              sleep 5
+              if ps -p \$PID > /dev/null; then
+                echo 'Force killing process...'
+                kill -9 \$PID
+              fi
+            else
+              echo 'No running process found'
+            fi
+          "
+      - name: Start server
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -e
+            cd $APP_DIR
+            nohup $APP_CMD > hal.log 2>&1 &
+            echo 'Server start command executed - waiting for initialization...'
+          "
+
+      - name: Verify server status
+        run: |
+          sleep 60  # Initialization period
+          
+          # Get PID with exact match
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            pgrep -f '$(printf "%q" "$APP_CMD")'
+          " | tr -d '\n')
+          
+          echo "Raw PID detected: '$PID'"
+          
+          # Verify PID exists and is running
+          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -z \"$PID\" ]; then 
+              echo 'No PID found'; exit 1; 
+            elif ! ps -p \"$PID\" >/dev/null; then 
+              echo 'PID $PID not running'; exit 1;
+            elif ! grep -qF '$APP_CMD' /proc/$PID/cmdline 2>/dev/null; then
+              echo 'PID $PID command mismatch'; exit 1;
+            fi
+          "; then
+            echo "Server verified as running"
+          else
+            echo "::error::Server validation failed"
+            exit 1
+          fi
+
+
+      - name: Capture failure logs
+        if: failure()
+        run: |
+          echo "::group::=== FULL ERROR LOGS ==="
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "cat $APP_DIR/hal.log"
+          echo "::endgroup::"
+          
+          echo "::error::=== ERROR HIGHLIGHTS ==="
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+          grep -i -B
+      
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            set -e
+            cd $APP_DIR
+            echo 'Rolling back to previous version...'
+            git reset --hard HEAD@{1}
+            
+            # Kill current instance if different from original
+            if [ -n \"$PRE_DEPLOYMENT_PID\" ] && ! ps -p \"$PRE_DEPLOYMENT_PID\" > /dev/null; then
+              echo 'Restarting previous version...'
+              nohup $APP_CMD > hal.log 2>&1 &
+            fi
+          "
+          echo "::warning::Rollback to previous version completed"
