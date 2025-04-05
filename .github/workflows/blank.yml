@@ -48,10 +48,10 @@ jobs:
             echo 'Current working directory:'
             pwd
             echo 'Running processes:'
-            ps aux | grep StandardERPServer64 || true
+            ps aux | grep .\StandardERPServer64 || true
             echo 'Attempting to stop server...'
             
-            PID=\$(pgrep -f 'StandardERPServer64.*--port 1201' | head -1)
+            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
             if [ -n \"\$PID\" ]; then
               echo \"Found PID: \$PID\"
               kill \$PID
