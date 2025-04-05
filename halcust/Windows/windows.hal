@@ -39,7 +39,7 @@ external inner function Boolean HasQualityControl();
 window DeedOfSaleDClass:1
   wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
 begin
-  integer TileNr;1
+  integer TileNr;
   real h,v,vs;
   WindowBegin("Deed Of Sale1", DeedOfSaleDClass, CGview, -);
   SetWRect(20,80,200,500);   
