@@ -1,9 +1,8 @@
-name: Deploy to Server
+name: PR Validation & Deployment
 
 on:
-  push:
-    branches:
-      - "main"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -22,107 +21,80 @@ jobs:
 
     steps:
       - name: Checkout feature branch
-        uses: actions/checkout@v3  # Updated to latest version
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.T}}
+          ssh-private-key: ${{ secrets.T }}
 
       - name: Validate server connection
-        run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
+        run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Connected to server'"
 
-      - name: Pull Feature branch changes to production
+      - name: Capture main branch state
+        run: |
+          MAIN_COMMIT=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP \
+            "cd $APP_DIR && git rev-parse main")
+          echo "MAIN_COMMIT=$MAIN_COMMIT" >> $GITHUB_ENV
+
+      - name: Deploy feature branch
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
             git fetch origin ${{ github.head_ref }}
-            git checkout -B validation ${{ github.head_ref }}
-            nohup $APP_CMD > validation.log 2>&1 &
-          " 
-
-      - name: Stop existing server
-        run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x  # Enable debugging
-            echo 'Current working directory:'
-            pwd
-            echo 'Running processes:'
-            ps aux | grep .\StandardERPServer64 || true
-            echo 'Attempting to stop server...'
-            
-            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
-            if [ -n \"\$PID\" ]; then
-              echo \"Found PID: \$PID\"
-              kill \$PID
-              sleep 5
-              if ps -p \$PID > /dev/null; then
-                echo 'Force killing process...'
-                kill -9 \$PID
-              fi
-            else
-              echo 'No running process found'
-            fi
+            git checkout -f ${{ github.head_ref }}
           "
-      - name: Start server
+
+      - name: Restart server with feature code
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -e
             cd $APP_DIR
-            nohup $APP_CMD > hansa.log 2>&1 &
-            echo 'Server start command executed - waiting for initialization...'
+            pkill -f '$APP_CMD' || true
+            nohup $APP_CMD > feature-test.log 2>&1 &
           "
 
-      - name: Check server log
+      - name: Validate deployment
         run: |
           sleep 60  # Initialization period
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
-
-      - name: Verify server status
-        run: |          
-          # Get PID with exact match
-          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            pgrep -f '$(printf "%q" "$APP_CMD")'
-          " | tr -d '\n')
           
-          echo "Raw PID detected: '$PID'"
-                    
-          # Verify PID exists and is running
-          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            if [ -z \"$PID\" ]; then 
-              echo 'No PID found'; exit 1; 
-            elif ! ps -p \"$PID\" >/dev/null; then 
-              echo 'PID $PID not running'; exit 1;
-            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
-              echo 'PID $PID command mismatch'; exit 1;
-            fi
-          "; then
-            echo "Server verified as running"
-          else
-            echo "::error::Server validation failed"
-            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+          # Check server status
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP \
+            "pgrep -f '$APP_CMD' || echo ''")
+          
+          if [ -z "$PID" ]; then
+            echo "::error::Server failed to start"
             exit 1
           fi
 
-      - name: Rollback on failure
+          # Additional health checks can be added here
+
+      - name: Rollback to main on failure
         if: failure()
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -e
             cd $APP_DIR
-            echo 'Rolling back to previous version...'
-            git pull origin main
-
-            nohup $APP_CMD > hal.log 2>&1 &
-            echo 'Server restart after pull'
-  
-            # Kill current instance if different from original
-            if [ -n \"$PRE_DEPLOYMENT_PID\" ] && ! ps -p \"$PRE_DEPLOYMENT_PID\" > /dev/null; then
-              echo 'Restarting previous version...'
-              nohup $APP_CMD > hal.log 2>&1 &
-            fi
+            git reset --hard ${{ env.MAIN_COMMIT }}
+            pkill -f '$APP_CMD' || true
+            nohup $APP_CMD > main.log 2>&1 &
           "
-          echo "::warning::Rollback to previous version completed"
+          echo "::error::Rolled back to main commit ${{ env.MAIN_COMMIT }}"
+
+  final-merge:
+    needs: validate-merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge PR
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: 'merge'
+            })
