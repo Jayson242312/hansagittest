@@ -1,0 +1,68 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+window VNStockINEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Stock Item Group Header Info.",VNStockINEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure StockINEn(record RcVc RepSpec)
+begin
+  record ITVc ITr;
+  record AccVc Accr;
+  integer acnt,i;
+  Array string 255 aSalesAcc, aGroup;
+
+  ExportString("Group1Code");
+  ExportString("Group1Description");
+  newLine;
+  acnt = 0;
+  while(LoopMain(ITr,1,true)) begin
+    Accr.AccNumber = ITr.SalesAcc;
+    if (ReadFirstKey("AccNumber",Accr,1,true)) then begin
+      for (i=0;i<acnt;i=i+1) begin
+        if (aSalesAcc[i] == ITr.SalesAcc) then begin
+          goto LSkip;
+        end;
+      end;
+      aSalesAcc[acnt] = ITr.SalesAcc;
+      aGroup[acnt] = Accr.Comment;
+      acnt = acnt + 1;
+      LSkip:;
+    end;
+  end;
+  for (i=0;i<acnt;i=i+1) begin
+    ExportString(aSalesAcc[i]);
+    ExportString(aGroup[i]);
+    newLine;
+  end;
+
+  CloseFile;
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure StockIN_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Group1.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Group1.txt");
+  end;
+  StockINEn(RepSpec);
+
+  return;
+end;

@@ -1,0 +1,160 @@
+external function boolean ItemGroupExcl(string,string,string,val);
+
+function Boolean ValIsInteger(val v)
+begin
+  LongInt t;
+  val v2;
+
+  t = v;
+  v2 = t;
+
+  if (v==v2) then begin
+    ValIsInteger = true;
+  end else begin
+    ValIsInteger = false;
+  end;
+end;
+
+global
+procedure InventoryEn(record RcVc RepSpec)
+begin
+  record ItemStatusVc ISr;
+  record LocationVc Locationr;
+  record LastPurchaseDateVc LPDr;
+  record INVc INr;
+  record PIVc PIr;
+  boolean testf;
+  boolean excluded;
+
+  testf = false;
+
+  ExportString("SKU");
+  ExportString("Location");
+  ExportString("Parent Location");
+  ExportString("Stock On Hand");
+  ExportString("Stock Available");
+  ExportString("Stock Back Ordered");
+  ExportString("Stock On Hand Committed");
+  ExportString("Stock On Order Committed");
+  ExportString("Coverage");
+  ExportString("Min Coverage");
+  ExportString("Service Level");
+  ExportString("Stock Min");
+  ExportString("Is Perishable");
+  ExportString("Is Produced");
+  ExportString("Processing Time");
+  ExportString("Excluded");
+  ExportString("Supplier");
+  ExportString("Lead Time");
+  ExportString("Min OQ");
+  ExportString("Max OQ");
+  ExportString("Packing Unit");
+  ExportString("Production Time");
+  ExportString("Production Rate");
+  ExportString("Unavailability Start");
+  ExportString("Unavailability End");
+  ExportString("Shelf life");
+  NewLine;
+
+  while(LoopMain(ISr,1,true)) begin
+    INr.Code = ISr.Code;
+    Locationr.Code = ISr.Location;
+
+    if(ReadFirstMain(INr, 1, true) and ReadFirstMain(Locationr, 1, true)) then begin 
+      testf = true; 
+
+      if(INr.Redundant == 1) then begin
+        excluded = true;
+      end;
+    end;
+
+    if(ISr.Location == ";;;") then begin testf = false; end;
+    if(ISr.Instock < 0) then begin testf = false; end;
+    if(ISr.OrddOut < 0) then begin testf = false; end;
+    if(ValIsInteger(ISr.Instock) == false or ValIsInteger(ISr.OrddOut) == false) then begin testf = false; end;
+    if(ItemGroupExcl(ISr.Location,INr.Group,INr.Code,ISr.Instock)) then begin testf = false; end;
+
+    if(testf) then begin
+      ExportString(ISr.Code);
+      ExportString(ISr.Location);
+
+      if(ISr.Location != "1000" and CurrentCompany == 3)then begin
+        ExportString("1000");
+      end else begin
+        ExportString("");
+      end;
+
+      ExportVal(ISr.Instock, M45Val);
+      ExportVal(ISr.Instock, M45Val);
+      ExportVal(0, M4Val);
+      ExportVal(ISr.OrddOut, M4Qty);
+      ExportVal(0, M4Val);
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+
+      if(excluded == true) then begin
+        ExportString("TRUE");
+      end else begin
+        ExportString("FALSE");
+      end;
+
+      // PIr.ItemCode = ISr.Code;
+      // PIr.DefaultChoice = 1;
+
+      // if(ReadFirstMain(PIr, 2, true)) then begin
+      //   if(PIr.ItemCode == ISr.Code and PIr.DefaultChoice == 1) then begin
+      //     ExportString(PIr.VEName);
+      //   end else begin
+      //     ExportString("");
+      //   end;
+      // end;
+
+      LPDr.ItemCode = ISr.Code;
+
+      if(ReadFirstMain(LPDr,1,true)) then begin
+        ExportString(LPDr.VECode);
+      end else begin
+        ExportString("");
+      end;
+
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      ExportString("");
+      NewLine;
+    end;
+
+    testf = false;
+    excluded = false;
+  end;
+
+  CloseFile;
+end;
+
+global
+procedure InventoryIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Inventory.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Inventory.txt");
+  end;
+  InventoryEn(RepSpec);
+
+  return;
+end;

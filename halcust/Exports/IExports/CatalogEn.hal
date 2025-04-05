@@ -1,0 +1,95 @@
+external inner function val GetStockQty(string,string,Date,Boolean);
+external function boolean ItemGroupExcl(string,string,string,val);
+
+global
+procedure CatalogEn(record RcVc RepSpec)
+begin
+  record InvExpRulesVc IERr;
+  row InvExpRulesVc IERrw;
+  record INVc INr;
+  record PLVc PLr;
+  boolean testf;
+  val instock;
+
+  testf = true;
+
+  ExportString("SKU");
+  ExportString("Category");
+  ExportString("Name");
+  ExportString("Type");
+  ExportString("Publishing Date");
+  ExportString("End of Life Date");
+  ExportString("Seasonal Break Start");
+  ExportString("Seasonal Break End");
+  ExportString("Purchase Price");
+  ExportString("Listed Purchase Price");
+  ExportString("Selling Price");
+  ExportString("Image URL");
+  ExportString("Thumbnail URL");
+  ExportString("Page URL");
+  ExportString("<attributes>");
+  newLine;
+
+  while(LoopMain(INr,1,true)) begin
+    instock = GetStockQty(INr.Code,";;;",CurrentDate,false);
+
+    if(ItemGroupExcl("1000",INr.Group,INr.Code,instock)) then begin
+      testf = false;
+    end;
+
+    if (testf and INr.Terminated == 0 and INr.Redundant == 0) then begin
+      PLr.PLCode = "CL1";
+      PLr.ArtCode = INr.Code;
+
+      if(ReadFirstMain(PLr,2,true)) then begin    
+        if(
+          NonBlank(INr.Code) and 
+          NonBlank(INr.Group) and 
+          NonBlank(INr.Name) and 
+          NonBlank(INr.UserDate1) and
+          NonBlank(INr.LastPurchPrice) and
+          NonBlank(PLr.ExVatPrice)
+        ) then begin
+          ExportString(INr.Code);
+          ExportString(INr.Group);
+          ExportString(INr.Name);
+          ExportString("FINISHED");
+          ExportDate(INr.UserDate1);
+          ExportString("");
+          ExportString("");
+          ExportString("");
+          ExportVal(INr.LastPurchPrice, M45Val);
+          ExportVal(INr.LastPurchPrice, M45Val);
+          ExportVal(PLr.ExVatPrice, M423Val);
+          ExportString("");
+          ExportString("");
+          ExportString("");
+          ExportString("");
+          newLine;
+        end;
+      end;
+    end;
+
+    testf = true;
+  end;
+
+  CloseFile;
+  return;
+end;
+
+global
+procedure CatalogIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Catalog.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Catalog.txt");
+  end;
+  CatalogEn(RepSpec);
+
+  return;
+end;

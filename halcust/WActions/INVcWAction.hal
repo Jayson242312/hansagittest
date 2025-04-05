@@ -1,0 +1,37 @@
+remote procedure AddOneINToADORQueue(record INVc); //RGS: HAL-943
+
+//RGS: HAL-943
+global
+updating procedure SendINToADORDsm()
+begin
+  record INVc INr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,INr);
+  if (UserCanAction("SendToADOR",false)) then begin
+    if ((WindowState(wn)==0)) then begin
+      if (INr.SendToADORf == 1) then begin
+        MessageBox(3100043,"");
+      end else begin
+        AddOneINToADORQueue(INr);
+        MessageBox(3100042,"");
+      end;
+    end;  
+  end else begin
+    MessageBox(3100041,"");
+  end;
+
+  return;
+end;
+//:RGS
+
+global
+updating procedure GrandmarkItemSearchsm()
+begin
+  record RcVc RepSpec;
+
+  OpenWindow("GrandmarkSearchWClass",0,0,"","",RepSpec);
+  return;
+end;

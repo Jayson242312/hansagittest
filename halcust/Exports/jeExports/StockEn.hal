@@ -1,0 +1,217 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+external inner function val FindCostPrice(string,string,string,val,val,Boolean);
+external inner function val GetStockQty(string,string,Date,Boolean);
+
+window VNStockEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Inventory",VNStockEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+function string 255 GetVECode(string INCode)
+begin
+  record PIVc PIr;
+  string 255 res;
+  boolean continue;
+
+  continue = true;
+  PIr.ItemCode = INCode;
+  PIr.DefaultChoice = 1;
+
+  while (LoopMain(PIr,2,continue)) begin
+    if (PIr.ItemCode == INCode and PIr.DefaultChoice == 1) then begin
+      res = PIr.VECode;
+      continue = false;
+    end;
+  end;
+
+  GetVECode = res;
+  return;
+end;
+
+//  AG 2013-06-07 -- ORB-130523-001 -- Excluding Items as per the Inventory Export Rules  >>
+global
+function boolean ItemGroupExcl(string location,string group,string item,val instock)
+begin
+  record LastSoldDateVc LSDr;
+  record InvExpRulesVc IERr;
+  row InvExpRulesVc IERrw;
+  integer i,rwcnt;
+  boolean res;
+
+  res = false;
+  ResetLoop(IERr);
+  IERr.Location = location;
+  if (ReadFirstMain(IERr,1,true)) then begin
+    if (IERr.ExclNoSales == 1) then begin //  �Exclude items with 0 QTY and no Sales�
+      if (instock <= 0) then begin
+        res = true; // will not export 0 qty items by default
+        ResetLoop(LSDr);
+        LSDr.Location = location;
+        LSDr.ItemCode = item;
+        if (ReadFirstMain(LSDr,2,true)) then begin
+          if (LSDr.LastDate > AddMonth(CurrentDate,-6)) then begin
+            res = false; //  If the �Exclude items with 0 QTY and no Sales� tickbox ticked then items where the qty <=0 and that were sold in the last 6 months will be exported.
+          end;
+        end;
+      end;
+    end;
+    if (res == false) then begin
+      rwcnt = MatRowCnt(IERr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(IERr,i,IERrw);
+        if (IERrw.Group == group) then begin
+          res = true;
+          i = rwcnt;
+        end;
+      end;
+    end;
+  end;
+
+  ItemGroupExcl = res;
+  return;
+end;
+//  AG 2013-06-07 <<
+
+global
+procedure DisplayStock(record RcVc RepSpec,record LocationVc Locr)
+begin
+  record PLVc PLr;
+  record INVc INr;
+  string 255 VECodeP, UnitConv, StockIndicator;
+  val instock;
+  val basePrice;
+  boolean plhit, testf;
+  integer FromVEFlag;
+  val value, salesp, costp;
+
+  ResetLoop(INr);
+  INr.Code = "";
+  while (LoopMain(INr,1,true)) begin
+    testf = true;
+    if (INr.Terminated == 1) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      instock = GetStockQty(INr.Code,Locr.Code,CurrentDate,false);
+      if (INr.Redundant == 1) then begin testf = false; end;
+      if ((Locr.ViaLocation == 1) and (instock < 1)) then begin testf = false; end;
+    end;
+    //  AG 2013-06-07 -- ORB-130523-001 -- Excluding Items as per the Inventory Export Rules  >>
+    if (testf) then begin
+      if (ItemGroupExcl(Locr.Code,INr.Group,INr.Code,instock)) then begin
+        testf = false;
+      end;
+    end;
+    //  AG 2013-06-07 <<
+    if (testf) then begin
+      salesp = INr.UPrice1;
+      VECodeP = GetVECode(INr.Code);
+      plhit = true;
+      PLr.PLCode = "CL1";
+      PLr.ArtCode = INr.Code;
+      plhit = ReadFirstMain(PLr,2,true);
+      if (plhit) then begin
+        basePrice = PLr.ExVatPrice;
+      end else begin
+        basePrice = INr.UPrice1;
+      end;
+      if (Blank(INr.InPrice)) begin
+        INr.InPrice = 0;
+      end;
+      if (Blank(basePrice)) begin
+        basePrice = 0;
+      end;
+      //  AG 2013-06-07 -- ORB001-130523-001 -- No NULL fields  >>
+      if (Blank(INr.MinLevel)) begin
+        INr.MinLevel = 0;
+      end;
+      //  AG 2013-06-07 <<
+      ExportString(Locr.Code);
+      ExportString(INr.Code);
+      ExportVal(instock,M4UVal);
+      ExportString("0");  //  AG 2013-06-07 -- ORB001-130523-001 -- No NULL fields
+      ExportString(INr.UserDate1);
+      ExportVal(INr.InPrice,M4UVal);
+      ExportVal(basePrice,M4Val);
+      ExportString(VECodeP);
+      ExportString("");
+      ExportString(FromVEFlag);
+      ExportString(StockIndicator);
+      ExportString(UnitConv);
+      ExportString(INr.MinLevel);
+      newLine;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure StockEn(record RcVc RepSpec)
+begin
+  record INVc INr;
+  record PLVc PLr;
+  record LocationVc Locr;
+  string 255 VECodeP, UnitConv;
+  val instock;
+  val basePrice;
+  boolean plhit;
+  integer FromVEFlag;
+  val value, salesp, costp;
+  Boolean testf;
+  record JEBlock JEb;
+  Date CutOffDate;
+
+  BlockLoad(JEb);
+  CutOffDate = CurrentDate;
+  CutOffDate = AddMonth(CutOffDate,-JEb.Months);
+  FromVEFlag = 1;
+  ExportString("SiteCode");
+  ExportString("ItemCode");
+  ExportString("StockOnHand");
+  ExportString("StockReserved");
+  ExportString("FirstStockedDate");
+  ExportString("DefaultCostPrice");
+  ExportString("DefaultSellingPrice");
+  ExportString("SupplierCode(Primary)");
+  ExportString("SourceSite");
+  ExportString("FromSupplierFlag");
+  ExportString("StockingIndicator");
+  ExportString("OrderMultiple");
+  ExportString("MinimumSafetyStockUnits");
+  newLine;
+    //ILLoopIS
+  while (LoopMain(Locr,1,true))   begin
+    DisplayStock(RepSpec,Locr);
+  end;
+
+  CloseFile;
+  return;
+end;
+
+global
+procedure Stock_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Inventory.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Inventory.txt");
+  end;
+  StockEn(RepSpec);
+
+  return;
+end;

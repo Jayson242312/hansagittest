@@ -1,0 +1,652 @@
+// VER: 6.2 100727
+//JRX - 100707
+remote inner function Boolean QTVc_PastePRCode(var record QTVc,string,var string);
+remote inner  procedure QTVc_PasteQTDate(var record QTVc);
+remote inner procedure QTVc_PasteCurncyCode(var record QTVc,string);
+external inner procedure QTVc_PastePrice(var record QTVc,Integer,var Boolean);
+external inner function Boolean QTDchrsum(var record QTVc,Integer,Integer);
+external inner procedure CalcSum(val,val,val,val,var val,Integer);
+external inner procedure RoundRowSum(string,string,string,var val);
+external inner function roundmode SetRoundModeD(Integer);
+external inner procedure QTVc_PasteSalesMan(var record QTVc,string);
+remote inner procedure QTVc_PasteSerialNr(var record QTVc,Integer);
+external inner function Boolean QTVc_PasteArtCode(var record QTVc,Integer,var string,var string);
+external inner procedure QTVc_PasteQuant(var record QTVc,Integer,Boolean,var Boolean);
+external inner procedure QTDchsum(record QTVc,Integer);
+external inner procedure QTSumup(var record QTVc);
+remote function Boolean PasteCustInQT(var record QTVc,string,string,var string,Boolean);
+
+
+//c62100526/hal/WActions/QTVcWAction2.hal --- Is not defined at global - Copied in here
+procedure QTVc_PastevRebate(var record QTVc QTr,Integer rownr,var Boolean chsum)
+BEGIN
+  record GeneralOptionBlock GenOptRec;
+
+  BlockLoad(GenOptRec);
+  chsum = QTDchrsum(QTr,rownr,GenOptRec.UseDiscount);
+  return;
+end;
+//HAL/6.2/c62100526/hal/WActions/QTVcWAction2.hal --- Is not defined at global - Copied in here
+procedure QTVc_PasteSum(var record QTVc QTr,Integer rownr)
+BEGIN
+  record GeneralOptionBlock GenOptr;
+  row QTVc QTrw;
+  val s,t;
+
+  MatRowGet(QTr,rownr,QTrw);
+  if ((QTrw.Quant!=0) and (QTrw.Price!=0)) then begin
+    QTrw.vRebate = blankval;
+    BlockLoad(GenOptr);
+    CalcSum(QTrw.Quant,QTrw.Price,QTrw.PriceFactor,QTrw.vRebate,t,GenOptr.UseDiscount);
+    RoundRowSum(QTr.CurncyCode,QTr.PayDeal,"QTVc",t);
+    s = QTrw.Sum;// /QTrw.Quant;not good
+    s = t - s;
+    s = s*100;
+    s = s/t;
+    QTrw.vRebate = Round(s,SetRoundModeD(1));
+    if (QTrw.vRebate==0) then begin QTrw.vRebate = blankval; end;
+    MatRowPut(QTr,rownr,QTrw);
+  end;
+  RETURN;
+END;
+
+
+//  seperate input and return variable.
+procedure StripSpaces(string source,var string res)
+begin
+  integer i,l;
+  boolean testf;
+  l = len(source);
+  for (i = 0; i < l; i= i +1) begin
+    testf = true;
+    if (mid(source,i,1)==" ") then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      res = res & mid(source,i,1);
+    end;
+  end;
+return;
+end;
+
+
+
+function Boolean TestField(string ExpectedStr,var Integer ColNr)
+begin
+  Boolean res;
+  string 255 ActualStr,tstr;
+
+  res = true;
+  ActualStr = ImportField;
+  ColNr = ColNr + 1;
+  if (ExpectedStr!=ActualStr) then begin
+    tstr = "File not in correct format. Import cancelled.";
+    tstr = tstr & chr(10) & "First row must contain header values.";
+    tstr = tstr & chr(10) & "Column: " & ColNr & "; Expected: " & ExpectedStr & "; Actual: " & ActualStr;
+    MessageBox(0,tstr);
+    res = false;
+  end;
+
+  TestField = res;
+  return;
+end;
+
+function Boolean ValidateQuoteHeader()
+begin
+  Boolean res;
+  Integer ColNr;
+  //JRX - Done  100715 14:45
+  if (!TestField("QUOTENO",ColNr)) then begin goto LExit; end;
+  if (!TestField("CUSTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("NAME",ColNr)) then begin goto LExit; end;
+  if (!TestField("PROJECTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("DATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("TERMSCODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("ATTENTION",ColNr)) then begin goto LExit; end;
+  if (!TestField("SALESMAN",ColNr)) then begin goto LExit; end;
+  if (!TestField("VALIDDATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("DECDATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("PROB",ColNr)) then begin goto LExit; end;
+  if (!TestField("CLASS",ColNr)) then begin goto LExit; end;
+  if (!TestField("STATUS",ColNr)) then begin goto LExit; end;
+  if (!TestField("CURRENCY",ColNr)) then begin goto LExit; end;
+  if (!TestField("TRNSPCODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("TRNSPMODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("PRICELIST",ColNr)) then begin goto LExit; end;
+  if (!TestField("MATRIX",ColNr)) then begin goto LExit; end;
+  if (!TestField("LANG",ColNr)) then begin goto LExit; end;
+  if (!TestField("PLANNED",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTQTY",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTWEIGHT",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTVAL",ColNr)) then begin goto LExit; end;
+  if (!TestField("COMMENTS",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADD1",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADD2",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADD3",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADD4",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADD5",ColNr)) then begin goto LExit; end;
+  if (!TestField("STATUS2",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD1",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD2",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD3",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD4",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD5",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVTIME",ColNr)) then begin goto LExit; end;
+  if (!TestField("STOCKED",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVMATL",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVPURCH",ColNr)) then begin goto LExit; end;
+
+  res = true;
+
+
+LExit:;
+  NextImportLine(true);
+  ValidateQuoteHeader = res;
+  return;
+end;
+
+function Boolean ValidateQuoteRows()
+begin
+  Boolean res;
+  Integer ColNr;
+
+  if (!TestField("QUOTENO",ColNr)) then begin goto LExit; end;
+  if (!TestField("LINE",ColNr)) then begin goto LExit; end;      //Ignored skipped in import code
+  if (!TestField("PARTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("QTY",ColNr)) then begin goto LExit; end;
+  if (!TestField("DESCRIPT",ColNr)) then begin goto LExit; end;
+  if (!TestField("PRICE",ColNr)) then begin goto LExit; end;
+  if (!TestField("DISCPERC",ColNr)) then begin goto LExit; end;
+  if (!TestField("SUM",ColNr)) then begin goto LExit; end;
+  if (!TestField("VCOD",ColNr)) then begin goto LExit; end;
+  if (!TestField("COST",ColNr)) then begin goto LExit; end;
+  if (!TestField("GP",ColNr)) then begin goto LExit; end;
+  if (!TestField("BUDCOST",ColNr)) then begin goto LExit; end;
+  if (!TestField("UNIT",ColNr)) then begin goto LExit; end;
+  if (!TestField("WIDTH",ColNr)) then begin goto LExit; end;
+  if (!TestField("DEPTH",ColNr)) then begin goto LExit; end;
+  if (!TestField("HEIGHT",ColNr)) then begin goto LExit; end;
+  if (!TestField("VAT",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTAL",ColNr)) then begin goto LExit; end;
+
+  res = true;
+
+LExit:;
+  NextImportLine(true);
+  ValidateQuoteRows = res;
+  return;
+end;
+
+procedure GotoEndOfFile()
+begin
+  while (!TestEOF) begin
+    NextImportLine(true);
+  end;
+  return;
+end;
+
+function Boolean ImportString(var string Field)
+begin
+  Boolean res;
+  string 255 tstr;
+
+  tstr = ImportField;
+  if (nonblank(tstr)) then begin
+    Field = tstr;
+    res = true;
+  end;
+
+  ImportString = res;
+  return;
+end;
+
+global
+function Boolean ImportItemCode(var string Field)
+begin
+  Boolean res;
+  string 255 tstr,tstr2;
+
+  tstr2 = "";
+  tstr = ImportField;
+  StripSpaces(tstr,tstr2);
+  if (nonblank(tstr2)) then begin
+    Field = UpperCase(tstr2);
+   // LogText(0,"Import Code: after Spaces stripped: " & Field);
+    res = true;
+  end;
+
+  ImportItemCode = res;
+  return;
+end;
+
+function Boolean ImportCode(var string Field)
+begin
+  Boolean res;
+  string 255 tstr;
+
+  tstr = UpperCase(ImportField);
+  if (nonblank(tstr)) then begin
+    Field = tstr;
+    res = true;
+  end;
+
+  ImportCode = res;
+  return;
+end;
+
+function Boolean ImportDate(var Date Field)
+begin
+  Boolean res;
+  string 255 tstr;
+
+  tstr = ImportField;
+  if (nonblank(tstr)) then begin
+    Field = StringToDate(tstr);
+    res = true;
+  end;
+
+  ImportDate = res;
+  return;
+end;
+
+function Boolean ImportVal(var val Field,Integer Format)
+begin
+  Boolean res;
+  string 255 tstr;
+
+  tstr = ImportField;
+  if (nonblank(tstr)) then begin
+    Field = StringToVal(tstr,Format);
+    res = true;
+  end;
+
+  ImportVal = res;
+  return;
+end;
+
+
+global
+updating procedure QuoteHeaderIn()
+begin
+  record QTVc QTr;
+  string 255 tstr,ourref,Snr,commentStr,tstr2;
+  record PRVc PRr;
+  record UserVc Userr;
+  record CUVc CUVcr;
+
+/*
+  while (LoopMain(QTr,1,true)) begin
+    RecordDelete(QTr);
+    StepBack(QTr);
+  end;
+*/
+  if (!ValidateQuoteHeader) then begin
+    GotoEndOfFile;
+    goto LQuoteHeaderIn;
+  end;
+
+  while (!TestEOF) begin
+    RecordNew(QTr);
+
+    ImportString(Snr);   //sorting
+    if (ImportCode(QTr.CustCode)) then begin
+      PasteCustInQT(QTr,QTr.CustCode,"",tstr,true);
+    end;
+    ImportString(QTr.Addr0);
+
+    //project
+    ImportCode(ourref);
+    QTr.OurContact = ourref;
+
+ /*   if (ImportCode(tstr)) then begin
+      PRr.Code = tstr;
+      if (ReadFirstKey("Code",PRr,1,true)) then begin
+        QTr.PRCode = PRr.Code;
+        QTVc_PastePRCode(QTr,tstr,tstr);
+      end else begin
+        LogText(0,"Project not found: " & tstr);
+      end;
+    end;
+    */
+
+    if (ImportDate(QTr.QTDate)) then begin
+      QTVc_PasteQTDate(QTr);
+    end;
+
+    if (ImportCode(QTr.PayDeal)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.PayDeal = CUVcr.PayDeal;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " PayDeal blank");
+        QTr.PayDeal = "";
+      end;
+    end;
+
+    //attention
+    if (ImportString(QTr.CustContact)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Name",CUVcr,1,true)) then begin
+        QTr.CustContact = CUVcr.Name;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & "Name field blank");
+        QTr.CustContact = "";
+      end;
+    end;
+
+
+    ImportString(tstr2); //Salesman
+
+    if (ImportString(tstr2)) then begin
+      QTr.Comment = tstr2;     // adding to Comment field too
+      Userr.Name = tstr2;
+      if (ReadFirstKey("Name",Userr,1,true)) then begin
+        tstr2 = QTr.SalesMan;
+        QTr.SalesMan = Userr.Code;
+        QTVc_PastePRCode(QTr,tstr2,tstr2);
+      end else begin
+        LogText(0,"Quote Import>> User not found: " & tstr2);
+      end;
+    end;
+
+
+
+    ImportString(QTr.ValidUntilDate);   // makecontact date and
+    if (nonblank(QTr.ValidUntilDate)) then begin
+      QTr.MakeContactDate = QTr.ValidUntilDate;
+      QTr.RejectDate = stringtodate(QTr.ValidUntilDate);
+    end;
+
+
+    Importfield;  // rejectdate skip.. setting to valid
+   // if (ImportDate(QTr.RejectDate)) then begin
+      //QTVc_PasteQTDate(QTr);
+   // end;
+
+    ImportVal(QTr.Probability,M41Val);    // make 60 if none
+    if (blank(QTr.Probability)) then begin
+      QTr.Probability = 60;
+    end;
+
+    ImportCode(QTr.QuoteClass);
+    if (blank(QTr.QuoteClass)) then begin
+      QTr.QuoteClass = "1";
+    end;
+    QTr.Rejected = StringToInt(ImportField);
+
+    tstr = QTr.CurncyCode;
+    if (ImportCode(QTr.CurncyCode)) then begin
+      QTVc_PasteCurncyCode(QTr,tstr);
+    end;
+
+    ImportCode(QTr.ShipMode);
+
+    // TRANSPMODE  -- Empty
+    ImportField;
+    // TRANSPMODE
+
+    ImportCode(QTr.PriceList);
+    ImportCode(QTr.RebCode);
+    ImportCode(QTr.LangCode);
+    ImportString(QTr.PlanShip);  //This is a string field
+    ImportVal(QTr.TotQty,M4Qty);
+    ImportVal(QTr.TotWeight,M4Qty);
+    ImportVal(QTr.TotVolume,M4Qty);
+
+    ImportCode(commentStr);
+    if (nonblank(commentStr)) then begin
+     QTr.Comment = QTr.Comment & " " &  commentStr;
+     end;
+
+    //invoice address
+    // We need to have more colums for the import file
+    if (ImportString(QTr.Addr1)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.Addr1 = CUVcr.InvAddr0;
+        QTr.Addr2 = CUVcr.InvAddr1;
+        QTr.Addr3 = CUVcr.InvAddr2;
+        QTr.InvAddr3 = CUVcr.InvAddr3;
+        QTr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+        QTr.Addr1 = "";
+        QTr.Addr2 = "";
+        QTr.Addr3 = "";
+        QTr.InvAddr3 = "";
+        QTr.InvAddr4 = "";
+      end;
+    end;
+
+    if (ImportString(QTr.Addr2)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.Addr2 = CUVcr.InvAddr1;
+        QTr.Addr3 = CUVcr.InvAddr2;
+        QTr.InvAddr3 = CUVcr.InvAddr3;
+        QTr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.Addr3)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.Addr3 = CUVcr.InvAddr2;
+        QTr.InvAddr3 = CUVcr.InvAddr3;
+        QTr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.InvAddr3)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.InvAddr3 = CUVcr.InvAddr3;
+        QTr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.InvAddr4)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+
+    QTr.AcceptanceStatus = StringToInt(ImportField);
+
+    //delivery address
+    if (ImportString(QTr.ShipAddr0)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.ShipAddr0 = CUVcr.DelAddr0;
+        QTr.ShipAddr1 = CUVcr.DelAddr1;
+        QTr.ShipAddr2 = CUVcr.DelAddr2;
+        QTr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+        QTr.ShipAddr0 = "";
+        QTr.ShipAddr1 = "";
+        QTr.ShipAddr2 = "";
+        QTr.ShipAddr3 = "";
+      end;
+    end;
+
+    if (ImportString(QTr.ShipAddr1)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.ShipAddr1 = CUVcr.DelAddr1;
+        QTr.ShipAddr2 = CUVcr.DelAddr2;
+        QTr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.ShipAddr2)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.ShipAddr2 = CUVcr.DelAddr2;
+        QTr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.ShipAddr3)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(QTr.DelAddr3)) then begin end else
+    begin
+      CUVcr.Code = QTr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        QTr.DelAddr3 = CUVcr.DelAddr4;
+      end else begin
+        LogText(0,"User not found: " & QTr.CustCode & " Address field blank");
+      end;
+    end;
+
+    //Serial Number
+    QTr.Sorting = Snr;
+
+    QTr.BudTime = StringToInt(ImportField);
+    QTr.BudStocked = StringToInt(ImportField);
+    QTr.BudMaterial = StringToInt(ImportField);
+    QTr.BudOther = StringToInt(ImportField);
+//    QTr.SalesMan = CurrentUser;
+
+    if (QTr.SerNr==-1) then begin
+      QTr.SerNr = NextSerNr("QTVc",QTr.QTDate,-1,false,"");
+    end;
+    RecordStore(QTr,false);
+
+    NextImportLine(true);
+  end;
+
+LQuoteHeaderIn:;
+  return;
+end;
+
+
+
+global
+updating procedure QuoteRowsIn()
+begin
+  record QTVc QTr,OldQTr;
+  row QTVc QTrw;
+  string 255 tstr;
+  Integer rownr;
+  Boolean chsum;
+
+  if (!ValidateQuoteRows) then begin
+    GotoEndOfFile;
+    goto LQuoteRowsIn;
+  end;
+
+  while (!TestEOF) begin
+    if (ImportString(tstr)) then begin
+      QTr.Sorting = tstr;
+      if (ReadFirstKey("Sorting",QTr,1,true)) then begin
+        RecordCopy(OldQTr,QTr);
+        ClearRow(QTr,QTrw,1);
+        rownr = MatRowCnt(QTr);
+        Logtext(0,"Quote Row Import: Rown number: " & rownr);
+        ImportField;  // Line , not needed, rowcount does this auto : Skipping this
+
+        if (ImportItemCode(QTrw.ArtCode)) then begin
+          MatRowPut(QTr,rownr,QTrw);
+          QTVc_PasteArtCode(QTr,rownr,tstr,tstr);
+          MatRowGet(QTr,rownr,QTrw);
+        end;
+
+        if (ImportVal(QTrw.Quant,M4UVal)) then begin
+          MatRowPut(QTr,rownr,QTrw);
+          QTVc_PasteQuant(QTr,rownr,false,chsum);
+          if (chsum) then begin
+            QTDchsum(QTr,rownr);
+            QTSumup(QTr);
+          end;
+          MatRowGet(QTr,rownr,QTrw);
+        end;
+
+        ImportString(QTrw.Spec);
+
+        if (ImportVal(QTrw.Price,M423Val)) then begin
+          MatRowPut(QTr,rownr,QTrw);
+          QTVc_PastePrice(QTr,rownr,chsum);
+          if (chsum) then begin
+            QTDchsum(QTr,rownr);
+            QTSumup(QTr);
+          end;
+          MatRowGet(QTr,rownr,QTrw);
+        end;
+
+        if (ImportVal(QTrw.vRebate,M41Val)) then begin
+          MatRowPut(QTr,rownr,QTrw);
+          QTVc_PastevRebate(QTr,rownr,chsum);
+          if (chsum) then begin
+            QTDchsum(QTr,rownr);
+            QTSumup(QTr);
+          end;
+          MatRowGet(QTr,rownr,QTrw);
+        end;
+
+        if (ImportVal(QTrw.Sum,M4Val)) then begin
+          MatRowPut(QTr,rownr,QTrw);
+          QTVc_PasteSum(QTr,rownr);
+          if (chsum) then begin
+            QTDchsum(QTr,rownr);
+            QTSumup(QTr);
+          end;
+          MatRowGet(QTr,rownr,QTrw);
+        end;
+
+        ImportCode(QTrw.VATCode);
+        ImportVal(QTrw.BasePrice,M4Val);
+        ImportVal(QTrw.rowGP,M4Val);
+        //ImportVal(QTrw.RBudCost,M4Val);
+        ImportCode(QTrw.UnitCode);
+        ImportVal(QTrw.UnitXval,M4UVal);
+        ImportVal(QTrw.UnitZval,M4UVal);
+        ImportVal(QTrw.UnitYval,M4UVal);
+        //ImportVal(QTrw.RVAT,M4UVal);
+        //ImportVal(QTrw.RTotal,M4UVal);
+        QTSumup(QTr);
+
+        MatRowPut(QTr,rownr,QTrw);
+        RecordUpdate(OldQTr,QTr,false);
+      end else begin
+        LogText(0,"Order header not found: " & tstr);
+      end;
+    end;
+    NextImportLine(true);
+  end;
+
+LQuoteRowsIn:;
+  return;
+end;

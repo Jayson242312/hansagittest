@@ -1,0 +1,32 @@
+remote procedure AddOnePOToADORQueue(record POVc); // TM - DESK 5130 
+
+// TM - DESK 5130 
+global
+function Boolean PODClassADORLockedButtonAction(Integer wn,Integer value)
+begin
+  PODClassADORLockedButtonAction = false;
+  return;
+end;
+
+global
+updating procedure SendPOToADORDsm()
+begin
+  record POVc POr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  wn = CurWindow; 
+  GetWindowRecord(wn,POr);
+  //if (UserCanAction("SendToADOR",false)) then begin
+    if ((WindowState(wn)==0)) then begin
+      AddOnePOToADORQueue(POr);
+      MessageBox(3100042,"");
+      PutWindowRecord(wn,POr);
+    end;  
+//  end else begin
+   // MessageBox(3100041,"");
+  //end;
+
+  return;
+end;
+//:TM

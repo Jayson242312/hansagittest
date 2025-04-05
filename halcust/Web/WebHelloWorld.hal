@@ -1,0 +1,8 @@
+// global
+// webpublic //use only this if you know that this wont be attacked
+// procedure WebHelloWorld()
+// begin 
+//     WebOutStringFormatNL("Hello");   
+//     LogText(0, "WebHelloWorld");
+// return;
+// end; 

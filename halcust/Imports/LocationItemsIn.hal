@@ -1,0 +1,28 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure LocationItemIn()
+begin
+  record MinPerLocVc LIr;
+  string 255 inline;
+
+  while(TestEOF==false) begin
+    inline=importField;
+    if(inline=="ItemCode") then begin
+      goto LA1;
+    end else begin
+      RecordNew(LIr);
+      LIr.ItemCode = inline;
+      inline=importField;
+      LIr.Location = inline;
+      inline=importField;
+      LIr.ShelfCode=inline;
+      if(RecordStore(LIr,true))then begin end;
+    end;
+    LA1:;
+    if(NextImportLine(true)) then begin end;
+  end;
+  return;
+end;

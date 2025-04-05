@@ -1,0 +1,76 @@
+global
+procedure PurchaseOrdersEn(record RcVc RepSpec)
+begin
+  record POVc POr;
+  Date today;
+  Date startdate;
+  boolean continue;
+  boolean testf;
+
+  continue = true;
+  testf = true;
+  today = CurrentDate;
+  startdate = AddMonth(today,-3);
+  POr.TransDate = startdate;
+
+  ExportString("Purchase Order Id");
+  ExportString("Name");
+  ExportString("Location");
+  ExportString("Supplier");
+  ExportString("Creation Datetime");
+  ExportString("Issue date");
+  ExportString("ETA");
+  ExportString("Status");
+  NewLine;
+
+  while(LoopKey("TransDate", POr, 1, continue)) begin
+    if(DateInRange(POr.TransDate, startdate, today) == false)then begin
+      continue = false;
+      goto PurchaseOrders;
+    end;
+
+    if(POr.Closed == 1) then begin testf = false; end;
+
+    if(testf) then begin
+      ExportString(POr.SerNr);
+      ExportString(POr.SerNr & " - " & POr.Addr0);
+      ExportString(POr.Location);
+      ExportString(POr.VECode);
+      ExportString("");
+      ExportString(POr.TransDate);
+      ExportString("");
+
+      if(POr.OKFlag == 0) then begin
+        ExportString("OPEN");
+      end else begin 
+        if(POr.OKFlag == 1) then begin
+          ExportString("CLOSED");
+        end;
+      end;
+
+      NewLine;
+    end;
+
+    testf = true;
+  end;
+
+  PurchaseOrders:;
+  CloseFile;
+end;
+
+global
+procedure PurchaseOrdersIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Purchase Orders.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Purchase Orders.txt");
+  end;
+  PurchaseOrdersEn(RepSpec);
+
+  return;
+end;

@@ -1,0 +1,58 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+window VNVEEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Supplier Master",VNVEEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure VEEn(record RcVc RepSpec)
+begin
+  record CUVc CUr;
+  integer HostSystemLeadTime;
+
+  //Headers
+  ExportString("Code");
+  ExportString("Name");
+  ExportString("HostSystemLeadTime");
+  ExportString("Min. Order Sum");
+  newLine;
+  
+  while(LoopKey("Code",CUr,1,true)) begin
+    if (CUr.VEType <> 0 and Len(CUr.Code) == 9) then begin
+      ExportString(CUr.Code);
+      ExportString(Left(CUr.Name, 49));
+      ExportVal(CUr.MinOrdSum,M4Val);
+      newLine;
+    end;
+  end;
+
+  CloseFile;
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure VE_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Supplier.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Supplier.txt");
+  end;
+  VEEn(RepSpec);
+
+  return;
+end;

@@ -1,0 +1,54 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+window VNSiteEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Locations",VNSiteEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure SiteEn(record RcVc RepSpec)
+begin
+  record LocationVc locr;
+
+  ExportString("SiteCode");
+  ExportString("SiteName");
+  ExportString("HostSystemLeadTime");
+  ExportString("SiteGroup1");
+  newLine;
+  while(LoopMain(locr,1,true)) begin
+    ExportString(locr.Code);
+    ExportString(locr.Name);
+    ExportString("");
+    ExportString("");
+    newLine;
+  end;
+  CloseFile;
+
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure Site_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile("/u1/HansaWorldLive/JE Grandmark/Site.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile("/u1/HansaWorldLive/JE Gregs/Site.txt");
+  end;
+  SiteEn(RepSpec);
+
+  return;
+end;

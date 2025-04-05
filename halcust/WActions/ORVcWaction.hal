@@ -1,0 +1,31 @@
+external function boolean GetBrokerNameORVc(Integer,var record ORVc);
+
+global
+updating function Boolean ORDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+begin
+  Boolean res;
+  record ORVc ORr;
+
+  res = inner.ORDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+
+  switch (fieldname) begin
+    case "BrNum":  //MDS: GREG-9
+      GetWindowRecord(wn,ORr); //MDS: GREG-9
+      if (GetBrokerNameORVc(wn,ORr))then begin
+        PutWindowRecord(wn,ORr);
+        res = true;
+      end;
+  end;
+  ORDClassAfterEditField = res;
+  return;
+end;
+
+global
+updating procedure VehiclePartsSearchsm()
+begin
+  record RcVc RepSpec;
+
+  OpenWindow("VehiclePartsSearchWClass",0,0,"","",RepSpec);
+  return;
+end;
+

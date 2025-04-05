@@ -1,0 +1,98 @@
+//TM - here we assume that we are going to receive a post request in JSON data format 
+
+global 
+webpublic //remember to comment this out and do what we did before for security Retrposes 
+updating procedure WebConfirmReturnGoods()
+begin 
+  area arequest; //area variable is a big block of memory, containing strings 
+  record RetVc Retr,oldRetr;
+  row RetVc Retrw;  
+  json jdata; //will receive the parsed json data from the area 
+  longint sernr; 
+  string 20 artcode; 
+  integer quant,okflag,rwcnt,i,j,cnt,compno,oldcompno; 
+  string 200 reply_code; 
+  
+  //an area is like a "file" which is in memory 
+  //it has HAL premitives which you can use on this data type e.g pick a file from filesystem to area etc, count lines in an area, 
+
+  compno = 3; //Greg's Motor Spares compno is 3 
+  oldcompno = CurrentCompany;
+  SetServerCompany(compno);
+
+  if(CurrentCompany == 3) then begin 
+
+  //1. 
+    WebGetPostData(arequest); //it returns an area populated with the posted data 
+    WriteAreaToFile(arequest,"tmp/" & GetCurTick & ".json",0); //dump the request  i received to a new file as a way of confirming that you did receive the request 
+    //now we assume that we are going to get a JSON formatted text not an xml formatted test from the other system e.g. ADOR We can use postmap to simulate that 
+    jdata = ParseJsonArea(arequest); //i will parse the json area now we can work with the json data the same way we did when we loaded it from a file 
+    //{
+       // "sernr":5,
+        //"matrix":[
+          //{"artcode":"9101000035"},
+          //{"quant":10}
+        //]
+    //}
+
+    //now we need to parse the above json 
+    sernr = StringToLongInt(JSONGet(jdata,"sernr")); //parse the sernr
+    
+    //now you need to read the the record based on its serial number and update it 
+    Retr.SerNr = sernr; 
+    if(ReadFirstMain(Retr,1,true)) then begin //read the record that matches the serial number 
+        if(Retr.OKFlag != 1) then begin 
+          RecordCopy(oldRetr,Retr); //copies the Goods Receipt Record to the oldGRV variable 
+              
+          cnt = JSONCountChildren(jdata,"matrix"); //counting posted matrix data. 
+          for(i=0; i<cnt; i=i+1) begin 
+            //ClearRow(Retr,Retrw,1); 
+            artcode = JSONGet(jdata,"matrix/[" & i & "]/artcode");
+            quant = StringToInt(JSONGet(jdata,"matrix/[" & i & "]/quant"));
+            //-----
+            rwcnt = MatRowCnt(Retr);
+              for (j = 0; j < rwcnt; j = j + 1) begin
+                    MatRowGet(Retr, j, Retrw); //get row from record 
+                    if(artcode != "" and quant>0) then begin 
+                      if(Retrw.ArtCode == artcode) then begin //where record itemcode matches posted itemcode update the quantities 
+                        Retrw.Quant = quant; 
+                      // Retrw.Sum = Retrw.UPrice * quant; //and the new sum 
+                        MatRowPut(Retr,j,Retrw);
+                      end; 
+                    end; 
+              end; 
+            //----
+          
+          end; 
+
+          Retr.OKFlag = 1; 
+          
+          if(RecordUpdate(oldRetr,Retr,true) == 0) then begin 
+            reply_code = "OK"; 
+          end else begin   
+              reply_code = "UNABLE_TO_UPDATE_THE_RETURNED_GOODS"; 
+          end; 
+        end else begin 
+          reply_code = "RETURN_GOODS_ALREADY_CONFIRMED"; 
+          //LogText(0,"Return Goods already OKd"); 
+        end; 
+    end else begin 
+      reply_code = "RETURNED_GOODS_DOES_NOT_EXIST"; //if GRV doesnt exist 
+    end; 
+
+    //since this is a request to change something in the database, we have to reply and say data was updated 
+    //or maybe return an error code and you can log it so that you know exactly so there is a
+    //lets create a string reply_code 
+
+    //REPLY 
+    WebSetContentType("Content-Type:application/json"); 
+    WebOuTstring("{\"replycode\":\"" & reply_code & "\"}"); 
+
+  end; 
+
+  if(CurrentCompany != oldcompno) then begin 
+    ResetCompany(oldcompno); //resets back to old company 
+  end; 
+  LogText(0, "WebConfirmReturnToSupplier");
+  return; 
+end; 

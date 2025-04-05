@@ -75,12 +75,11 @@ jobs:
 
       - name: Check server log
         run: |
+          sleep 60  # Initialization period
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
 
       - name: Verify server status
-        run: |
-          sleep 60  # Initialization period
-          
+        run: |          
           # Get PID with exact match
           PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             pgrep -f '$(printf "%q" "$APP_CMD")'

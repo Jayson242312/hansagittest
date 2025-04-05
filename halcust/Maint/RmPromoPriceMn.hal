@@ -1,0 +1,39 @@
+global
+updating procedure RmPromoPriceMn(record RcVc RepSpec) //Use this example maintenance to fix Hansa's maintenance for deleting records when creating new hansa from scratch 
+begin 
+
+  record PLVc PLr;
+  Date curDate; 
+  boolean started,TrHs,testf;
+
+  started = false;
+  curDate = CurrentDate; 
+     
+  TrHs = true; 
+  while(LoopMain(PLr,1,TrHs)) begin 
+
+    if (BlankDate(PLr.EndDate)) then begin
+      TrHs = false;
+    end;
+
+
+    if(TrHs) then begin 
+        if (curDate <= PLr.EndDate) then begin
+            TrHs = false;
+          // LogText(0,"current date less than end date"); 
+        end;
+    end; 
+     
+     if (TrHs) then begin
+      // LogText(0,"condition met"); 
+      RecordRemove(PLr); //deletes a record from the register and triggers RecordRemoveTest,RecordRemoveAfter record actions
+      // RecordDelete(PLr); // will not call any record actions, i.e. FORCE DELETE
+      StepBack(PLr); //Reduces the loop position of specified record by 1. usually used after deleting a record inside a loop to avoid skipping the record 
+      //that comes right after the record that is deleted. 
+
+    end; 
+       TrHs = true;
+  end; 
+  
+  return; 
+end; 

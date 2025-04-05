@@ -1,0 +1,209 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+procedure BPForecastRn2(record INVc INr)
+begin
+  record ITVc ITr;
+  val MarkUp, baseprice,markupPerc;
+  string 15 finalBasePrice,itemGroup; 
+
+  switch (INr.UpdateCost) begin
+    case "2": //Weighted Avg
+      //if (INr.InPrice > INr.OldInPrice) then begin
+      if (NonBlank(INr.Markup)) then begin
+        MarkUp = INr.Markup;
+      end else begin
+        ITr.Code = INr.Group;
+        if (ReadFirstMain(ITr,1,true)) then begin
+          MarkUp = ITr.MrkUpPerc;
+        end;
+      end;
+      baseprice = INr.WeighedAvPrice * (1+(MarkUp/100));
+                //if (INr.UPrice1 < baseprice) then begin
+        //Display the details e.g baseprice;
+          
+        StartFormat(15);
+        OutString(0,"DblINVc",INr.Code,false);
+        OutString(40,0,INr.Name,false);
+        OutString(210,0,INr.UPrice1,true);
+
+        if (INr.UPrice1 > baseprice) then begin 
+          baseprice = -baseprice;
+          finalBasePrice = "(" & baseprice & ")";
+        OutString(250,0,finalBasePrice,true);
+        end else begin 
+          OutString(250,0,baseprice,true);
+        end;
+
+        //RP ABC Start
+        OutString(275,0,INr.ABC,true);
+
+        if(NonBlank(INr.ABCUPrice)) then begin
+          if (INr.UPrice1 > INr.ABCUPrice) then begin 
+            baseprice = -INr.ABCUPrice;
+            finalBasePrice = "(" & baseprice & ")";
+          OutString(310,0,finalBasePrice,true);
+          end else begin 
+            OutString(310,0,INr.ABCUPrice,true);
+          end; 
+        end;
+        //RP ABC End
+
+        markupPerc = (((INr.UPrice1 - INr.LastPurchPrice)/INr.LastPurchPrice) * 100); //RP calculate markup from last purchase price
+
+        OutString(350,0,INr.OldInPrice,true);
+        OutString(390,0,INr.LastPurchPrice,true);
+        OutString(430,0,INr.WeighedAvPrice,true);
+        OutString(470,0,markupPerc,true); //RP
+        EndFormat;
+      //end;
+    //end;
+    case "1": //Last Purchase Cost
+      if (INr.LastPurchPrice > INr.OldInPrice) then begin
+        if (NonBlank(INr.Markup)) then begin
+          MarkUp = INr.Markup;
+        end else begin
+          ITr.Code = INr.Group;
+          if (ReadFirstMain(ITr,1,true)) then begin
+        MarkUp = ITr.MrkUpPerc;
+        end;
+      end;
+    baseprice = INr.LastPurchPrice * (1+(MarkUp/100));
+    if (INr.UPrice1 > baseprice) then begin baseprice = -baseprice; end;
+    finalBasePrice = "(" & baseprice & ")"; 
+      //Display the details e.g baseprice;
+      StartFormat(15);
+      OutString(0,"DblINVc",INr.Code,false);
+      OutString(40,0,INr.Name,false);
+      OutString(210,0,INr.UPrice1,true);
+
+      if (INr.UPrice1 > baseprice) then begin 
+        baseprice = -baseprice;
+        finalBasePrice = "(" & baseprice & ")";
+      OutString(250,0,finalBasePrice,true);
+      end else begin 
+        OutString(250,0,baseprice,true);
+      end; 
+
+      //RP ABC Start
+      OutString(275,0,INr.ABC,true);
+
+      if(NonBlank(INr.ABCUPrice)) then begin
+        if (INr.UPrice1 > INr.ABCUPrice) then begin 
+          baseprice = -INr.ABCUPrice;
+          finalBasePrice = "(" & baseprice & ")";
+        OutString(310,0,finalBasePrice,true);
+        end else begin 
+          OutString(310,0,INr.ABCUPrice,true);
+        end; 
+      end;
+      //RP ABC End
+
+      markupPerc = (((INr.UPrice1 - INr.LastPurchPrice)/INr.LastPurchPrice) * 100); //RP calculate markup from last purchase price
+      
+      OutString(350,0,INr.OldInPrice,true);
+      OutString(390,0,INr.LastPurchPrice,true);
+      OutString(430,0,INr.WeighedAvPrice,true);
+      OutString(470,0,markupPerc,true); //RP
+      EndFormat;
+    end;
+  end;
+end;
+
+global
+procedure BPForecastRn(record RcVc RepSpec)
+begin
+  record INVc INr;
+  record ITVc ITr;
+  string 15 itemGroup; 
+  string 255 tstr;
+  boolean testf;
+
+  StartReportJob("Base Price Forecast");
+  if (RepSpec.sStartDate == RepSpec.sEndDate) then begin
+    tstr = PackStrDate(RepSpec.sStartDate);  
+    tstr = USetStr(8267) & ": " & tstr;
+  end else begin
+    tstr = PackStrDate(RepSpec.sStartDate);
+    tstr = tstr & " : " & PackStrDate(RepSpec.sEndDate);
+    tstr = USetStr(8260) & ": " & tstr;
+  end;
+  Header(1,tstr,1)  
+  if(nonblank(Repspec.f3)) then begin
+    tstr = Repspec.f3;
+    Header(2,"Item Group: " & tstr,1);
+  end;
+  EndHeader;
+
+  StartFormat(15);
+  OutString(0,0,"ItemCode",false);
+  OutString(40,0,"Description",false);
+  OutString(210,0,"CurBasePrice",true);
+  OutString(250,0,"NewBasePrice",true);
+  OutString(275,0,"ABC",true);
+  OutString(310,0,"ABCBasePrice",true);
+  OutString(350,0,"OldCostPrice",true);
+  OutString(390,0,"GRVCostPrice",true);
+  OutString(430,0,"WeightedAvg",true);
+  OutString(470,0,"Markup %",true);
+  EndFormat;
+  Gray_Divider(0,1);
+
+  testf = false;
+
+  if(NonBlank(Repspec.f3)) then begin
+    testf = true;
+    itemGroup = Repspec.f3;
+  end;
+
+  while(LoopMain(INr,1,true))begin
+    if(INr.LastPriceChange >= RepSpec.sStartDate and INr.LastPriceChange <= RepSpec.sEndDate) then begin
+      if(testf) then begin
+        if(INr.Group == itemGroup) then begin
+          BPForecastRn2(INr);
+        end;
+      end else begin
+        BPForecastRn2(INr);
+      end;
+    end;
+  end;
+
+  EndJob;
+  return;
+end;
+
+//  Duplicate Location Items (Added in this file to save on nr of files)
+global
+procedure DuplicateLIRn(record RcVc RepSpec)
+begin
+  record MinPerLocVc LIr;
+  integer i, cnt;
+  string 255 TempLoc, TempArtCode;
+
+  StartReportJob("Duplicate Location Items Report");
+  Header(1,"Period: "&CurrentDate,1);
+  EndHeader;
+
+  StartFormat(15);
+  OutString(0,0,"ItemCode",false);
+  OutString(150,0,"Location",false);
+  OutString(300,0,"ShelfCode",false);
+  EndFormat;
+  Gray_Divider(0,1);
+
+  while (LoopMain(LIr,1,true)) begin
+    if (TempArtCode == LIr.ItemCode) and (TempLoc == LIr.Location) then begin
+      StartFormat(15);
+      OutString(0,0,LIr.ItemCode,false);
+      OutString(150,0,LIr.Location,false);
+      OutString(300,0,LIr.ShelfCode,false);
+      EndFormat;
+    end;
+    TempArtCode = LIr.ItemCode;
+    TempLoc = LIr.Location;
+  end;
+
+  EndJob;
+  return;
+end;

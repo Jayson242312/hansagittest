@@ -1,0 +1,680 @@
+// VER: 6.2 100727
+//JRX - 100707
+//Customer Invoice History Import Header and Row
+
+external function Boolean ImportItemCode(var string);
+external function Boolean ImportString(var string,Integer);
+external function Boolean ImportCode(var string,Integer);
+external function Boolean ImportDate(var Date);
+external function Boolean ImportVal(var val,Integer);
+external function Boolean ImportInt(var Integer);
+
+
+external inner function Boolean PasteCustInInv(var record IVVc);
+external inner procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external inner procedure VISumup(record VIVc,var val);
+external inner function val CalculateVINettVal(record VIVc,Boolean);
+external inner procedure IVVc_PasteInvDate(var record IVVc,record LocalMachineBlock,var Integer,var Integer);
+external inner procedure IVVc_PasteTransDate(var record IVVc,var Integer,var Integer);
+external inner procedure IVVc_PasteCurncyCode(var record IVVc,string,Integer,Boolean,Boolean);
+external inner procedure PastePDInInv(var record IVVc,string,boolean);
+external inner procedure IVVc_PastePrice(var record IVVc,record IVVc,Integer,var string);
+external inner procedure IVSumup(var record IVVc,Boolean);
+external inner procedure IVDchsum(var record IVVc,Integer);
+external inner procedure IVVc_PastePriceList(var record IVVc);
+external inner function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,var string,Boolean,var Integer);
+
+external inner function Boolean IVVc_PasteQuantity(record IVVc,Integer);
+external inner procedure DisplayIVItem(record IVVc,Integer);
+external inner function Boolean IVVc_PasteSum(var record IVVc,Integer,var Boolean,Integer);
+external inner procedure IVVc_PasteVATCode(var record IVVc,Integer,string,var Boolean);
+//external inner updating function LongInt IVVcRecordSaveAfter(var record IVVc ,record IVVc ,LongInt ,LongInt );
+//external inner updating function LongInt IVVcRecordSave(var record IVVc ,record IVVc ,LongInt ,LongInt );
+external inner function LongInt DateDiff(Date,Date);
+
+
+
+
+procedure StripSpaces(string source,var string res)
+begin
+  integer i,l;
+  boolean testf;
+  l = len(source);
+  for (i = 0; i < l; i= i +1) begin
+    testf = true;
+    if (mid(source,i,1)==" ") then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      res = res & mid(source,i,1);
+    end;
+  end;
+return;
+end;
+
+global
+function Boolean ImportPriceValue(var val Field, Integer Format )
+begin
+  Boolean res;
+  string 255 tstr,tstr2;
+
+  tstr2 = "";
+  tstr = ImportField;
+  StripSpaces(tstr,tstr2);
+  if (nonblank(tstr2)) then begin
+    Field = StringToVal(tstr2,Format);
+   // LogText(0,"Import Code: after Spaces stripped: " & Field);
+    res = true;
+  end;
+
+  ImportPriceValue = res;
+  return;
+end;
+
+
+function Boolean TestField(string ExpectedStr,var Integer ColNr)
+begin
+  Boolean res;
+  string 255 ActualStr,tstr;
+
+  res = true;
+  ActualStr = ImportField;
+  ColNr = ColNr + 1;
+  if (ExpectedStr!=ActualStr) then begin
+    tstr = "File not in correct format. Import cancelled.";
+    tstr = tstr & chr(10) & "First row must contain header values.";
+    tstr = tstr & chr(10) & "Column: " & ColNr & "; Expected: " & ExpectedStr & "; Actual: " & ActualStr;
+    MessageBox(0,tstr);
+    res = false;
+  end;
+
+  TestField = res;
+  return;
+end;
+
+
+function Boolean ValidateCustInvHistHeader()
+begin
+  Boolean res;
+  Integer ColNr;
+  //JRX - Done  100715 14:45
+  if (!TestField("INVOICENO",ColNr)) then begin goto LExit; end;
+  if (!TestField("CUSTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("NAME",ColNr)) then begin goto LExit; end;
+  if (!TestField("DATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("TERMS",ColNr)) then begin goto LExit; end;
+  if (!TestField("OURREF",ColNr)) then begin goto LExit; end;
+  if (!TestField("EXPDELDATE",ColNr)) then begin goto LExit; end;
+  if (!TestField("SALESMAN",ColNr)) then begin goto LExit; end;
+  if (!TestField("REFERENCE",ColNr)) then begin goto LExit; end;
+  if (!TestField("CLASS",ColNr)) then begin goto LExit; end;
+  if (!TestField("CURRENCY",ColNr)) then begin goto LExit; end;
+  if (!TestField("TRNSPCODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELTERMS",ColNr)) then begin goto LExit; end;
+  if (!TestField("COMMENTS",ColNr)) then begin goto LExit; end;
+  if (!TestField("LOCATION",ColNr)) then begin goto LExit; end;
+  if (!TestField("PROJECTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("PRICELIST",ColNr)) then begin goto LExit; end;
+  if (!TestField("LANGUAGE",ColNr)) then begin goto LExit; end;
+  if (!TestField("DISCOUNT",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTQTY",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTWEIGHT",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADDRESS1",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADDRESS2",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADDRESS3",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADDRESS4",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVADDRESS5",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTVOLUME",ColNr)) then begin goto LExit; end;
+  if (!TestField("SORTING",ColNr)) then begin goto LExit; end;
+  if (!TestField("VATZONE",ColNr)) then begin goto LExit; end;
+  if (!TestField("APPSTATUS",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD1",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD2",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD3",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD4",ColNr)) then begin goto LExit; end;
+  if (!TestField("DELADD5",ColNr)) then begin goto LExit; end;
+
+  res = true;
+
+
+LExit:;
+  NextImportLine(true);
+  ValidateCustInvHistHeader = res;
+  return;
+end;
+
+function Boolean ValidateCustInvHistRow()
+begin
+  Boolean res;
+  Integer ColNr;
+
+  if (!TestField("INVOICENO",ColNr)) then begin goto LExit; end;
+  if (!TestField("PARTNO",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVQTY",ColNr)) then begin goto LExit; end;
+  if (!TestField("DESCRIPT",ColNr)) then begin goto LExit; end;
+  if (!TestField("PRICE",ColNr)) then begin goto LExit; end;
+  if (!TestField("DISCPERC",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTAL",ColNr)) then begin goto LExit; end;
+  if (!TestField("VCODE",ColNr)) then begin goto LExit; end;
+  if (!TestField("COST",ColNr)) then begin goto LExit; end;
+  if (!TestField("GP",ColNr)) then begin goto LExit; end;
+  if (!TestField("BUDCOST",ColNr)) then begin goto LExit; end;
+  if (!TestField("PICKNOTDEL",ColNr)) then begin goto LExit; end;
+  if (!TestField("DEL2",ColNr)) then begin goto LExit; end;
+  if (!TestField("INVOICE",ColNr)) then begin goto LExit; end;
+  if (!TestField("RECIPE",ColNr)) then begin goto LExit; end;
+  if (!TestField("UNIT",ColNr)) then begin goto LExit; end;
+  if (!TestField("WIDTH",ColNr)) then begin goto LExit; end;
+  if (!TestField("DEPTH",ColNr)) then begin goto LExit; end;
+  if (!TestField("HEIGHT",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTVAT",ColNr)) then begin goto LExit; end;
+  if (!TestField("TOTALINC",ColNr)) then begin goto LExit; end;
+
+  res = true;
+
+LExit:;
+  NextImportLine(true);
+  ValidateCustInvHistRow = res;
+  return;
+end;
+
+procedure GotoEndOfFile()
+begin
+  while (!TestEOF) begin
+    NextImportLine(true);
+  end;
+  return;
+end;
+
+
+
+
+global
+updating procedure CustInvHistIn()
+begin
+  record IVVc IVr;
+  record LocalMachineBlock LMb;  
+  string 255 tstr,contactour,Snr,curncycode,Accpref;
+  //record PRVc PRr;
+  //record UserVc Userr;
+  record CUVc CUVcr;
+  val from,to1,to2,base1,base2,vat,ct;
+  Integer err1,err2;
+//  record IVSerBlock IVSerBlockr;
+  LongInt rowcount;
+/*
+  StopAlert("Removing all Invoices first.");
+  while (LoopMain(IVr,1,true)) begin
+    RecordDelete(IVr);
+    StepBack(IVr);
+  end;
+  StopAlert("Done:  Starting Import now ....");
+  */
+
+  if (!ValidateCustInvHistHeader) then begin
+    GotoEndOfFile;
+    goto LCustInvHistIn;
+  end;
+
+  BlockLoad(LMb);
+  //Blockload(IVSerBlockr);
+  rowcount = -1;
+  while (!TestEOF) begin
+    rowcount = rowcount + 1;
+    RecordNew(IVr);
+    ImportString(Snr,20);   //sorting                           //Invoice Number
+    IVr.OurContact = Snr;
+
+    //LogText(0,"Importing: " & Snr);
+    if (ImportItemCode(IVr.CustCode)) then begin                 //Customer  without spaces too  using (ImportItemCode)
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        PasteCustInInv(IVr);
+      end else begin
+        LogText(0,"Invoice History Import: Customer not found: " & IVr.CustCode & " Skipping Header import: Import Row No.: " & rowcount );
+        goto LCustInvHistInNextRecord;
+      end;
+    end;
+
+    ImportString(IVr.Addr0,20);                                 //Cust NAME
+    err1 = 0;
+    err2 = 0;
+    if (ImportDate(IVr.InvDate)) then begin                     //DATE
+      IVVc_PasteInvDate(IVr,LMb,err1,err2);
+      PastePDInInv(IVr,"",false);  //Paste Paydate
+
+      if ((err1!=0) or (err2!=0)) then begin
+        Logtext(0,"Invoice Hist Import: Date Error: " & err1 &" Skipping Header Record import. Customer: " & IVr.CustCode);
+        goto LCustInvHistInNextRecord;
+      end;
+    end else begin
+        Logtext(0,"Invoice Hist Import: Blank Date Error!! Using default date: 30/06/2010. Header Record import line. Customer: " & IVr.CustCode & " Import Row No.: " & rowcount);
+        IVr.InvDate = stringtodate("30/06/2010");
+        IVVc_PasteInvDate(IVr,LMb,err1,err2);
+        PastePDInInv(IVr,"",false);  //Paste Paydate
+        //goto LCustInvHistInNextRecord;
+    end;
+    //checking Due date to make sure it is not less than invoice date
+    //JRX - 100823  dd
+    if (DateDiff(IVr.PayDate,IVr.InvDate) < 0) then begin
+      IVr.PayDate = IVr.InvDate;
+    end;
+
+                                                                //TERMS
+    //If no paydeal specified, will use the contact specified paydeal
+    if (ImportCode(IVr.PayDeal,2)) then begin end else
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.PayDeal = CUVcr.PayDeal;
+      end else begin
+      //  LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " PayDeal blank");
+        IVr.PayDeal = "";
+      end;
+    end;
+    //contactour
+
+    ImportString(contactour,20);                            //OURREF
+    if (nonblank(contactour)) then begin
+      IVr.OurContact  = IVr.OurContact & " " & contactour;
+    end;
+
+
+    // Ignoring this Import Colums
+    importfield;
+    /*
+    if (ImportDate(IVr.TransDate)) then begin                   //EXPDELDATE
+      IVVc_PasteTransDate(IVr,err1,err2);
+      if (err1!=0) then begin
+        Logtext(0,"Invoice Hist Import: Transaction Date Error: " & err1 &" ");
+      end;
+    end;
+    */
+    if (!ImportCode(IVr.SalesMan,60)) then begin                //SALESMAN
+        // IVr.SalesMan = currentuser;    //uncomment to set to default current user
+    end;
+
+    ImportString(IVr.RefStr,60);                                //REFERENCE
+
+//check
+Importfield;      //CLASS
+
+    if (ImportCode(IVr.CurncyCode,5)) then begin                //CURRENCY
+      GetFullCurncyRate(curncycode,IVr.TransDate,from,to1,to2,base1,base2);
+      IVr.CurncyCode = curncycode;
+      IVr.FrRate = from;
+      IVr.ToRateB1 = to1;
+      IVr.ToRateB2 = to2;
+      IVr.BaseRate1 = base1;
+      IVr.BaseRate2 = base2;
+      IVVc_PasteCurncyCode(IVr,IVr.CurncyCode,-1,true,true);
+    end;                                                        //CURRENCY  end
+
+//check
+Importfield;                                                    //TRNSPCODE
+
+    ImportCode(IVr.ShipDeal,5);                                 //DELTERMS
+
+    ImportString(IVr.InvComment,200);                           //COMMENTS
+
+    if (ImportCode(IVr.Location,10) == false) then begin        //LOCATION  if blank
+      Accpref = left(IVr.CustCode,2);
+    //  logtext(0,"second: " & Accpref);
+      /* switch (Accpref) begin
+        case "31":  IVr.Location = "KLI";
+        case "32":  IVr.Location = "DUR";
+        case "36":  IVr.Location = "SEC";
+        otherwise
+          begin
+           IVr.Location = "KLI";
+          end;
+      end;
+
+      Accpref = left(IVr.CustCode,1);
+     // logtext(0,"first: " & Accpref);
+      switch (Accpref) begin
+        case "1":  IVr.Location = "CEN";
+        case "2":  IVr.Location = "POS";
+        otherwise
+          begin
+          end;
+      end; */
+    end;
+
+    ImportCode(IVr.PRCode,20);                                  //PROJECTNO
+    if (ImportCode(IVr.PriceList,5)) then begin                 //PRICELIST
+          IVVc_PastePriceList(IVr);
+    end;
+    ImportCode(IVr.LangCode,5);                                 //LANGUAGE
+    ImportCode(IVr.RebCode,5);                                  //DISCOUNT
+    ImportVal(IVr.TotQty,M4Qty);                                //TOTQTY
+    ImportVal(IVr.TotWeight,M4Qty);                             //TOTWEIGHT
+
+
+    if (ImportString(IVr.Addr1,60)) then begin end else         //INVADDRESS1
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.Addr1 = CUVcr.InvAddr0;
+        IVr.Addr2 = CUVcr.InvAddr1;
+        IVr.Addr3 = CUVcr.InvAddr2;
+        IVr.InvAddr3 = CUVcr.InvAddr3;
+        IVr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+     //   LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+        IVr.Addr1 = "";
+        IVr.Addr2 = "";
+        IVr.Addr3 = "";
+        IVr.InvAddr3 = "";
+        IVr.InvAddr4 = "";
+      end;
+    end;
+
+    if (ImportString(IVr.Addr2,60)) then begin end else         //INVADDRESS2
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.Addr2 = CUVcr.InvAddr1;
+        IVr.Addr3 = CUVcr.InvAddr2;
+        IVr.InvAddr3 = CUVcr.InvAddr3;
+        IVr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+    //    LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.Addr3,60)) then begin end else         //INVADDRESS3
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.Addr3 = CUVcr.InvAddr2;
+        IVr.InvAddr3 = CUVcr.InvAddr3;
+        IVr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+     //   LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.InvAddr3,60)) then begin end else      //INVADDRESS4
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.InvAddr3 = CUVcr.InvAddr3;
+        IVr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+    //    LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.InvAddr4,60)) then begin end else      //INVADDRESS5
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.InvAddr4 = CUVcr.InvAddr4;
+      end else begin
+    //    LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+
+// ----------------------------------------------------------------------------------------------------------------
+
+    ImportVal(IVr.TotVolume,M4Qty);                             //TOTVOLUME
+    ImportString(IVr.Sorting,20);                //SORTING         Going to Loss this value : Using it for storing the invoice number
+
+//Check This
+ImportCode(IVr.Region,20);                                      //VATZONE
+
+    ImportInt(IVr.AcceptanceStatus);                            //APPSTATUS
+
+    //delivery address
+    if (ImportString(IVr.ShipAddr0,60)) then begin end else      //DELADD1
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.ShipAddr0 = CUVcr.DelAddr0;
+        IVr.ShipAddr1 = CUVcr.DelAddr1;
+        IVr.ShipAddr2 = CUVcr.DelAddr2;
+        IVr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+   //     LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+        IVr.ShipAddr0 = "";
+        IVr.ShipAddr1 = "";
+        IVr.ShipAddr2 = "";
+        IVr.ShipAddr3 = "";
+      end;
+    end;
+
+    if (ImportString(IVr.ShipAddr1,60)) then begin end else     //DELADD2
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.ShipAddr1 = CUVcr.DelAddr1;
+        IVr.ShipAddr2 = CUVcr.DelAddr2;
+        IVr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+  //      LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.ShipAddr2,60)) then begin end else     //DELADD3
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.ShipAddr2 = CUVcr.DelAddr2;
+        IVr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+   //     LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.ShipAddr3,60)) then begin end else     //DELADD4
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.ShipAddr3 = CUVcr.DelAddr3;
+      end else begin
+  //      LogText(0,"Invoice History Import:User not found: " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+    if (ImportString(IVr.DelAddr3,60)) then begin end else      //DELADD5
+    begin
+      CUVcr.Code = IVr.CustCode;
+      if (ReadFirstKey("Code",CUVcr,1,true)) then begin
+        IVr.DelAddr3 = CUVcr.DelAddr4;
+      end else begin
+  //      LogText(0,"Invoice History Import:Invoice History " & IVr.CustCode & " Address field blank");
+      end;
+    end;
+
+
+
+
+
+
+// ----------------------------------------------------------------------------------------------------------------
+//Manual Overide
+
+   // IVr.Objects = "HANSA,SV,KLI";
+    IVr.UpdStockFlag = 0;       // Do not update Stock
+    IVr.PayDeal = "CA";         // Manual Overide
+    IVr.InvType = 2;            //Manual Overide /* 1 = Normal, 2 = Cash, 3 = Credit, 4 = Interest, 5 = "Dummy" Prepayment Invoice */
+// ----------------------------------------------------------------------------------------------------------------
+    //Serial Number
+    IVr.Sorting = Snr;
+    if (IVr.SerNr==-1) then begin
+      IVr.SerNr = NextSerNr("IVr",IVr.InvDate,-1,false,"");
+    end;
+    RecordStore(IVr,false);
+    LCustInvHistInNextRecord:;
+    NextImportLine(true);
+  end;
+
+LCustInvHistIn:;
+  return;
+end;
+
+
+
+global
+updating procedure CustInvHistRowIn()
+begin
+  record IVVc IVr,OldIVr,OldIVr1,IV2r,IVr3,IVr4,IVr5;
+  row IVVc IVrw;
+  string 255 tstr,inwarning,spec;
+  Integer rownr,changed;
+  LongInt long3,long4,ivvcsave,ivvcsaveafter,rowcount;
+  Boolean chsum,putf;
+  record INVc INr;
+  Integer sernrf;
+  LongInt rowcountpoint;
+  rowcountpoint = 1000;
+
+  if (!ValidateCustInvHistRow) then begin
+    GotoEndOfFile;
+    goto LCustInvHistRowIn;
+  end;
+
+  rowcount = 0;
+  while (!TestEOF) begin
+    if (ImportString(tstr,255)) then begin                      //INVOICENO
+      IVr.Sorting = tstr;
+      if (ReadFirstKey("Sorting",IVr,1,true)) then begin
+        RecordCopy(OldIVr,IVr);
+        ClearRow(IVr,IVrw,1);
+        rownr = MatRowCnt(IVr);
+        if (rownr >= 999) then begin
+          LogText(0,"JRX: Matrix Row more than: 999");  //JRX - 100816
+          GotoEndOfFile;
+        end;
+      //  LogText(0,"Overal Row: " & rowcount & " Importing: matrix Row:  "& rownr & " Linked to Old Invoice No.: " & tstr & " HW Invoice NO. : " & IVr.SerNr );
+        rowcount = rowcount +1;
+
+        if (ImportItemCode(IVrw.ArtCode)) then begin            //PARTNO
+          INr.Code = IVrw.ArtCode;
+          if (ReadFirstKey("Code",INr,1,true)) then begin
+            IVrw.UnitCode = INr.Unittext;                       // Unit >> Getting from the Item
+            spec = INr.Name;
+            IVrw.Spec = spec;
+            MatRowInsert(IVr,rownr,IVrw);
+            if (IVVc_PasteArtCode(IVr,rownr,tstr,tstr,false,sernrf)) then begin
+            end;
+          //  IVrw.UnitCode = INr.Unittext;                       // Unit >> Getting from the Item
+          end else begin
+              IVrw.ArtCode = "99999";     //if Item does not exist : Deafault
+              IVrw.UnitCode = "EACH";
+              MatRowInsert(IVr,rownr,IVrw);
+              if (IVVc_PasteArtCode(IVr,rownr,tstr,tstr,false,sernrf)) then begin
+              end;
+
+          end;
+          MatRowGet(IVr,rownr,IVrw);
+        end;
+
+
+        if (ImportVal(IVrw.Quant,M4UVal)) then begin            //INVQTY
+          MatRowPut(IVr,rownr,IVrw);
+//JRX - 100816           IVVc_PasteQuantity(IVr,rownr);         //JRX - 100816  temp .. will use sumup option later.
+          MatRowGet(IVr,rownr,IVrw);
+         // DisplayIVItem(IVr,rownr);
+        end;
+
+        ImportString(IVrw.Spec,100);                            //DESCRIPT
+        IVrw.Spec = spec;                                       //Over ride Specification with specification from Item
+
+        if (ImportPriceValue(IVrw.Price,M423Val)) then begin    //PRICE    //JRX - 100802 //JRX - 100802
+          MatRowPut(IVr,rownr,IVrw);
+//JRX - 100816            IVVc_PastePrice(IVr,IV2r,rownr,inwarning);      //JRX - 100816  temp. Sumup will do later
+
+          MatRowGet(IVr,rownr,IVrw);
+        end;
+
+        if (ImportVal(IVrw.vRebate,M41Val)) then begin          //DISCPERC
+         // MatRowPut(IVr,rownr,IVrw);
+         // MatRowGet(IVr,rownr,IVrw);
+        end;
+
+        if (ImportPriceValue(IVrw.Sum,M4Val)) then begin        //TOTAL    ImportPriceValue
+        //  MatRowPut(IVr,rownr,IVrw);
+        /*  putf = IVVc_PasteSum(IVr,rownr,chsum,changed);  //JRX - 100815  9:49 AM
+          if (putf) then begin
+            if (chsum) then begin
+              IVDchsum(IVr,rownr);
+              IVSumup(IVr,true);
+            end;
+          end;
+        */
+         // MatRowGet(IVr,rownr,IVrw);
+        end;
+
+        if (ImportCode(IVrw.VATCode,2)) then begin              //VCODE
+          MatRowPut(IVr,rownr,IVrw);
+          IVVc_PasteVATCode(IVr,rownr,"",chsum);
+          if (IVrw.VATCode == "00") then begin
+            IVrw.VATCode = "1";                //default ... override
+          end;
+          MatRowGet(IVr,rownr,IVrw);
+        end;
+
+        ImportPriceValue(IVrw.BasePrice,M4Val);                 //COST   //JRX - 100802 changed ImportPriceValue
+        ImportVal(IVrw.rowGP,M4Val);                            //GP
+
+        //ImportVal(IVrw.RBudCost,M4Val);
+        importfield;       //BUDCOST
+        importfield;       //PICKNOTDEL
+        importfield;       //DEL2
+        importfield;       //INVOICE
+        ImportCode(IVrw.Recepy,20);                             //RECIPE
+        importfield; //ImportCode(IVrw.UnitCode,5);             //UNIT        Alan wants this take from the Item Register
+
+
+        ImportVal(IVrw.UnitXval,M4UVal);                        //WIDTH
+        ImportVal(IVrw.UnitZval,M4UVal);                        //DEPTH
+        ImportVal(IVrw.UnitYval,M4UVal);                        //HEIGHT
+
+        importfield;      //TOTVAT
+        importfield;      //TOTALINC
+        MatRowPut(IVr,rownr,IVrw);
+        //IVDchsum(IVr,rownr);
+        IVSumup(IVr,true /*round off*/);
+
+
+         // IVr.OKFlag = 1;
+         //   RecordUpdate(OldIVr,IVr,true);  //JRX - 100815  made true
+
+        if (RecordUpdate(OldIVr,IVr,false)!=0) then begin
+          LogText(0,"JRX: RecordUpdate Error at Invoice Numer: "& IVr.SerNr & " Invoice Header Number: " & tstr  );    //JRX - 100816
+        end;
+        if ( rowcount == rowcountpoint) then begin
+          if (RecordImportStore(IVr,true)) then begin end;
+          rowcountpoint = rowcountpoint + 1000;
+         // LogText(0,"JRX: Storing Invoice Register at : rowcount: " & rowcount);  //JRX - 100818
+        end;
+      end else begin
+        LogText(0,"Invoice History Import >> Invoice Header not found: " & tstr & " ");
+      end;
+    end;
+    NextImportLine(true);
+  end;
+
+  RecordImportStore(IVr,true);
+
+  LogText(0,"");LogText(0,"Invoices with Headers that have Blank Matrix");LogText(0,"");
+  while (LoopMain(IVr4,1,true)) begin
+    if ( MatRowCnt(IVr4) <= 0) then begin
+      LogText(0,"Old Invoice No.: " & IVr4.Sorting  & ": HW Invoice NO. : " & IVr4.SerNr );
+    end;
+  end;
+/*
+  LogText(0,"");LogText(0,"Invoice with Matrix Rows, but ZERO Invoice Amount.");LogText(0,"");
+  while (LoopMain(IVr3,1,true)) begin
+    if (valtostring(IVr3.Sum4,M4Val,",",".",0) == "0.00") then begin
+      LogText(0,"ZERO R. Old Invoice No.: " & IVr3.Sorting  & ": HW Invoice NO. : " & IVr3.SerNr );
+    end;
+  end;
+*/
+  GotoEndOfFile;
+  LCustInvHistRowIn:;
+  return;
+end;

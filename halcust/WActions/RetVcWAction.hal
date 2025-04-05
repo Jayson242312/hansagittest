@@ -1,0 +1,36 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+//VN>>
+remote updating procedure AddOneRetToADORQueue(record RetVc); // TM - Desk 5130 
+
+// RGS: HAL-944
+global
+function Boolean RetDClassADORLockedButtonAction(Integer wn,Integer value)
+begin
+  RetDClassADORLockedButtonAction = false;
+  return;
+end;
+
+global
+updating procedure SendRetToADORDsm()
+begin
+  record RetVc Retr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,Retr);
+  if (UserCanAction("SendToADOR",false)) then begin
+    if ((WindowState(wn)==0)) then begin
+      AddOneRetToADORQueue(Retr);
+      MessageBox(3100042,"");
+      PutWindowRecord(wn,Retr);
+    end;  
+  end else begin
+    MessageBox(3100041,"");
+  end;
+
+  return;
+end;
+//:RGS

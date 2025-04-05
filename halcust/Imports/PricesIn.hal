@@ -1,0 +1,50 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure PriceIn()
+begin
+  record PLVc PLr;
+  string 255 inline;
+  Boolean pCh;
+  integer i, count;
+
+  while(TestEOF==false) begin
+    inline=importField;
+    if(inline=="Item") then begin
+      goto LA1;
+    end else begin
+      PLr.ArtCode = inline;
+      inline=importField;
+      PLr.PLCode = inline;
+      pCh = ReadFirstMain(PLr,2,true);
+      if(pCh) then begin
+        inline=importField;
+        PLr.Comment=inline;
+        inline=importField;
+        PLr.ExVatPrice=StringToVal(inline,M4Val);
+        inline=importField;
+        PLr.SalesAcc=inline;
+        inline=importField;
+        PLr.VATCode=inline;
+        inline=importField;
+        PLr.CustCode=inline;
+        inline=importField;
+        PLr.CostPrice=StringToVal(inline,M4Val);
+        inline=importField;
+        PLr.BBVarAcc=inline;
+        inline=importField;
+        PLr.NoOtherPricing=StringToInt(inline);
+        inline=importField;
+        PLr.DonotRecalculate=StringToInt(inline);
+        inline=importField;
+        PLr.BBGenTrans=StringToInt(inline);
+        if(RecordStore(PLr,true))then begin end;
+      end;
+    end;
+    LA1:;
+    if(NextImportLine(true)) then begin end;
+  end;
+  return;
+end;

@@ -1,0 +1,76 @@
+global
+function string 255 GMSFromatDate(date dt)
+begin
+  string 255 res;
+  res = dt.year & "-" & dt.month & "-" & dt.day;
+  GMSFromatDate = res;
+  return;
+end;
+
+global
+procedure AddTextToAreaNL(string text,area ar)
+begin
+  AddTextToArea(text,ar);
+  AddTextToArea(chr(13) & chr(10),ar);
+  return;
+end;
+
+global
+updating procedure SendToAdor(area apost,record ADORQueueVc ADORQueuer,string interface)
+begin
+  record HALAdorBlock ADRb;
+  row ADORQueueVc ADORQueuerw;
+  area aresponse;
+  json json_response;
+  string 255 filename,details;
+  integer qpos;
+  
+  //logtext(0,interface&" "&chr(13)&" "&chr(10)); //TM - Desk 5130 
+  
+  BlockLoad(ADRb);
+  LogText(0,"SendWebRequest: SendToAdor");
+  if(SendWebRequest(ADRb.ADORHost,ADRb.ADORPort,-1,false,"POST",ADRb.ADORPath & "/" & interface,"application/json","",false,apost,aresponse,20)) then begin
+    json_response = ParseJSONArea(aresponse);
+    
+    if (JSONNodeExists(json_response,"message")) then begin
+      details = JSONGet(json_response,"message");
+      //logtext(0,"This is the json: " & details); 
+      if (details == "null") then begin
+        if (JSONNodeExists(json_response,"errorData")) then begin
+          details = JSONGet(json_response,"errorData/[0]");
+        end;
+      end;
+    end else begin
+      details = "No response";
+    end;
+
+    if (NonBlank(details)) then begin
+      qpos = MatRowCnt(ADORQueuer) - 1; // row should already be created
+      MatRowGet(ADORQueuer,qpos,ADORQueuerw);
+      ADORQueuerw.Details = details;
+      MatRowPut(ADORQueuer,qpos,ADORQueuerw);
+    end;
+    
+    if (JSONNodeExists(json_response,"success")) then begin
+      if (JSONGet(json_response,"success") == "true") then begin
+        ADORQueuer.Status = 2;
+      end else begin
+        ADORQueuer.Status = 4;
+      end;
+    end else begin
+      ADORQueuer.Status = 4;
+    end;
+    LogText(0,"ADORQueuer: Store");
+    RecordStore(ADORQueuer,true); 
+  
+    if (FileExists("EN_LeaveADORResponse")) then begin
+      filename = "ADOR_Response_" & GetCurTick;
+      WriteAreaToFile(aresponse,"tmp/" & filename & ".json",0);
+      filename = "ADOR_Request_" & GetCurTick;
+      WriteAreaToFile(apost,"tmp/" & filename & ".json",0); 
+    end;
+  end;
+
+  return;
+end;
+

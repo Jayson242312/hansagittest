@@ -1,0 +1,54 @@
+global
+updating function LongInt IVVcRecordCheck(record IVVc IVr,record IVVc IV2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  string 255 ag;
+  Integer pos;
+  Integer i,rwcnt;
+  record HALGMSGenSetBlock HALGMSGenSetBl;
+  record CUVc Cur;
+  record BrokerVc Brokerr; 
+  Record UserVc Userr;
+  
+  Cur.Code = IVr.CustCode;//MDS: GREG-9
+  blockload(HALGMSGenSetBl);
+  if(ReadFirstMain(Cur,1,true)) then begin
+    if(nonblank(Cur.CustCat) and nonblank(HALGMSGenSetBl.HALGMSGeCat)) then begin
+      if(SetInSet(Cur.CustCat,HALGMSGenSetBl.HALGMSGeCat)) then begin
+          Brokerr.BrNumber = IVr.BrNum; 
+          if(ReadFirstMain(Brokerr,1,true)) then begin
+            if(blank(IVr.BrNum)) then begin
+              RecordCheckError(1058,"",-1,"BrNum");
+              res = -1;
+              goto LIVVcRecordCheck;
+            end;
+          end else begin 
+            MessageBox(0,"The Broker Number entered does not exist"); 
+            RecordCheckError(1058,"",-1,"BrNum");
+            goto LIVVcRecordCheck;
+          end; 
+        if(blank(IVr.ClaimNum))then begin
+          RecordCheckError(1058,"",-1,"ClaimNum");
+          res = -1;
+          goto LIVVcRecordCheck;
+        end;
+        if(blank(IVr.OrderNum)) then begin
+          RecordCheckError(1058,"",-1,"OrderNum");
+          res = -1;
+          goto LIVVcRecordCheck;
+        end;
+        
+      end;
+    end;
+  end;//:MDS
+
+  //RGS: HAL-918
+  if (res == -1) then begin
+    res = inner.IVVcRecordCheck(IVr, IV2r, stat, long4);
+  end;
+  //:RGS
+
+  LIVVcRecordCheck:; 
+  IVVcRecordCheck = res;
+  RETURN;
+END;

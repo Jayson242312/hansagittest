@@ -1,0 +1,61 @@
+external remote function Boolean EngineVc_PasteArtCode(var record EngineVc,Integer,Integer,var string);
+
+global
+function Boolean EngineDClassSwitchRow(Integer wn,Integer rownr)
+begin        
+  record EngineVc Enginer;  
+  row EngineVc Enginerw; 
+  Integer rwcnt;
+  Boolean res;
+  val unitprdisc;
+  string 255 recepy;
+
+  res = true;
+  GetWindowRecord(wn,Enginer);
+  rwcnt = MatRowCnt(Enginer);  
+  if ((rownr<rwcnt) and (rownr>=0)) then begin
+    MatRowGet(Enginer,rownr,Enginerw);
+  end;
+  EngineDClassSwitchRow = res;  
+  return;
+end;
+
+function Boolean EngineDClassArtCodeEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row EngineVc Enginerw;
+  record EngineVc Enginer;
+  Boolean res;
+  string 255 inwarn;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,Enginer);
+    if (EngineVc_PasteArtCode(Enginer,rownr,changed,inwarn)) then begin
+      if (nonblank(inwarn)) then begin
+        MessageBox(0,inwarn);
+      end;
+      PutWindowRecord(wn,Enginer);    
+      if (EngineDClassSwitchRow(wn,rownr)) then begin end;    
+    end else begin
+      Beep;
+    end;
+  end;
+  EngineDClassArtCodeEFAfter = res;
+  return;
+end;
+
+global
+function boolean EngineDClassAfterEditField(Integer wn,string fieldname,Integer fn,Integer rownr,Integer changed)
+begin
+  boolean res;
+  LogText(0,fieldname);
+
+  switch (fieldname) begin
+    // case "EngineCode": res = EngineDClassEngineCodeEFAfter(wn,changed!=0);
+    case "ArtCode": res = EngineDClassArtCodeEFAfter(wn,fn,rownr,changed);
+  end;
+
+  EngineDClassAfterEditField = res;
+
+  RETURN;
+end;

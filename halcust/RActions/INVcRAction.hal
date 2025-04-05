@@ -1,0 +1,76 @@
+//TM  - Item Pics 
+
+global
+updating function LongInt INVcRecordUpdateAfter(var record INVc INr,record INVc IN2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  record HALPicVc HALPicr,oldHALPicr; 
+
+  res = 0;
+
+  res = inner.INVcRecordUpdateAfter(INr,IN2r,stat,long4);
+  if(res < 0) then begin 
+    //LogText(0,"When res > 0"); 
+    // if(PUr.OKFlag == 1 and PU2r.OKFlag !=1 ) then begin 
+      HALPicr.ArtCode = INr.Code; 
+        if(ReadFirstMain(HALPicr,1,true)) then begin 
+            HALPicr.AltCode = INr.AlternativeCode;
+            HALPicr.GMCode = INr.UserStr1;
+            HALPicr.ItemName = INr.Name;
+            HALPicr.Group = INr.Group;
+          RecordCopy(oldHALPicr,HALPicr); 
+         // HALPicr.OKFlag = 1; 
+           if(RecordUpdate(oldHALPicr,HALPicr,true) == 0) then begin 
+             //CreateRecordLink(INr,CurrentCompany,HALPicr,CurrentCompany);
+             //CreateRecordLink(HALPicr,CurrentCompany,INr,CurrentCompany);
+            // LogText(0,"ADORGRV Record Nr " & HALPicr.SerNr & " OKd" ); 
+           end; 
+        end; 
+      
+  end; 
+    
+    INVcRecordUpdateAfter = res;
+  return;
+end; 
+
+global
+updating function LongInt INVcRecordSaveAfter(var record INVc INr,record INVc IN2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  record HALPicVc HALPicr,oldHALPicr; 
+  res = 0;
+  res = inner.INVcRecordSaveAfter(INr,IN2r,stat,long4);
+  
+  //LogText(0,"res is " & " " & res); 
+  if(res == -1) then begin 
+    RecordNew(HALPicr);
+    HALPicr.ArtCode = INr.Code; 
+    HALPicr.AltCode = INr.AlternativeCode;
+    HALPicr.GMCode = INr.UserStr1;
+    HALPicr.ItemName = INr.Name;
+    HALPicr.Group = INr.Group;
+    if(RecordStore(HALPicr,true))then begin end;
+  end; 
+    
+    INVcRecordSaveAfter = res;
+  return;
+end; 
+
+global
+function LongInt INVcRecordCheck(var record INVc INr,record INVc IN2r,LongInt stat,LongInt long4)
+begin
+  LongInt res;
+  res = 0;
+
+  if (len(INr.Code)>10) then begin
+    RecordCheckError(23018,"",-1,"Code");      
+    res = -1; 
+    goto LINVcRecordCheck;
+  end;
+
+  res = inner.INVcRecordCheck(INr,IN2r,stat,long4);
+
+  LINVcRecordCheck:;
+  INVcRecordCheck = res;
+  return;
+end;

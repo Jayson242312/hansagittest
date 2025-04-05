@@ -1,0 +1,51 @@
+// //TM - Import for the Item Pics 
+
+// global
+// updating procedure ItemsHALPicsVcIn()
+// begin
+//   //record PIVc PIr;
+//   //record PIVc PI2r;
+//   record HALPicVc HALPicr, oldHALPicr;
+//   //row HALPicVc HALPicrw;
+//   //record CUVc CUr;
+//   string 255 inputline;
+//   Boolean pCh;
+//   Integer updatecnt;
+
+//   while(TestEOF==false) begin
+//     inputline=importField;
+//     if(inputline=="ItemCode") then begin
+//       goto LA1;
+//     end else begin
+//       HALPicr.ArtCode=inputline;  //number
+//       pCh = ReadFirstMain(HALPicr,1,true);
+//       if(pCh) then begin
+//         RecordCopy(oldHALPicr,HALPicr);
+//         inputline=importField;
+//         HALPicr.ItemName=inputline;  //description
+//         inputline=importField;
+//         HALPicr.Group=inputline; //Group
+//         inputline=importField;
+//         HALPicr.GMCode = inputline; //GM Code 
+//         inputline = importField;
+//         HALPicr.AltCode = inputline;  //Altenative Item Code
+//         if(RecordStore(HALPicr,true))then begin end;
+//       end else begin 
+//           RecordNew(HALPicr);
+//             HALPicr.ArtCode=inputline;
+//             inputline=importField;
+//             HALPicr.ItemName=inputline;  //description
+//             inputline=importField;
+//             HALPicr.Group=inputline; //Group
+//             inputline=importField;
+//             HALPicr.GMCode = inputline; //GM Code 
+//             inputline = importField;
+//             HALPicr.AltCode = inputline;  //Altenative Item Code
+//            if(RecordStore(HALPicr,true))then begin end;
+//       end; 
+//     end;
+//     LA1:;
+//     if(NextImportLine(true)) then begin end;
+//   end;
+//   return;
+// end;
