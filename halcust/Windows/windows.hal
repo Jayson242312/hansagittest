@@ -42,7 +42,7 @@ begin
   integer TileNr;
   real h,v,vs;
   WindowBegin("Deed Of Sale1", DeedOfSaleDClass, CGview, -);
-  SetWRect(20,80,200,500);   
+  SetWRect(20,80,200,500);   PLEASE WORK
   Sizeable(-1,-1,0,0); 
   UseView(DeedOfSaleVc);
   FormName(DeedOfSaleForm);
