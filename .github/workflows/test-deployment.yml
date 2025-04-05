@@ -22,10 +22,7 @@ jobs:
     steps:
       - name: Checkout test branch
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
+      
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -39,8 +36,8 @@ jobs:
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
-            git fetch origin ${{ github.head_ref }}
-            git checkout -B test ${{ github.head_ref }}
+            git fetch origin test
+            git checkout -B test 
           "
 
       - name: Stop existing server
