@@ -41,64 +41,60 @@ jobs:
             git reset --hard origin/main
           " 
 
-      - name: Stop existing server
-        run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x  # Enable debugging
-            echo 'Current working directory:'
-            pwd
-            echo 'Running processes:'
-            ps aux | grep StandardERPServer64 || true
-            echo 'Attempting to stop server...'
-            
-            PID=\$(pgrep -f 'StandardERPServer64.*--port 1201' | head -1)
-            if [ -n \"\$PID\" ]; then
-              echo \"Found PID: \$PID\"
-              kill \$PID
-              sleep 5
-              if ps -p \$PID > /dev/null; then
-                echo 'Force killing process...'
-                kill -9 \$PID
+          - name: Stop existing server
+          run: |
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+              set -x
+              echo 'Running processes:'
+              ps aux | grep StandardERPServer64 || true
+              echo 'Attempting to stop server...'
+              PIDS=\$(pgrep -f 'StandardERPServer64.*--port 1201')
+              if [ -n \"\$PIDS\" ]; then
+                echo \"Found PIDs: \$PIDS\"
+                kill \$PIDS
+                sleep 5
+                for PID in \$PIDS; do
+                  if ps -p \$PID > /dev/null; then
+                    echo \"Force killing PID \$PID...\"
+                    kill -9 \$PID
+                  fi
+                done
+              else
+                echo 'No running process found'
               fi
-            else
-              echo 'No running process found'
-            fi
-          "
+            "
+        
       - name: Start server
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -e
-            cd $APP_DIR
-            nohup $APP_CMD > hal.log 2>&1 &
-            echo 'Server start command executed - waiting for initialization...'
-          "
-
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+              set -e
+              cd $APP_DIR
+              nohup $APP_CMD > hal.log 2>&1 &
+              echo 'Server start command executed - waiting for initialization...'
+            "
+        
+      - name: Check server log
+        run: |
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+        
       - name: Verify server status
         run: |
-          sleep 60  # Initialization period
-          
-          # Get PID with exact match
-          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            pgrep -f '$(printf "%q" "$APP_CMD")'
-          " | tr -d '\n')
-          
-          echo "Raw PID detected: '$PID'"
-          
-          # Verify PID exists and is running
-          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            if [ -z \"$PID\" ]; then 
-              echo 'No PID found'; exit 1; 
-            elif ! ps -p \"$PID\" >/dev/null; then 
-              echo 'PID $PID not running'; exit 1;
-            elif ! grep -qF '$APP_CMD' /proc/$PID/cmdline 2>/dev/null; then
-              echo 'PID $PID command mismatch'; exit 1;
-            fi
-          "; then
+            sleep 60
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+              echo 'Listing all StandardERPServer64 processes:'
+              ps aux | grep StandardERPServer64 | grep -v grep || true
+              echo 'Checking if port 1201 is listening:'
+              if ss -tln | grep -q ':1201 '; then
+                echo 'Server is listening on port 1201'
+              else
+                echo 'Server is not listening on port 1201'
+                exit 1
+              fi
+            " || {
+              echo "::error::Server validation failed"
+              exit 1
+            }
             echo "Server verified as running"
-          else
-            echo "::error::Server validation failed"
-            exit 1
-          fi
 
 
       - name: Capture failure logs
