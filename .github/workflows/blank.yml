@@ -69,13 +69,13 @@ jobs:
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
-            nohup $APP_CMD > hal.log 2>&1 &
+            nohup $APP_CMD > hansa.log 2>&1 &
             echo 'Server start command executed - waiting for initialization...'
           "
 
       - name: Check server log
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
 
       - name: Verify server status
         run: |
