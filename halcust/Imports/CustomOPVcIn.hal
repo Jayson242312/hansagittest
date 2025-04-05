@@ -1,0 +1,149 @@
+function string 255 AdjustImport (string tstr)
+begin
+  integer i;
+  string 255 res;
+
+  if((left(tstr,1) == "\"") and (right(tstr,1) == "\"")) then begin
+    i = len(tstr);
+    i = i-2;
+    res = mid(tstr,1,i);
+  end else begin
+    res = tstr;
+  end;
+
+  AdjustImport = res;
+
+  return;
+end;
+
+procedure ReadImportTagOPVcRecord(record OPVc OPr)
+begin
+  string 255 tstr;
+  row OPVc OPrw;
+  integer rwcnt,i;
+  
+  RecordNew(OPr);
+  OPr.SerNr = StringToLongint(ImportField);
+  OPr.BankAcc = ImportField;
+  OPr.Sign = ImportField;
+  OPr.RegDate = StringToDate(ImportField);
+  OPr.TransDate = StringToDate(ImportField);
+  OPr.PayMode = ImportField;
+  OPr.BankName = ImportField;
+  OPr.OrderedFlag = StringToInt(ImportField);
+  OPr.SentFlag = StringToInt(ImportField);
+  OPr.DoneFlag = StringToInt(ImportField);
+  OPr.PayDate = StringToDate(ImportField);
+  OPr.StatFlag = StringToInt(ImportField);
+  OPr.ExportedFlag = StringToInt(ImportField);
+  OPr.PayNumber = ImportField;
+  OPr.RejectedFlag = StringToInt(ImportField);
+  OPr.Invalid = StringToInt(ImportField);
+  OPr.APonTR = StringToInt(ImportField);
+  OPr.PayCurCode = ImportField;
+  tstr = ImportField;
+  OPr.CurPayVal = StringToVal(AdjustImport(tstr),M4Val);
+  OPr.Objects = ImportField;
+  OPr.SortCode = ImportField;
+  OPr.LangCode = ImportField;
+  OPr.PayperSupplier = StringToInt(ImportField);
+  OPr.PayMethod = StringToInt(ImportField);
+  OPr.Bankfees = StringToInt(ImportField);
+  OPr.ForeignPayment = StringToInt(ImportField);
+  OPr.AcceptanceStatus = StringToInt(ImportField);
+  OPr.AcceptanceBy = ImportField;
+  OPr.AcceptanceFYI = ImportField;
+  OPr.OKBy = ImportField;
+  rwcnt = 0;
+  i = 0;
+  while (NextImportLine(false)) begin
+    if(i == 0) then begin
+      ImportField;
+      ImportField;
+      OPr.Paid = StringToInt(ImportField);
+    end;
+    if(i > 1) then begin
+      ClearRow(OPr,OPrw,1);
+      OPrw.stp = StringToInt(ImportField);
+      OPrw.ovst = StringToInt(ImportField);
+      OPrw.VISerNr = StringToLongint(ImportField);
+      OPrw.BankAcc = ImportField;
+      OPrw.Comment = ImportField;
+      OPrw.VECode = ImportField;
+      OPrw.Objects = ImportField;
+      OPrw.VATVal = StringToVal(ImportField,M4Val);
+      OPrw.VATCode = ImportField;
+      OPrw.ChequeNr = StringToLongint(ImportField);
+      OPrw.PrepayNr = StringToLongint(ImportField);
+      OPrw.PayMode = ImportField;
+      OPrw.PInvOutstand = StringToVal(ImportField,M4Val);
+      OPrw.PInvCurncy = ImportField;
+      OPrw.PInvVal = StringToVal(ImportField,M4Val);
+      OPrw.BankCurncy = ImportField;
+      tstr = ImportField;
+      OPrw.BankVal = StringToVal(AdjustImport(tstr),M4Val);
+      OPrw.RecCurncy = ImportField;
+      tstr = ImportField;
+      OPrw.RecVal = StringToVal(AdjustImport(tstr),M4Val);
+      OPrw.BankFeeVal = StringToVal(ImportField,M4Val);
+      OPrw.RoundOff = StringToVal(ImportField,M4Val);
+      OPrw.RoundOffAcc = ImportField;
+      OPrw.SortCode = ImportField;
+      OPrw.Coef = StringToVal(ImportField,M4Rate);
+      OPrw.BankFeePrc = ImportField;
+      OPrw.OrderNr = StringToLongint(ImportField);
+      OPrw.B1BankVal = StringToVal(ImportField,M4Val);
+      OPrw.B2BankVal = StringToVal(ImportField,M4Val);
+      OPrw.ToRateB1BankVal = StringToVal(ImportField,M4Rate);
+      OPrw.ToRateB2BankVal = StringToVal(ImportField,M4Rate);
+      OPrw.BankRefStr = ImportField;
+      OPrw.rkPayNumber = ImportField;
+      OPrw.WHTax = ImportField;
+      OPrw.WHTaxBase = StringToVal(ImportField,M4Val);
+      OPrw.TAX1Sum = StringToVal(ImportField,M4Val);
+      OPrw.APAcc = ImportField;
+      OPrw.InstNr = StringToLongint(ImportField);
+      OPrw.FrRateBankVal = StringToVal(ImportField,M4Rate);
+      OPrw.BaseRate1BankVal = StringToVal(ImportField,M4Rate);
+      OPrw.BaseRate2BankVal = StringToVal(ImportField,M4Rate);
+      OPrw.WHTaxPrc = StringToVal(ImportField,M4Val);
+      OPrw.PaymentCode = ImportField;
+      OPrw.WHTaxAccumBase = StringToVal(ImportField,M4Val);
+      MatRowPut(OPr,rwcnt,OPrw);
+      rwcnt = rwcnt + 1;
+    end;
+    i = i+1;
+  end;
+
+  return;
+end;
+
+global
+updating procedure CustomOPVcIn()
+begin
+  record OPVc OPr,OP2r;
+  boolean start;
+  longint tstr;
+  
+  start = false;  
+  while (NextImportLine(false)) begin
+    if(start) then begin
+      ReadImportTagOPVcRecord(OPr);
+      if(!RecordStore(OPr,false)) then begin
+      tstr = OPr.SerNr;
+        if(nonblank(tstr)) then begin
+          OP2r.SerNr = tstr;
+          if(ReadFirstMain(OP2r,1,true)) then begin
+//            logtext(1,"Found existing payment No. " & OP2r.SerNr & " trying to overwrite it");
+            if(RecordUpdate(OP2r,OPr,false)) then begin end;
+          end;
+        end;
+      end;
+    end;
+    if(ImportField == "OPVc") then begin
+      start = true;
+    end;
+  end;
+  
+  return;
+end;

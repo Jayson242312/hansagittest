@@ -1,0 +1,137 @@
+// RP - POS, Fixed Paste Delivery bug
+// external procedure IVCashVc_PasteLoyaltyCardNr(var record IVCashVc);
+// external function string 255 FillupTaxMatrix(Integer,string,string,string,string,string,var record TaxMatrixVc);
+// external procedure RowCalculateTaxMatrix_IVCashVc(var record IVCashVc,Integer,row IVCashVc);
+// external function Boolean IVCashDchrsum(record IVCashVc,Integer,Integer);
+// external procedure IVCashDchsum(record IVCashVc,Integer);
+// external function LongInt GetCurUserLastNr(string);
+// external procedure IVCashSumup(var record IVCashVc,Boolean);
+// external function Boolean GetItemPriceDiscount3(string,val,var record INVc,string,val,val,val,val,val,string,string,string,string,
+//                                                 var val,var string,var val,var string,var val,var string,Integer,var Boolean,Date,Time,
+//                                                 string,Boolean,var Boolean,string,var string,var val,string,string,var string);
+                                                
+// global
+// updating procedure SHPasteNPTSSClassRemote(string dnr,var record IVCashVc IVCashr)
+// begin
+//   row IVCashVc IVCashrw;
+//   record CUVc CUr;
+//   Integer i,rwcnt,rownr,newnr;
+//   Boolean testf;
+//   string 255 tstr;
+//   record LoyaltyCardVc LCr;
+//   val q;
+//   record GeneralOptionBlock GenOptRec;
+//   record SRBlock SRRec;
+//   record SHVc SHr;
+//   record WeigAvVc WeigAvr;
+//   row SHVc SHrw;
+//   record INVc INr;
+//   Boolean calcprice,dummyf;
+//   string 255 tax2code,taxtemplatecode,salesacc,vatcode;
+//   val price,baseprice,tax2prc,vreb;
+//   record TaxMatrixVc TMr;
+
+//   BlockLoad(GenOptRec);
+//   SHr.SerNr = StringToLongInt(dnr);
+//   if (ReadFirstMain(SHr,1,true)) then begin
+//     IVCashr.SHNr = SHr.SerNr;
+//     CUr.Code = IVCashr.CustCode;
+//     ReadFirstMain(CUr,1,true);
+//     IVCashr.CustCode = SHr.CustCode;
+//     IVCashr.Addr0 = SHr.Addr0;
+//     IVCashr.Addr1 = SHr.Addr1;
+//     IVCashr.Addr2 = SHr.Addr2;
+//     IVCashr.Addr3 = SHr.Addr3;
+//     IVCashr.Region = SHr.Region;
+//     IVCashr.InvDate = CurrentDate;
+//     IVCashr.Objects = SHr.Objects;
+//     IVCashr.CurncyCode = SHr.CurncyCode;
+//     IVCashr.LangCode = SHr.LangCode;
+//     IVCashr.Location = SHr.Location;
+//     IVCashr.InvComment = SHr.Comment;
+//     IVCashr.TotVolume = SHr.TotVolume;
+//     IVCashr.TotWeight = SHr.TotWeight;
+//     IVCashr.TotQty = SHr.TotQty;
+//     IVCashr.TAX1Sum = SHr.TAX1Sum;
+//     IVCashr.CurncyCode = SHr.CurncyCode;
+//     IVCashr.LangCode = SHr.LangCode;
+//     IVCashr.OrderNr = SHr.SerNr;
+//     IVCashr.SubLedgerFlag = 1;
+//     if (ReadFirstKey("ActCustCode",LCr,1,true)) then begin
+//       IVCashr.LoyaltyCardNr = LCr.SerNr;
+//       IVCashVc_PasteLoyaltyCardNr(IVCashr);
+//     end;
+//     IVCashr.RegNr1 = CUr.RegNr1;
+//     IVCashr.RegNr2 = CUr.RegNr2;
+//     rownr = MatRowCnt(IVCashr);
+//     rwcnt = MatRowCnt(SHr);
+//     for (i=0;i<rwcnt;i=i+1) begin
+//       MatRowGet(SHr,i,SHrw);
+//       q = SHrw.Ship;
+//       if (q>0) then begin
+//         ClearRow(IVCashr,IVCashrw,SHrw.stp);
+//         IVCashrw.Quant = q;
+//         IVCashrw.ArtCode = SHrw.ArtCode;
+//         IVCashrw.Quant = SHrw.Ship;
+//         IVCashrw.SerialNr = SHrw.SerialNr;
+//         //RP - Bug: Incorrect ptice pasted resulting 0 profit on an item
+//         //The Baseprice and cost price values are switched
+//         //OLD: IVCashrw.Price = SHrw.BasePrice;
+        
+//         //MOD
+//         IVCashrw.Price = SHrw.BasePrice;
+//         IVCashrw.vRebate = SHrw.Coefficient;
+//         IVCashrw.ArtCode = SHrw.ArtCode;
+//         IVCashrw.CustArtCode = SHrw.CustArtCode;
+//         IVCashrw.Spec = SHrw.Spec;
+//         IVCashrw.SalesAcc = SHrw.SalesAcc;
+//         IVCashrw.Objects = SHrw.Objects;
+//         IVCashrw.UnitCode = SHrw.UnitCode;
+//         IVCashrw.UnitXval = SHrw.UnitXval;
+//         IVCashrw.UnitYval = SHrw.UnitYval;
+//         IVCashrw.UnitZval = SHrw.UnitZval;
+
+//         //MOD
+//         IVCashrw.BasePrice = SHrw.FIFORowVal;
+//         IVCashrw.Recepy = SHrw.Recepy;
+//         IVCashrw.MotherArtCode = SHrw.MotherArtCode;
+//         IVCashrw.RecipeQuant = SHrw.RecipeQuant;
+//         IVCashrw.TAX2Code = SHrw.TAX2Code;
+//         IVCashrw.TAX2Prc = SHrw.TAX2Prc;
+//         IVCashrw.TAX2Reb = SHrw.TAX2Reb;
+//         IVCashrw.TAX1Reb = SHrw.TAX1Reb;
+//         IVCashrw.TAX2Acc = SHrw.TAX2Acc;
+//         IVCashrw.OrdRow = i;
+//         GetItemPriceDiscount3(IVCashrw.ArtCode,IVCashrw.Quant,INr,IVCashr.CurncyCode,
+//                               IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,
+//                               IVCashr.LangCode,IVCashr.CustCat,IVCashr.PriceList,IVCashr.RebCode,
+//                               price,tstr,vreb,vatcode,baseprice,
+//                               salesacc,0,calcprice,IVCashr.TransDate,IVCashr.TransTime,IVCashr.CustCode,true,dummyf,IVCashr.PayDeal,tax2code,tax2prc,"","",taxtemplatecode);
+//         IVCashrw.VATCode = vatcode;
+//         IVCashrw.TaxTemplateCode = FillupTaxMatrix(0,IVCashr.BranchID,IVCashr.CustCode,IVCashr.CustCat,IVCashr.DelAddrCode,taxtemplatecode,TMr);
+//         PackRowFieldMatrix(IVCashrw,"TaxMatrix",TMr);
+//         RowCalculateTaxMatrix_IVCashVc(IVCashr,rownr,IVCashrw);
+//         MatRowPut(IVCashr,rownr,IVCashrw);
+//         MatRowGet(IVCashr,rownr,IVCashrw);
+//         if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+//           IVCashDchsum(IVCashr,rownr);
+//         end;
+//         rownr = rownr + 1;
+//       end;
+//     end;
+//     IVCashSumup(IVCashr,true);
+//   end;
+//   if (IVCashr.SerNr==-1) then begin
+//     BlockLoad(SRRec);
+//     newnr = GetCurUserLastNr("IVCashVc");
+//     if (newnr==-1) then begin
+//       newnr = SRRec.LastInvNr;
+//     end;
+//     IVCashr.SerNr = NextSerNr("IVCashVc",IVCashr.TransDate,newnr,false,"");
+//   end;
+//   if (RecordInsert(IVCashr,true)) then begin
+//     CreateRecordLink(IVCashr,CurrentCompany,SHr,CurrentCompany);
+//     CreateRecordLink(SHr,CurrentCompany,IVCashr,CurrentCompany);
+//   end;
+//   return;
+// end;

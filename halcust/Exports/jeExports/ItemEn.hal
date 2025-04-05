@@ -1,0 +1,58 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+window VNItemsEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Item Master",VNItemsEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure ItemEn(record RcVc RepSpec)
+begin
+  record INVc INr;
+  String 255 Descrption;
+
+  ExportString("Item Code");
+  ExportString("Description");
+  ExportString("Barcode");
+  newLine;
+  while(LoopMain(INr,1,true)) begin
+    if (INr.Terminated == 0) then begin
+      Descrption = INr.Name & "," & INr.UserStr1;
+      ExportString(INr.Code);
+      ExportString(Descrption);
+      ExportString(INr.BarCode);
+      //ExportVal(INr.InPrice,M4Val);
+      //ExportVal(INr.UPrice1,M4Val);
+      newLine;
+    end;
+  end;
+  CloseFile;
+
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure Item_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "ItemMaster.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "ItemMaster.txt");
+  end;
+  ItemEn(RepSpec);
+
+  return;
+end;

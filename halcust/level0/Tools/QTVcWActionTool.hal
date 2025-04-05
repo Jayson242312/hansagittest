@@ -1,0 +1,104 @@
+// external procedure GetLCPrices(val,string,var string,var string);
+// external procedure RemoveOldCustObjects(string,var string);
+// external function Boolean CheckBaseCurcy(string);
+// external function Boolean PasteCustInQT(var record QTVc,string,string,var string,Boolean);
+// external procedure QTGetRate(var record QTVc);
+
+// global
+// function Boolean QTVc_PasteCustCode(var record QTVc QTr,string oldcustcode,string DefLocation,string DefPLCode,var Integer err,var string warning)
+// begin
+//   Boolean res;
+  
+//   if ((oldcustcode!=QTr.CustCode) and (nonblank(oldcustcode))) then begin
+//     RemoveOldCustObjects(oldcustcode,QTr.Objects);
+//   end;
+//   if (PasteCustInQT(QTr,QTr.CustCode,"",warning,true)) then begin
+//     res = true;
+//     QTGetRate(QTr);
+//     if (ProgramType==typOffLine) then begin           
+//       if (CheckBaseCurcy(QTr.CurncyCode)==false) then begin
+//         QTr.CurncyCode = "";
+//         QTGetRate(QTr);
+//         res = 1978;
+//       end;
+//     end;            
+//     QTr.SalesMan = CurrentUser;
+//   end;
+//   QTVc_PasteCustCode = res;
+//   return;
+// end;
+
+// global
+// procedure QTVc_PasteLoyaltyCardNr(var record QTVc QTr)
+// begin 
+//   record LoyaltyCardVc LoyaltyCardr;
+//   string 255 warning;
+//   string 5 PLCode,RebCode;
+//   boolean pricechange;
+//   boolean testf;
+//   string 20 oldcust;
+//   record LocalMachineBlock lmr;
+//   integer err;
+
+//   BlockLoad(lmr);
+//   pricechange = false;
+//   LoyaltyCardr.SerNr = QTr.LoyaltyCardNr;
+//   if (ReadFirstMain(LoyaltyCardr,1,true)) then begin
+//     LogText(0,LoyaltyCardr.SerNr); 
+//     testf = true;
+//     // if (LoyaltyCardr.ExpiryDate<StringToDate(QTr.ValidUntilDate)) and nonblank(LoyaltyCardr.ExpiryDate) then begin
+//     //   testf = false;
+//     // end;
+//     // if (LoyaltyCardr.StartDate>StringToDate(QTr.ValidUntilDate)) then begin
+//     //   testf = false;
+//     // end;
+//     if (LoyaltyCardr.Closed!=0) then begin
+//       testf = false;
+//     end;
+//     if (testf) then begin 
+//       oldcust = QTr.CustCode;
+//       QTr.CustCode = LoyaltyCardr.CustCode;
+//       //QTr.LCMLevel = LoyaltyCardr.LCMLevel;
+//       //QTr.Points = 0;      
+//       if (QTr.CustCode<>oldcust) then begin 
+//         if (QTVc_PasteCustCode(QTr,oldcust,lmr.DefLocation,lmr.PLCode,err,warning)) then begin
+//           if (nonblank(warning)) then begin
+//             MessageBox(0,warning);
+//           end;
+//           if (err!=0) then begin
+//             MessageBox(0,err);
+//           end;
+//         end;
+//       end;
+//       QTr.LoyaltyCardNr = LoyaltyCardr.SerNr;
+//       //QTr.LCMLevel = LoyaltyCardr.LCMLevel;
+//       //QTr.Points = 0;      
+//       //if (LoyaltyCardr.PointsBalance<>0) then begin
+//         //GetLCPrices(LoyaltyCardr.PointsBalance,LoyaltyCardr.LCMLevel,PLCode,RebCode);
+//         //if (nonblank(PLCode) and (QTr.PriceList<>PLCode)) then begin 
+//           //QTr.PriceList = PLCode;
+//           //pricechange = true;
+//         //end;
+//         //if (nonblank(RebCode) and (QTr.RebCode<>RebCode)) then begin 
+//           //QTr.RebCode = RebCode;
+//           //pricechange = true;
+//         //end;
+//         //if (MatRowCnt(QTr)>0) then begin 
+//          //IVCashDUpdatePrices(QTr);
+//          //if (HasLocalization("LVA")) then begin//potentially slow
+//            //IVCashPasteRvrsVATCode(QTr,false);
+//          //end;
+//          //IVCashSumup(QTr,true);
+//         //end;  
+//       //end;  
+//     end else begin
+//       //QTr.LCMLevel = "";
+//       //QTr.Points = 0;
+//       MessageBox(26434,"");
+//     end;
+//   end else begin 
+//     //QTr.LCMLevel = "";
+//     //QTr.Points = 0;
+//   end;
+//   return;
+// end;

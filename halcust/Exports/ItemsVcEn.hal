@@ -1,0 +1,124 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure ItemsVcEn()
+begin
+  record PIVc PIr;
+  record PIVc PI2r;
+  record INVc INr;
+  record CUVc CUr;
+  string 255 inputline;
+  Boolean pCh;
+
+  ExportString("ItemCode");
+  ExportString("Description");
+  ExportString("Group");
+  ExportString("CostPrice");
+  // ExportString("ABCUPrice");
+  // ExportString("ABC");
+  ExportString("Weighed");
+  ExportString("LastPurchCost");
+  ExportString("LastPurchPrice");
+  ExportString("BasePrice");
+  ExportString("Classification");
+  ExportString("ItemType");
+  ExportString("WeightedAvg");
+  ExportString("MinLevel");
+  ExportString("MaxLevel");
+  ExportString("Closed");
+  ExportString("Unit");
+  ExportString("ShelfCode");
+  ExportString("Serialised");
+  ExportString("Width");
+  ExportString("Height");
+  ExportString("Depth");
+  ExportString("Volume");
+  ExportString("Density");
+  ExportString("Weight");
+  ExportString("Unit 2");
+  /*SKIP ROWS
+  ExportString("Text1");
+  ExportString("Text2");
+  ExportString("Text3");
+  */
+  ExportString("Barcode");
+  ExportString("Userdef1");
+  ExportString("Userdef2");
+  ExportString("Userdef3");
+  ExportString("Userdef4");
+  ExportString("Userdef5");
+  ExportString("Userval1");
+  ExportString("Userval2");
+  ExportString("Userval3");
+  ExportString("Userdate1");
+  ExportString("Userdate2");
+  ExportString("Userdate3");
+  ExportString("Objects");
+  ExportString("AltenativeCode ");
+  ExportString("isRedundant ");
+  ExportString("OldBasePrice ");
+  ExportString("Department ");
+  newLine;
+
+  while(LoopMain(INr,1,true)) begin
+    if (INr.Terminated == 0) then begin
+      ExportString(INr.Code); //number
+      ExportString(INr.Name); //description
+      ExportString(INr.Group); //Group
+      ExportString(INr.InPrice); //StringToVal(inputline,M4Val); //cost price
+      // ExportString(INr.ABCUPrice); //ABC Base Price
+      // ExportString(INr.ABC); // ABC
+      ExportString(INr.WeighedAvPrice); //StringToVal(inputline,M4Val);  //Weighed
+      ExportString(INr.LastPurchPrice); //StringToVal(inputline,M4Val);  //last purch cost
+      ExportString(INr.LastPurchPrice2); //StringToVal(inputline,M4Val);  //last purch price
+      ExportString(INr.UPrice1); //StringToVal(inputline,M4Val); //base price
+      ExportString(INr.DispGroups); //classification
+      ExportString(INr.ItemType); //StringToVal(inputline,M40Val);  //item is stocked
+      ExportString(INr.UpdateCost); //StringToVal(inputline,M40Val);  //weighted avg
+      ExportString(INr.MinLevel); //StringToVal(inputline,M40Val); //min level
+      ExportString(INr.MaxLevel); //StringToVal(inputline,M40Val); //max level
+      ExportString(INr.Terminated); //StringToVal(inputline,M40Val); //closed
+      ExportString(INr.Unittext); //Unit
+      ExportString(INr.InvCode); //shelf code
+      ExportString(INr.SerNrf); //StringToVal(inputline,M40Val);  //serialised
+      ExportString(INr.Width); //StringToVal(inputline,M4Val);  //width
+      ExportString(INr.Height); //StringToVal(inputline,M4Val);  //height
+      ExportString(INr.Depth); //StringToVal(inputline,M4Val);  //depth
+      ExportString(INr.Volume); //StringToVal(inputline,M4Val);  //volume
+      ExportString(INr.Density); //StringToVal(inputline,M4Val);  //density
+      ExportString(INr.Weight); //StringToVal(inputline,M4Val);  //weight
+      ExportString(INr.Unittext2);  //unit 2
+      //ROWS
+      /*INrw.Text = inputline;
+      MatRowInsert(INr,MatRowCnt(INr),INrw);  //text1
+      inputline = importField;
+      INrw.Text = inputline;
+      MatRowInsert(INr,MatRowCnt(INr),INrw);  //text2
+      inputline = importField;
+      INrw.Text = inputline;
+      MatRowInsert(INr,MatRowCnt(INr),INrw);  //text3
+      */
+      ExportString(INr.BarCode); //Barcode
+      ExportString(INr.UserStr1); //userdef1
+      ExportString(INr.UserStr2); //userdef2
+      ExportString(INr.UserStr3); //userdef3
+      ExportString(INr.UserStr4); //userdef4
+      ExportString(INr.UserStr5); //userdef5
+      ExportString(INr.UserVal1); //StringToVal(inputline,M4UVal); //userval1
+      ExportString(INr.UserVal2); //StringToVal(inputline,M4UVal); //userval2
+      ExportString(INr.UserVal3); //StringToVal(inputline,M4UVal); //userval3
+      ExportString(INr.UserDate1); //StringToDate(inputline); //userdate1
+      ExportString(INr.UserDate2); //StringToDate(inputline); //userdate2
+      ExportString(INr.UserDate3); //StringToDate(inputline); //userdate3
+      ExportString(INr.Objects); //objects
+      ExportString(INr.AlternativeCode); //Altenative Item Code
+      ExportString(INr.Redundant); //IsRedundant
+      ExportString(INr.OldUPrice1); //OldBasePrice
+      ExportString(INr.Department); //Department
+      newLine;
+    end;
+  end;
+  return;
+end;

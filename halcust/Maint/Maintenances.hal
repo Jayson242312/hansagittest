@@ -1,0 +1,419 @@
+//external updating procedure NightlyMn(record RcVc);
+external inner procedure SetPOFlags(record POVc,Boolean);
+//external inner updating procedure CalcPriceListsMn(record RcVc); //TM - This has been missing 
+
+global
+updating procedure CalcBasePRVcMn(record RcVc RepSpec)
+begin
+  record INVc INr, OldINr;
+  record ITVc ITr;
+  record MinPerLocVc MinPerLocr;
+  val MarkUp, baseprice, ABCBasePrice;
+
+  //INr.Code = RepSpec.f1;
+  //LogText(0,"Item Code is: " & INr.Code);
+  //if(ReadFirstMain(INr,1,true)) then begin
+  while(LoopMain(INr,1,true))begin
+  
+    RecordCopy(OldINr,INr);
+    //Use Item Group
+    ITr.Code = INr.Group;
+    if (ReadFirstMain(ITr,1,true)) then begin
+
+      MinPerLocr.ItemCode = INr.Code;
+      MinPerLocr.Location = 1000;
+
+      if(ReadFirstMain(MinPerLocr,2,true)) then begin
+        //RP Start ABC
+        // if(NonBlank(ITr.AXMrkUpPerc) and MinPerLocr.ABC == "AX") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.AXMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.AYMrkUpPerc) and MinPerLocr.ABC == "AY") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.AYMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.AZMrkUpPerc) and MinPerLocr.ABC == "AZ") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.AZMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.BXMrkUpPerc) and MinPerLocr.ABC == "BX") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.BXMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.BYMrkUpPerc) and MinPerLocr.ABC == "BY") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.BYMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.BZMrkUpPerc) and MinPerLocr.ABC == "BZ") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.BZMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.CXMrkUpPerc) and MinPerLocr.ABC == "CX") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.CXMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.CYMrkUpPerc) and MinPerLocr.ABC == "CY") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.CYMrkUpPerc/100)); 
+        // end else begin if(NonBlank(ITr.CZMrkUpPerc) and MinPerLocr.ABC == "CZ") then begin ABCBasePrice = INr.LastPurchPrice * (1+(ITr.CZMrkUpPerc/100)); 
+        // end else begin 
+        //   ABCBasePrice = blankval;
+        // end;
+        // end;
+        // end;
+        // end;
+        // end;
+        // end;
+        // end;
+        // end;
+        // end;
+
+        // INr.ABCUPrice = ABCBasePrice;
+        // INr.ABC = MinPerLocr.ABC;
+      end;
+      //RP End ABC
+
+      if (INr.LastPriceChange == CurrentDate) then begin
+        if (INr.LastPurchPrice > INr.OldInPrice) then begin
+          MarkUp = ITr.MrkUpPerc;
+          baseprice = INr.LastPurchPrice * (1+(MarkUp/100));
+          if (INr.UPrice1 < baseprice) then begin
+            INr.OldUPrice1 = INr.UPrice1;
+            INr.UPrice1 = baseprice;
+            INr.LastBasePriceChange = CurrentDate;
+            LogText(0, "Updated Price: " & INr.Code);
+
+            if(RecordUpdate(OldINr,INr,true)!=0)then begin
+              // LogText(0,"Item Prices Update failed");
+            end;
+          end;
+        end;
+      end;
+    end;
+             
+//end of pasted
+
+  end;
+  LCalcBasePRVcMn:;
+  
+  return;
+end;
+
+global
+updating procedure CreationDateMn(record RcVc RepSpec)
+begin
+  record INVc INr, OldINr;
+  Date GoLive;
+  string 255 mstr;
+
+  while(LoopMain(INr,1,true))begin
+    RecordCopy(OldINr,INr);
+    if (Blank(INr.UserDate1)) then begin
+      INr.UserDate1 = RepSpec.RegDate;
+    end;
+    if(RecordUpdate(OldINr,INr,true)!=0)then begin
+      LogText(0,"Item Update failed");
+    end;
+  end;
+  
+  return;
+end;
+
+global
+updating procedure CreateLocINMn(record RcVc RepSpec)
+begin
+  record INVc INr;
+  record MinPerLocVc LocINr;
+  Boolean testf;
+
+  LogText(0, "CreateLocINMn");
+  while(LoopMain(INr,1,true))begin
+    if (NonBlank(INr.InvCode)) then begin
+      LocINr.ItemCode = INr.Code;
+      LocINr.Location = RepSpec.f1;
+      if (ReadFirstMain(LocINr,2,true)) then begin
+        //Update Location Item
+        if (LocINr.ShelfCode <> INr.InvCode) then begin
+          LocINr.ShelfCode = INr.InvCode;
+        end;
+      end else begin
+        //New Location Item
+        RecordNew(LocINr);
+        LocINr.ItemCode = INr.Code;
+        LocINr.Location = RepSpec.f1;
+        LocINr.ShelfCode = INr.InvCode;
+      end;
+      //Save Location Item
+      //if (RecordInsert(LocINr,false)) then begin end;
+      testf = RecordStore(LocINr,true);
+    end;
+  end;
+  
+  return;
+end;
+
+global
+updating procedure AddLocORMn(record RcVc RepSpec)
+begin
+  record POVc POr, OldPOr;
+  string 255 mstr;
+
+  LogText(0, "AddLocORMn");
+  POr.SerNr = RepSpec.f1;
+  if(ReadFirstMain(POr,1,true))begin
+    RecordCopy(OldPOr,POr);
+    if (Blank(POr.Location)) then begin
+      if (POr.OKFlag <> 0) then begin
+        POr.Location = RepSpec.f3;
+      end;
+    end;
+    SetPOFlags(POr,false);
+    if (RecordUpdate(oldPOr,POr,false)==0) then begin
+    end;
+    /*if(RecordUpdate(OldPOr,POr,true)!=0)then begin
+      LogText(0,"Order Update failed");
+    end;*/
+  end;
+  return;
+  
+end;
+
+//  Delete Location Items
+global
+updating procedure DelLIVcMn(record RcVc rp)
+BEGIN
+  record MinPerLocVc LIr;
+
+  LogText(0,"DelLIVcMn");
+  if(nonblank(rp.f1) and nonblank(rp.f2)) then begin
+    LIr.ItemCode = rp.f1;
+    if(ReadFirstMain(LIr,1,true)) then begin
+      if (LIr.ItemCode == rp.f1) and (LIr.Location == rp.f2)then begin
+        RecordDelete(LIr);
+        StepBack(LIr);
+      end;
+    end;
+  end else begin
+    LIr.ShelfCode ="";
+    while(LoopMain(LIr,1,true)) begin
+      //if (LIr.Location == rp.f2) then begin
+        RecordDelete(LIr);
+        StepBack(LIr);
+      //end;
+    end;
+  end;
+  
+  RETURN;
+END;
+
+//  AG 2013-06-07 -- ORB001-130523-001 -- Maintenance to create the Last Sold Dates records >>
+global
+updating procedure CreateLSDMn(record RcVc RepSpec)
+begin
+  record LastSoldDateVc LSDr, oldLSDr;
+  record ItemHistVc IHr;
+  integer i,rwcnt;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  boolean testf,TrHs;
+
+  TrHs = true;
+  IHr.FileName = "IVVc";
+  IHr.TransDate = RepSpec.sEndDate;
+  while (LoopBackKey("FNTransDate",IHr,2,TrHs)) begin
+    testf = true;
+    if (IHr.FileName != "IVVc") then begin
+      TrHs = false;
+    end;
+     if (IHr.TransDate < RepSpec.sStartDate) then begin
+      TrHs = false;
+    end;
+    if (TrHs == false) then begin testf = false; end;
+    if (testf) then begin
+      ResetLoop(LSDr);
+      LSDr.ItemCode = IHr.ArtCode;
+      LSDr.Location = IHr.Location;
+      if (ReadFirstMain(LSDr,2,true)) then begin
+        if (IHr.TransDate > LSDr.LastDate) then begin
+          RecordCopy(oldLSDr,LSDr);
+          LSDr.PrevDate = LSDr.LastDate;
+          LSDr.LastDate = IHr.TransDate;
+          if (RecordUpdate(oldLSDr,LSDr,false) == 0) then begin end;
+        end;
+      end else begin
+        RecordNew(LSDr);
+        LSDr.ItemCode = IHr.ArtCode;
+        LSDr.Location = IHr.Location;
+        LSDr.LastDate = IHr.TransDate;
+        if (RecordInsert(LSDr,false)) then begin end;
+      end;
+    end;
+  end;
+
+  TrHs = true;
+  IVCashr.TransDate = RepSpec.sEndDate;
+
+  while(LoopBackKey("TransDate",IVCashr,2,TrHs)) begin
+    testf = true;
+    if (IVCashr.TransDate < RepSpec.sStartDate) then begin
+      TrHs = false;
+    end;
+
+    if (TrHs == false) then begin testf = false; end;
+    if (testf) then begin
+      rwcnt = MatRowCnt(IVCashr);
+
+      for(i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(IVCashr,i,IVCashrw);
+        ResetLoop(LSDr);
+        LSDr.ItemCode = IVCashrw.ArtCode;
+        LSDr.Location = IVCashr.Location;
+
+        if (ReadFirstMain(LSDr,2,true)) then begin
+          if (IVCashr.TransDate > LSDr.LastDate) then begin
+            RecordCopy(oldLSDr,LSDr);
+            LSDr.PrevDate = LSDr.LastDate;
+            LSDr.LastDate = IVCashr.TransDate;
+            if (RecordUpdate(oldLSDr,LSDr,false) == 0) then begin end;
+          end;
+        end else begin
+          RecordNew(LSDr);
+          LSDr.ItemCode = IVCashrw.ArtCode;
+          LSDr.Location = IVCashr.Location;
+          LSDr.LastDate = IVCashr.TransDate;
+          if (RecordInsert(LSDr,false)) then begin end;
+        end;
+      end;
+    end;
+  end;
+
+  return;
+end;
+//  AG 2013-06-07 <<
+
+//RP - Code to set default supplier if item is only supplier
+// global
+// updating procedure SetDefaultSupplierMn(record RcVc RepSpec)
+// begin
+//   record PIVc PIr, oldPIr;
+//   record INVc INr;
+//   integer c;
+//   boolean THrS;
+//   string 100 suppl;
+
+//   THrS = true;
+
+//   while(LoopMain(INr,1,true)) begin
+//     PIr.ItemCode = INr.Code;
+//     c = 0;
+//     THrS = true;
+
+//     while(LoopMain(PIr,1,THrS)) begin
+//       if(PIr.ItemCode == INr.Code) then begin
+//         c = c + 1;
+//         suppl = PIr.VECode;
+//       end else begin
+//         THrS = false;
+//       end;
+//     end;
+
+//     ResetLoop(PIr);
+    
+//     if(c == 1) then begin
+//       PIr.ItemCode = INr.Code;
+//       PIr.VECode = suppl;
+
+//       if(ReadFirstMain(PIr,2,true)) then begin
+//         RecordCopy(oldPIr,PIr);
+//         PIr.DefaultChoice = 1;
+//         if (RecordUpdate(oldPIr,PIr,false) == 0) then begin end;
+//       end;
+//     end;
+//   end;
+// end;
+//end
+
+// RP - Calculate last purchase date
+global
+updating procedure CreateLPDMn(record RcVc RepSpec)
+begin
+  record LastPurchaseDateVc LPDr, oldLPDr;
+  record ItemHistVc IHr;
+  record PUVc PUr;
+  record INVc INr;
+  record CUVc CUr;
+  record PIVc PIr, oldPIr;
+  integer i,rwcnt;
+  string 20 suppl;
+  boolean testf,TrHs;
+
+  TrHs = true;
+  IHr.FileName = "PUVc";
+  IHr.TransDate = RepSpec.sEndDate;
+  while (LoopBackKey("FNTransDate",IHr,2,TrHs)) begin
+    testf = true;
+    if (IHr.FileName != "PUVc") then begin
+      TrHs = false;
+    end;
+     if (IHr.TransDate < RepSpec.sStartDate) then begin
+      TrHs = false;
+    end;
+
+    if (TrHs == false) then begin testf = false; end;
+    
+    INr.Code = IHr.ArtCode;
+    PUr.SerNr = IHr.TransNr;
+
+    if (ReadFirstMain(INr,1,true) == false) then begin testf = false; end;
+    
+    if(ReadFirstMain(PUr,1,true)) then begin
+      if(Blank(PUr.VECode)) then begin
+        testf = false;
+      end else begin
+        suppl = PUr.VECode;
+      end;
+    end;
+
+    if (testf) then begin
+      ResetLoop(LPDr);
+      LPDr.ItemCode = IHr.ArtCode;
+      if (ReadFirstMain(LPDr,1,true)) then begin
+        if (IHr.TransDate > LPDr.LastDate) then begin
+          RecordCopy(oldLPDr,LPDr);
+          LPDr.VECode = suppl;
+          LPDr.PrevDate = LPDr.LastDate;
+          LPDr.LastDate = IHr.TransDate;
+          if (RecordUpdate(oldLPDr,LPDr,false) == 0) then begin end;
+        end;
+      end else begin
+        RecordNew(LPDr);
+        LPDr.VECode = suppl;
+        LPDr.ItemCode = IHr.ArtCode;
+        LPDr.LastDate = IHr.TransDate;
+        if (RecordInsert(LPDr,false)) then begin end;
+      end;
+
+      INr.Code = IHr.ArtCode;
+
+      // if(ReadFirstMain(INr,1,true)) then begin
+      //   PIr.ItemCode = IHr.ArtCode;
+      //   PIr.VECode = suppl;
+
+      //   if(ReadFirstMain(PIr, 2, true)) then begin
+      //     RecordCopy(oldPIr,PIr);
+      //     CUr.Code = PUr.VECode;
+
+      //     if(ReadFirstMain(CUr,1,true)) then begin
+      //       PIr.VEName = CUr.Name;
+      //     end;
+
+      //     PIr.Comment = INr.Name;
+      //     PIr.PurPrice = INr.WeighedAvPrice;
+      //     if (RecordUpdate(oldPIr,PIr,false) == 0) then begin end;
+      //   end else begin
+      //     RecordNew(PIr);
+      //     CUr.Code = PUr.VECode;
+
+      //     if(ReadFirstMain(CUr,1,true)) then begin
+      //       PIr.VEName = CUr.Name;
+      //     end;
+
+      //     PIr.ItemCode = IHr.ArtCode;
+      //     PIr.VECode = suppl;
+      //     PIr.Comment = INr.Name;
+      //     PIr.PurPrice = INr.WeighedAvPrice;
+
+      //     if(CurrentCompany == 3) then begin
+      //       PIr.Location = "1000";
+      //     end;
+
+      //     if(CurrentCompany == 1) then begin
+      //       PIr.Location = "7001";
+      //     end;
+
+      //     if (RecordInsert(PIr,false)) then begin end;
+      //   end;
+      // end;
+    end;
+  end;
+
+  // SetDefaultSupplierMn(RepSpec);
+end;

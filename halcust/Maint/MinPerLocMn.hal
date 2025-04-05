@@ -1,0 +1,12 @@
+global
+updating procedure FixMinPerLocMn(record RcVc RepSpec)
+begin
+  record MinPerLocVc MinPerLocr;
+
+  while(LoopMain(MinPerLocr,1,true)) begin
+    if(Blank(MinPerLocr.Location)) then begin
+      RecordDelete(MinPerLocr);
+    end;
+  end;
+  return;
+end;

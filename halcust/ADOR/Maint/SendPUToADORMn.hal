@@ -1,0 +1,161 @@
+external procedure AddTextToAreaNL(string,area);
+external updating procedure SendToAdor(area,var record ADORQueueVc,string);
+external function string 255 GMSFromatDate(date);
+
+global
+updating procedure SendPUToADOR(record PUVc PUr,record ADORQueueVc ADORQueuer)
+begin
+  area apost,aresponse;
+  record PUVc PU2r;
+  record HALAdorBlock ADRb;
+  row PUVc PUrw;
+  row ADORQueueVc ADORQueuerw;
+  integer rwcnt,i;
+  string 255 filename;
+  boolean oncef; 
+
+  BlockLoad(ADRb);
+  AddTextToAreaNL("{",apost);
+  AddTextToAreaNL("  ""interfaceName"" : ""PurchaseOrder_GregsMotors"",",apost);
+  AddTextToAreaNL("  ""returnDetailedData"" : true,",apost);
+  AddTextToAreaNL("  ""data"": [{",apost);
+  AddTextToAreaNL("    ""PONo"": """ & PUr.SerNr & """,",apost);
+  AddTextToAreaNL("    ""PODesc"": """ & PUr.Comment & """,",apost);
+  AddTextToAreaNL("    ""POSource"": ""SERP"",",apost);
+  AddTextToAreaNL("    ""ClientNo"": """ & ADRb.ADORClientNo & """,",apost);
+  AddTextToAreaNL("    ""Ref1"": """ & PUr.PONr & """,",apost);
+  AddTextToAreaNL("    ""DeliveryDate"": """ & GMSFromatDate(PUr.TransDate) & """,",apost); // needs to be in yyyy-mm-dd format
+  AddTextToAreaNL("    ""POType"": ""GRV"",",apost);
+  AddTextToAreaNL("    ""Location"": {",apost);
+  AddTextToAreaNL("      ""LocationNo"": """ & PUr.VECode & """,",apost);
+  AddTextToAreaNL("      ""LocationName1"": """ & PUr.VEName & """",apost);
+  AddTextToAreaNL("    },",apost);
+  AddTextToAreaNL("    ""Lines"": [",apost);
+  rwcnt = MatRowCnt(PUr);
+  if (rwcnt > 0) then begin
+    for (i = 0; i < rwcnt; i = i + 1) begin
+      MatRowGet(PUr, i, PUrw);
+      if(oncef) then begin 
+        AddTextToAreaNL("      ,",apost);
+      end; 
+      AddTextToAreaNL("      {",apost);
+      AddTextToAreaNL("        ""LineNo"": """ & i + 1 & """,",apost); // should start at 1
+      AddTextToAreaNL("        ""CustomerNo"": """ & ADRb.ADORClientNo & """,",apost);
+      AddTextToAreaNL("        ""SKUNo"": """ & PUrw.ArtCode & """,",apost);
+      AddTextToAreaNL("        ""OrderedQty"":" & PUrw.Quant,apost);
+      AddTextToAreaNL("       }",apost);  
+      oncef = true; 
+    end;
+    
+  end;
+  AddTextToAreaNL("     ]",apost);
+  AddTextToAreaNL("   }]",apost);
+  AddTextToAreaNL("}",apost);
+
+  if (PUr.ADORLocked != 1) then begin
+    RecordCopy(PU2r,PUr);
+    PUr.ADORLocked = 1;
+    RecordUpdate(PU2r,PUr,false);
+  end;
+  CreateRecordLink(PUr,CurrentCompany,ADORQueuer,CurrentCompany);
+  CreateRecordLink(ADORQueuer,CurrentCompany,PUr,CurrentCompany);
+
+  SendToAdor(apost,ADORQueuer,"Inbound");
+
+  return;
+end;
+
+global
+updating procedure AddOnePUToADORQueue(record PUVc PUr)
+begin
+  record ADORQueueVc ADORQueuer;
+  record PUVc PU2r;
+  row ADORQueueVc ADORQueuerw;
+  record HALAdorBlock HALAdorb;
+  record LocationVc Locationr;
+  string 255 key;
+  integer i,rwcnt;
+  boolean testf;
+
+  testf = true;
+  BlockLoad(HALAdorb);
+  if (HALAdorb.ADORIntegr != 1) then begin
+    testf = false;
+  end;
+
+  if (testf) then begin
+    if (PUr.OKFlag == 1) then begin
+      testf = false;
+    end;
+  end;
+
+  if (testf) then begin
+    Locationr.Code = PUr.Location;
+    if (ReadFirstMain(Locationr,1,true)) then begin
+      if (Locationr.ADORControl != 1) then begin
+        testf = false;
+      end;
+    end;  
+  end;
+  
+  if (testf) then begin
+    ADORQueuer.RegisterCode = "PUVc";
+    ADORQueuer.RecordNumber = PUr.SerNr;
+    key = "RegCodeNumber";
+    if (ReadFirstKey(key,ADORQueuer,2,true)) then begin
+      ADORQueuer.Operation = 2; // update
+      ADORQueuer.Status = 1; // Queued
+      ADORQueuerw.Operation = 2;
+      ADORQueuerw.LogDate = CurrentDate;
+      ADORQueuerw.LogTime = CurrentTime;
+      ADORQueuerw.Details = "Updated";
+      MatRowInsert(ADORQueuer,MatRowCnt(ADORQueuer),ADORQueuerw);
+    end else begin
+      ADORQueuer.SerNr = NextSerNr("ADORQueueVc",CurrentDate,0,false,"");
+      ADORQueuer.RegisterCode = "PUVc";
+      ADORQueuer.RecordNumber = PUr.SerNr;
+      ADORQueuer.CreationDate = CurrentDate;
+      ADORQueuer.CreationTime = CurrentTime;
+      ADORQueuer.Operation = 1; // create
+      ADORQueuer.Status = 1; // Queued
+      ADORQueuerw.Operation = 1;
+      ADORQueuerw.LogDate = CurrentDate;
+      ADORQueuerw.LogTime = CurrentTime;
+      ADORQueuerw.Details = "Created";
+      MatRowInsert(ADORQueuer,MatRowCnt(ADORQueuer),ADORQueuerw);
+    end;
+    LogText(0,"Queued: SendPUToADOR");
+    SendPUToADOR(PUr,ADORQueuer);
+  end;
+
+  return;
+end;
+
+global
+updating procedure SendPUToADORMn(record RcVc RepSpec)
+begin
+  record PUVc PUr;
+  boolean TrHs;
+
+  TrHs = true;
+  if (BlankDate(RepSpec.sEndDate)) then begin
+    PUr.TransDate = CurrentDate;  
+  end else begin
+    PUr.TransDate = RepSpec.sEndDate;  
+  end;
+  while (LoopBackKey("TransDate", PUr, 1, TrHs)) begin
+    if (TrHs) then begin
+      if (NonBlank(RepSpec.sStartDate)) then begin
+        if (PUr.TransDate < RepSpec.sStartDate) then begin
+          TrHs = false;
+        end;
+      end;
+    end;
+    if (TrHs) then begin
+      if (PUr.OKFlag != 1) then begin
+        AddOnePUToADORQueue(PUr);
+      end;
+    end;
+  end;
+  return;
+end;

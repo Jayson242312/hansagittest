@@ -1,0 +1,37 @@
+external inner function Boolean GetFirstItem(var string,var record INVc);
+external inner function Boolean FindItemVAR(string,var string,var string,var string,var string);
+external inner function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+
+global
+function Boolean EngineVc_PasteArtCode(var record EngineVc Enginep,Integer rownr,Integer changed,var string inwarn)
+BEGIN
+  Boolean res,itemfound;
+  record INVc INr;
+  row EngineVc Enginerw;
+  string 60 sz,msk,mskrep;
+  string 200 varsubset;
+
+  MatRowGet(Enginep,rownr,Enginerw);  
+  if ((changed!=0) or ((blank(Enginerw.Name)) and (nonblank(Enginerw.ArtCode)))) then begin
+    res = true;
+    itemfound = GetFirstItem(Enginerw.ArtCode,INr);
+    if (itemfound==false) then begin
+      itemfound = ReadFirstItem(Enginerw.ArtCode,INr,true,true);
+      if (FindItemVAR(INr.Code,sz,msk,mskrep,varsubset)) then begin
+        INr.Code = Enginerw.ArtCode;
+      end;
+    end;
+    if (itemfound) then begin
+      if (nonblank(INr.WarnText1)) then begin
+        inwarn = INr.WarnText1;
+      end;
+      Enginerw.ArtCode = INr.Code;
+      Enginerw.Name = INr.Name;
+      MatRowPut(Enginep,rownr,Enginerw);
+    end else begin;
+      MessageBox(1120,Enginerw.ArtCode);
+    end;
+  end;
+  EngineVc_PasteArtCode = res;
+  RETURN;
+END;

@@ -1,0 +1,80 @@
+global
+updating procedure UpdatePricesMn(record RcVc RepSpec)
+begin
+  record PLVc PLr,oldPLr;
+  record HALPromPrVc HALPromPrr; 
+  row HALPromPrVc HALPromPrw; 
+  boolean started,TrHs,testf;
+  string 200 fakerecid;
+  date sStartDate, curDate; 
+  Integer i,rwcnt; 
+  LogText(0, "UpdatePricesMn");
+
+  started = false;
+  TrHs = true;
+  curDate = CurrentDate; 
+
+  //loop the register for active records 
+  //if active, look for if current date is greater or equal to start date 
+  //next check if current is less or equal to end date 
+  //then it can copy the records over to the prices register 
+  // LogText(0,"Maint executed"); 
+  while (LoopMain(HALPromPrr,1,TrHs)) begin
+    if (!started) then begin
+       if (HALPromPrr.Active == 1) then begin
+        started = true;
+      end;
+    end;
+    if (curDate <= HALPromPrr.StartDate) then begin
+      TrHs = false;
+       LogText(0,"current date less than start date"); 
+    end;
+   // if (curDate > HALPromPrr.EndDate) then begin
+   //   TrHs = false;
+   //    LogText(0,"current date greater than end date"); 
+   // end;
+
+    testf = false;
+    if (TrHs and started) then begin
+            testf = true;
+    end;
+    if (testf) then begin
+        // LogText(0,"conditions met"); 
+        rwcnt = MatRowCnt(HALPromPrr);
+                          for (i = 0; i < rwcnt; i = i + 1) begin
+                                MatRowGet(HALPromPrr, i, HALPromPrw); //get row from record 
+                                
+                                   
+                                  PLr.PLCode = HALPromPrr.PLReplCode;
+                                  PLr.ArtCode = HALPromPrw.ItemCode; 
+                                  PLr.CustCode = HALPromPrw.CustCode;
+                                    if(ReadFirstMain(PLr,3,true)) then begin 
+                                        PLr.ExVatPrice = HALPromPrw.FixedPrice;
+                                        PLr.EndDate = HALPromPrr.EndDate;
+                                        PLr.CustCode = HALPromPrw.CustCode;
+                                        RecordCopy(oldPLr,PLr); 
+                                    // HALPicr.OKFlag = 1; 
+                                      if(RecordUpdate(oldPLr,PLr,true) == 0) then begin 
+                                        //CreateRecordLink(INr,CurrentCompany,HALPicr,CurrentCompany);
+                                        //CreateRecordLink(HALPicr,CurrentCompany,INr,CurrentCompany);
+                                                    // LogText(0,"ADORGRV Record Nr " & HALPicr.SerNr & " OKd" ); 
+                                      end; 
+                                      // LogText(0,"Updated Mode"); 
+                                    end else begin 
+                                        RecordNew(PLr);
+                                        PLr.ArtCode = HALPromPrw.ItemCode;
+                                        PLr.PLCode = HALPromPrr.PLReplCode; 
+                                        PLr.Comment = HALPromPrr.Comment; 
+                                        PLr.ExVatPrice = HALPromPrw.FixedPrice;
+                                        PLr.EndDate = HALPromPrr.EndDate;
+                                        PLr.CustCode = HALPromPrw.CustCode;
+                                      if(RecordStore(PLr,true))then begin end;
+                                      // LogText(0,"Insert Mode"); 
+                                    end; 
+                        end; 
+
+    end;
+  end;
+  
+  return;
+end;

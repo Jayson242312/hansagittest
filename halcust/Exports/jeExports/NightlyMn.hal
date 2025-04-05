@@ -1,0 +1,81 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports - Changed all calls to XXXX_NightlyEn
+external procedure Site_NightlyEn(record RcVc);
+external procedure Item_NightlyEn(record RcVc);
+external procedure VE_NightlyEn(record RcVc);
+external procedure Stock_NightlyEn(record RcVc);
+external procedure StockIN_NightlyEn(record RcVc);
+external procedure StockIN2_NightlyEn(record RcVc);
+external procedure StockGroup_NightlyEn(record RcVc);
+external procedure StockMovHeader_NightlyEn(record RcVc);
+external procedure StockMovLines_NightlyEn(record RcVc);
+external procedure VEStock_NightlyEn(record RcVc);
+external procedure VEORHeader_NightlyEn(record RcVc);
+external procedure VEORLines_NightlyEn(record RcVc);
+external procedure VEReceipts_NightlyEn(record RcVc);
+external procedure CUORHeader_NightlyEn(record RcVc);
+external procedure CUORLines_NightlyEn(record RcVc);
+external procedure CUVc_NightlyEn(record RcVc);
+external procedure Sales3IN_NightlyEn(record RcVc);
+//RP - Not needed anymore
+//external procedure HALAttachPODsMn(record RcVc); 
+
+global
+updating procedure NightlyMn(record RcVc RepSpec)
+begin
+  Time t;
+  Integer curcomp,rwcnt,i;
+  record CompaniesBlock Compb;
+  row CompaniesBlock Compbw;
+
+  BlockLoad(Compb);
+  rwcnt = MatRowCnt(Compb);
+  LogText(0,"JE Export Start");
+  for (i=0;i<=rwcnt;i=i+1) begin
+    MatRowGet(Compb,i,Compbw);
+    if (i == 1 or i == 3) then begin
+      SetCompanyCode(i,true);
+
+      Site_NightlyEn(RepSpec);  //  SiteEn(RepSpec);
+      //------------------------------------------------------------------
+      Item_NightlyEn(RepSpec);  //  ItemEn(RepSpec);
+      //------------------------------------------------------------------
+      VE_NightlyEn(RepSpec);  //  VEEn(RepSpec);
+      //------------------------------------------------------------------
+      Stock_NightlyEn(RepSpec); //  StockEn(RepSpec);
+      //------------------------------------------------------------------
+      StockIN_NightlyEn(RepSpec); //  StockINEn(RepSpec);
+      //------------------------------------------------------------------
+      StockIN2_NightlyEn(RepSpec);  //  StockIN2En(RepSpec);
+      //------------------------------------------------------------------
+      StockGroup_NightlyEn(RepSpec);  //  StockGroupEn(RepSpec);
+      //------------------------------------------------------------------
+      StockMovHeader_NightlyEn(RepSpec);  //  StockMovHeaderEn(RepSpec);
+      //------------------------------------------------------------------
+      StockMovLines_NightlyEn(RepSpec); // StockMovLinesEn(RepSpec);
+      //------------------------------------------------------------------
+      VEStock_NightlyEn(RepSpec); //  VEStockEn(RepSpec);
+      //------------------------------------------------------------------
+      VEORHeader_NightlyEn(RepSpec);  //  VEORHeaderEn(RepSpec);
+      //------------------------------------------------------------------
+      VEORLines_NightlyEn(RepSpec); //  VEORLinesEn(RepSpec);
+      //------------------------------------------------------------------
+      VEReceipts_NightlyEn(RepSpec);  //  VEReceiptsEn(RepSpec);
+      //------------------------------------------------------------------
+      CUORHeader_NightlyEn(RepSpec); // CUORHeaderEn(RepSpec);
+      //------------------------------------------------------------------
+      CUORLines_NightlyEn(RepSpec); // CUORLinesEn(RepSpec);
+      //------------------------------------------------------------------
+      CUVc_NightlyEn(RepSpec);  //  CUVcEn(RepSpec);
+      //------------------------------------------------------------------
+      Sales3IN_NightlyEn(RepSpec);  //  Sales3INEn(RepSpec);  //  AG 2013-06-24 - Sales History (14 Days)
+      //------------------------------------------------------------------
+      //RP - Not needed anymore | Web version available | 17 feb 2021 
+      //HALAttachPODsMn(RepSpec); // Attached Invoice PODs //TM - 09-10-2018 
+    end;
+  end;
+  LogText(0,"JE Export Stop");
+  return;
+end;

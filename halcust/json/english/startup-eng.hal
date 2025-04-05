@@ -1,0 +1,15 @@
+// ui
+event startup
+begin
+
+  SetLangMode(langEnglish,"ENG",0);
+  
+  Module("Burti - JSON API","",730,modJSON);
+
+  Register("API Register definitions","API Register definitions",JSON_RegDefLClass,modJSON);
+  Setting("ADOR Integration",HALAdorTClass,modJSON); // KOS: HAL-491
+
+  Import("Export/import format file",0,,modJSON);
+
+  return;
+end;

@@ -1,0 +1,44 @@
+external procedure PasteIntOrdInStockMov(record IntORVc,record StockMovVc);
+
+global
+updating procedure RecordAction_raPasteIntOrdInStockMov(record IntORVc IntORp,record StockMovVc StockMovp)
+begin
+  //LongInt res;
+  record IntORClassVc IntORClassr;
+  record AcceptSetBlock AcceptSet;
+  
+     
+  if (nonblank(IntORp.IntORClass)) then begin
+    IntORClassr.Code = IntORp.IntORClass;
+    if (ReadFirstMain(IntORClassr,1,true)) then begin
+      if (IntORClassr.DisallowStockMov==1) then begin
+      //  res = -3;
+        goto LRecordAction_raPasteIntOrdInStockMov;
+      end;  
+    end;  
+  end;    
+  BlockLoad(AcceptSet) 
+  if (IntORp.StatusFlag<>1) and (AcceptSet.ForceAcceptIntOR<>0) then begin
+   // res = -4;
+    goto LRecordAction_raPasteIntOrdInStockMov;
+  end;
+  //RecordNew(StockMovp);
+  //LogText(0,"I am executed at this second stage"); 
+  PasteIntOrdInStockMov(IntORp,StockMovp);
+  /*if (StockMovp.SerNr<=0) then begin
+    StockMovp.SerNr = NextSerNr("StockMovVc",StockMovp.TransDate,-1,false,"");
+  end;  
+  if (StockMovp.SerNr<=0) then begin goto LRecordAction_raPasteIntOrdInStockMov; end;  
+  if (MatRowCnt(StockMovp)>0) then begin
+    StockMovSumUp(StockMovp);
+    if (RecordStore(StockMovp,false)) then begin
+      CreateRecordLink(StockMovp,CurrentCompany,IntORp,CurrentCompany);
+      CreateRecordLink(IntORp,CurrentCompany,StockMovp,CurrentCompany);
+      res = 1;
+    end;
+  end; */
+  //res = 1; 
+  LRecordAction_raPasteIntOrdInStockMov:;
+  //RecordAction_raPasteIntOrdInStockMov = res;
+  return;
+end;

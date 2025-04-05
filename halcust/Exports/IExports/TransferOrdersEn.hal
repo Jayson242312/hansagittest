@@ -1,0 +1,73 @@
+global
+procedure TransferOrdersEn(record RcVc RepSpec)
+begin
+  record StockMovVc SMr;
+  Date today;
+  Date startdate;
+  boolean continue;
+  boolean testf;
+
+  continue = true;
+  testf = true;
+  today = CurrentDate;
+  startdate = AddMonth(today,-3);
+  SMr.OrdTransDate = startdate;
+
+  ExportString("Transfer Order Id");
+  ExportString("Name");
+  ExportString("Destination Location");
+  ExportString("Source Location");
+  ExportString("Creation Datetime");
+  ExportString("Issue date");
+  ExportString("ETA");
+  ExportString("Status");
+  ExportString("Total");
+  NewLine;
+
+  while(LoopMain(SMr, 1, continue)) begin
+    if(DateInRange(SMr.OrdTransDate, startdate, today))then begin
+      ExportString(SMr.SerNr);
+      ExportString(SMr.Comment);
+      ExportString(SMr.ToLocation);
+      ExportString(SMr.FrLocation);
+      ExportString("");
+      ExportString(SMr.OrdTransDate);
+      ExportString("");
+
+      if(SMr.OrdFlag == 0 and SMr.SentOKFlag == 0 and SMr.OKFlag == 0) then begin
+        ExportString("DRAFT");
+      end else begin 
+        if(SMr.OrdFlag == 1 or SMr.SentOKFlag == 1) then begin
+          ExportString("OPEN");
+        end else begin
+          if(SMr.OKFlag == 1) then begin
+            ExportString("CLOSED");
+          end;
+        end;
+      end;
+
+      ExportString("");
+      NewLine;
+    end;
+  end;
+
+  TransferOrders:;
+  CloseFile;
+end;
+
+global
+procedure TransferOrdersIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Transfer Orders.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Transfer Orders.txt");
+  end;
+  TransferOrdersEn(RepSpec);
+
+  return;
+end;

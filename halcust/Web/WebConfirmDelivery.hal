@@ -1,0 +1,119 @@
+//TM - here we assume that we are going to receive a post request in JSON data format 
+
+global 
+webpublic //remember to comment this out and do what we did before for security SHrposes 
+updating procedure WebConfirmDelivery()
+begin 
+  area arequest; //area variable is a big block of memory, containing strings 
+  record SHVc SHr,oldSHr;
+  record LocationVc Locationr; 
+  row SHVc SHrw;  
+  json jdata; //will receive the parsed json data from the area 
+  longint sernr; 
+  string 20 artcode; 
+  integer shipquant,rwcnt,i,j,cnt,compno,oldcompno; 
+  string 200 reply_code; 
+  
+  //an area is like a "file" which is in memory 
+  //it has HAL premitives which you can use on this data type e.g pick a file from filesystem to area etc, count lines in an area, 
+
+  compno = 3; //Greg's Motor Spares compno is 3 
+  oldcompno = CurrentCompany;
+  SetServerCompany(compno);
+
+  if(CurrentCompany == 3) then begin
+
+  //1. 
+    WebGetPostData(arequest); //it returns an area populated with the posted data 
+    WriteAreaToFile(arequest,"tmp/" & GetCurTick & ".json",0); //dump the request  i received to a new file as a way of confirming that you did receive the request 
+    //now we assume that we are going to get a JSON formatted text not an xml formatted test from the other system e.g. ADOR We can use postmap to simulate that 
+    jdata = ParseJsonArea(arequest); //i will parse the json area now we can work with the json data the same way we did when we loaded it from a file 
+    //{
+       // "sernr":5,
+        //"matrix":[
+          //{"artcode":"9101000035"},
+          //{"quant":10}
+        //]
+    //}
+
+    //now we need to parse the above json 
+    sernr = StringToLongInt(JSONGet(jdata,"sernr")); //parse the sernr
+    
+    //now you need to read the the record based on its serial number and update it 
+    SHr.SerNr = sernr; 
+   // SHr.TotQty = 0; 
+    if(ReadFirstMain(SHr,1,true)) then begin //read the record that matches the serial number 
+      Locationr.Code = SHr.Location; 
+      if(ReadFirstMain(Locationr,1,true)) then begin
+        if(Locationr.ADORControl == 1) then begin 
+            if(SHr.OKFlag !=1) then begin 
+              RecordCopy(oldSHr,SHr); //copies the Goods Receipt Record to the oldGRV variable 
+                  
+              cnt = JSONCountChildren(jdata,"matrix"); //counting posted matrix data. 
+              for(i=0; i<cnt; i=i+1) begin 
+                //ClearRow(SHr,SHrw,1); 
+                artcode = JSONGet(jdata,"matrix/[" & i & "]/artcode");
+                shipquant = StringToInt(JSONGet(jdata,"matrix/[" & i & "]/shipquant"));
+                //-----
+                rwcnt = MatRowCnt(SHr);
+                  for (j = 0; j < rwcnt; j = j + 1) begin
+                        MatRowGet(SHr, j, SHrw); //get row from record 
+                        if(artcode != "" and shipquant>0) then begin 
+                          if(SHrw.ArtCode == artcode) then begin //where record itemcode matches posted itemcode update the quantities 
+                            SHrw.Ship = shipquant; 
+                           // SHr.TotQty = SHr.TotQty + SHrw.Ship; 
+                          // SHrw.Sum = SHrw.UPrice * quant; //and the new sum 
+                            MatRowPut(SHr,j,SHrw);
+                          end; 
+                        end; 
+                  end; 
+                //----
+
+                //-- calculating new totals 
+                          SHr.TotQty = 0; 
+                          rwcnt = MatRowCnt(SHr);
+                          for (j = 0; j < rwcnt; j = j + 1) begin
+                                MatRowGet(SHr, j, SHrw); //get row from record 
+                                  SHr.TotQty = SHr.TotQty + SHrw.Ship; 
+                                  MatRowPut(SHr,j,SHrw);
+                          end; 
+                        //----
+
+              
+              end; 
+              SHr.OKFlag = 1; //ok 
+                          
+              if(RecordUpdate(oldSHr,SHr,true) == 0) then begin 
+                reply_code = "OK"; 
+              end else begin   
+                  reply_code = "UNABLE_TO_UPDATE_THE_DELIVERY"; 
+              end; 
+            end else begin 
+              reply_code = "DELIVERY_ALREADY_OKd"; 
+              //LogText(0,"Delivery already OKd"); 
+            end; 
+        end else begin 
+            reply_code = "DELIVERY_LOCATION_IS_NOT_ADOR_CONTROLLED"; 
+            //LogText(0,"Delivery Location is not ADOR Controlled");
+        end; 
+      end; 
+    end else begin 
+      reply_code = "DELIVERY_DOES_NOT_EXIST"; //if GRV doesnt exist 
+    end; 
+
+    //since this is a request to change something in the database, we have to reply and say data was updated 
+    //or maybe return an error code and you can log it so that you know exactly so there is a
+    //lets create a string reply_code 
+
+    //REPLY 
+    WebSetContentType("Content-Type:application/json"); 
+    WebOuTstring("{\"replycode\":\"" & reply_code & "\"}"); 
+
+  end; 
+
+  if(CurrentCompany != oldcompno) then begin 
+    ResetCompany(oldcompno); //resets back to old company 
+  end; 
+  LogText(0, "WebConfirmDelivery");
+  return; 
+end; 

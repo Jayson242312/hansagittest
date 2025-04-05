@@ -1,0 +1,29 @@
+//RP - Item Pics 
+global
+procedure ItemPicORDsm()
+BEGIN
+
+  record RcVc RepSpec;
+  record ORVc ORr;
+  record HALPicVc HALPicr;
+  record INVc INr; 
+  row ORVc ORrw; 
+  Integer wn,nwn,rwnr;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,ORr);
+  MatRowGet(ORr,WindowActiveRow(wn),ORrw)
+  RepSpec.f1 = ORrw.ArtCode; 
+
+  HALPicr.ArtCode = ORrw.ArtCode;
+
+  if(ReadFirstMain(HALPicr, 1, true)) then begin
+    OpenWindow("HALPicDClass", 0, wn, "", "", HALPicr);
+  end else begin
+    MessageBox(0,"Item Picture does not exist.");
+  end;
+
+  RETURN
+END;
+
+//END OF RP

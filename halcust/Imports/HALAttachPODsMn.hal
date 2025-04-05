@@ -1,0 +1,31 @@
+// global
+// updating procedure HALAttachPODsMn(record RcVc RepSpec)
+// begin
+//   integer c,i,j,cnt;
+//   string 255 fname,path,invoice_num;
+//   record IVVc IVr;
+
+//   path = "/pods/";
+
+
+//   c=CountFilesInDir(path);
+//   //LogText(0,c&" files in the pods directory");
+//   for(i=0; i<c; i=i+1) begin
+//       fname = GetFileNameInDir(path,i);
+//       invoice_num = left(fname,len(fname)-4);
+
+//       IVr.SerNr = StringToLongInt(invoice_num); //read the invoice serial number from the file
+//     //assume you have pods folder on the server
+//       if(ReadFirstMain(IVr,1,true)) then begin //you can take the file and attach directly to the record. recordLinkfile
+//         RecordLinkFile("/pods/" & fname,0,IVr,CurrentCompany); //on the server you have several companies and record links which each all attachments,
+//         MoveFile(fname,"/pods","/pods/attached"); //if successful, move file to attached folder
+//       end else begin //if it failed
+//         MoveFile(fname,"/pods","/pods/failed");  // in case the invoice dont exist. move the file to failed and then one can go and check while we have failed files
+//       end;
+//     //you can also create a report where you look in the POD failed so that someone can see what failed, just output the invoice number
+
+//     end;
+
+//   return;
+// end;
+

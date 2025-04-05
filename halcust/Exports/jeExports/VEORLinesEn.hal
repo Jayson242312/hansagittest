@@ -1,0 +1,112 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+window VNVEORLinesEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Supplier Order Lines",VNVEORLinesEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure VEORLinesEn(record RcVc RepSpec)
+begin
+  record POVc POr;
+  row POVc POrw;
+  string 255 IBTFlag,siteCode,ORStatus;
+  integer lineNr,count,i;
+  val OutStQty;
+  Date LimitOrderDate;
+  record JEBlock JEb;
+  integer td;
+  Date CutOffDate;
+
+  BlockLoad(JEb);
+  CutOffDate = CurrentDate;
+  CutOffDate = AddMonth(CutOffDate,-JEb.Months);
+  IBTFlag = "N";
+  lineNr = 1;
+  siteCode = "WARE";
+  LimitOrderDate.day = 30;
+  LimitOrderDate.month = 09;
+  LimitOrderDate.year = 2009;
+  ExportString("PurchaseOrderNumber");
+  ExportString("PurchaseOrderLineNumber");
+  ExportString("SiteCode");
+  ExportString("ItemCode");
+  ExportString("EstimatedReceiptDate");
+  ExportString("OrderedQTY");
+  ExportString("CostPerUnit");
+  ExportString("OrderLineStatusIndicator");
+  ExportString("SupplierCode");
+  ExportString("IBTSiteCode");
+  ExportString("OutstandingQuantity");
+  newLine;
+  while(LoopMain(POr,1,true)) begin
+    if (POr.TransDate > CutOffDate) then begin
+      if ((POr.Closed == 0) and (NonBlank(POr.Location))) then begin
+        count = MatRowCnt(POr);
+        for(i=0;i<count;i=i+1)begin
+          lineNr = i + 1;
+          MatRowGet(POr,i,POrw);
+          OutStQty = POrw.Quant - POrw.Shipd2;
+          if ((OutStQty < 0) or Blank(OutStQty)) then begin
+            OutStQty = 0;
+          end;
+          if (NonBlank(POrw.ArtCode)) then begin
+            if (OutStQty <> 0) then begin
+              ORStatus = "Pending";
+            end;
+            if (OutStQty == 0) then begin
+              ORStatus = "Delivered";
+            end;
+            if (Blank(POrw.Shipd2)) then begin
+              ORStatus = "Placed";
+            end;
+            if (POr.Closed <> 0) then begin
+              ORStatus = "Cancelled";
+            end;
+            ExportString(POr.SerNr);
+            ExportLongInt(lineNr);
+            ExportString(POr.Location);
+            ExportString(POrw.ArtCode);
+            ExportDate("");//EstimatedReceiptDate
+            ExportLongint(POrw.Quant);
+            ExportLongint("");//CostPerUnit
+            ExportString(ORStatus);//OrderLineStatusIndicator
+            ExportString(POr.VECode);
+            ExportString("");//IBTSiteCode
+            ExportVal(OutStQty,M4Val);
+            newLine;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  CloseFile;
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure VEORLines_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "SupplierOrderLine.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "SupplierOrderLine.txt");
+  end;
+  VEORLinesEn(RepSpec);
+
+  return;
+end;

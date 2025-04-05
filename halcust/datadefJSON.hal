@@ -1,0 +1,51 @@
+// ui
+
+SourceFile("halcust/json/english",3);
+SourceFile("halcust/json/south-african",3);
+SourceFile("halcust/json",3);
+SourceFile("halcust/json/generated-interfaces",3);
+SourceFile("halcust/json/custom-interfaces",3);
+SourceFile("halcust/json/Imports",3);
+SourceFile("halcust/json/Tools",3);
+SourceFile("halcust/json/WActions",3);
+
+begin
+  
+  RecordBegin(JSON_RegDefVc,-,"");
+  RecordField(Code,M4Str,50,0);
+  RecordField(ImportTag,M4Str,50,0);
+  RecordField(ImportDate,M4Date,0,0);
+  RecordField(ImportTime,M4Time,0,0);
+  RecordField(Math,M4Matrix,0,0);
+  RecordField(IsBlock,M4Mark,0,0);
+  RecordField(MainKey,M4Str,255,0);
+  RecordField(SuppVarVectorTypes,M4Str,255,0);
+  RecordField(SuppVarArrayTypes,M4Str,255,0);
+  RecordField(SuppVarSimpleTypes,M4Str,255,0);
+  RecordField(ShowAttachments,M4Mark,0,0);
+  RecordField(RowIDField,M4Str,255,0);
+  RecordField(TimestampField,M4Str,255,0);
+  RecordField(DownloadAttachments,M4Mark,0,0);
+  RecordField(UploadAttachments,M4Mark,0,0);
+  RecordField(RemoveAttachments,M4Mark,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(FieldName,M4Str,50,0);
+  ArrayField(FieldType,M4Str,20,0);
+  ArrayField(FieldLength,M4Int,0,0);
+  ArrayField(HeaderMatrixFlag,M4Set,990,0);
+  ArrayField(ShowInList,M4Set,991,0);
+  ArrayField(ShowInFull,M4Set,991,0);
+  ArrayField(KeyNames,M4Str,255,0);
+  ArrayField(UseInFilter,M4Set,991,0);
+  ArrayField(TempStr,M4Str,255,0);
+  ArrayField(TempLong,M4Long,0,0);
+  ArrayField(KeyNames2,M4Str,255,0);
+  ArrayField(KeyNames3,M4Str,255,0);
+  EndArray;
+  MainKeyBegin(Code,0);
+  KeySegment(Code);
+  EndRecord;
+  
+  
+  return;
+end;

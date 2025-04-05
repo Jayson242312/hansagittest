@@ -1,0 +1,89 @@
+global
+procedure PurchaseOrderReceiptsEn(record RcVc RepSpec)
+begin
+  record PUVc PUr;
+  record INVc INr;
+  record LocationVc Locationr;
+  row PUVc PUrw;
+  Date today;
+  Date startdate;
+  boolean continue;
+  boolean testf;
+  integer rwcnt, i;
+
+  continue = true;
+  testf = true;
+  today = CurrentDate;
+  startdate = AddMonth(today,-3);
+  PUr.TransDate = startdate;
+
+  ExportString("Purchase Order Id");
+  ExportString("Receipt Id");
+  ExportString("Received date");
+  ExportString("SKU");
+  ExportString("Location");
+  ExportString("Supplier");
+  ExportString("Quantity");
+  NewLine;
+
+  while(LoopKey("TransDate", PUr, 1, continue)) begin
+    if(DateInRange(PUr.TransDate, startdate, today) == false)then begin
+      continue = false;
+      goto PurchaseOrderReceipts;
+    end;
+
+    if(PUr.OKFlag == 0) then begin testf = false; end;
+
+    if(testf) then begin
+      rwcnt = MatRowCnt(PUr);  
+
+      for(i=0;i<rwcnt;i=i+1)begin
+        MatRowGet(PUr,i,PUrw);
+        INr.Code = PUrw.ArtCode;
+        Locationr.Code = PUr.Location;
+        testf = false;
+
+        if(ReadFirstMain(INr, 1, true) and ReadFirstMain(Locationr, 1, true)) then begin
+          testf = true;
+        end;
+
+        if(Blank(PUr.VECode) or Blank(PUr.PONr)) then begin testf = false; end;
+
+        if(testf) then begin
+          ExportString(PUr.PONr);
+          ExportString(PUr.SerNr);
+          ExportString(Pur.TransDate);
+          ExportString(PUrw.ArtCode);
+          ExportString(PUr.Location);
+          ExportString(PUr.VECode);
+          ExportVal(PUrw.Quant, M4UVal);
+          NewLine;
+        end;
+      end;
+
+      testf = true;
+    end;
+
+    testf = true;
+  end;
+
+  PurchaseOrderReceipts:;
+  CloseFile;
+end;
+
+global
+procedure PurchaseOrderReceiptsIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Purchase Order Receipts.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Purchase Order Receipts.txt");
+  end;
+  PurchaseOrderReceiptsEn(RepSpec);
+
+  return;
+end;

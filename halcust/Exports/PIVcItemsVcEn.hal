@@ -1,0 +1,55 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure PIVcItemsVcEn()
+begin
+  record PIVc PIr;
+  Boolean pCh;
+
+  ExportString("ItemCode");
+  ExportString("ItemName");
+  ExportString("SupplierCode");
+  ExportString("SupplierName");
+  ExportString("Location");
+  ExportString("Default");
+  ExportString("PurchPrice");
+  ExportString("PurchCost");
+  ExportString("Currency");
+  ExportString("UnitCoversion");
+  ExportString("SupplierItemCode");
+  ExportString("SupplierUnit");
+  ExportString("NormOrdQty");
+  ExportString("MinOrdQty");
+  ExportString("Producer");
+  ExportString("CountryOfOrigin");
+  ExportString("SalesMan");
+  ExportString("SalesGroup");
+  ExportString("DeliveryDays");
+  newLine;
+
+  while(LoopMain(PIr,1,true)) begin
+    ExportString(PIr.ItemCode); //ItemCode
+    ExportString(PIr.Comment); //Item name
+    ExportString(PIr.VECode); //Supp Code
+    ExportString(PIr.VEName); //supplier name
+    ExportString(PIr.Location); //Location
+    ExportString(PIr.DefaultChoice); //StringToInt(inline);  //default
+    ExportString(PIr.PurPrice); //purch price
+    ExportString(PIr.PurchaseCost); //purch cost
+    ExportString(PIr.CurncyCode); //currency
+    ExportString(PIr.PIFactor);// StringToVal(inline,M45Val);  //unit coversion
+    ExportString(PIr.VEItemCode); //supplier item code
+    ExportString(PIr.VEUnit); //StringToInt(inline);  //supplier unit
+    ExportString(PIr.NormPOQty); //norm Ord Qty
+    ExportString(PIr.MinPOQty); //min Ord Qty
+    ExportString(PIr.Manufacturer); //producer
+    ExportString(PIr.OrgCountry); //Country of Origin
+    ExportString(PIr.SalesMan); //salesman
+    ExportString(PIr.SalesGroup); //Sales Group
+    ExportString(PIr.PlannedDelDays); //Delivery Days
+    newLine;
+  end;
+  return;
+end;

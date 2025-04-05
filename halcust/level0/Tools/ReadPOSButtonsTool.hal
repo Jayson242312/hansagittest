@@ -1,0 +1,54 @@
+// global
+// function Boolean ReadPOSButtons(string windowclass,string pbcode,longint page,var string bc1,var string bc2,var string compname,var record POSButtonsVc POSBr,var Integer acnt)
+// begin
+//   Boolean res;
+//   Boolean pbgf;
+//   Boolean found;
+//   record BaseCurBlock BCb;
+//   record CYBlock CYb;
+//   //longint page;
+  
+//   //page = 1; // should be parameter...
+//   acnt = 0;
+//   BlockLoad(BCb);
+//   bc1 = BCb.BaseCur1;
+//   bc2 = BCb.BaseCur2;
+//   BlockLoad(CYb);
+//   compname = CYb.CompName;
+  
+//   pbgf = true;
+  
+//   //StopAlert("ReadPOSButtons wclass: " & windowclass & " pbcode: " & pbcode & " page: " & page);
+  
+//   POSBr.WindowClass = windowclass;
+//   POSBr.POSButtonGroupCode = pbcode;
+//   POSBr.Page = page;
+//   found = ReadFirstMain(POSBr,3,true);
+  
+//   if (found) then begin
+//     res = found;
+//     acnt = acnt + 1;
+//     goto LReadPOSButtonsout;
+//   end;
+  
+//   //StopAlert("found==false wclass: " & windowclass & " pbcode: " & pbcode & " page: " & page);
+//   pbgf = false;
+//   POSBr.WindowClass = windowclass;
+//   POSBr.POSButtonGroupCode = "";
+//   POSBr.Page = page;
+//   found = ReadFirstMain(POSBr,3,true);
+  
+//   res = found;
+//   if (found==false) then begin
+//     res = found;
+//     acnt = acnt + 1;
+//     goto LReadPOSButtonsout;
+//   end;
+    
+// LReadPOSButtonsout:;
+
+// //,var record POSButtonsVc POSBr,
+// //LogText(0,"ReadPosButtons(" &  windowclass & "," & pbcode & "," & page & ") -> " & bc1 & "," & bc2 & "," & compname & "," & acnt);
+//   ReadPOSButtons = res;
+//   return;
+// end;

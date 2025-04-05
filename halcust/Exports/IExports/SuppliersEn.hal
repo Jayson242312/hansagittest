@@ -1,0 +1,59 @@
+global
+procedure SuppliersEn(record RcVc RepSpec)
+begin
+  record CUVc CUr;
+  boolean testf;
+
+  testf = false;
+
+  ExportString("Name");
+  ExportString("Description");
+  ExportString("Email");
+  ExportString("MOQ");
+  ExportString("MOB");
+  ExportString("Shipping Interval");
+  ExportString("Ordering Interval");
+  ExportString("Notes");
+  ExportString("<attributes>");
+  NewLine;
+
+  CUr.VEType = 1;
+
+  while(LoopMain(CUr, 1, true)) begin
+    if(CUr.VEType == 1) then begin testf = true; end;
+
+    if(testf) then begin
+      ExportString(CUr.Code);
+      ExportString(CUr.Name);
+      ExportString(CUr.eMail);
+      ExportString("");
+      ExportString("");
+      ExportVal(0, M45Val);
+      ExportVal(0, M45Val);
+      ExportString("");
+      ExportString("");
+      NewLine;
+    end;
+
+    testf = false;
+  end;
+
+  CloseFile;
+end;
+
+global
+procedure SuppliersIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Suppliers.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Suppliers.txt");
+  end;
+  SuppliersEn(RepSpec);
+
+  return;
+end;

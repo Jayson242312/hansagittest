@@ -1,0 +1,183 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+//VN>>
+remote procedure AddOnePUToADORQueue(record PUVc); // RGS: HAL-944
+
+function Boolean PUDClassReasonEFAfter(Integer wn,Integer rownr,Boolean changedf)
+begin
+  record PUVc PUr;
+  row PUVc PUrw;
+  integer i,rwcnt;
+  record StandProblemVc SPr;
+  string 255 Accstr;
+
+  if (changedf) then begin
+    GetWindowRecord(wn,PUr);
+    if (NonBlank(PUr.Reason)) then begin
+      SPr.Code = PUr.Reason;
+      if (ReadFirstMain(SPr,1,true)) then begin
+        Accstr = SPr.Account;
+      end;
+      rwcnt = MatRowCnt(PUr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(PUr,i,PUrw);
+        if (PUrw.CredAcc <> Accstr) then begin
+          PUrw.CredAcc = Accstr;
+          MatRowPut(PUr,i,PUrw);
+        end;
+      end;
+    end;
+    PutWindowRecord(wn,PUr);
+  end;
+
+  PUDClassReasonEFAfter = true;
+  return;
+end;
+//VN<<
+
+//TM- Desk 5130 
+
+function Boolean PUDClassADORGRVEFAfter(Integer wn,Integer rownr,Boolean changedf)
+begin
+  
+  record PUVc PUr; 
+  row PUVc PUrw; 
+  record ADORGRVc ADORGRr; 
+  row ADORGRVc ADORGRrw; 
+  record VATCodeBlock VATr; 
+  row VATCodeBlock VATrw;  
+  boolean testf,oncef; 
+  integer i,j,k,rwcnt,rwcnt2,rwcnt3,quant; 
+  string 20 artcode;
+  val rowtotal,vat,vatpercent; 
+   
+  testf = false; 
+  oncef = false; 
+
+  //getting the VAT from the VAT Block 
+    BlockLoad(VATr); 
+    rwcnt = MatRowCnt(VATr); 
+    for(i=0; i<rwcnt; i = i+1) begin 
+      MatRowGet(VATr,i,VATrw); 
+      if(VATrw.VATCode == "4") then begin 
+        vatpercent = Round(VATrw.ExVatpr,DefaultValRoundoff); 
+      end; 
+    end; 
+  //
+   
+  DeselectWindow(wn,false); 
+  GetWindowRecord(wn,PUr); //take what's on the window and populate the PUVc record 
+  
+  ADORGRr.SerNr = PUr.ADORGRV; //use the order number 
+  //ADORGRr.RecordNr = PUr.PONr; //and PO Number to search for a GRV in the ADORGRV register 
+  if(ReadFirstMain(ADORGRr,1,true)) then begin 
+     if(ADORGRr.RecordNr == PUr.PONr) then begin 
+            if(ADORGRr.OKFlag!=1) then begin  
+              testf = true; 
+            end; 
+           
+            if(testf) then begin 
+                      rwcnt = MatRowCnt(PUr);
+                      rwcnt2 = MatRowCnt(ADORGRr);
+                      
+                                for (i = 0; i < rwcnt; i = i + 1) begin //outer loop for register with many rows i.e. the PUVc
+                                    MatRowGet(PUr, i, PUrw); //get row from record 
+                                    oncef = false; //resets oncef  
+                                    for(j=0; j<rwcnt2; j=j+1) begin //inner loop for register with fewer matrix rows 
+                                          MatRowGet(ADORGRr, j, ADORGRrw);      
+                                          
+                                          if(PUrw.ArtCode == ADORGRrw.ArtCode) then begin
+                                                oncef = true; //set oncef to true if we have a match 
+                                                  PUrw.Quant = ADORGRrw.ADORQty; //update the PUVc quantity with Qty from ADOR 
+                                                  MatRowPut(PUr,i,Purw);  //Write to the PUr matrix 
+                                                  PutWindowRecord(wn,PUr);      
+                                          end; 
+                                    end; 
+                                      
+                                    if(!oncef) then begin  //outside the inner loop because obviously the inner loop will be just for those that will be found in both registers 
+                                        PUrw.Quant = 0; //set the quantities to 0 for those items that dont exist in the ADOR register 
+                                        MatRowPut(PUr,i,Purw); //write matrix row 
+                                        PutWindowRecord(wn,PUr); //write record to window 
+                                    end; 
+                                end;  
+                      
+                      //-- calculating new totals 
+                      PUr.SumQuant = 0; 
+                      PUr.SumCostPrice = 0; 
+                      rwcnt3 = MatRowCnt(PUr);
+                      for (k = 0; k < rwcnt; k = k + 1) begin
+                        MatRowGet(PUr, k, PUrw); //get row from record 
+                           PUr.SumQuant = PUr.SumQuant + PUrw.Quant; 
+                           rowtotal = PUrw.Quant * PUrw.UPrice; 
+                           PUrw.Sum = Round(rowtotal,DefaultValRoundoff); 
+                           PUr.SumCostPrice = PUr.SumCostPrice + PUrw.Sum; 
+                           vat = (vatpercent * PUr.SumCostPrice)/100; 
+                           PUr.VATVal = Round(vat,DefaultValRoundoff); 
+                           PUr.PayVal = PUr.SumCostPrice + PUr.VATVal;
+                          // RetPUrw.Sum = RetPUrw.UPrice * quant; //and the new sum 
+                            MatRowPut(PUr,k,PUrw);
+                            PutWindowRecord(wn,PUr);
+                      end; 
+                      //----end of new totals calculation 
+
+              
+
+              end; 
+     end else begin 
+       MessageBox(0,"Wrong ADOR GRV Selected"); 
+     end; 
+        
+  end;  //next end inside this 
+    
+  PUDClassADORGRVEFAfter = true;
+  return;
+end;
+//:TM 
+
+global
+updating function Boolean PUDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+begin
+  Boolean res;
+
+  switch (fieldname) begin
+    case "Reason": res = PUDClassReasonEFAfter(wn,rownr,changed!=0);  //  VN
+    case "ADORGRV": res = PUDClassADORGRVEFAfter(wn,rownr,changed!=0); //TM 
+    otherwise res = inner.PUDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  end;
+
+  PUDClassAfterEditField = res;
+  return;
+end;
+
+// RGS: HAL-944
+global
+function Boolean PUDClassADORLockedButtonAction(Integer wn,Integer value)
+begin
+  PUDClassADORLockedButtonAction = false;
+  return;
+end;
+
+global
+updating procedure SendPUToADORDsm()
+begin
+  record PUVc PUr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,PUr);
+  if (UserCanAction("SendToADOR",false)) then begin
+    if ((WindowState(wn)==0)) then begin
+      AddOnePUToADORQueue(PUr);
+      MessageBox(3100042,"");
+      PutWindowRecord(wn,PUr);
+    end;  
+  end else begin
+    MessageBox(3100041,"");
+  end;
+
+  return;
+end;
+//:RGS
+

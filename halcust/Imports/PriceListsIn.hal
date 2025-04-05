@@ -1,0 +1,76 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// vn: 23.12.2010 Developed for version 6.1 100512
+
+updating procedure ClearMatrix(record PLDefVc PLr)
+begin
+  integer i,rwcnt;
+  row PLDefVc PLrw;
+
+  while (LoopMain(PLr,1,true)) begin
+    rwcnt = MatRowCnt(PLr);
+    for (i=rwcnt-1;i>=0;i=i-1) begin
+      MatRowGet(PLr,i,PLrw);
+      MatRowDelete(PLr,i);
+    end;
+    if(RecordStore(PLr,true))then begin end;
+  end;
+  return;
+end;
+
+global
+updating procedure PriceListsIn()
+begin
+  record PLDefVc PLr;
+  row PLDefVc PLrw;
+  string 255 inline;
+  Boolean pCh;
+  integer rwcnt;
+
+  ClearMatrix(PLr);
+
+  while(TestEOF==false) begin
+    inline=importField;
+    if(inline=="Code") then begin
+      goto LA1;
+    end else begin
+      PLr.Code = inline;
+      pCh = ReadFirstMain(PLr,1,true);
+      if(pCh) then begin
+        PLr.Code=inline; //Code
+        inline=importField;
+        PLr.Comment = inline;  //Description
+        inline=importField;
+        PLr.StartDate=inline;  //PeriodStartDate
+        inline=importField;
+        PLr.EndDate=inline;  //PeriodEndDate
+        inline = importField;
+        PLr.CurncyCode = inline;  //Currency
+        inline = importField;
+        PLr.PLReplCode = inline;  //Replace
+        inline = importField;
+        PLr.BBVECode = inline;  //BuyBack Accr. A/C
+        inline = importField;
+        PLr.InclVAT = StringToInt(inline);  //VAT
+        inline = importField;
+        PLr.DepPrice = StringToInt(inline);  //Type
+        //ROWS
+        inline = importField;
+        PLrw.CodeType = StringToInt(inline);  //Row Type
+        inline = importField;
+        PLrw.ItemCode = inline;  //Item Group
+        inline = importField;
+        PLrw.Formula = inline;  //Formulae
+        inline = importField;
+        PLrw.VATCode = inline;  //V-Cd
+
+        MatRowInsert(PLr,MatRowCnt(PLr),PLrw);
+
+        if(RecordStore(PLr,true))then begin end;
+      end;
+    end;
+    LA1:;
+    if(NextImportLine(true)) then begin end;
+  end;
+  return;
+end;

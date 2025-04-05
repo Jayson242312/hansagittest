@@ -1,0 +1,29 @@
+//TM - Desk 5130 
+remote procedure AddOneCUToADORQueue(record CUVc); 
+
+//TM - Desk 5130 
+global
+updating procedure SendCUToADORDsm()
+begin
+  record CUVc CUr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,CUr);
+  if (UserCanAction("SendToADOR",false)) then begin
+    if ((WindowState(wn)==0)) then begin
+      if (CUr.SendToADORf == 1) then begin
+        MessageBox(3100043,"");
+      end else begin
+        AddOneCUToADORQueue(CUr);
+        MessageBox(3100042,"");
+      end;
+    end;  
+  end else begin
+    MessageBox(3100041,"");
+  end;
+
+  return;
+end;
+//:RGS

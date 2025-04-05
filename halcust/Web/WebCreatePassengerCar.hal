@@ -1,0 +1,53 @@
+// global
+// webpublic //use only this if you know that this wont be attacked
+// updating procedure WebCreatePassengerCar()
+// begin 
+  
+//   area arequest;
+//   record EngineVc Enginer; 
+//   row EngineVc Enginerw;
+//   record EngineBlock Engineb;
+//   row EngineBlock Enginebrw;
+//   record INVc INr;
+//   integer compno,oldcompno,cnt,i,rwcnt; 
+//   json jdata;
+//   boolean testf;
+
+//   compno = 3;
+//   oldcompno = CurrentCompany;
+//   SetServerCompany(compno);
+
+//   WebGetPostData(arequest); 
+//   WriteAreaToFile(arequest,"tmp/" & GetCurTick & ".json",0);
+//   jdata = ParseJsonArea(arequest);
+
+//   Enginer.Code = JSONGet(jdata,"code");
+//   testf = true;
+//   if(ReadFirstMain(Enginer,1,true)) then begin testf = false; end;
+
+//   if(testf) then begin
+//     testf = false;
+//     BlockLoad(Engineb);
+//     rwcnt = MatRowCnt(Engineb);
+//     for (i=0;i<rwcnt;i=i+1) begin
+//       MatRowGet(Engineb,i,Enginebrw);
+//       if(JSONGet(jdata,"code") == Enginebrw.Code) then begin
+//         testf = true;
+//         i = rwcnt;
+//         LogText(0,JSONGet(jdata,"code"));
+//       end;
+//     end;
+//   end;
+
+//   if(testf) then begin
+//     Enginer.Code = JSONGet(jdata,"code");
+//     Enginer.EngineSize = JSONGet(jdata,"size");
+//     Enginer.Closed = 1;
+//     RecordStore(Enginer, true);
+//   end;
+
+//   // LogText(0,JSONGet(jdata,"passenger_car_no"));
+    
+//   return;
+//   end; 
+

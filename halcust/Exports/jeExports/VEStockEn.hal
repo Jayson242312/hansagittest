@@ -1,0 +1,116 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+
+external inner function val GetStockQty(string,string,Date,Boolean);
+
+window VNVEStockEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Supplier Stock Info.",VNVEStockEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+window VNSalesINEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Sales Info.",VNSalesINEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  PeriodField(h=50,v+=20,"Period");
+  EndWindow;
+
+  return;
+end;
+
+window VNSales2INEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Sales Info. 6 Months Mandatory",VNSales2INEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+window VNSales3INEClass:1
+  wtag("language","ENG"), wtag("product","*"), wtag("productcode","*"), wtag("device","computer")
+begin
+  real h,v;
+
+  WindowBegin("Export Sales Info. 14 Days Mandatory",VNSales3INEClass,CGEcw,RcType);
+  SetWRect(20,80,400,300);
+  EndWindow;
+
+  return;
+end;
+
+global
+procedure DisplayStock(record RcVc RepSpec,String locCode)
+begin
+  record PIVc PIr;
+  record INVc INr;
+  val instock;
+  Boolean testf;
+
+  while (LoopMain(PIr,1,true)) begin
+    testf = true;
+    if (NonBlank(PIr.VECode)) then begin
+      INr.Code = PIr.ItemCode;
+      if (ReadFirstKey("Code",INr,1,true)) then begin end;
+      if (INr.Code <> PIr.ItemCode) then begin testf = false; end;
+      if (PIr.DefaultChoice == 1 ) then begin testf = false; end;
+      if (INr.Terminated == 1) then begin testf = false; end;
+    end;
+    if (testf) then begin
+      ExportString(LocCode);
+      ExportString(PIr.ItemCode);
+      ExportString(PIr.VECode);
+      newLine;
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure VEStockEn(record RcVc RepSpec)
+begin
+  record LocationVc Locr;
+
+  ExportString("SiteCode");
+  ExportString("ItemCode");
+  ExportString("SupplierCode");
+  newLine;
+  while(LoopMain(Locr,1,true)) begin
+    DisplayStock(RepSpec,Locr.Code);
+  end;
+
+  CloseFile;
+  return;
+end;
+
+//  AG 2013-06-24 -- ORB001-130624-001 - Creating the split between Nightly Export and user run exports
+global
+procedure VEStock_NightlyEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "SupplierInventory.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "SupplierInventory.txt");
+  end;
+  VEStockEn(RepSpec);
+
+  return;
+end;

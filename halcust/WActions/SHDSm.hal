@@ -1,0 +1,106 @@
+remote inner updating function Integer PasteSHInIVCash(var record IVCashVc,var record SHVc);
+remote inner updating function LongInt PasteSHInInvoice2(record SHVc,var record IVVc);
+external inner procedure IVOpenPrepExists(string);
+remote inner updating procedure IVFromSHDsmCreateRecordLinks(record SHVc,record IVVc);
+external inner procedure CustMessages(string,string);
+
+global
+updating procedure IVCashFromSHDsm()
+begin
+  record IVCashVc IVCashr;
+  record ARPayVc ARPayr;
+  record SHVc SHr;
+  Integer nwn,wn;
+  LongInt err;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,SHr);
+  if (UserCanAction("SHToIVCash",true)) then begin
+    if ((WindowState(wn)==Rs_normal) and (SHr.OKFlag!=0)) then begin
+      //RP - Check for Open Prepayment
+      ARPayr.CUPNr = SHr.OrderNr;
+      if(ReadFirstMain(ARPayr, 1, true)) then begin
+        MessageBox(2025,". Create an Account Invoice.");
+      end else begin
+        err = PasteSHInIVCash(IVCashr,SHr);
+        switch (err) begin
+          case 0:
+            if (MatRowCnt(IVCashr)!=0) then begin
+                nwn = OpenWindow("NPTSIVCashDClass",1,0,"","",IVCashr);
+                // RP - Open a Touch Screen interface instead of the normal POS window
+                // nwn = OpenWindow("IVCashDClass",1,0,"","",IVCashr);
+                WindowFieldGoto(nwn,IVCashr,-1,"CashValue",true);
+                UpdateBrowses("ORVc");
+                // RP
+            end else begin
+              Beep;
+            end;
+          otherwise
+            MessageBox(err,"");
+        end;
+      end;
+    end else begin
+      Beep;
+    end;
+  end else begin
+    MessageBox(1274,StringFromStringSet(3,"SHToIVCash"));
+  end;
+  return;
+end;
+
+global
+updating procedure IVFromSHDsm()
+begin
+  record SHVc SHr;
+  record IVVc IVr;
+  record CUVc CUr;
+  Integer wn,nwn;
+  LongInt err;
+  boolean testf;
+  
+  testf = false;
+  wn = CurWindow;
+  GetWindowRecord(wn,SHr);
+  if (UserCanAction("SHToInv",true)) then begin
+    if ((WindowState(wn)==Rs_normal) and (SHr.OKFlag!=0)) then begin
+
+      //RP - Prevent Cash Account to be invoiced as account invoice
+
+      CUr.Code = SHr.CustCode;
+
+      if(ReadFirstMain(CUr,1,true)) then begin
+        if(CUr.LangCode == "ACC" or CUr.OnAccount == 1) then begin
+            testf = true;
+          end else begin
+            MessageBox(0,"Only cash payments allowed on cash customer account " & SHr.CustCode & ", create POS Invoice (Ctrl + F)");
+          end;             
+      end;
+      
+      if(testf) then begin
+        err = PasteSHInInvoice2(SHr,IVr);
+        switch (err) begin
+          case 0:
+            if (MatRowCnt(IVr)!=0) then begin
+                nwn = OpenWindow("IVDClass",1,0,"","",IVr);
+
+                if (WindowDoOK(nwn,0)) then begin
+                  IVFromSHDsmCreateRecordLinks(SHr,IVr);
+                  UpdateBrowses("ORVc");
+                  IVOpenPrepExists(IVr.CustCode);
+                  CustMessages("SHVc",IVr.CustCode);
+                end;
+            end else begin
+              Beep;
+            end;
+          otherwise
+            MessageBox(err,"");
+        end;
+      end;
+    end else begin
+      Beep;
+    end;
+  end else begin
+    MessageBox(1274,StringFromStringSet(3,"SHToInv"));
+  end;
+  return;
+end;

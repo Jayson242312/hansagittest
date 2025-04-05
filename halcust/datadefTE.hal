@@ -1,0 +1,39 @@
+// ui
+SourceFile("halcust/timedevents/latvian",3);
+SourceFile("halcust/timedevents/english",3);
+SourceFile("halcust/timedevents/saf",3);
+SourceFile("halcust/timedevents/Tools",3);
+
+begin
+  
+  RecordBegin(Burti_TimedEventVc,-,"");
+  ImpExpLevel(3);
+  RegisterForAllCompanies(false);
+  RecordField(SerNr,M4Long,0,0);
+  RecordField(Routine,M4Str,60,0);
+  RecordField(RoutineType,M4Int,0,0);
+  RecordField(LastDate,M4Date,0,0);
+  RecordField(LastTime,M4Time,0,0);
+  RecordField(NextDate,M4Date,0,0);
+  RecordField(NextTime,M4Time,0,0);
+  RecordField(Interval,M4Long,0,0);
+  RecordField(IntervalType,M4Int,0,0);
+  RecordField(HoldFlag,M4Mark,0,0);
+  RecordField(CompanyNr,M4Int,0,0);
+  RecordField(Math,M4Matrix,0,0);
+  RecordField(LastDateDone,M4Date,0,0);//HERBE-787
+  RecordField(LastTimeDone,M4Time,0,0);//HERBE-787
+  ArrayBegin(Math,-,1);
+  ArrayField(ParamName,M4Str,30,0); 
+  ArrayField(ParamValue,M4Str,60,0); 
+  ArrayField(Comment,M4Str,60,0); 
+  EndArray;
+  MainKeyBegin(MainKey,0);
+  KeySegment(SerNr);
+  KeyBegin(HoldFlag);
+  KeySegment(HoldFlag);
+  KeySegment(SerNr);
+  EndRecord;
+  
+  return;
+end;

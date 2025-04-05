@@ -1,0 +1,45 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure PriceEn()
+begin
+  record PLVc PLr;
+  string 255 inline;
+  Boolean pCh;
+  integer i, count;
+
+  ExportString("Item");//Item
+  ExportString("PriceList");//PriceList
+  ExportString("Description");//Comment
+  ExportString("Price");//Price
+  ExportString("SalesAcc");//Sales A/C
+  ExportString("VAT Code");//VAT Code
+  ExportString("Customer");//Customer
+  ExportString("CostPrice");//Cost Price
+  ExportString("BuyBackAcc");//BuyBack Accr. A/C
+  ExportString("UseThePrice");//Use the price
+  ExportString("DoNotRecalculate");//Do not Recalculate
+  ExportString("GenerateBuyBack");//Generate BuyBack
+  newLine;
+
+  while(LoopMain(PLr,1,true)) begin
+    if (PLr.DonotRecalculate == 1) then begin
+      ExportString(PLr.ArtCode);
+      ExportString(PLr.PLCode);
+      ExportString(PLr.Comment);
+      ExportString(PLr.ExVatPrice);
+      ExportString(PLr.SalesAcc);
+      ExportString(PLr.VATCode);
+      ExportString(PLr.CustCode);
+      ExportString(PLr.CostPrice);
+      ExportString(PLr.BBVarAcc);
+      ExportString(PLr.NoOtherPricing);
+      ExportString(PLr.DonotRecalculate);
+      ExportString(PLr.BBGenTrans);
+      newLine;
+    end;
+  end;
+  return;
+end;

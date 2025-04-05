@@ -1,0 +1,56 @@
+//  VER: 7.1 71120450 (2013-10-13) - AG 2013-11-04 - upgraded
+//  VER 6.4 64241500
+// 23.12.2010 Developed for version 6.1 100512
+
+global
+updating procedure PriceListsEn()
+begin
+  record PLDefVc PLr;
+  row PLDefVc PLrw;
+  string 255 inline;
+  Boolean pCh;
+  integer i, count;
+
+  ExportString("Code");
+  ExportString("Description");
+  ExportString("PeriodStartDate");
+  ExportString("PeriodEndDate");
+  ExportString("Currency");
+  ExportString("Replace");
+  ExportString("BuyBack Accr. A/C");
+  ExportString("VAT");
+  ExportString("Type");
+  ExportString("RowType");
+  ExportString("ItemGroup");
+  ExportString("Formulae");
+  ExportString("V-Cd");
+  ExportString("WeightrdAvg");
+  ExportString("LastPurchasePrice");
+  newLine;
+
+  while(LoopMain(PLr,1,true)) begin
+    count = MatRowCnt(PLr);
+    for(i=0;i<count;i=i+1)begin
+      ExportString(PLr.Code); //Code
+      ExportString(PLr.Comment);  //Description
+      ExportString(PLr.StartDate);  //PeriodStartDate
+      ExportString(PLr.EndDate);  //PeriodEndDate
+      ExportString(PLr.CurncyCode);  //Currency
+      ExportString(PLr.PLReplCode);  //Replace
+      ExportString(PLr.BBVECode);  //BuyBack Accr. A/C
+      ExportString(PLr.InclVAT); //StringToInt(inline);  //VAT
+      ExportString(PLr.DepPrice); //StringToInt(inline);  //Type
+      //ROWS
+      MatRowGet(PLr,i,PLrw);
+      ExportString(PLrw.CodeType); //Row Type
+      ExportString(PLrw.ItemCode); //Item Group
+      ExportString(PLrw.Formula); //Formulae
+      ExportString(PLrw.VATCode); //V-Cd
+      //FROM ITEM
+      //ExportString(INr.WeighedAvPrice); //WeightrdAvg
+      //ExportString(INr.LastPurchPrice2); //LastPurchasePrice
+      newLine;
+    end;
+  end;
+  return;
+end;

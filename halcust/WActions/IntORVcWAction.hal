@@ -1,0 +1,67 @@
+external inner function Integer IntORTestApprovalStatus(record IntORVc); //***
+external updating procedure RecordAction_raPasteIntOrdInStockMov(record IntORVc,record StockMovVc); //***
+
+// Removed - Not needed anymore
+// global
+// function Boolean IntORDClassOKFlagButtonAction(Integer wn,Integer value)
+// begin
+//   IntORDClassOKFlagButtonAction = false;
+//   return;
+// end;
+
+global
+updating procedure GregsStockMovFromIntORDsm()
+BEGIN
+  record IntORVc IntORr;
+  record StockMovVc StockMovr;
+  LongInt r;
+  Integer wn,nwn;
+  record IntORClassVc IntORClassr;
+  record AcceptSetBlock ASr;
+  
+  wn = CurWindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,IntORr);
+    if (IntORr.Closed!=0) then begin 
+      MessageBox(22062,"");
+      goto LStockMovFromIntORDsm;
+    end;
+    r = IntORTestApprovalStatus(IntORr);
+    if (r!=0) then begin
+      MessageBox(r,"");
+      goto LStockMovFromIntORDsm;
+    end;
+    if (UserCanAction("IntORToStockMov",true)) then begin
+      if nonblank(IntORr.IntORClass) then begin
+        IntORClassr.Code = IntORr.IntORClass;
+        if (ReadFirstMain(IntORClassr,1,true)) then begin
+          if (IntORClassr.DisallowStockMov==1) then begin
+            MessageBox(20091,IntORr.IntORClass);
+            goto LStockMovFromIntORDsm;
+          end;  
+        end;  
+      end;    
+      BlockLoad(ASr) 
+      if (IntORr.StatusFlag<>1) and (ASr.ForceAcceptIntOR<>0) then begin
+        MessageBox(20039,"");
+        goto LStockMovFromIntORDsm;
+      end;
+      RecordAction_raPasteIntOrdInStockMov(IntORr,StockMovr);
+      //RP This code will check if record is created, if not will show a message
+      //   switch (r) begin
+      //     case -1: Beep;
+      //     case -2: MessageBox(1281,"");
+      //     otherwise
+      //       nwn = OpenWindow("StockMovDClass",1,0,"","",StockMovr);
+      //       WindowFieldGoto(nwn,StockMovr,-1,"FrLocation",true);
+      //   end;
+      // UpdateBrowses("IntORVc");
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"IntORToStockMov"));
+    end;
+  end else begin
+    Beep;
+  end; 
+LStockMovFromIntORDsm:; 
+  RETURN;
+END;

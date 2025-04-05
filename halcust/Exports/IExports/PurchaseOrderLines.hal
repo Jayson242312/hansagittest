@@ -1,0 +1,110 @@
+global
+procedure PurchaseOrderLinesEn(record RcVc RepSpec)
+begin
+  record POVc POr;
+  record INVc INr;
+  record LocationVc Locationr;
+  row POVc POrw;
+  Date today;
+  Date startdate;
+  boolean continue;
+  boolean testf;
+  integer rwcnt, i;
+
+  continue = true;
+  testf = true;
+  today = CurrentDate;
+  startdate = AddMonth(today,-3);
+  POr.TransDate = startdate;
+
+  ExportString("Purchase Order Id");
+  ExportString("Line Id");
+  ExportString("SKU");
+  ExportString("Location");
+  ExportString("Supplier");
+  ExportString("Quantity");
+  ExportString("Received");
+  ExportString("Issue Date");
+  ExportString("ETA");
+  ExportString("Price Per Unit");
+  ExportString("Amount");
+  ExportString("Lot Number");
+  ExportString("Expiration Date");
+  NewLine;
+
+  while(LoopKey("TransDate", POr, 1, continue)) begin
+    if(DateInRange(POr.TransDate, startdate, today) == false)then begin
+      continue = false;
+      goto PurchaseOrderLines;
+    end;
+
+    if(POr.Closed == 1) then begin testf = false; end;
+
+    if(testf) then begin
+      rwcnt = MatRowCnt(POr);
+
+      for(i=0;i<rwcnt;i=i+1)begin
+        MatRowGet(POr,i,POrw);
+        INr.Code = POrw.ArtCode;
+        Locationr.Code = POr.Location;
+        testf = false;
+
+        if(ReadFirstMain(INr, 1, true) and ReadFirstMain(Locationr, 1, true)) then begin
+          testf = true;
+        end;
+        
+        if(testf) then begin
+          ExportString(POr.SerNr);
+          ExportString((i + 1));
+          ExportString(POrw.ArtCode);
+          ExportString(POr.Location);
+          ExportString(POr.VECode);
+
+          if(NonBlank(POrw.Quant)) then begin
+            ExportVal(POrw.Quant, M4UVal);
+          end else begin
+            ExportString("0");
+          end;
+    
+          if(NonBlank(POrw.Shipd1)) then begin
+            ExportVal(POrw.Shipd1, M4UVal);
+          end else begin
+            ExportString("0");
+          end;
+
+          ExportString(POr.TransDate);
+          ExportString("");
+          ExportVal(POrw.Price, M45Val);
+          ExportVal(POrw.Sum, M45Val);
+          ExportString("");
+          ExportString("");
+          NewLine;
+        end;
+
+        testf = true;
+      end;
+    end;
+
+    testf = true;
+  end;
+
+  PurchaseOrderLines:;
+  CloseFile;
+end;
+
+global
+procedure PurchaseOrderLinesIEn(record RcVc RepSpec)
+begin
+  record JEBlock JEb;
+
+  BlockLoad(JEb);
+  if (CurrentCompany == 1) then begin
+    CreateFile(JEb.Path & "Purchase Order Lines.txt");
+  end;
+  if (CurrentCompany == 3) then begin
+    CreateFile(JEb.Path2 & "Purchase Order Lines.txt");
+  end;
+  PurchaseOrderLinesEn(RepSpec);
+
+  return;
+end;

@@ -1,0 +1,163 @@
+external procedure AddTextToAreaNL(string,area);
+external updating procedure SendToAdor(area,var record ADORQueueVc,string);
+external function string 255 GMSFromatDate(date);
+
+global
+updating procedure SendRetToADOR(record RetVc Retr,record ADORQueueVc ADORQueuer)
+begin
+  area apost,aresponse;
+  record RetVc Ret2r;
+  record HALAdorBlock ADRb;
+  row RetVc Retrw;
+  row ADORQueueVc ADORQueuerw;
+  integer rwcnt,i;
+  string 255 filename;
+  boolean oncef; 
+
+  BlockLoad(ADRb);
+  AddTextToAreaNL("{",apost);
+  AddTextToAreaNL("  ""interfaceName"" : ""PurchaseOrder_GregsMotors"",",apost);
+  AddTextToAreaNL("  ""returnDetailedData"" : true,",apost);
+  AddTextToAreaNL("  ""data"": [{",apost);
+  AddTextToAreaNL("    ""PONo"": """ & Retr.SerNr & """,",apost);
+  AddTextToAreaNL("    ""PODesc"": """ & Retr.Comment & """,",apost);
+  AddTextToAreaNL("    ""POSource"": ""SERP"",",apost);
+  AddTextToAreaNL("    ""ClientNo"": """ & ADRb.ADORClientNo & """,",apost);
+  AddTextToAreaNL("    ""Ref1"": """ & Retr.OrdNr & """,",apost);
+  AddTextToAreaNL("    ""Ref2"": """ & Retr.SHNr & """,",apost);
+  AddTextToAreaNL("    ""DeliveryDate"": """ & GMSFromatDate(Retr.TransDate) & """,",apost); // needs to be in yyyy-mm-dd format
+  AddTextToAreaNL("    ""InvoiceNo"": """ & Retr.InvoiceNr & """,",apost);
+  AddTextToAreaNL("    ""POType"": ""ReturnGood"",",apost);
+  AddTextToAreaNL("    ""Location"": {",apost);
+  AddTextToAreaNL("      ""LocationNo"": """ & Retr.CustCode & """,",apost);
+  AddTextToAreaNL("      ""LocationName1"": """ & Retr.CustName & """",apost);
+  AddTextToAreaNL("    },",apost);
+  AddTextToAreaNL("    ""Lines"": [",apost);
+  rwcnt = MatRowCnt(Retr);
+  if (rwcnt > 0) then begin
+    for (i = 0; i < rwcnt; i = i + 1) begin
+      MatRowGet(Retr, i, Retrw);
+      if(oncef) then begin 
+        AddTextToAreaNL("      ,",apost);
+      end; 
+      AddTextToAreaNL("      {",apost);
+      AddTextToAreaNL("        ""LineNo"": """ & i + 1 & """,",apost); // should start at 1
+      AddTextToAreaNL("        ""CustomerNo"": """ & ADRb.ADORClientNo & """,",apost);
+      AddTextToAreaNL("        ""SKUNo"": """ & Retrw.ArtCode & """,",apost);
+      AddTextToAreaNL("        ""OrderedQty"":" & Retrw.Quant,apost);
+      AddTextToAreaNL("       }",apost);  
+      oncef = true; 
+    end;
+    
+  end;
+  AddTextToAreaNL("     ]",apost);
+  AddTextToAreaNL("   }]",apost);
+  AddTextToAreaNL("}",apost);
+
+  if (Retr.ADORLocked != 1) then begin
+    RecordCopy(Ret2r,Retr);
+    Retr.ADORLocked = 1;
+    RecordUpdate(Ret2r,Retr,false);
+  end;
+  CreateRecordLink(Retr,CurrentCompany,ADORQueuer,CurrentCompany);
+  CreateRecordLink(ADORQueuer,CurrentCompany,Retr,CurrentCompany);
+
+  SendToAdor(apost,ADORQueuer,"Inbound");
+
+  return;
+end;
+
+global
+updating procedure AddOneRetToADORQueue(record RetVc Retr)
+begin
+  record ADORQueueVc ADORQueuer;
+  record RetVc Ret2r;
+  row ADORQueueVc ADORQueuerw;
+  record HALAdorBlock HALAdorb;
+  record LocationVc Locationr;
+  string 255 key;
+  integer i,rwcnt;
+  boolean testf;
+
+  testf = true;
+  BlockLoad(HALAdorb);
+  if (HALAdorb.ADORIntegr != 1) then begin
+    testf = false;
+  end;
+
+  if (testf) then begin
+    if (Retr.OKFlag == 1) then begin
+      testf = false;
+    end;
+  end;
+
+  if (testf) then begin
+    Locationr.Code = Retr.Location;
+    if (ReadFirstMain(Locationr,1,true)) then begin
+      if (Locationr.ADORControl != 1) then begin
+        testf = false;
+      end;
+    end;  
+  end;
+  
+  if (testf) then begin
+    ADORQueuer.RegisterCode = "RetVc";
+    ADORQueuer.RecordNumber = Retr.SerNr;
+    key = "RegCodeNumber";
+    if (ReadFirstKey(key,ADORQueuer,2,true)) then begin
+      ADORQueuer.Operation = 2; // update
+      ADORQueuer.Status = 1; // Queued
+      ADORQueuerw.Operation = 2;
+      ADORQueuerw.LogDate = CurrentDate;
+      ADORQueuerw.LogTime = CurrentTime;
+      ADORQueuerw.Details = "Updated";
+      MatRowInsert(ADORQueuer,MatRowCnt(ADORQueuer),ADORQueuerw);
+    end else begin
+      ADORQueuer.SerNr = NextSerNr("ADORQueueVc",CurrentDate,0,false,"");
+      ADORQueuer.RegisterCode = "RetVc";
+      ADORQueuer.RecordNumber = Retr.SerNr;
+      ADORQueuer.CreationDate = CurrentDate;
+      ADORQueuer.CreationTime = CurrentTime;
+      ADORQueuer.Operation = 1; // create
+      ADORQueuer.Status = 1; // Queued
+      ADORQueuerw.Operation = 1;
+      ADORQueuerw.LogDate = CurrentDate;
+      ADORQueuerw.LogTime = CurrentTime;
+      ADORQueuerw.Details = "Created";
+      MatRowInsert(ADORQueuer,MatRowCnt(ADORQueuer),ADORQueuerw);
+    end;
+      LogText(0,"Queued: SendRetToADOR");
+    SendRetToADOR(Retr,ADORQueuer);
+  end;
+
+  return;
+end;
+
+global
+updating procedure SendRetToADORMn(record RcVc RepSpec)
+begin
+  record Retvc Retr;
+  boolean TrHs;
+
+  TrHs = true;
+  if (BlankDate(RepSpec.sEndDate)) then begin
+    Retr.TransDate = CurrentDate;  
+  end else begin
+    Retr.TransDate = RepSpec.sEndDate;  
+  end;
+  while (LoopBackKey("TransDate", Retr, 1, TrHs)) begin
+    if (TrHs) then begin
+      if (NonBlank(RepSpec.sStartDate)) then begin
+        if (Retr.TransDate < RepSpec.sStartDate) then begin
+          TrHs = false;
+        end;
+      end;
+    end;
+    if (TrHs) then begin
+      if (Retr.OKFlag != 1) then begin
+        AddOneRetToADORQueue(Retr);
+      end;
+    end;
+  end;
+  return;
+end;
