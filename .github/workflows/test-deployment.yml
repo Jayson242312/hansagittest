@@ -38,26 +38,25 @@ jobs:
             cd $APP_DIR
             git fetch origin test
             git checkout -B test
-          "
       - name: Stop existing server if running
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -ex
-            # Escape the dot to match './StandardERPServer64'
-            PID=\$(pgrep -f '\\./StandardERPServer64.*--port 1201' || true)
-            if [ -n \"\$PID\" ]; then
-              echo \"Found PID: \$PID\"
-              kill \$PID || true
-              sleep 5
-              if ps -p \$PID > /dev/null; then
-                echo 'Force killing process...'
-                kill -9 \$PID
-              fi
-            else
-              echo 'No running process found, starting server...'
-              cd $APP_DIR
-              nohup $APP_CMD > test.log 2>&1 &
+          ssh -p "$SSH_PORT" "$SERVER_USER@$SERVER_IP" /bin/bash << 'EOF'
+          set -ex
+          PID=$(pgrep -f '\./StandardERPServer64.*--port 1201' || true)
+          if [ -n "$PID" ]; then
+            echo "Found PID: $PID"
+            kill "$PID" || true
+            sleep 5
+            if ps -p "$PID" >/dev/null; then
+              echo "Force killing PID $PID..."
+              kill -9 "$PID"
             fi
+          else
+            echo "No running process found, starting server..."
+            cd "$APP_DIR"
+            nohup $APP_CMD > test.log 2>&1 &
+          fi
+          EOF
       - name: Remove old logs
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
