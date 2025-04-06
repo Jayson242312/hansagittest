@@ -45,7 +45,7 @@ begin
   SetWRect(20,80,200,500);   
   Sizeable(-1,-1,0,0); 
   UseView(DeedOfSaleVc);
-  FormName(DeedOfSaleForm);
+  FormName(DeedOfSaleForm);ff
   v=20; h=100;
   EditField(h,v,50,"Code",St_i,SerNr,false,0);
   EditField(h+=120,v,150,"Deed No.",Normal,DeedNo,false,0);
