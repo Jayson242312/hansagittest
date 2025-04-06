@@ -58,6 +58,11 @@ jobs:
             fi
           "
 
+      - name: Remove old logs
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
+  
+
       - name: Start server with test branch
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
@@ -124,7 +129,7 @@ jobs:
             git pull origin main
             PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
             if [ -n \"\$PID\" ]; then
-              kill \$PID
+              kill \$PID   
               sleep 5
               if ps -p \$PID > /dev/null; then
                 kill -9 \$PID
