@@ -26,7 +26,7 @@ jobs:
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.T }}
+          ssh-private-key: ${{ secrets.T}}
 
       - name: Validate server connection
         run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
@@ -42,34 +42,36 @@ jobs:
 
       - name: Stop existing server if running
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -ex
-            PID=$(pgrep -f "$(printf "%q" "'"$APP_CMD"'")" || true)
-            if [ -n "$PID" ]; then
-              echo "Found PID: $PID"
-              kill $PID || true
+            # Attempt to find the PID; if not found, do not fail the command
+            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' || true)
+            if [ -n \"\$PID\" ]; then
+              echo \"Found PID: \$PID\"
+              kill \$PID || true
               sleep 5
-              if ps -p $PID > /dev/null; then
-                echo "Force killing process..."
-                kill -9 $PID
+              if ps -p \$PID > /dev/null; then
+                echo 'Force killing process...'
+                kill -9 \$PID
               fi
             else
-              echo "No running process found"
+              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+              nohup $APP_CMD > test.log 2>&1 &
+              echo 'No running process found so attempting to start server...'
             fi
-          '
-
+          "
       - name: Remove old logs
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
 
       - name: Start server with test branch
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
-            cd '"$APP_DIR"'
-            nohup '"$APP_CMD"' > test.log 2>&1 &
-            echo "Server start command executed - waiting for initialization..."
-          '
+            cd $APP_DIR
+            nohup $APP_CMD > test.log 2>&1 &
+            echo 'Server start command executed - waiting for initialization...'
+          "
 
       - name: Wait and display current logs
         run: |
@@ -79,40 +81,41 @@ jobs:
 
       - name: Verify server status
         run: |
-          # Retrieve PID using the properly escaped APP_CMD pattern
-          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
-            pgrep -f "$(printf "%q" "'"$APP_CMD"'")" || true
-          ' | tr -d "\n")
+          # Retrieve PID with an exact match for APP_CMD
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            pgrep -f '$(printf "%q" "$APP_CMD")'
+          " | tr -d '\n')
         
           echo "Raw PID detected: '$PID'"
         
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
-            if [ -z "'"$PID"'" ]; then 
-              echo "No PID found - server did not start as expected"; exit 1; 
-            elif ! ps -p "'"$PID"'" >/dev/null; then 
-              echo "PID '"$PID"' not running"; exit 1;
-            elif ! grep -qF "'"$APP_CMD"'" /proc/"'"$PID"'/cmdline 2>/dev/null; then
-              echo "PID '"$PID"' command mismatch"; exit 1;
+          # Verify the process is running with the expected command line
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -z \"$PID\" ]; then 
+              echo 'No PID found'; exit 1; 
+            elif ! ps -p \"$PID\" >/dev/null; then 
+              echo 'PID $PID not running'; exit 1;
+            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
+              echo 'PID $PID command mismatch'; exit 1;
             fi
-          '
+          "
         
           echo "Process is running."
         
           # Check for 'close database' error in test.log
-          ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
-            if grep -qi "close database" '"$APP_DIR"'/test.log; then
-              echo "error"
+          ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if grep -qi 'close database' $APP_DIR/test.log; then
+              echo 'error'
             fi
-          ' | tr -d "\n")
+          " | tr -d '\n')
         
           # Check if hal.log exists (indicates a validation error)
-          HAL_EXISTS=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
-            if [ -f '"$APP_DIR"'/hal.log ]; then
-              echo "exists"
+          HAL_EXISTS=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -f $APP_DIR/hal.log ]; then
+              echo 'exists'
             fi
-          ' | tr -d "\n")
+          " | tr -d '\n')
         
-          if [ "$ERROR_FOUND" = "error" ] || [ "$HAL_EXISTS" = "exists" ]; then
+          if [ \"$ERROR_FOUND\" = \"error\" ] || [ \"$HAL_EXISTS\" = \"exists\" ]; then
             echo "::error::Server validation failed."
             echo "Error details from logs:"
             # Prefer hal.log if it exists; otherwise, show test.log
@@ -126,19 +129,19 @@ jobs:
       - name: Revert to main branch
         if: always()
         run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP '
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
-            cd '"$APP_DIR"'
+            cd $APP_DIR
             git checkout main
             git pull origin main
-            PID=$(pgrep -f "$(printf "%q" "'"$APP_CMD"'")" || true | head -1)
-            if [ -n "$PID" ]; then
-              kill $PID || true
+            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
+            if [ -n \"\$PID\" ]; then
+              kill \$PID
               sleep 5
-              if ps -p $PID > /dev/null; then
-                kill -9 $PID
+              if ps -p \$PID > /dev/null; then
+                kill -9 \$PID
               fi
             fi
-            nohup '"$APP_CMD"' > hal.log 2>&1 &
-            echo "Server restarted with main branch"
-          '
+            nohup $APP_CMD > hal.log 2>&1 &
+            echo 'Server restarted with main branch'
+          "
