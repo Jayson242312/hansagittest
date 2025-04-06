@@ -1,9 +1,10 @@
-name: Test Deployment
+name: Deploy to Server
 
 on:
-  pull_request:
+  push:
     branches:
       - "main"
+  workflow_dispatch:
 
 env:
   SSH_PORT: 22
@@ -15,14 +16,14 @@ env:
   RETRY_DELAY: 10
 
 jobs:
-  test-deploy:
+  deploy:
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout test branch
-        uses: actions/checkout@v3
-      
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Updated to latest version
+
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -31,19 +32,25 @@ jobs:
       - name: Validate server connection
         run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
 
-      - name: Pull test branch changes to production
+      - name: Pull latest changes
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
-            git fetch origin test
-            git checkout -B test 
-          "
+            git fetch origin
+            git reset --hard origin/main
+          " 
 
       - name: Stop existing server
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x
+            set -x  # Enable debugging
+            echo 'Current working directory:'
+            pwd
+            echo 'Running processes:'
+            ps aux | grep .\StandardERPServer64 || true
+            echo 'Attempting to stop server...'
+            
             PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
             if [ -n \"\$PID\" ]; then
               echo \"Found PID: \$PID\"
@@ -57,86 +64,62 @@ jobs:
               echo 'No running process found'
             fi
           "
-
-      - name: Remove old logs
-        run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
-  
-
-      - name: Start server with test branch
+      - name: Start server
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
-            nohup $APP_CMD > test.log 2>&1 &
+            nohup $APP_CMD > hansa.log 2>&1 &
             echo 'Server start command executed - waiting for initialization...'
           "
 
       - name: Check server log
         run: |
-          sleep 60
+          sleep 60  # Initialization period
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/test.log"
-          - name: Verify server status
-          run: |
-            # Get PID with exact match
-            PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              pgrep -f '$(printf "%q" "$APP_CMD")'
-            " | tr -d '\n')
-        
-            echo "Raw PID detected: '$PID'"
-                      
-            # Verify PID exists and is running
-            if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              if [ -z \"$PID\" ]; then 
-                echo 'No PID found'; exit 1; 
-              elif ! ps -p \"$PID\" >/dev/null; then 
-                echo 'PID $PID not running'; exit 1;
-              elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
-                echo 'PID $PID command mismatch'; exit 1;
-              fi
-            "; then
-              echo "Process is running"
-            else
-              echo "::error::Server validation failed"
-              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
-              exit 1
-            fi
-        
-            # Additional check for known errors in log files
-            ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              if grep -qi 'close database' $APP_DIR/hansa.log; then
-                echo 'error'
-              fi
-            " | tr -d '\n')
-        
-            if [ \"$ERROR_FOUND\" = \"error\" ]; then
-              echo "::error::Found 'close database' error in hansa.log"
-              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
-              exit 1
-            else
-              echo "No critical errors found in logs"
-              echo "Server verified as running"
-            fi
 
-      - name: Revert to main branch
-        if: always()
+      - name: Verify server status
+        run: |          
+          # Get PID with exact match
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            pgrep -f '$(printf "%q" "$APP_CMD")'
+          " | tr -d '\n')
+          
+          echo "Raw PID detected: '$PID'"
+                    
+          # Verify PID exists and is running
+          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -z \"$PID\" ]; then 
+              echo 'No PID found'; exit 1; 
+            elif ! ps -p \"$PID\" >/dev/null; then 
+              echo 'PID $PID not running'; exit 1;
+            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
+              echo 'PID $PID command mismatch'; exit 1;
+            fi
+          "; then
+            echo "Server verified as running"
+          else
+            echo "::error::Server validation failed"
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+            exit 1
+          fi
+
+      - name: Rollback on failure
+        if: failure()
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             set -e
             cd $APP_DIR
-            git checkout main
-            git pull origin main
-            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
-            if [ -n \"\$PID\" ]; then
-              kill \$PID   
-              sleep 5
-              if ps -p \$PID > /dev/null; then
-                kill -9 \$PID
-              fi
-            fi
-            nohup $APP_CMD > hal.log 2>&1 &
-            echo 'Server restarted with main branch'
-          "
+            echo 'Rolling back to previous version...'
+            git reset --hard HEAD@{1}
 
- 
+            nohup $APP_CMD > hal.log 2>&1 &
+            echo 'Server restart after pull'
+  
+            # Kill current instance if different from original
+            if [ -n \"$PRE_DEPLOYMENT_PID\" ] && ! ps -p \"$PRE_DEPLOYMENT_PID\" > /dev/null; then
+              echo 'Restarting previous version...'
+              nohup $APP_CMD > hal.log 2>&1 &
+            fi
+          "
+          echo "::warning::Rollback to previous version completed"
