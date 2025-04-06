@@ -72,14 +72,13 @@ jobs:
           sleep 60
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/test.log"
-
-      - name: Verify server status
-        run: |          
+          - name: Verify server status
+          run: |
             # Get PID with exact match
             PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
               pgrep -f '$(printf "%q" "$APP_CMD")'
             " | tr -d '\n')
-            
+        
             echo "Raw PID detected: '$PID'"
                       
             # Verify PID exists and is running
@@ -92,13 +91,28 @@ jobs:
                 echo 'PID $PID command mismatch'; exit 1;
               fi
             "; then
-              echo "Server verified as running"
+              echo "Process is running"
             else
               echo "::error::Server validation failed"
               ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
               exit 1
             fi
-
+        
+            # Additional check for known errors in log files
+            ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+              if grep -qi 'close database' $APP_DIR/hansa.log; then
+                echo 'error'
+              fi
+            " | tr -d '\n')
+        
+            if [ \"$ERROR_FOUND\" = \"error\" ]; then
+              echo "::error::Found 'close database' error in hansa.log"
+              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
+              exit 1
+            else
+              echo "No critical errors found in logs"
+              echo "Server verified as running"
+            fi
 
       - name: Revert to main branch
         if: always()
