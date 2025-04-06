@@ -40,14 +40,15 @@ jobs:
             git checkout -B test
           "
 
-      - name: Stop existing server
+      - name: Stop existing server if running
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x
-            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
+            set -ex
+            # Attempt to find the PID; if not found, do not fail the command
+            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' || true)
             if [ -n \"\$PID\" ]; then
               echo \"Found PID: \$PID\"
-              kill \$PID
+              kill \$PID || true
               sleep 5
               if ps -p \$PID > /dev/null; then
                 echo 'Force killing process...'
@@ -57,7 +58,6 @@ jobs:
               echo 'No running process found'
             fi
           "
-
       - name: Remove old logs
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
