@@ -87,6 +87,7 @@ jobs:
           "; then
             echo "Test server verified as running"
           else
+            $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
             exit 1
           fi
 
@@ -105,7 +106,7 @@ jobs:
       - name: Rollback to production code (on failure)
         if: failure()
         run: |
-          echo "Test deployment failed. Rolling back to production code from main..."
+          echo "Test deployment failed. Rolling back to production code from main and restarting server..."
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
             git fetch origin
