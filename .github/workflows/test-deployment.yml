@@ -26,7 +26,7 @@ jobs:
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.T}}
+          ssh-private-key: ${{ secrets.T }}
 
       - name: Validate server connection
         run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
@@ -37,7 +37,7 @@ jobs:
             set -e
             cd $APP_DIR
             git fetch origin test
-            git checkout -B test 
+            git checkout -B test
           "
 
       - name: Stop existing server
@@ -61,7 +61,6 @@ jobs:
       - name: Remove old logs
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "rm -f $APP_DIR/hansa.log $APP_DIR/hal.log $APP_DIR/test.log"
-  
 
       - name: Start server with test branch
         run: |
@@ -72,52 +71,58 @@ jobs:
             echo 'Server start command executed - waiting for initialization...'
           "
 
-      - name: Check server log
+      - name: Wait and display current logs
         run: |
-          sleep 60
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
+          sleep 30
+          echo "Latest test.log output:"
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/test.log"
-          - name: Verify server status
-          run: |
-            # Get PID with exact match
-            PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              pgrep -f '$(printf "%q" "$APP_CMD")'
-            " | tr -d '\n')
+
+      - name: Verify server status
+        run: |
+          # Retrieve PID with an exact match for APP_CMD
+          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            pgrep -f '$(printf "%q" "$APP_CMD")'
+          " | tr -d '\n')
         
-            echo "Raw PID detected: '$PID'"
-                      
-            # Verify PID exists and is running
-            if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              if [ -z \"$PID\" ]; then 
-                echo 'No PID found'; exit 1; 
-              elif ! ps -p \"$PID\" >/dev/null; then 
-                echo 'PID $PID not running'; exit 1;
-              elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
-                echo 'PID $PID command mismatch'; exit 1;
-              fi
-            "; then
-              echo "Process is running"
-            else
-              echo "::error::Server validation failed"
-              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
-              exit 1
+          echo "Raw PID detected: '$PID'"
+        
+          # Verify the process is running with the expected command line
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -z \"$PID\" ]; then 
+              echo 'No PID found'; exit 1; 
+            elif ! ps -p \"$PID\" >/dev/null; then 
+              echo 'PID $PID not running'; exit 1;
+            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
+              echo 'PID $PID command mismatch'; exit 1;
             fi
+          "
         
-            # Additional check for known errors in log files
-            ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              if grep -qi 'close database' $APP_DIR/hansa.log; then
-                echo 'error'
-              fi
-            " | tr -d '\n')
+          echo "Process is running."
         
-            if [ \"$ERROR_FOUND\" = \"error\" ]; then
-              echo "::error::Found 'close database' error in hansa.log"
-              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
-              exit 1
-            else
-              echo "No critical errors found in logs"
-              echo "Server verified as running"
+          # Check for 'close database' error in test.log
+          ERROR_FOUND=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if grep -qi 'close database' $APP_DIR/test.log; then
+              echo 'error'
             fi
+          " | tr -d '\n')
+        
+          # Check if hal.log exists (indicates a validation error)
+          HAL_EXISTS=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            if [ -f $APP_DIR/hal.log ]; then
+              echo 'exists'
+            fi
+          " | tr -d '\n')
+        
+          if [ \"$ERROR_FOUND\" = \"error\" ] || [ \"$HAL_EXISTS\" = \"exists\" ]; then
+            echo "::error::Server validation failed."
+            echo "Error details from logs:"
+            # Prefer hal.log if it exists; otherwise, show test.log
+            ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "cat $APP_DIR/hal.log || cat $APP_DIR/test.log"
+            exit 1
+          else
+            echo "No critical errors found in logs."
+            echo "Server verified as running."
+          fi
 
       - name: Revert to main branch
         if: always()
@@ -129,7 +134,7 @@ jobs:
             git pull origin main
             PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
             if [ -n \"\$PID\" ]; then
-              kill \$PID   
+              kill \$PID
               sleep 5
               if ps -p \$PID > /dev/null; then
                 kill -9 \$PID
@@ -138,5 +143,3 @@ jobs:
             nohup $APP_CMD > hal.log 2>&1 &
             echo 'Server restarted with main branch'
           "
-
- 
