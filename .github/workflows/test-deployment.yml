@@ -26,7 +26,7 @@ jobs:
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.T}}
+          ssh-private-key: ${{secrets.T}}
 
       - name: Validate server connection
         run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
