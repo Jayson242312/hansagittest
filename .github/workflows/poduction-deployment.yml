@@ -1,7 +1,7 @@
-name: Test Deployment on PR
+name: Deploy to Server (Production)
 
 on:
-  pull_request:
+  push:
     branches:
       - "main"
   workflow_dispatch:
@@ -16,15 +16,13 @@ env:
   RETRY_DELAY: 10
 
 jobs:
-  test-deploy:
+  deploy:
     runs-on: self-hosted
     timeout-minutes: 15
 
     steps:
-      - name: Checkout PR code
+      - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Configure SSH
         uses: webfactory/ssh-agent@v0.5.3
@@ -34,19 +32,17 @@ jobs:
       - name: Validate server connection
         run: ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "echo 'Successfully connected to server'"
 
-      - name: Force update to test branch
+      - name: Pull latest changes from main
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -e
             cd $APP_DIR
             git fetch origin
-            git reset --hard origin/${{ github.head_ref }}
+            git reset --hard origin/main
           "
 
       - name: Stop existing server
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x
             PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
             if [ -n \"\$PID\" ]; then
               kill \$PID
@@ -62,10 +58,9 @@ jobs:
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
             nohup $APP_CMD > hansa.log 2>&1 &
-            echo 'Server start command executed'
           "
 
-      - name: Wait and check server log
+      - name: Check server log
         run: |
           sleep 60
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
@@ -90,9 +85,12 @@ jobs:
             exit 1
           fi
 
-      - name: Auto Merge PR (if successful)
-        if: success()
+      - name: Rollback on failure
+        if: failure()
         run: |
-          echo "Merging PR automatically..."
-          # Example using GitHub CLI (gh) -- ensure it's installed on your runner
-          gh pr merge ${{ github.event.pull_request.number }} --merge --admin --delete-branch
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            cd $APP_DIR
+            echo 'Rolling back to previous version...'
+            git reset --hard HEAD@{1}
+            nohup $APP_CMD > hal.log 2>&1 &
+          "
