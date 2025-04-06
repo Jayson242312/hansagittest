@@ -91,7 +91,7 @@ jobs:
           fi
 
 
-      - name: Install GitHub CLI
+      - name: Install GitHub CLI (if not already installed)
         if: success()
         run: |
           sudo apt-get update
