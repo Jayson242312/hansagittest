@@ -55,9 +55,9 @@ jobs:
                 kill -9 \$PID
               fi
             else
-              ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-              nohup $APP_CMD > test.log 2>&1 &
-              echo 'No running process found so attempting to start server...'
+            echo 'No running process found, starting server...'
+            cd $APP_DIR
+            nohup $APP_CMD > test.log 2>&1 &
             fi
           "
       - name: Remove old logs
