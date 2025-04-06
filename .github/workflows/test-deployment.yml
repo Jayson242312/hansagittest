@@ -57,12 +57,12 @@ jobs:
             fi
           "
 
-      - name: Start server
+      - name: Start server with test branch
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
             nohup $APP_CMD > hansa.log 2>&1 &
-            echo 'Server start command executed'
+            echo 'Test branch server start command executed'
           "
 
       - name: Wait and check server log
@@ -85,20 +85,32 @@ jobs:
               echo 'PID $PID command mismatch'; exit 1;
             fi
           "; then
-            echo "Server verified as running"
+            echo "Test server verified as running"
           else
             exit 1
           fi
 
+      - name: Deploy production code from main (on success)
+        if: success()
+        run: |
+          echo "Test deployment succeeded. Checking out production code from main..."
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            cd $APP_DIR
+            git fetch origin
+            git reset --hard origin/main
+            nohup $APP_CMD > hansa.log 2>&1 &
+            echo 'Production code deployed from main'
+          "
 
-      - name: Install GitHub CLI (if not already installed)
-        if: success()
+      - name: Rollback to production code (on failure)
+        if: failure()
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
-      - name: Auto Merge PR (if successful)
-        if: success()
-        run: |
-          echo "Merging PR automatically..."
-          # Example using GitHub CLI (gh) -- ensure it's installed on your runner
-          gh pr merge ${{ github.event.pull_request.number }} --merge --admin --delete-branch
+          echo "Test deployment failed. Rolling back to production code from main..."
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            cd $APP_DIR
+            git fetch origin
+            git reset --hard origin/main
+            nohup $APP_CMD > hal.log 2>&1 &
+            echo 'Rollback: Production code deployed from main'
+          "
+          echo "Rollback completed: Production code is now running."
