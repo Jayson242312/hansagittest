@@ -11,7 +11,6 @@ env:
   SERVER_IP: 172.21.56.243
   SERVER_USER: f
   APP_DIR: u1/StandardERPServer/
-  APP_CMD: ./StandardERPServer64 --port 1201 --webport 1301 --stop journaling
   MAX_RETRIES: 5
   RETRY_DELAY: 10
 
@@ -43,26 +42,21 @@ jobs:
             git reset --hard origin/${{ github.head_ref }}
           "
 
-      - name: Stop existing server
-        run: |
-          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            set -x
-            PID=\$(pgrep -f '.\StandardERPServer64.*--port 1201' | head -1)
-            if [ -n \"\$PID\" ]; then
-              kill \$PID
-              sleep 5
-              if ps -p \$PID > /dev/null; then
-                kill -9 \$PID
-              fi
-            fi
-          "
-
-      - name: Start server with test branch
+      - name: Stop existing server using script
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
-            nohup $APP_CMD > hansa.log 2>&1 &
-            echo 'Test branch server start command executed'
+            chmod +x stop-hansa.sh
+            ./stop-hansa.sh
+          "
+
+      - name: Start server using script
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            cd $APP_DIR
+            chmod +x start-hansa.sh
+            nohup ./start-hansa.sh > hansa.log 2>&1 &
+            echo 'Start script executed'
           "
 
       - name: Wait and check server log
@@ -71,47 +65,33 @@ jobs:
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hansa.log"
 
       - name: Verify server status
-        run: |          
-          PID=$(ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            pgrep -f '$(printf "%q" "$APP_CMD")'
-          " | tr -d '\n')
-          echo "Raw PID detected: '$PID'"
-          if ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
-            if [ -z \"$PID\" ]; then 
-              echo 'No PID found'; exit 1; 
-            elif ! ps -p \"$PID\" >/dev/null; then 
-              echo 'PID $PID not running'; exit 1;
-            elif ! grep -qF \"\$APP_CMD\" /proc/$PID/cmdline 2>/dev/null; then
-              echo 'PID $PID command mismatch'; exit 1;
-            fi
-          "; then
-            echo "Test server verified as running"
-          else
-            $SSH_PORT $SERVER_USER@$SERVER_IP "tail -n 20 $APP_DIR/hal.log"
-            exit 1
-          fi
+        run: |
+          ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
+            ps aux | grep '[S]tandardERPServer64' | grep -- '--port 1201' || (echo 'Server not running' && exit 1)
+          "
 
       - name: Deploy production code from main (on success)
         if: success()
         run: |
-          echo "Test deployment succeeded. Checking out production code from main..."
+          echo "Test deployment succeeded. Deploying main branch to production..."
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
             git fetch origin
             git reset --hard origin/main
-            nohup $APP_CMD > hansa.log 2>&1 &
-            echo 'Production code deployed from main'
+            ./stop-hansa.sh
+            nohup ./start-hansa.sh > hansa.log 2>&1 &
+            echo 'Main branch deployed and server restarted'
           "
 
       - name: Rollback to production code (on failure)
         if: failure()
         run: |
-          echo "Test deployment failed. Rolling back to production code from main and restarting server..."
+          echo "Test deployment failed. Rolling back to main branch..."
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
             git fetch origin
             git reset --hard origin/main
-            nohup $APP_CMD > hal.log 2>&1 &
-            echo 'Rollback: Production code deployed from main'
+            ./stop-hansa.sh
+            nohup ./start-hansa.sh > hansa.log 2>&1 &
+            echo 'Rollback to main branch completed'
           "
-          echo "Rollback completed: Production code is now running."
