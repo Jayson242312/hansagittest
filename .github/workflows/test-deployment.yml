@@ -77,7 +77,8 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             ./stop-hansa.sh
-            nohup ./start-hansa.sh > hansa.log 2>&1 &
+            sleep 2
+            ./start-hansa.sh
             echo 'Main branch deployed and server restarted'
           "
 
@@ -87,9 +88,11 @@ jobs:
           echo "Test deployment failed. Rolling back to main branch..."
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
+            cat hal.log
             git fetch origin
             git reset --hard origin/main
             ./stop-hansa.sh
-            nohup ./start-hansa.sh > hansa.log 2>&1 &
+            sleep 2
+            ./start-hansa.sh
             echo 'Rollback to main branch completed'
           "
