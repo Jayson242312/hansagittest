@@ -7,12 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  SSH_PORT: 22
-  SERVER_IP: 172.21.56.243
-  SERVER_USER: f
+  SSH_PORT: ${{ secrets.SERVER_PORT }}
+  SERVER_IP: ${{ secrets.SERVER_IP }}
+  SERVER_USER:  ${{ vars.SERVERUSER }}
   APP_DIR: u1/StandardERPServer/
-  MAX_RETRIES: 5
-  RETRY_DELAY: 10
 
 jobs:
   test-deploy:
@@ -79,6 +77,7 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             ./stop-hansa.sh
+            sleep 2
             nohup ./start-hansa.sh > hansa.log 2>&1 &
             echo 'Main branch deployed and server restarted'
           "
@@ -89,9 +88,11 @@ jobs:
           echo "Test deployment failed. Rolling back to main branch..."
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
+            cat hal.log
             git fetch origin
             git reset --hard origin/main
             ./stop-hansa.sh
+            sleep 2
             nohup ./start-hansa.sh > hansa.log 2>&1 &
             echo 'Rollback to main branch completed'
           "
