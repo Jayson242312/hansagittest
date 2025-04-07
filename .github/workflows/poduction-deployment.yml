@@ -69,6 +69,7 @@ jobs:
         run: |
           ssh -p $SSH_PORT $SERVER_USER@$SERVER_IP "
             cd $APP_DIR
+            tail -n 20 $APP_DIR/hal.log
             echo 'Rolling back to previous version...'
             git reset --hard HEAD@{1}
             ./stop-hansa.sh
