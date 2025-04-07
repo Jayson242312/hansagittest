@@ -78,7 +78,7 @@ jobs:
             git reset --hard origin/main
             ./stop-hansa.sh
             sleep 2
-            ./start-hansa.sh
+            nohup ./start-hansa.sh > hansa.log 2>&1 &
             echo 'Main branch deployed and server restarted'
           "
 
@@ -93,6 +93,6 @@ jobs:
             git reset --hard origin/main
             ./stop-hansa.sh
             sleep 2
-            ./start-hansa.sh
+            nohup ./start-hansa.sh > hansa.log 2>&1 &
             echo 'Rollback to main branch completed'
           "

@@ -73,6 +73,7 @@ jobs:
             echo 'Rolling back to previous version...'
             git reset --hard HEAD@{1}
             ./stop-hansa.sh
+            sleep 2
             nohup ./start-hansa.sh > hal.log 2>&1 &
             echo 'Rollback to previous commit completed'
           "
